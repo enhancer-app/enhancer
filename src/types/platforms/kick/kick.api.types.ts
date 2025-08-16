@@ -8,19 +8,85 @@ export interface ChannelResponse {
 	subscription_enabled: boolean;
 	is_affiliate: boolean;
 	followers_count: number;
-	subscriber_badges: any[];
-	livestream: any;
-	role: string;
+	subscriber_badges: SubscriberBadge[];
+	banner_image: { url: string } | null;
+	livestream: Livestream | null;
+	role: string | null;
 	muted: boolean;
 	follower_badges: any[];
-	offline_banner_image: any;
+	offline_banner_image: string | null;
 	verified: boolean;
-	recent_categories: any[];
+	recent_categories: RecentCategory[];
 	can_host: boolean;
 	user: User;
 	chatroom: Chatroom;
-	channel_users: any[];
-	channel_actions: any[];
+}
+
+export interface SubscriberBadge {
+	id: number;
+	channel_id: number;
+	months: number;
+	badge_image: {
+		srcset: string;
+		src: string;
+	};
+}
+
+export interface LivestreamCategory {
+	id: number;
+	category_id: number;
+	name: string;
+	slug: string;
+	tags: string[];
+	description: string | null;
+	deleted_at: string | null;
+	is_mature: boolean;
+	is_promoted: boolean;
+	viewers: number;
+	is_fallback: boolean;
+	category: {
+		id: number;
+		name: string;
+		slug: string;
+		icon: string;
+	};
+}
+
+export interface Livestream {
+	id: number;
+	slug: string;
+	channel_id: number;
+	created_at: string;
+	session_title: string;
+	is_live: boolean;
+	risk_level_id: number | null;
+	start_time: string;
+	source: string | null;
+	twitch_channel: string | null;
+	duration: number;
+	language: string;
+	is_mature: boolean;
+	viewer_count: number;
+	thumbnail: { url: string };
+	lang_iso: string;
+	tags: string[];
+	categories: LivestreamCategory[];
+}
+
+export interface RecentCategory {
+	id: number;
+	category_id: number;
+	name: string;
+	slug: string;
+	tags: string[];
+	description: string | null;
+	deleted_at: string | null;
+	is_mature: boolean;
+	is_promoted: boolean;
+	viewers: number;
+	is_fallback: boolean;
+	banner: { responsive: string; url: string };
+	category: { id: number; name: string; slug: string; icon: string };
 }
 
 export interface User {
@@ -29,16 +95,16 @@ export interface User {
 	agreed_to_terms: boolean;
 	email_verified_at: string;
 	bio: string;
-	country: any;
-	state: any;
-	city: any;
+	country: string;
+	state: string;
+	city: string;
 	instagram: string;
 	twitter: string;
 	youtube: string;
 	discord: string;
 	tiktok: string;
 	facebook: string;
-	profile_pic: any;
+	profile_pic: string;
 }
 
 export interface Chatroom {

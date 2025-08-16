@@ -278,3 +278,12 @@ export type GuestStarChannelGuestListProps = {
 	channelID: string;
 	currentUserID: string;
 };
+
+export type KickStreamerInfo = {
+	username: string;
+	isLive: boolean;
+	game: string | null;
+	avatar: string | null;
+	url: string;
+	viewerCount: number;
+};
