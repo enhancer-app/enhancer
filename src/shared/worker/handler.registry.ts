@@ -8,6 +8,9 @@ import { UpdateSettingsHandler } from "$shared/worker/settings/update-settings.h
 import { AddWatchtimeHandler } from "$shared/worker/watchtime/add-watchtime.handler.ts";
 import { GetWatchtimeHandler } from "$shared/worker/watchtime/get-watchtime.handler.ts";
 import type { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
+import type { CommonService } from "$shared/worker/common/common.service.ts";
+import { GetCommonHandler } from "$shared/worker/common/get-common.handler.ts";
+import { SetCommonHandler } from "$shared/worker/common/set-common.handler.ts";
 import type { WorkerAction } from "$types/shared/worker/worker.types.ts";
 
 export class HandlerRegistry {
@@ -17,6 +20,7 @@ export class HandlerRegistry {
 		private readonly logger: Logger,
 		private readonly watchtimeService: WatchtimeService,
 		private readonly settingsService: SettingsService,
+		private readonly commonService: CommonService,
 	) {
 		this.registerHandlers();
 	}
@@ -28,6 +32,8 @@ export class HandlerRegistry {
 		this.handlers.set("getWatchtime", new GetWatchtimeHandler(this.logger, this.watchtimeService));
 		this.handlers.set("getSettings", new GetSettingsHandler(this.logger, this.settingsService));
 		this.handlers.set("updateSettings", new UpdateSettingsHandler(this.logger, this.settingsService));
+		this.handlers.set("getCommon", new GetCommonHandler(this.logger, this.commonService));
+		this.handlers.set("setCommon", new SetCommonHandler(this.logger, this.commonService));
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {

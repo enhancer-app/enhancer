@@ -15,6 +15,7 @@ import RealVideoTimeModule from "$kick/modules/real-video-time/real-video-time.m
 import SettingsButtonModule from "$kick/modules/settings-button/settings-button.module.tsx";
 import SettingsModule from "$kick/modules/settings/settings.module.tsx";
 import StreamLatencyModule from "$kick/modules/stream-latency/stream-latency.module.tsx";
+import TwitchStreamsModule from "$kick/modules/twitch-streams/twitch-streams.module.tsx";
 import Platform from "$shared/platform/platform.ts";
 import type { KickEvents } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickSettings } from "$types/platforms/kick/kick.settings.types.ts";
@@ -54,6 +55,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			new ChatMessagePopupModule(...dependencies),
 			// new MessageMenuModule(...dependencies),
 			// new ChatMessageMenuModule(...dependencies),
+			new TwitchStreamsModule(...dependencies),
 		];
 	}
 }

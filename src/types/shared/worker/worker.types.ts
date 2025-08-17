@@ -60,6 +60,25 @@ export interface UpdateSettingsPayload {
 export type GetSettingsResponse = PlatformSettings;
 export type UpdateSettingsResponse = { success: true };
 
+export interface GetCommonPayload {
+	platform: PlatformType;
+	key: string;
+}
+
+export interface GetCommonResponse {
+	value: unknown | null;
+}
+
+export interface SetCommonPayload {
+	platform: PlatformType;
+	key: string;
+	value: unknown;
+}
+
+export interface SetCommonResponse {
+	success: true;
+}
+
 export interface WorkerApiActions {
 	ping: {
 		payload?: never;
@@ -84,6 +103,14 @@ export interface WorkerApiActions {
 	updateSettings: {
 		payload: UpdateSettingsPayload;
 		response: UpdateSettingsResponse;
+	};
+	getCommon: {
+		payload: GetCommonPayload;
+		response: GetCommonResponse;
+	};
+	setCommon: {
+		payload: SetCommonPayload;
+		response: SetCommonResponse;
 	};
 }
 

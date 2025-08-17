@@ -33,6 +33,7 @@ export default class SettingsModule extends KickModule {
 	private settingsSignal: Signal<KickSettings> = signal(KICK_DEFAULT_SETTINGS);
 	private isOpenSignal: Signal<boolean> = signal(false);
 	private settingsContainer: HTMLDivElement | null = null;
+	private exposeSyncInterval: NodeJS.Timeout | null = null;
 
 	async initialize() {
 		this.SETTINGS_TABS = [
@@ -60,6 +61,14 @@ export default class SettingsModule extends KickModule {
 			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
 		};
 		this.SETTING_DEFINITIONS = [
+			{
+				id: "exposeFollowedToOthers",
+				title: "Expose followed channels to other platforms",
+				description: "Share your Kick followed list to Enhancer so it can be used on Twitch.",
+				type: "toggle",
+				tabIndex: 0,
+				requiresRefreshToDisable: false,
+			},
 			{
 				id: "streamLatencyEnabled",
 				title: "Enable Stream Latency",
@@ -159,6 +168,9 @@ export default class SettingsModule extends KickModule {
 		await this.loadSettings();
 		await this.createSettingsContainer();
 		this.setupKeyboardShortcut();
+		if (this.settingsSignal.value.exposeFollowedToOthers) {
+			this.startExposeFollowedSync();
+		}
 	}
 
 	private async loadSettings() {
@@ -175,8 +187,64 @@ export default class SettingsModule extends KickModule {
 			this.settingsSignal.value = settings;
 			this.emitter.emit(`kick:settings:${updatedKey}`, settings[updatedKey]);
 			this.logger.debug(`Settings changed "${updatedKey}" to`, settings[updatedKey]);
+			if (updatedKey === "exposeFollowedToOthers") {
+				if (settings.exposeFollowedToOthers) {
+					this.startExposeFollowedSync();
+				} else {
+					this.stopExposeFollowedSync();
+				}
+			}
 		} catch (error) {
 			console.error("Failed to save settings:", error);
+		}
+	}
+
+	private startExposeFollowedSync() {
+		if (this.exposeSyncInterval) clearInterval(this.exposeSyncInterval);
+		void this.syncFollowedToCommon();
+		this.exposeSyncInterval = setInterval(() => void this.syncFollowedToCommon(), 5 * 60 * 1000);
+	}
+
+	private stopExposeFollowedSync() {
+		if (this.exposeSyncInterval) {
+			clearInterval(this.exposeSyncInterval);
+			this.exposeSyncInterval = null;
+		}
+	}
+
+	private extractKickUsernamesFromSidebar(): string[] {
+		const sidebar = document.querySelector("#sidebar-wrapper");
+		if (!sidebar) return [];
+		const anchors = Array.from(sidebar.querySelectorAll("a"));
+		const names = anchors
+			.map((a) => {
+				const href = (a as HTMLAnchorElement).href || (a as HTMLAnchorElement).getAttribute("href") || "";
+				if (!href) return null;
+				try {
+					const url = new URL(href, window.location.origin);
+					const parts = url.pathname.split("/").filter(Boolean);
+					if (parts.length === 1) {
+						return parts[0].toLowerCase();
+					}
+				} catch {}
+				return null;
+			})
+			.filter((v): v is string => typeof v === "string");
+		return Array.from(new Set(names));   //nicki z sidebara do wyjebania trzeba przez endpointa
+	}
+
+	private async syncFollowedToCommon() {
+		try {
+			const names = this.extractKickUsernamesFromSidebar();
+			if (names.length === 0) return;
+			await this.workerService().send("setCommon", {
+				platform: "twitch",
+				key: "kickStreamers",
+				value: names,
+			});
+			this.logger.debug("Exposed Kick followed channels to common store (for Twitch)", names);
+		} catch (error) {
+			this.logger.warn("Failed to sync Kick followed channels:", error);
 		}
 	}
 

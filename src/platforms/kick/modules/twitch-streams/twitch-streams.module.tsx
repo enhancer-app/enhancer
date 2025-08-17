@@ -1,23 +1,31 @@
-import KickApi from "$kick/apis/kick.api.ts";
-import TwitchModule from "$twitch/twitch.module.ts";
-import type { ChannelResponse } from "$types/platforms/kick/kick.api.types.ts";
-import type { KickStreamerInfo } from "$types/platforms/twitch/twitch.utils.types.ts";
-import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
+import KickModule from "$kick/kick.module.ts";
+import TwitchApi from "$twitch/apis/twitch.api.ts";
+import type { TwitchMultiChannelResponse } from "$types/platforms/twitch/twitch.api.types.ts";
+import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
 
-export default class KickStreamersModule extends TwitchModule {
-	readonly config: TwitchModuleConfig = {
-		name: "kick-streamers",
+type TwitchStreamerInfo = {
+	username: string;
+	isLive: boolean;
+	game: string | null;
+	avatar: string | null;
+	url: string;
+	viewerCount: number;
+};
+
+export default class TwitchStreamsModule extends KickModule {
+	readonly config: KickModuleConfig = {
+		name: "twitch-streams",
 		appliers: [
 			{
 				type: "selector",
-				selectors: ["#side-nav .side-nav-section"],
+				selectors: ["#sidebar-wrapper"],
 				callback: this.mountSection.bind(this),
-				key: "kick-streamers",
 				once: true,
+				key: "twitch-streams",
 			},
 		],
 	};
@@ -25,96 +33,111 @@ export default class KickStreamersModule extends TwitchModule {
 	private static readonly UPDATE_INTERVAL_MS = 5 * 60 * 1000;
 	private updateInterval: NodeJS.Timeout | undefined;
 
-	private readonly kickApi = new KickApi();
-	private readonly kickStreamers: string[] = [];
-	private cachedKickStreamers: string[] | null = null;
-	private readonly streamers: Signal<KickStreamerInfo[]> = signal([]);
+	private readonly twitchApi = new TwitchApi({} as any);
+	private readonly twitchStreamers: string[] = [];
+	private cachedTwitchStreamers: string[] | null = null;
+	private readonly streamers: Signal<TwitchStreamerInfo[]> = signal([]);
 
 	async initialize() {
 		await this.loadStreamersFromCommon();
 		await this.refreshStatuses();
 		if (this.updateInterval) clearInterval(this.updateInterval);
-		this.updateInterval = setInterval(() => void this.refreshStatuses(), KickStreamersModule.UPDATE_INTERVAL_MS);
+		this.updateInterval = setInterval(() => void this.refreshStatuses(), TwitchStreamsModule.UPDATE_INTERVAL_MS);
 	}
 
 	private mountSection(elements: Element[]) {
 		if (document.querySelector(`.${this.getId()}`)) return;
-		const parent = elements.at(0);
-		if (!parent) return;
-		const wrapper = this.commonUtils().createElementByParent(this.getId(), "div", parent);
-		render(<KickStreamersSection streamers={this.streamers} onRefresh={this.refreshStatuses.bind(this)} />, wrapper);
+
+		const targetElement = this.findTargetElement(elements.at(0));
+		if (!targetElement) return;
+
+		const wrapper = document.createElement("div");
+		wrapper.id = this.getId();
+		targetElement.parentNode?.insertBefore(wrapper, targetElement);
+
+		render(<TwitchStreamsSection streamers={this.streamers} onRefresh={this.refreshStatuses.bind(this)} />, wrapper);
+	}
+
+	private findTargetElement(sidebarWrapper: Element | undefined): Element | null {
+		if (!sidebarWrapper) return null;
+
+		const thirdChild = sidebarWrapper.children[2];
+		if (!thirdChild) return null;
+
+		const flexContainer = thirdChild.children[0];
+		if (!flexContainer) return null;
+
+		return flexContainer.querySelector("section:nth-child(3)");
+	}
+
+	private buildMultiChannelQuery(names: string[]) {
+		const fields = names
+			.map(
+				(name, idx) =>
+					`a${idx}: channel(name: "${name}") { id displayName owner { id login profileImageURL(width: 300) } stream { id title viewersCount game { name } } }`,
+			)
+			.join("\n");
+		return `query {\n${fields}\n}`;
+	}
+
+	private getStreamerNames(): string[] {
+		return (this.cachedTwitchStreamers && this.cachedTwitchStreamers.length > 0)
+			? this.cachedTwitchStreamers
+			: this.twitchStreamers;
+	}
+
+	private async loadStreamersFromCommon(): Promise<void> {
+		try {
+			const res = await this.workerService().send("getCommon", { platform: "kick", key: "twitchStreamers" });
+			const value = (res && (res as { value: unknown | null }).value) as unknown;
+			if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+				this.cachedTwitchStreamers = value as string[];
+			} else {
+				this.cachedTwitchStreamers = [];
+			}
+			this.logger.debug("Loaded Twitch streamer nicknames for Kick:", this.cachedTwitchStreamers);
+		} catch (error) {
+			this.logger.warn("Failed to load Twitch streamers from common store", error);
+			this.cachedTwitchStreamers = [];
+		}
 	}
 
 	private async refreshStatuses() {
 		try {
 			await this.loadStreamersFromCommon();
-			const names = this.getStreamerNames();
-			if (names.length === 0) {
+			const source = this.getStreamerNames();
+			if (source.length === 0) {
 				this.streamers.value = [];
 				return;
 			}
-			const results = await Promise.all(
-				names.map(async (name) => {
-					try {
-						const { data } = await this.kickApi.getChannel(name.toLowerCase());
-						return this.mapChannelToInfo(data);
-					} catch (error) {
-						this.logger.warn(`Failed to fetch Kick channel: ${name}`, error);
-						return undefined;
-					}
-				}),
-			);
-			const mapped = results.filter(Boolean) as KickStreamerInfo[];
+			const query = this.buildMultiChannelQuery(source.map((n) => n.toLowerCase()));
+			const { data } = await this.twitchApi.gql<TwitchMultiChannelResponse>(query, {} as any);
+			const mapped: TwitchStreamerInfo[] = source.map((name, idx) => {
+				const node = data?.[`a${idx}` as const];
+				const isLive = Boolean(node?.stream);
+				return {
+					username: (node?.displayName as string) ?? name,
+					isLive,
+					game: (node?.stream?.game?.name as string) ?? null,
+					avatar: (node?.owner?.profileImageURL as string) ?? null,
+					url: `https://twitch.tv/${name}`,
+					viewerCount: (node?.stream?.viewersCount as number) ?? 0,
+				};
+			});
 			mapped.sort((a, b) => b.viewerCount - a.viewerCount);
 			this.streamers.value = mapped;
-			this.logger.info("Kick statuses updated", mapped);
+			this.logger.info("Twitch statuses updated", mapped);
 		} catch (error) {
-			this.logger.error("Failed to refresh Kick statuses", error);
+			this.logger.error("Failed to refresh Twitch statuses", error);
 		}
-	}
-
-	private getStreamerNames(): string[] {
-		return this.cachedKickStreamers && this.cachedKickStreamers.length > 0
-			? this.cachedKickStreamers
-			: this.kickStreamers;
-	}
-
-	private async loadStreamersFromCommon(): Promise<void> {
-		try {
-			const res = await this.workerService().send("getCommon", { platform: "twitch", key: "kickStreamers" });
-			const value = (res && (res as { value: unknown | null }).value) as unknown;
-			if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
-				this.cachedKickStreamers = value as string[];
-			} else {
-				this.cachedKickStreamers = [];
-			}
-			this.logger.debug("Loaded Kick streamer nicknames for Twitch:", this.cachedKickStreamers);
-		} catch (error) {
-			this.logger.warn("Failed to load Kick streamers from common store", error);
-			this.cachedKickStreamers = [];
-		}
-	}
-
-	private mapChannelToInfo(channel: ChannelResponse): KickStreamerInfo {
-		const isLive = Boolean(channel.livestream?.is_live);
-		const category =
-			channel.livestream?.categories?.[0]?.name ?? channel.livestream?.categories?.[0]?.category?.name ?? null;
-		return {
-			username: channel.user.username,
-			isLive,
-			game: category ?? null,
-			avatar: channel.user.profile_pic ?? null,
-			url: `https://kick.com/${channel.slug ?? channel.user.username}`,
-			viewerCount: channel.livestream?.viewer_count ?? 0,
-		};
 	}
 }
 
-function KickStreamersSection({
+function TwitchStreamsSection({
 	streamers,
 	onRefresh,
 }: {
-	streamers: Signal<KickStreamerInfo[]>;
+	streamers: Signal<TwitchStreamerInfo[]>;
 	onRefresh: () => void;
 }) {
 	const rootRef = useRef<HTMLDivElement>(null);
@@ -132,10 +155,10 @@ function KickStreamersSection({
 	}, []);
 
 	return (
-		<SectionWrapper ref={rootRef}>
+		<SectionWrapper ref={rootRef} className="twitch-streams-section">
 			{!compact && (
 				<SectionHeader>
-					<span>KICK</span>
+					<span>TWITCH</span>
 					<RefreshButton onClick={onRefresh}>Refresh</RefreshButton>
 				</SectionHeader>
 			)}
@@ -156,14 +179,17 @@ function KickStreamersSection({
 								<Game>{s.game ?? ""}</Game>
 							</ItemBody>
 						)}
-						{!compact &&
-							(!s.isLive ? (
-								<RightStatus>Offline</RightStatus>
-							) : (
-								<RightStatus>
-									<LiveDot title="Live" /> <RightViewers>{formatViewers(s.viewerCount)}</RightViewers>
-								</RightStatus>
-							))}
+						{!compact && (
+							<RightStatus>
+								{s.isLive ? (
+									<>
+										<LiveDot title="Live" /> <RightViewers>{formatViewers(s.viewerCount)}</RightViewers>
+									</>
+								) : (
+									<RightViewers>Offline</RightViewers>
+								)}
+							</RightStatus>
+						)}
 					</Item>
 				))}
 			</List>
@@ -264,7 +290,7 @@ const LiveDot = styled.span`
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #5ee42a;
+    background: #eb0400; 
 `;
 
 const RightViewers = styled.span`

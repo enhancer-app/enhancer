@@ -2,12 +2,19 @@ import { Logger } from "$shared/logger/logger.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
 import { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
+import { CommonService } from "$shared/worker/common/common.service.ts";
 
 export default class WorkerBackground {
 	private readonly logger = new Logger({ context: "background" });
 	private readonly watchtimeService = new WatchtimeService();
 	private readonly settingsService = new SettingsService();
-	private readonly handlerRegistry = new HandlerRegistry(this.logger, this.watchtimeService, this.settingsService);
+	private readonly commonService = new CommonService();
+	private readonly handlerRegistry = new HandlerRegistry(
+		this.logger,
+		this.watchtimeService,
+		this.settingsService,
+		this.commonService,
+	);
 
 	private isInitialized = false;
 	private messageQueue: Array<{
@@ -18,7 +25,11 @@ export default class WorkerBackground {
 	async start() {
 		this.setupMessageListener();
 
-		await Promise.all([this.watchtimeService.initialize(), this.settingsService.initialize()]);
+		await Promise.all([
+			this.watchtimeService.initialize(),
+			this.settingsService.initialize(),
+			this.commonService.initialize(),
+		]);
 		this.isInitialized = true;
 		this.logger.info("Background worker started");
 
