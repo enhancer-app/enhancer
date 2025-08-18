@@ -36,6 +36,7 @@ export default class ChatHighlightUserModule extends TwitchModule {
 	}
 
 	private highlightUserMentions(event: MouseEvent): void {
+		// todo change color to red of mention is not 7tv
 		const target = event.currentTarget as HTMLElement;
 		const username = target.getAttribute("enhancer-mention-user");
 		if (!username) return;

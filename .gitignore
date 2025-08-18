@@ -3,3 +3,4 @@ dist
 .idea/*
 !.idea/icon.svg
 *.zip
+tsconfig.tsbuildinfo

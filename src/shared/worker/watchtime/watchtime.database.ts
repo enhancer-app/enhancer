@@ -6,7 +6,7 @@ export class WatchtimeDatabase {
 	private readonly logger = new Logger({ context: "watchtime-db" });
 	private database: IDBDatabase | null = null;
 	private readonly dbName = "enhancer_watchtime";
-	private readonly dbVersion = 1;
+	private readonly dbVersion = 2;
 	private readonly storeName = "watchtime";
 
 	async initialize(): Promise<void> {
@@ -31,6 +31,7 @@ export class WatchtimeDatabase {
 	}
 
 	private handleUpgrade(event: IDBVersionChangeEvent): void {
+		if (event.oldVersion === 1 && event.newVersion === 2) return;
 		const db = (event.target as IDBOpenDBRequest).result;
 		this.logger.info(`Creating watchtime database (version ${this.dbVersion})...`);
 		const store = db.createObjectStore(this.storeName, { keyPath: "id" });

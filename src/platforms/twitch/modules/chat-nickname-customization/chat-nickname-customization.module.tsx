@@ -25,7 +25,7 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 			element.querySelector<HTMLElement>(".seventv-chat-user-username");
 		if (!usernameElement) return;
 
-		const userCustomization = this.enhancerApi().findUserNicknameForCurrentChannel(message.user.userID);
+		const userCustomization = this.enhancerApi().findUserForCurrentChannel(message.user.userID);
 		if (!userCustomization) return;
 
 		if (userCustomization.customNickname) {

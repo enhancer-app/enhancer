@@ -24,7 +24,7 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 		];
 		if (usernameElements.length < 1) return;
 
-		const userCustomization = this.enhancerApi().findUserNicknameForCurrentChannel(message.sender.id.toString());
+		const userCustomization = this.enhancerApi().findUserForCurrentChannel(message.sender.id.toString());
 		if (!userCustomization) return;
 
 		usernameElements.forEach((usernameElement) => {

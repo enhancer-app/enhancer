@@ -1,10 +1,10 @@
 import { HttpClient } from "$shared/http/http-client.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import type {
-	EnhancerBadgesResponseDto,
+	EnhancerBadge,
 	EnhancerChannelDto,
-	EnhancerNicknamesResponseDto,
 	EnhancerStreamerWatchTimeData,
+	EnhancerUser,
 } from "$types/apis/enhancer.apis.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 
@@ -20,15 +20,12 @@ export default class EnhancerApi {
 	private isInitialized = false;
 
 	private static readonly GLOBAL_CHANNEL_ID = "0";
-	private static readonly API_URL = "https://api.enhancer.at";
+	private static readonly API_URL = "https://api2.enhancer.at";
 	//private static readonly API_URL = "http://localhost:8080";
 
 	private static readonly CACHE_KEYS = {
-		GLOBAL_BADGES: "global-badges",
+		GLOBAL: "global",
 		CHANNEL: (id: string) => `channel:${id}`,
-		BADGES: (id: string) => `badges:${id}`,
-		GLOBAL_NICKNAMES: "global-nicknames",
-		NICKNAMES: (id: string) => `nicknames:${id}`,
 	} as const;
 
 	private readonly logger = new Logger({ context: "enhancer-api" });
@@ -40,19 +37,12 @@ export default class EnhancerApi {
 		if (this.isInitialized) return;
 
 		try {
-			const globalBadges = await this.fetchBadges(EnhancerApi.GLOBAL_CHANNEL_ID);
-			const globalNicknames = await this.fetchNicknames(EnhancerApi.GLOBAL_CHANNEL_ID);
-			if (globalBadges.ok) {
-				this.cache.set(EnhancerApi.CACHE_KEYS.GLOBAL_BADGES, globalBadges.data);
-				this.logger.debug("Global badges loaded successfully");
+			const globalChannel = await this.fetchChannel(EnhancerApi.GLOBAL_CHANNEL_ID);
+			if (globalChannel.ok) {
+				this.cache.set(EnhancerApi.CACHE_KEYS.GLOBAL, globalChannel.data);
+				this.logger.debug("Global channel loaded successfully");
 			} else {
-				this.logger.warn("Failed to load global badges");
-			}
-			if (globalNicknames.ok) {
-				this.cache.set(EnhancerApi.CACHE_KEYS.GLOBAL_NICKNAMES, globalNicknames.data);
-				this.logger.debug("Global nicknames loaded successfully");
-			} else {
-				this.logger.warn("Failed to load global nicknames");
+				this.logger.warn("Failed to load global channel");
 			}
 		} catch (error) {
 			this.logger.error("Error initializing EnhancerApi:", error);
@@ -63,18 +53,9 @@ export default class EnhancerApi {
 
 	async joinChannel(channelId: string): Promise<void> {
 		if (!channelId || channelId === this.currentChannelId) return;
-
 		try {
-			const [channelResult, badgesResult, nicknamesResult] = await Promise.allSettled([
-				this.fetchChannel(channelId),
-				this.fetchBadges(channelId),
-				this.fetchNicknames(channelId),
-			]);
-
-			this.handleChannelResult(channelId, channelResult);
-			this.handleBadgesResult(channelId, badgesResult);
-			this.handleNicknamesResult(channelId, nicknamesResult);
-
+			const { data: channelData } = await this.fetchChannel(channelId);
+			this.handleChannelResult(channelId, channelData);
 			this.currentChannelId = channelId;
 			this.logger.info(`Successfully joined channel: ${channelId}`);
 		} catch (error) {
@@ -83,24 +64,12 @@ export default class EnhancerApi {
 		}
 	}
 
+	getGlobalChannel(): EnhancerChannelDto | null {
+		return this.cache.get(EnhancerApi.CACHE_KEYS.GLOBAL) ?? null;
+	}
+
 	getCurrentChannel(): EnhancerChannelDto | null {
 		return this.getCurrentChannelData(EnhancerApi.CACHE_KEYS.CHANNEL);
-	}
-
-	getCurrentChannelBadges(): EnhancerBadgesResponseDto | null {
-		return this.getCurrentChannelData(EnhancerApi.CACHE_KEYS.BADGES);
-	}
-
-	getCurrentChannelNicknames(): EnhancerNicknamesResponseDto | null {
-		return this.getCurrentChannelData(EnhancerApi.CACHE_KEYS.NICKNAMES);
-	}
-
-	getGlobalBadges(): EnhancerBadgesResponseDto | null {
-		return this.cache.get(EnhancerApi.CACHE_KEYS.GLOBAL_BADGES) ?? null;
-	}
-
-	getGlobalNicknames(): EnhancerNicknamesResponseDto | null {
-		return this.cache.get(EnhancerApi.CACHE_KEYS.GLOBAL_NICKNAMES) ?? null;
 	}
 
 	async getChannelById(channelId: string): Promise<EnhancerChannelDto | null> {
@@ -128,32 +97,28 @@ export default class EnhancerApi {
 		return data;
 	}
 
-	findUserBadgesForCurrentChannel(externalUserId: string) {
-		const globalBadges = this.getGlobalBadges();
-		const badges = this.getCurrentChannelBadges();
+	findUserBadgesForCurrentChannel(externalUserId: string): EnhancerBadge[] {
+		const globalChannel = this.getGlobalChannel();
+		const currentChannel = this.getCurrentChannel();
 
-		const userBadgesIds = [
-			...(globalBadges?.users.find((user) => user.externalId === externalUserId)?.badgesIds ?? []),
-			...(badges?.users.find((user) => user.externalId === externalUserId)?.badgesIds ?? []),
-		];
-		return [
-			...(globalBadges?.badges?.filter((badge) => userBadgesIds?.includes(badge.badgeId)) ?? []).sort(
-				(a, b) => a.priority - b.priority,
-			),
-			...(badges?.badges?.filter((badge) => userBadgesIds?.includes(badge.badgeId)) ?? []).sort(
-				(a, b) => a.priority - b.priority,
-			),
-		];
+		const globalUser = globalChannel?.users.find((user) => user.externalId === externalUserId);
+		const channelUser = currentChannel?.users.find((user) => user.externalId === externalUserId);
+
+		const userBadgeIds = new Set([...(globalUser?.badgesIds ?? []), ...(channelUser?.badgesIds ?? [])]);
+		const allBadges = [...(globalChannel?.badges ?? []), ...(currentChannel?.badges ?? [])];
+		const userBadges = allBadges.filter((badge) => userBadgeIds.has(badge.badgeId));
+
+		const uniqueBadges = Array.from(new Map(userBadges.map((badge) => [badge.badgeId, badge])).values());
+		return uniqueBadges.sort((a, b) => a.priority - b.priority);
 	}
 
-	findUserNicknameForCurrentChannel(externalUserId: string) {
-		const globalNicknames = this.getGlobalNicknames();
-		const channelNicknames = this.getCurrentChannelNicknames();
-
-		const user =
-			channelNicknames?.users.find((user) => user.externalId === externalUserId) ||
-			globalNicknames?.users.find((user) => user.externalId === externalUserId);
-		return user || null;
+	findUserForCurrentChannel(externalUserId: string): EnhancerUser | null {
+		const channelUser = this.getCurrentChannel()?.users.find((user) => user.externalId === externalUserId);
+		if (channelUser) {
+			return channelUser;
+		}
+		const globalUser = this.getGlobalChannel()?.users.find((user) => user.externalId === externalUserId);
+		return globalUser ?? null;
 	}
 
 	getCurrentChannelId(): string {
@@ -172,31 +137,7 @@ export default class EnhancerApi {
 
 	private async fetchChannel(channelId: string): Promise<ApiResponse<EnhancerChannelDto>> {
 		const { data, status } = await this.httpClient.request<EnhancerChannelDto>(
-			`${EnhancerApi.API_URL}/channel/${this.platform}/${channelId}`,
-			{
-				method: "GET",
-				responseType: "json",
-				validateStatus: (status) => [200, 404].includes(status),
-			},
-		);
-		return { data, ok: status === 200, status };
-	}
-
-	private async fetchBadges(channelId: string): Promise<ApiResponse<EnhancerBadgesResponseDto>> {
-		const { data, status } = await this.httpClient.request<EnhancerBadgesResponseDto>(
-			`${EnhancerApi.API_URL}/badge/${this.platform}/${channelId}`,
-			{
-				method: "GET",
-				responseType: "json",
-				validateStatus: (status) => [200, 404].includes(status),
-			},
-		);
-		return { data, ok: status === 200, status };
-	}
-
-	private async fetchNicknames(channelId: string): Promise<ApiResponse<EnhancerNicknamesResponseDto>> {
-		const { data, status } = await this.httpClient.request<EnhancerNicknamesResponseDto>(
-			`${EnhancerApi.API_URL}/nickname/${this.platform}/${channelId}`,
+			`${EnhancerApi.API_URL}/v2/channel/${this.platform}/${channelId}`,
 			{
 				method: "GET",
 				responseType: "json",
@@ -211,33 +152,7 @@ export default class EnhancerApi {
 		return this.cache.get(keyFactory(this.currentChannelId)) ?? null;
 	}
 
-	private handleChannelResult(channelId: string, result: PromiseSettledResult<ApiResponse<EnhancerChannelDto>>): void {
-		if (result.status === "fulfilled" && result.value.ok) {
-			this.cache.set(EnhancerApi.CACHE_KEYS.CHANNEL(channelId), result.value.data);
-		} else {
-			this.logger.warn(`Failed to fetch channel data for ${channelId}`);
-		}
-	}
-
-	private handleBadgesResult(
-		channelId: string,
-		result: PromiseSettledResult<ApiResponse<EnhancerBadgesResponseDto>>,
-	): void {
-		if (result.status === "fulfilled" && result.value.ok) {
-			this.cache.set(EnhancerApi.CACHE_KEYS.BADGES(channelId), result.value.data);
-		} else {
-			this.logger.warn(`Failed to fetch badges for ${channelId}`);
-		}
-	}
-
-	private handleNicknamesResult(
-		channelId: string,
-		result: PromiseSettledResult<ApiResponse<EnhancerNicknamesResponseDto>>,
-	): void {
-		if (result.status === "fulfilled" && result.value.ok) {
-			this.cache.set(EnhancerApi.CACHE_KEYS.NICKNAMES(channelId), result.value.data);
-		} else {
-			this.logger.warn(`Failed to fetch nicknames for ${channelId}`);
-		}
+	private handleChannelResult(channelId: string, data: EnhancerChannelDto): void {
+		this.cache.set(EnhancerApi.CACHE_KEYS.CHANNEL(channelId), data);
 	}
 }
