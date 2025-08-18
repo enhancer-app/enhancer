@@ -19,6 +19,7 @@ export type TwitchSettings = {
 	pinnedStreamersEnabled: boolean;
 	xayoWatchtimeEnabled: boolean;
 	exposeFollowedToOthers: boolean;
+	kickStreamerEnabled: boolean;
 };
 
 export type TwitchSettingsEvents = {

@@ -33,7 +33,6 @@ export default class SettingsModule extends TwitchModule {
 	private settingsSignal: Signal<TwitchSettings> = signal(TWITCH_DEFAULT_SETTINGS);
 	private isOpenSignal: Signal<boolean> = signal(false);
 	private settingsContainer: HTMLDivElement | null = null;
-	private exposeSyncInterval: NodeJS.Timeout | null = null;
 
 	async initialize() {
 		this.SETTINGS_TABS = [
@@ -62,9 +61,17 @@ export default class SettingsModule extends TwitchModule {
 		};
 		this.SETTING_DEFINITIONS = [
 			{
+				id: "kickStreamerEnabled",
+				title: "Enable follow list from other platforms",
+				description: "Shows your followed channels from other platforms in the follow list.",
+				type: "toggle",
+				tabIndex: 0,
+				requiresRefreshToDisable: true,
+			},
+			{
 				id: "exposeFollowedToOthers",
-				title: "Expose followed channels to other platforms",
-				description: "Share your Twitch followed list to Enhancer so it can be used on Kick.",
+				title: "Share followed channels",
+				description: "Expose your followed list to Enhancer so it can be used across platforms.",
 				type: "toggle",
 				tabIndex: 0,
 				requiresRefreshToDisable: false,
@@ -219,10 +226,7 @@ export default class SettingsModule extends TwitchModule {
 		await this.loadSettings();
 		await this.createSettingsContainer();
 		this.setupKeyboardShortcut();
-		// Start syncing if the setting is enabled
-		if (this.settingsSignal.value.exposeFollowedToOthers) {
-			this.startExposeFollowedSync();
-		}
+		// syncing handled by ExposeFollowsModule
 	}
 
 	private async loadSettings() {
@@ -243,56 +247,8 @@ export default class SettingsModule extends TwitchModule {
 			this.settingsSignal.value = settings;
 			this.emitter.emit(`twitch:settings:${updatedKey}`, settings[updatedKey]);
 			this.logger.debug(`Settings changed "${updatedKey}" to`, settings[updatedKey]);
-			if (updatedKey === "exposeFollowedToOthers") {
-				if (settings.exposeFollowedToOthers) {
-					this.startExposeFollowedSync();
-				} else {
-					this.stopExposeFollowedSync();
-				}
-			}
 		} catch (error) {
 			console.error("Failed to save settings:", error);
-		}
-	}
-
-	private startExposeFollowedSync() {
-		if (this.exposeSyncInterval) clearInterval(this.exposeSyncInterval);
-		// run once immediately
-		void this.syncFollowedToCommon();
-		// refresh periodically
-		this.exposeSyncInterval = setInterval(() => void this.syncFollowedToCommon(), 5 * 60 * 1000);
-	}
-
-	private stopExposeFollowedSync() {
-		if (this.exposeSyncInterval) {
-			clearInterval(this.exposeSyncInterval);
-			this.exposeSyncInterval = null;
-		}
-	}
-
-	private async syncFollowedToCommon() {
-		try {
-			const section = this.twitchUtils().getPersonalSections();
-			const streams = section?.props?.section?.streams ?? [];
-			const offline = section?.props?.section?.offlineChannels ?? [];
-			const extractLogin = (item: any): string | null => {
-				const login = item?.broadcaster?.login ?? item?.user?.login;
-				if (!login) return null;
-				return String(login).toLowerCase();
-			};
-			const names = [...streams, ...offline]
-				.map(extractLogin)
-				.filter((v): v is string => typeof v === "string");
-			const unique = Array.from(new Set(names));
-			if (unique.length === 0) return;
-			await this.workerService().send("setCommon", {
-				platform: "kick",
-				key: "twitchStreamers",
-				value: unique,
-			});
-			this.logger.debug("Exposed Twitch followed channels to common store (for Kick)", unique);
-		} catch (error) {
-			this.logger.warn("Failed to sync followed channels:", error);
 		}
 	}
 

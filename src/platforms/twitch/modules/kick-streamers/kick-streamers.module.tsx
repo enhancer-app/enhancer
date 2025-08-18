@@ -1,7 +1,7 @@
 import KickApi from "$kick/apis/kick.api.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { ChannelResponse } from "$types/platforms/kick/kick.api.types.ts";
-import type { KickStreamerInfo } from "$types/platforms/twitch/twitch.utils.types.ts";
+import type { KickStreamerInfo, StreamerInfo } from "$types/platforms/twitch/twitch.utils.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import { render } from "preact";
@@ -20,17 +20,22 @@ export default class KickStreamersModule extends TwitchModule {
 				once: true,
 			},
 		],
+		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("kickStreamerEnabled"),
 	};
 
-	private static readonly UPDATE_INTERVAL_MS = 5 * 60 * 1000;
+	private static readonly UPDATE_INTERVAL_MS = 2 * 60 * 1000;
 	private updateInterval: NodeJS.Timeout | undefined;
 
 	private readonly kickApi = new KickApi();
-	private readonly kickStreamers: string[] = [];
 	private cachedKickStreamers: string[] | null = null;
-	private readonly streamers: Signal<KickStreamerInfo[]> = signal([]);
+	private readonly streamers: Signal<StreamerInfo[]> = signal([]);
+	private platformIcons: Record<string, string> = {};
 
 	async initialize() {
+		try {
+			const kick = await this.commonUtils().getAssetFile(this.workerService(), "brands/kick.svg");
+			this.platformIcons = { kick };
+		} catch {}
 		await this.loadStreamersFromCommon();
 		await this.refreshStatuses();
 		if (this.updateInterval) clearInterval(this.updateInterval);
@@ -42,13 +47,23 @@ export default class KickStreamersModule extends TwitchModule {
 		const parent = elements.at(0);
 		if (!parent) return;
 		const wrapper = this.commonUtils().createElementByParent(this.getId(), "div", parent);
-		render(<KickStreamersSection streamers={this.streamers} onRefresh={this.refreshStatuses.bind(this)} />, wrapper);
+		render(
+			<KickStreamersSection
+				streamers={this.streamers}
+				onRefresh={this.refreshStatuses.bind(this)}
+				platformIcons={this.platformIcons}
+			/>,
+			wrapper,
+		);
 	}
 
 	private async refreshStatuses() {
 		try {
 			await this.loadStreamersFromCommon();
-			const names = this.getStreamerNames();
+			const names = this.cachedKickStreamers;
+			if (names === null) {
+				return;
+			}
 			if (names.length === 0) {
 				this.streamers.value = [];
 				return;
@@ -64,19 +79,13 @@ export default class KickStreamersModule extends TwitchModule {
 					}
 				}),
 			);
-			const mapped = results.filter(Boolean) as KickStreamerInfo[];
+			const mapped = (results.filter(Boolean) as KickStreamerInfo[]).map((s) => ({ ...s, platform: "kick" }));
 			mapped.sort((a, b) => b.viewerCount - a.viewerCount);
 			this.streamers.value = mapped;
 			this.logger.info("Kick statuses updated", mapped);
 		} catch (error) {
 			this.logger.error("Failed to refresh Kick statuses", error);
 		}
-	}
-
-	private getStreamerNames(): string[] {
-		return this.cachedKickStreamers && this.cachedKickStreamers.length > 0
-			? this.cachedKickStreamers
-			: this.kickStreamers;
 	}
 
 	private async loadStreamersFromCommon(): Promise<void> {
@@ -102,7 +111,7 @@ export default class KickStreamersModule extends TwitchModule {
 		return {
 			username: channel.user.username,
 			isLive,
-			game: category ?? null,
+			game: category,
 			avatar: channel.user.profile_pic ?? null,
 			url: `https://kick.com/${channel.slug ?? channel.user.username}`,
 			viewerCount: channel.livestream?.viewer_count ?? 0,
@@ -113,12 +122,17 @@ export default class KickStreamersModule extends TwitchModule {
 function KickStreamersSection({
 	streamers,
 	onRefresh,
+	platformIcons,
 }: {
-	streamers: Signal<KickStreamerInfo[]>;
+	streamers: Signal<StreamerInfo[]>;
 	onRefresh: () => void;
+	platformIcons: Record<string, string>;
 }) {
 	const rootRef = useRef<HTMLDivElement>(null);
 	const [compact, setCompact] = useState(false);
+	const [visibleCount, setVisibleCount] = useState(5);
+
+	const truncate = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}...` : text);
 
 	useEffect(() => {
 		const element = rootRef.current;
@@ -135,12 +149,12 @@ function KickStreamersSection({
 		<SectionWrapper ref={rootRef}>
 			{!compact && (
 				<SectionHeader>
-					<span>KICK</span>
+					<span>Other platforms</span>
 					<RefreshButton onClick={onRefresh}>Refresh</RefreshButton>
 				</SectionHeader>
 			)}
 			<List>
-				{streamers.value.map((s) => (
+				{streamers.value.slice(0, visibleCount).map((s) => (
 					<Item
 						key={s.username}
 						$offline={!s.isLive}
@@ -149,11 +163,14 @@ function KickStreamersSection({
 						target="_blank"
 						rel="noopener noreferrer"
 					>
-						<Avatar $compact={compact} src={s.avatar ?? ""} alt={s.username} />
+						<AvatarWrapper $compact={compact}>
+							<Avatar $compact={compact} src={s.avatar ?? ""} alt={s.username} />
+							{platformIcons[s.platform] ? <PlatformBadge src={platformIcons[s.platform]} alt={s.platform} /> : null}
+						</AvatarWrapper>
 						{!compact && (
 							<ItemBody>
 								<Name>{String(s.username)}</Name>
-								<Game>{s.game ?? ""}</Game>
+								<Game>{s.game ? truncate(s.game, 14) : ""}</Game>
 							</ItemBody>
 						)}
 						{!compact &&
@@ -167,6 +184,19 @@ function KickStreamersSection({
 					</Item>
 				))}
 			</List>
+			{streamers.value.length > 5 && !compact && (
+				<Footer>
+					<ExpandButton
+						onClick={() => setVisibleCount((v) => Math.min(streamers.value.length, v + 5))}
+						disabled={visibleCount >= streamers.value.length}
+					>
+						Show more
+					</ExpandButton>
+					<ExpandButton onClick={() => setVisibleCount(5)} disabled={visibleCount <= 5}>
+						Show less
+					</ExpandButton>
+				</Footer>
+			)}
 		</SectionWrapper>
 	);
 }
@@ -181,7 +211,7 @@ const SectionHeader = styled.div`
 	justify-content: space-between;
 	padding: 0 8px;
 	color: #efeff1;
-	font-size: 12px;
+	font-size: 14px;
 	font-weight: 700;
 	text-transform: none;
 `;
@@ -224,10 +254,16 @@ const Item = styled.a<{ $offline: boolean; $compact?: boolean }>`
 `;
 
 const Avatar = styled.img<{ $compact?: boolean }>`
-	width: ${(props) => (props.$compact ? 32 : 24)}px;
-	height: ${(props) => (props.$compact ? 32 : 24)}px;
+	width: ${(props) => (props.$compact ? 32 : 30)}px;
+	height: ${(props) => (props.$compact ? 32 : 30)}px;
 	border-radius: 50%;
 	background: #232323;
+`;
+
+const AvatarWrapper = styled.div<{ $compact?: boolean }>`
+	position: relative;
+	display: inline-block;
+	line-height: 0;
 `;
 
 const ItemBody = styled.div`
@@ -237,7 +273,7 @@ const ItemBody = styled.div`
 `;
 
 const Name = styled.div`
-	font-size: 13px;
+	font-size: 14px;
 	font-weight: 600;
 	color: #efeff1;
 	display: inline-flex;
@@ -245,14 +281,26 @@ const Name = styled.div`
 	gap: 6px;
 `;
 
+const PlatformBadge = styled.img`
+	position: absolute;
+	bottom: -2px;
+	left: -2px;
+	width: 14px;
+	height: 14px;
+	background: rgba(0, 0, 0, 0.75);
+	padding: 2px;
+	border-radius: 0;
+	z-index: 1;
+`;
+
 const Game = styled.div`
-	font-size: 12px;
+	font-size: 13px;
 	color: #adadb8;
 `;
 
 const RightStatus = styled.div`
 	margin-left: auto;
-	font-size: 12px;
+	font-size: 14px;
 	color: #adadb8;
 	display: inline-flex;
 	align-items: center;
@@ -261,16 +309,37 @@ const RightStatus = styled.div`
 
 const LiveDot = styled.span`
     display: inline-block;
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    background: #5ee42a;
+    background: #eb0400;
 `;
 
 const RightViewers = styled.span`
 	font-size: 13px;
-	font-weight: 700;
 	color: #ffffff;
+`;
+
+const Footer = styled.div`
+	display: flex;
+	justify-content: center;
+	padding: 6px 8px 0 8px;
+	gap: 16px;
+`;
+
+const ExpandButton = styled.button`
+	background: transparent;
+	border: none;
+	color: #adadb8;
+	cursor: pointer;
+	font-size: 11px;
+	padding: 2px 4px;
+	border-radius: 3px;
+	transition: background 0.2s ease;
+
+	&:hover {
+		background: rgba(255, 255, 255, 0.08);
+	}
 `;
 
 const formatViewers = (viewers: number) =>

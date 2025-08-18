@@ -1,8 +1,8 @@
 import { Logger } from "$shared/logger/logger.ts";
+import { CommonService } from "$shared/worker/common/common.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
 import { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
-import { CommonService } from "$shared/worker/common/common.service.ts";
 
 export default class WorkerBackground {
 	private readonly logger = new Logger({ context: "background" });

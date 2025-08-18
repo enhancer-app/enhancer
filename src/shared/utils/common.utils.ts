@@ -106,6 +106,22 @@ export default class CommonUtils {
 		}
 		return null;
 	}
+
+	getCookie(name: string): string | null {
+		try {
+			const cookie = document.cookie || "";
+			const prefix = `${name}=`;
+			const found = cookie
+				.split(";")
+				.map((c) => c.trim())
+				.find((c) => c.startsWith(prefix));
+			if (!found) return null;
+			const raw = found.slice(found.indexOf("=") + 1);
+			return decodeURIComponent(raw);
+		} catch {
+			return null;
+		}
+	}
 }
 
 class UnexpectedStatusError extends Error {}

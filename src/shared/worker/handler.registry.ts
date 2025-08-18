@@ -1,4 +1,7 @@
 import type { Logger } from "$shared/logger/logger.ts";
+import type { CommonService } from "$shared/worker/common/common.service.ts";
+import { GetCommonHandler } from "$shared/worker/common/get-common.handler.ts";
+import { SetCommonHandler } from "$shared/worker/common/set-common.handler.ts";
 import { AssetsFileHandler } from "$shared/worker/file/assets-file.handler.ts";
 import type { MessageHandler } from "$shared/worker/message.handler.ts";
 import { PingHandler } from "$shared/worker/ping/ping.handler.ts";
@@ -8,9 +11,6 @@ import { UpdateSettingsHandler } from "$shared/worker/settings/update-settings.h
 import { AddWatchtimeHandler } from "$shared/worker/watchtime/add-watchtime.handler.ts";
 import { GetWatchtimeHandler } from "$shared/worker/watchtime/get-watchtime.handler.ts";
 import type { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
-import type { CommonService } from "$shared/worker/common/common.service.ts";
-import { GetCommonHandler } from "$shared/worker/common/get-common.handler.ts";
-import { SetCommonHandler } from "$shared/worker/common/set-common.handler.ts";
 import type { WorkerAction } from "$types/shared/worker/worker.types.ts";
 
 export class HandlerRegistry {

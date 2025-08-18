@@ -12,6 +12,7 @@ export type KickSettings = {
 	realVideoTimeEnabled: boolean;
 	realVideoTimeFormat12h: boolean;
 	exposeFollowedToOthers: boolean;
+	twitchStreamerEnabled: boolean;
 };
 
 export type KickSettingsEvents = {

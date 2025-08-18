@@ -287,3 +287,5 @@ export type KickStreamerInfo = {
 	url: string;
 	viewerCount: number;
 };
+
+export type StreamerInfo = KickStreamerInfo & { platform: string };

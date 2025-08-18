@@ -10,6 +10,7 @@ import type {
 	ChatInputComponent,
 	CurrentLiveStatusComponent,
 	FollowedSectionComponenet,
+	FollowedSectionStreamData,
 	GuestStarChannelGuestListProps,
 	MediaPlayerComponent,
 	PersistentPlayerComponent,
@@ -271,5 +272,18 @@ export default class TwitchUtils {
 		)?.pendingProps.children.props.children.props.children.props;
 		if (!props) return;
 		return props;
+	}
+
+	getUserFollowList() {
+		const section = this.getPersonalSections();
+		const streams = section?.props?.section?.streams ?? [];
+		const offline = section?.props?.section?.offlineChannels ?? [];
+		const extractLogin = (item: FollowedSectionStreamData): string | null => {
+			const login = item?.user?.login;
+			if (!login) return null;
+			return String(login).toLowerCase();
+		};
+		const names = [...streams, ...offline].map(extractLogin).filter((v): v is string => typeof v === "string");
+		return Array.from(new Set(names));
 	}
 }

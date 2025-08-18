@@ -23,4 +23,5 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	pinnedStreamersEnabled: true,
 	xayoWatchtimeEnabled: true,
 	exposeFollowedToOthers: false,
+	kickStreamerEnabled: false,
 };

@@ -60,20 +60,17 @@ export interface UpdateSettingsPayload {
 export type GetSettingsResponse = PlatformSettings;
 export type UpdateSettingsResponse = { success: true };
 
-export interface GetCommonPayload {
-	platform: PlatformType;
-	key: string;
-}
+export type GetCommonPayload =
+	| { platform: "twitch"; key: "kickStreamers" }
+	| { platform: "kick"; key: "twitchStreamers" };
 
 export interface GetCommonResponse {
 	value: unknown | null;
 }
 
-export interface SetCommonPayload {
-	platform: PlatformType;
-	key: string;
-	value: unknown;
-}
+export type SetCommonPayload =
+	| { platform: "twitch"; key: "kickStreamers"; value: string[] }
+	| { platform: "kick"; key: "twitchStreamers"; value: string[] };
 
 export interface SetCommonResponse {
 	success: true;

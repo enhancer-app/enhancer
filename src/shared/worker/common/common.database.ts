@@ -1,13 +1,6 @@
 import { Logger } from "$shared/logger/logger.ts";
+import type { CommonRecord } from "$types/shared/common/common.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
-
-export type CommonRecord = {
-	id: string; // `${platform}:${key}`
-	platform: PlatformType;
-	key: string;
-	value: unknown;
-	lastUpdate: number;
-};
 
 export class CommonDatabase {
 	private readonly logger = new Logger({ context: "common-db" });
@@ -99,5 +92,3 @@ export class CommonDatabase {
 		});
 	}
 }
-
-

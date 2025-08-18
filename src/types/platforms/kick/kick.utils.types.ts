@@ -1,3 +1,6 @@
+import KickModule from "$kick/kick.module.ts";
+import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
+
 export type ChannelInfo = {
 	slug: string;
 	channelId: number;
@@ -26,3 +29,14 @@ export type ChannelChatRoom = {
 	isPaused: boolean;
 	setIsPaused: (paused: boolean) => void;
 };
+
+type TwitchStreamerInfo = {
+	username: string;
+	isLive: boolean;
+	game: string | null;
+	avatar: string | null;
+	url: string;
+	viewerCount: number;
+};
+
+type StreamerInfo = TwitchStreamerInfo & { platform: string };

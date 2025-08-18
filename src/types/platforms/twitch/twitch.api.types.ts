@@ -24,14 +24,12 @@ export type TwitchChannelNode = {
 		login: string;
 		profileImageURL: string;
 	};
-	stream:
-		| {
-			id: string;
-			title: string;
-			viewersCount: number;
-			game: { name: string } | null;
-		}
-		| null;
+	stream: {
+		id: string;
+		title: string;
+		viewersCount: number;
+		game: { name: string } | null;
+	} | null;
 };
 
 export type TwitchMultiChannelResponse = {
