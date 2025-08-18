@@ -35,9 +35,15 @@ export default class KickStreamersModule extends TwitchModule {
 		try {
 			const kick = await this.commonUtils().getAssetFile(this.workerService(), "brands/kick.svg");
 			this.platformIcons = { kick };
-		} catch {}
-		await this.loadStreamersFromCommon();
-		await this.refreshStatuses();
+		} catch (error) {
+			this.logger.warn("Failed to load Kick platform icon", error);
+		}
+		try {
+			await this.loadStreamersFromCommon();
+			await this.refreshStatuses();
+		} catch (error) {
+			this.logger.error("Failed to initialize Kick streamers module", error);
+		}
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(() => void this.refreshStatuses(), KickStreamersModule.UPDATE_INTERVAL_MS);
 	}
@@ -91,7 +97,7 @@ export default class KickStreamersModule extends TwitchModule {
 	private async loadStreamersFromCommon(): Promise<void> {
 		try {
 			const res = await this.workerService().send("getCommon", { platform: "twitch", key: "kickStreamers" });
-			const value = (res && (res as { value: unknown | null }).value) as unknown;
+			const value = res?.value ?? null;
 			if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
 				this.cachedKickStreamers = value as string[];
 			} else {
