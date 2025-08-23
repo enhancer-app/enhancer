@@ -61,7 +61,7 @@ export default class SettingsModule extends TwitchModule {
 		};
 		this.SETTING_DEFINITIONS = [
 			{
-				id: "kickStreamerEnabled",
+				id: "showFollowsFromOtherPlatforms",
 				title: "Enable follow list from other platforms",
 				description: "Shows your followed channels from other platforms in the follow list.",
 				type: "toggle",
@@ -69,7 +69,7 @@ export default class SettingsModule extends TwitchModule {
 				requiresRefreshToDisable: true,
 			},
 			{
-				id: "exposeFollowedToOthers",
+				id: "shareFollowsToOtherPlatforms",
 				title: "Share followed channels",
 				description: "Expose your followed list to Enhancer so it can be used across platforms.",
 				type: "toggle",

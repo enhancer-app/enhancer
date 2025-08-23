@@ -12,7 +12,7 @@ import LocalWatchtimeCounterModule from "$kick/modules/local-watchtime-counter/l
 import RealVideoTimeModule from "$kick/modules/real-video-time/real-video-time.module.tsx";
 import SettingsButtonModule from "$kick/modules/settings-button/settings-button.module.tsx";
 import SettingsModule from "$kick/modules/settings/settings.module.tsx";
-import SharedFollowsModule from "$kick/modules/share-follows/shared-follows.module.tsx";
+import SharedFollowsModule from "$kick/modules/shared-follows/shared-follows.module.tsx";
 import StreamLatencyModule from "$kick/modules/stream-latency/stream-latency.module.tsx";
 import Platform from "$shared/platform/platform.ts";
 import type { KickEvents } from "$types/platforms/kick/kick.events.types.ts";

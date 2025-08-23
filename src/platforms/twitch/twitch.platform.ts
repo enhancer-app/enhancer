@@ -12,6 +12,7 @@ import PinStreamerModule from "$twitch/modules/pin-streamer/pin-streamer.module.
 import RealVideoTimeModule from "$twitch/modules/real-video-time/real-video-time.module.tsx";
 import SettingsButtonModule from "$twitch/modules/settings-button/settings-button.module.tsx";
 import SettingsModule from "$twitch/modules/settings/settings.module.tsx";
+import SharedFollowsModule from "$twitch/modules/shared-follows/shared-follows.module.tsx";
 import WatchTimeModule from "$twitch/modules/watchtime/watchtime.module.tsx";
 import type { TwitchEvents } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchSettings } from "$types/platforms/twitch/twitch.settings.types.ts";
@@ -71,6 +72,7 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			new ChatMentionSoundModule(...dependencies),
 			// new KickStreamersModule(...dependencies),
 			// new ExposeFollowsModule(...dependencies),
+			new SharedFollowsModule(...dependencies),
 		];
 	}
 }

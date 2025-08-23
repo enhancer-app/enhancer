@@ -1,5 +1,5 @@
 import KickModule from "$kick/kick.module.ts";
-import KickFollowSyncer from "$kick/modules/share-follows/kick.follow-syncer.ts";
+import KickFollowSyncer from "$kick/modules/shared-follows/kick.follow-syncer.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class SharedFollowsModule extends KickModule {
@@ -18,7 +18,7 @@ export default class SharedFollowsModule extends KickModule {
 						this.stopSyncTimer();
 					}
 				},
-				key: "expose-follows",
+				key: "share-follows",
 			},
 		],
 	};
