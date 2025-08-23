@@ -1,7 +1,7 @@
 import type { Logger } from "$shared/logger/logger.ts";
 import type { CommonService } from "$shared/worker/common/common.service.ts";
-import { GetCommonHandler } from "$shared/worker/common/get-common.handler.ts";
-import { SetCommonHandler } from "$shared/worker/common/set-common.handler.ts";
+import { GetCommonDataHandler } from "$shared/worker/common/get-common-data.handler.ts";
+import { SetCommonDataHandler } from "$shared/worker/common/set-common-data.handler.ts";
 import { AssetsFileHandler } from "$shared/worker/file/assets-file.handler.ts";
 import type { MessageHandler } from "$shared/worker/message.handler.ts";
 import { PingHandler } from "$shared/worker/ping/ping.handler.ts";
@@ -32,8 +32,8 @@ export class HandlerRegistry {
 		this.handlers.set("getWatchtime", new GetWatchtimeHandler(this.logger, this.watchtimeService));
 		this.handlers.set("getSettings", new GetSettingsHandler(this.logger, this.settingsService));
 		this.handlers.set("updateSettings", new UpdateSettingsHandler(this.logger, this.settingsService));
-		this.handlers.set("getCommon", new GetCommonHandler(this.logger, this.commonService));
-		this.handlers.set("setCommon", new SetCommonHandler(this.logger, this.commonService));
+		this.handlers.set("getCommonData", new GetCommonDataHandler(this.logger, this.commonService));
+		this.handlers.set("setCommonData", new SetCommonDataHandler(this.logger, this.commonService));
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {

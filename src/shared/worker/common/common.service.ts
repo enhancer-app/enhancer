@@ -1,6 +1,6 @@
 import { Logger } from "$shared/logger/logger.ts";
 import { CommonDatabase } from "$shared/worker/common/common.database.ts";
-import type { PlatformType } from "$types/shared/platform.types.ts";
+import type { CommonDatabaseData } from "$types/shared/storage/common-database.types.ts";
 
 export class CommonService {
 	private readonly logger = new Logger({ context: "common-service" });
@@ -11,12 +11,12 @@ export class CommonService {
 		this.logger.info("Common service initialized");
 	}
 
-	async getValue<T>(platform: PlatformType, key: string): Promise<T | null> {
-		return await this.database.getValue<T>(platform, key);
+	async getData() {
+		return await this.database.getData();
 	}
 
-	async setValue(platform: PlatformType, key: string, value: unknown): Promise<void> {
-		await this.database.setValue(platform, key, value);
-		this.logger.debug(`Updated common value ${platform}:${key}`);
+	async setData(data: CommonDatabaseData): Promise<void> {
+		await this.database.setData(data);
+		this.logger.debug("Updated common data", data);
 	}
 }

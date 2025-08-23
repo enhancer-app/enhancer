@@ -4,6 +4,7 @@ import { Logger } from "$shared/logger/logger.ts";
 import EventModuleApplier from "$shared/module/applier/event-module-applier.ts";
 import SelectorModuleApplier from "$shared/module/applier/selector-module-applier.ts";
 import type Module from "$shared/module/module.ts";
+import CommonDataService from "$shared/settings/common.service.ts";
 import SettingsService from "$shared/settings/settings.service.ts";
 import StorageRepository from "$shared/storage/storage-repository.ts";
 import UtilsRepository from "$shared/utils/utils.repository.ts";
@@ -26,6 +27,7 @@ export default abstract class Platform<
 	protected readonly enhancerApi: EnhancerApi;
 	protected readonly workerApi = new WorkerService();
 	protected readonly settingsService: SettingsService<TSettings>;
+	protected readonly commonDataService = new CommonDataService(this.workerApi);
 
 	protected constructor(protected readonly config: PlatformConfig) {
 		this.enhancerApi = new EnhancerApi(config.type);

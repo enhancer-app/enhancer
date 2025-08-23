@@ -22,6 +22,6 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	realVideoTimeFormat12h: false,
 	pinnedStreamersEnabled: true,
 	xayoWatchtimeEnabled: true,
-	exposeFollowedToOthers: false,
-	kickStreamerEnabled: false,
+	shareFollowsToOtherPlatforms: false,
+	showFollowsFromOtherPlatforms: true,
 };

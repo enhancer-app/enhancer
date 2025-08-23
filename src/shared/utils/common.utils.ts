@@ -108,19 +108,15 @@ export default class CommonUtils {
 	}
 
 	getCookie(name: string): string | null {
-		try {
-			const cookie = document.cookie || "";
-			const prefix = `${name}=`;
-			const found = cookie
-				.split(";")
-				.map((c) => c.trim())
-				.find((c) => c.startsWith(prefix));
-			if (!found) return null;
-			const raw = found.slice(found.indexOf("=") + 1);
-			return decodeURIComponent(raw);
-		} catch {
-			return null;
+		const cookies = document.cookie.split(";").map((cookie) => cookie.trim().split("="));
+
+		for (const [key, value] of cookies) {
+			if (key === name) {
+				return value ? decodeURIComponent(value) : "";
+			}
 		}
+
+		return null;
 	}
 }
 

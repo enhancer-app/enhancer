@@ -1,4 +1,5 @@
 import type { PlatformType } from "$types/shared/platform.types.ts";
+import type { CommonDatabaseData } from "$types/shared/storage/common-database.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 
 export interface ExtensionMessageDetail {
@@ -60,19 +61,17 @@ export interface UpdateSettingsPayload {
 export type GetSettingsResponse = PlatformSettings;
 export type UpdateSettingsResponse = { success: true };
 
-export type GetCommonPayload =
-	| { platform: "twitch"; key: "kickStreamers" }
-	| { platform: "kick"; key: "twitchStreamers" };
+// @ts-ignore its okay here
+// biome-ignore lint/complexity/noBannedTypes: it's okay here
+export type GetCommonDataPayload = {};
 
-export interface GetCommonResponse {
-	value: unknown | null;
+export interface GetCommonDataResponse {
+	data: CommonDatabaseData;
 }
 
-export type SetCommonPayload =
-	| { platform: "twitch"; key: "kickStreamers"; value: string[] }
-	| { platform: "kick"; key: "twitchStreamers"; value: string[] };
+export type SetCommonDataPayload = { data: CommonDatabaseData };
 
-export interface SetCommonResponse {
+export interface SetCommonDataResponse {
 	success: true;
 }
 
@@ -101,13 +100,13 @@ export interface WorkerApiActions {
 		payload: UpdateSettingsPayload;
 		response: UpdateSettingsResponse;
 	};
-	getCommon: {
-		payload: GetCommonPayload;
-		response: GetCommonResponse;
+	getCommonData: {
+		payload: GetCommonDataPayload;
+		response: GetCommonDataResponse;
 	};
-	setCommon: {
-		payload: SetCommonPayload;
-		response: SetCommonResponse;
+	setCommonData: {
+		payload: SetCommonDataPayload;
+		response: SetCommonDataResponse;
 	};
 }
 

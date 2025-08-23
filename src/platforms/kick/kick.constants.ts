@@ -11,8 +11,8 @@ export const KICK_DEFAULT_SETTINGS: KickSettings = {
 	streamLatencyEnabled: true,
 	realVideoTimeEnabled: true,
 	realVideoTimeFormat12h: false,
-	exposeFollowedToOthers: false,
-	twitchStreamerEnabled: false,
+	shareFollowsToOtherPlatforms: false,
+	showFollowsFromOtherPlatforms: true,
 };
 
 export const KICK_LIVE_VIDEO_DURATION = 1073741824;

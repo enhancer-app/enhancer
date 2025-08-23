@@ -11,8 +11,8 @@ export type KickSettings = {
 	streamLatencyEnabled: boolean;
 	realVideoTimeEnabled: boolean;
 	realVideoTimeFormat12h: boolean;
-	exposeFollowedToOthers: boolean;
-	twitchStreamerEnabled: boolean;
+	shareFollowsToOtherPlatforms: boolean;
+	showFollowsFromOtherPlatforms: boolean;
 };
 
 export type KickSettingsEvents = {

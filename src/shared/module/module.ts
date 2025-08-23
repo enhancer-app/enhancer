@@ -1,5 +1,6 @@
 import type EnhancerApi from "$shared/apis/enhancer.api.ts";
 import { Logger } from "$shared/logger/logger.ts";
+import type CommonDataService from "$shared/settings/common.service.ts";
 import type SettingsService from "$shared/settings/settings.service.ts";
 import type StorageRepository from "$shared/storage/storage-repository.ts";
 import type UtilsRepository from "$shared/utils/utils.repository.ts";
@@ -21,6 +22,7 @@ export default abstract class Module<
 		protected readonly emitter: Emitter<Events>,
 		private readonly storageRepository: StorageRepository<Storage>,
 		private readonly _settingsService: SettingsService<Settings>,
+		private readonly _commonDataService: CommonDataService,
 		private readonly utilsRepository: UtilsRepository,
 		private readonly _enhancerApi: EnhancerApi,
 		private readonly _workerService: WorkerService,
@@ -67,5 +69,9 @@ export default abstract class Module<
 
 	protected settingsService() {
 		return this._settingsService;
+	}
+
+	protected commonDataService() {
+		return this._commonDataService;
 	}
 }
