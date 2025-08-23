@@ -6,7 +6,7 @@ export default class CommonDataService {
 
 	async getData(): Promise<CommonDatabaseData> {
 		const common = await this.workerService.send("getCommonData", {});
-		if (!common) throw new Error("Could not find common storage");
+		if (!common?.data) throw new Error("Could not find common storage");
 		return common.data;
 	}
 
