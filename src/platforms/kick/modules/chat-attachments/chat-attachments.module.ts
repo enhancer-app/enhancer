@@ -2,6 +2,7 @@ import KickModule from "$kick/kick.module.ts";
 import { ImagePreview } from "$shared/components/image-preview/image-preview.component";
 import { HttpClient } from "$shared/http/http-client.ts";
 import type ChatAttachmentHandler from "$shared/module/chat-attachments/chat-attachment-handler.ts";
+import EmotesChatAttachmentHandler from "$shared/module/chat-attachments/emotes-chat-attachment-handler";
 import ImageChatAttachmentHandler from "$shared/module/chat-attachments/image-chat-attachment-handler.ts";
 import { ImageChatAttachmentConfig } from "$shared/module/chat-attachments/image-chat-attachment.config.ts";
 import type { KickChatMessageEvent } from "$types/platforms/kick/kick.events.types.ts";
@@ -65,6 +66,7 @@ export default class ChatAttachmentsModule extends KickModule {
 
 	private readonly chatAttachmentHandlers: ChatAttachmentHandler[] = [
 		new ImageChatAttachmentHandler(this.logger, this.imageAttachmentConfig),
+		new EmotesChatAttachmentHandler(this.logger),
 	];
 
 	private async handleMessage(message: KickChatMessageEvent) {
@@ -126,11 +128,9 @@ export default class ChatAttachmentsModule extends KickModule {
 
 	private async getAttachmentData(url: URL) {
 		try {
-			const { response } = await this.httpClient.request(url.href, {
-				method: "HEAD",
-				responseType: "text",
-			});
-			return { type: response.headers.get("Content-Type"), size: response.headers.get("Content-Length") };
+			const { response } = await this.httpClient.request(url.href);
+
+			return { type: response.headers.get("Content-Type"), size: "10" };
 		} catch (error) {
 			this.logger.warn("Couldn't get attachment data", error);
 		}
