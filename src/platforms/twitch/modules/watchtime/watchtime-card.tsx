@@ -96,7 +96,6 @@ const ActionButton = styled.button`
 	width: 100%;
 	display: block;
 	text-align: center;
-	
 
 	&:hover {
 		filter: brightness(1.1);
