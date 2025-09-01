@@ -32,6 +32,8 @@ export type EnhancerResponseMap = {
 };
 
 export type EnhancerStreamerWatchTimeData = {
-	streamer: string;
-	count: number;
+	streamerName: string;
+	minutes: number;
+	lastSeen: string;
+	avatarUrl?: string;
 };

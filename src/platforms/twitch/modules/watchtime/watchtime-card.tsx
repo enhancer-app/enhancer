@@ -3,8 +3,6 @@ import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts
 import type { Signal } from "@preact/signals";
 import styled from "styled-components";
 
-// --- Shared Components & Helpers ---
-
 const WatchTimeItem = styled.a`
 	display: flex;
 	justify-content: space-between;
@@ -38,8 +36,7 @@ const TotalWatchTimeItem = styled(WatchTimeItem)`
 	}
 `;
 
-const formatWatchTime = (count: number): string => {
-	const totalMinutes = count * 5;
+const formatWatchTime = (totalMinutes: number): string => {
 	const hours = Math.floor(totalMinutes / 60);
 	const minutes = totalMinutes % 60;
 	return `${hours > 0 ? `${hours}h ` : ""}${minutes}m`;
@@ -52,19 +49,19 @@ interface WatchTimeDisplayProps {
 
 const WatchTimeDisplay = ({ watchTime, username }: WatchTimeDisplayProps) => {
 	const topFive = watchTime.slice(0, 5);
-	const totalCount = watchTime.reduce((acc, item) => acc + item.count, 0);
+	const totalCount = watchTime.reduce((acc, item) => acc + item.minutes, 0);
 
 	return (
 		<>
 			{topFive.map((item) => (
 				<WatchTimeItem
-					key={item.streamer}
-					href={`https://twitch.tv/${item.streamer}`}
+					key={item.streamerName}
+					href={`https://twitch.tv/${item.streamerName}`}
 					target="_blank"
 					rel="noopener noreferrer"
 				>
-					<span>{item.streamer}</span>
-					<span>{formatWatchTime(item.count)}</span>
+					<span>{item.streamerName}</span>
+					<span>{formatWatchTime(item.minutes)}</span>
 				</WatchTimeItem>
 			))}
 			<TotalWatchTimeItem href={`https://xayo.pl/${username}`} target="_blank" rel="noopener noreferrer">
@@ -74,8 +71,6 @@ const WatchTimeDisplay = ({ watchTime, username }: WatchTimeDisplayProps) => {
 	);
 };
 
-// --- User Card ---
-
 const UserCardWrapper = styled.div`
 	background-color: #18181b;
 	padding: 12px 16px;
@@ -83,14 +78,46 @@ const UserCardWrapper = styled.div`
 	--main-color: #bf94ff;
 `;
 
+const ScrollArea = styled.div`
+	max-height: 260px;
+	overflow-y: auto;
+	margin-top: 8px;
+`;
+
+const Actions = styled.div`
+	display: block;
+	width: 100%;
+`;
+
+const ActionButton = styled.button`
+	background-color: #9147ff;
+	color: #ffffff;
+	border: none;
+	border-radius: 4px;
+	padding: 6px 12px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1;
+	width: 100%;
+	display: block;
+	text-align: center;
+	
+
+	&:hover {
+		filter: brightness(1.1);
+	}
+`;
+
 interface UserCardProps {
 	username: string;
 	data: Signal<undefined | EnhancerStreamerWatchTimeData[]>;
 	isLoading: Signal<boolean>;
 	isError: Signal<boolean>;
+	onFetch?: () => void;
 }
 
-export const WatchTimeUserCard = ({ username, data, isLoading, isError }: UserCardProps) => {
+export const WatchTimeUserCard = ({ username, data, isLoading, isError, onFetch }: UserCardProps) => {
 	if (isLoading.value) {
 		return (
 			<UserCardWrapper>
@@ -104,24 +131,37 @@ export const WatchTimeUserCard = ({ username, data, isLoading, isError }: UserCa
 			<UserCardWrapper>
 				<p>An unexpected error occurred and we are sorry about that :(</p>
 				<p>Please try again later.</p>
+				{onFetch && (
+					<Actions>
+						<ActionButton onClick={onFetch}>Retry</ActionButton>
+					</Actions>
+				)}
 			</UserCardWrapper>
 		);
 	}
 
 	const watchTime = data.value;
-	if (!watchTime || watchTime.length === 0) {
+	if (watchTime === undefined) {
+		return (
+			<UserCardWrapper>
+				<Actions>{onFetch && <ActionButton onClick={onFetch}>Click to see {username} watchtime</ActionButton>}</Actions>
+			</UserCardWrapper>
+		);
+	}
+
+	if (watchTime.length === 0) {
 		return <UserCardWrapper>No watchtime data available.</UserCardWrapper>;
 	}
 
 	return (
 		<UserCardWrapper>
 			<strong>Watchtime of {username}:</strong>
-			<WatchTimeDisplay watchTime={watchTime} username={username} />
+			<ScrollArea>
+				<WatchTimeDisplay watchTime={watchTime} username={username} />
+			</ScrollArea>
 		</UserCardWrapper>
 	);
 };
-
-// --- Popup Components ---
 
 export const WatchTimePopupLoadingMessage = () => {
 	return <LoadingComponent text="Fetching data from xayo.pl..." />;
@@ -157,5 +197,9 @@ export const WatchTimePopupMessage = ({ username, watchTime }: WatchTimePopupPro
 		return <PopupNoDataMessage>No watchtime data available</PopupNoDataMessage>;
 	}
 
-	return <WatchTimeDisplay watchTime={watchTime} username={username} />;
+	return (
+		<ScrollArea>
+			<WatchTimeDisplay watchTime={watchTime} username={username} />
+		</ScrollArea>
+	);
 };
