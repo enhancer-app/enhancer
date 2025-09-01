@@ -150,9 +150,7 @@ export const WatchTimeUserCard = ({ username, data, isLoading, isError, onFetch 
 	return (
 		<UserCardWrapper>
 			<strong>Watchtime of {username}:</strong>
-			<ScrollArea>
-				<WatchTimeDisplay watchTime={watchTime} username={username} />
-			</ScrollArea>
+			<WatchTimeDisplay watchTime={watchTime} username={username} />
 		</UserCardWrapper>
 	);
 };
