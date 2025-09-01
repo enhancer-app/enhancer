@@ -107,5 +107,3 @@ export default class CommonUtils {
 		return null;
 	}
 }
-
-class UnexpectedStatusError extends Error {}
