@@ -36,7 +36,15 @@ export default class WatchTimeModule extends TwitchModule {
 	};
 
 	private async run(elements: Element[]) {
-		const wrapper = this.commonUtils().createEmptyElements(this.getId(), elements, "div");
+		const isViewerCardPage = window.location.href.includes("/viewercard/");
+		const wrappers = elements.map((parent) => {
+			const element = this.commonUtils().createElementByParent(this.getId(), "div", parent);
+			if (isViewerCardPage) {
+				const prev = element.previousElementSibling;
+				if (prev) prev.before(element);
+			}
+			return element;
+		});
 		const username = this.getUsernameFromUserCard(elements[0]);
 		if (!username) {
 			this.logger.error("Failed to found username from usercard");
@@ -44,21 +52,35 @@ export default class WatchTimeModule extends TwitchModule {
 		}
 
 		const data = signal<undefined | EnhancerStreamerWatchTimeData[]>(undefined);
-		const isLoading = signal(true);
+		const isLoading = signal(false);
 		const isError = signal(false);
 
-		wrapper.forEach((element) => {
-			render(<WatchTimeUserCard username={username} data={data} isLoading={isLoading} isError={isError} />, element);
-		});
+		const fetchWatchtime = async () => {
+			if (isLoading.value) return;
+			isError.value = false;
+			isLoading.value = true;
+			try {
+				data.value = await this.enhancerApi().getWatchTime(username);
+			} catch (error) {
+				this.logger.error(`Failed to fetch usercard watchtime ${username}`, error);
+				isError.value = true;
+			} finally {
+				isLoading.value = false;
+			}
+		};
 
-		try {
-			data.value = await this.enhancerApi().getWatchTime(username);
-			isLoading.value = false;
-		} catch (error) {
-			this.logger.error(`Failed to fetch usercard watchtime ${username}`, error);
-			isError.value = true;
-			isLoading.value = false;
-		}
+		wrappers.forEach((element) => {
+			render(
+				<WatchTimeUserCard
+					username={username}
+					data={data}
+					isLoading={isLoading}
+					isError={isError}
+					onFetch={fetchWatchtime}
+				/>,
+				element,
+			);
+		});
 	}
 
 	private getUsernameFromUserCard(element: Element): string | undefined {
