@@ -30,6 +30,7 @@ export default class RealVideoTimeModule extends KickModule {
 	private videoCreatedAt: Date | undefined;
 	private timeInterval: NodeJS.Timeout | undefined;
 	private use12HourFormat = signal<boolean>(false);
+	private elementCheckInterval: NodeJS.Timeout | undefined;
 
 	private async run(elements: Element[]) {
 		const video = document.querySelector<HTMLVideoElement>("video");
@@ -42,7 +43,7 @@ export default class RealVideoTimeModule extends KickModule {
 			htmlElement.addEventListener("mouseenter", async () => {
 				await this.commonUtils().delay(25);
 				this.updateVisibility();
-				this.runOnHover(element);
+				this.createElement(element);
 			});
 			htmlElement.addEventListener("click", async () => {
 				await this.commonUtils().delay(25);
@@ -51,6 +52,12 @@ export default class RealVideoTimeModule extends KickModule {
 				if (video) this.updateTime(video);
 			});
 		});
+
+		if (this.elementCheckInterval) clearInterval(this.elementCheckInterval);
+		this.elementCheckInterval = setInterval(() => {
+			const created = elements.some((element) => this.createElement(element));
+			if (created) this.updateVisibility();
+		}, 1000);
 	}
 
 	private updateTimeFormat(enabled: boolean) {
@@ -61,10 +68,10 @@ export default class RealVideoTimeModule extends KickModule {
 		return this.commonUtils().timeInMsToTimestamp(timeInMs, this.use12HourFormat.value ? "12" : "24");
 	}
 
-	private runOnHover(player: Element) {
-		if (player.querySelector(`#${this.getId()}`)) return;
+	private createElement(player: Element): boolean {
+		if (player.querySelector(`#${this.getId()}`)) return false;
 		const element = player.querySelector(".z-controls");
-		if (!element || !element.firstElementChild) return;
+		if (!element || !element.firstElementChild) return false;
 		const wrapper = document.createElement("div");
 		wrapper.id = this.getId();
 		wrapper.classList.add("enhancer-video-real-time-wrapper");
@@ -77,6 +84,7 @@ export default class RealVideoTimeModule extends KickModule {
 			wrapper,
 		);
 		element.firstElementChild.after(wrapper);
+		return true;
 	}
 
 	private createTimeInterval(video: HTMLVideoElement) {
