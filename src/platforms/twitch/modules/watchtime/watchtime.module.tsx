@@ -38,17 +38,10 @@ export default class WatchTimeModule extends TwitchModule {
 	private async run(elements: Element[]) {
 		const isViewerCardPage = window.location.href.includes("/viewercard/");
 		const wrappers = elements.map((parent) => {
-			const element = document.createElement("div");
-			element.classList.add(this.getId());
+			const element = this.commonUtils().createElementByParent(this.getId(), "div", parent);
 			if (isViewerCardPage) {
-				const last = parent.lastElementChild;
-				if (last?.previousElementSibling) {
-					parent.insertBefore(element, last);
-				} else {
-					parent.appendChild(element);
-				}
-			} else {
-				parent.appendChild(element);
+				const prev = element.previousElementSibling;
+				if (prev) prev.before(element);
 			}
 			return element;
 		});
