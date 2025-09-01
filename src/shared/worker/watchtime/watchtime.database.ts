@@ -7,7 +7,7 @@ export class WatchtimeDatabase {
 	private readonly logger = new Logger({ context: "watchtime-db" });
 	private database: IDBDatabase | null = null;
 	private readonly dbName = "enhancer_watchtime";
-	private readonly dbVersion = 3;
+	private readonly dbVersion = 4;
 	private readonly storeName = "watchtime";
 
 	private readonly migrator = new WatchtimeDatabaseMigrator(this.storeName, this.logger);
