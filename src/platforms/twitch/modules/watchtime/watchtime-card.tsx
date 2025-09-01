@@ -78,12 +78,6 @@ const UserCardWrapper = styled.div`
 	--main-color: #bf94ff;
 `;
 
-const ScrollArea = styled.div`
-	max-height: 260px;
-	overflow-y: auto;
-	margin-top: 8px;
-`;
-
 const Actions = styled.div`
 	display: block;
 	width: 100%;
@@ -197,9 +191,5 @@ export const WatchTimePopupMessage = ({ username, watchTime }: WatchTimePopupPro
 		return <PopupNoDataMessage>No watchtime data available</PopupNoDataMessage>;
 	}
 
-	return (
-		<ScrollArea>
-			<WatchTimeDisplay watchTime={watchTime} username={username} />
-		</ScrollArea>
-	);
+	return <WatchTimeDisplay watchTime={watchTime} username={username} />;
 };
