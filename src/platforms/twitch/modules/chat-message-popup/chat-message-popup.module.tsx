@@ -7,7 +7,7 @@ import styled from "styled-components";
 
 export default class ChatMessagePopupModule extends TwitchModule {
 	static readonly TWITCHTV_CHAT_SELECTOR = ".chat-list--default";
-	static readonly SEVENTV_CHAT_SELECTOR = "main.seventv-chat-list";
+	static readonly SEVENTV_CHAT_SELECTOR = "seventv-container.seventv-chat-list";
 
 	config: TwitchModuleConfig = {
 		name: "message-popup",

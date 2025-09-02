@@ -128,10 +128,9 @@ export default class ChatAttachmentsModule extends TwitchModule {
 		if (this.inputMonitoringInterval) return;
 		this.inputMonitoringInterval = setInterval(async () => {
 			const chatInputContent = this.twitchUtils().getChatInputContent();
-			if (!chatInputContent || chatInputContent === this.previousInputContent) return;
-			this.previousInputContent = chatInputContent;
-			const words = chatInputContent.split(" ");
+			if (!chatInputContent) return;
 
+			const words = chatInputContent.split(" ");
 			const firstWord = words.at(0);
 			const lastWord = words.at(-1);
 			const firstWordData = this.simulateBaseData(firstWord);
@@ -141,11 +140,14 @@ export default class ChatAttachmentsModule extends TwitchModule {
 				(firstWordData && (await this.resolveChatAttachmentHandler(firstWordData))?.applies) ||
 				(lastWordData && (await this.resolveChatAttachmentHandler(lastWordData))?.applies);
 
-			if (attachmentResolved) {
+			const url = firstWordData?.url.toString() || lastWordData?.url.toString();
+			if (attachmentResolved && url) {
+				if (this.previousInputContent === url) return;
+				this.previousInputContent = url;
 				this.emitter.emit("twitch:chatPopupMessage", {
 					title: "Image preview",
 					autoclose: 3,
-					content: ImagePreview(firstWordData?.url.toString() || lastWordData?.url.toString()),
+					content: ImagePreview(url),
 				});
 			}
 		}, 500);

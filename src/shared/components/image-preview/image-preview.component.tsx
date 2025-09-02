@@ -1,6 +1,6 @@
 import styled from "styled-components";
 
-export const ImagePreview = (src?: string) => {
+export const ImagePreview = (src: string) => {
 	return (
 		<Wrapper>
 			<div>This image will be shown in chat.</div>
