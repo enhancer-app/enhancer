@@ -152,7 +152,7 @@ export default class ChatAttachmentsModule extends KickModule {
 				(firstWordData && (await this.resolveChatAttachmentHandler(firstWordData))?.applies) ||
 				(lastWordData && (await this.resolveChatAttachmentHandler(lastWordData))?.applies);
 
-			const url = firstWordData?.url.toString() || lastWordData?.url.toString();
+			const url = firstWordData?.url?.toString() || lastWordData?.url?.toString();
 			if (attachmentResolved && url) {
 				if (this.previousInputContent === url) return;
 				this.previousInputContent = url;
