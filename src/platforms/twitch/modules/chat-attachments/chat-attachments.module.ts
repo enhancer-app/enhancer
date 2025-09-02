@@ -147,7 +147,7 @@ export default class ChatAttachmentsModule extends TwitchModule {
 				this.emitter.emit("twitch:chatPopupMessage", {
 					title: "Image preview",
 					autoclose: 3,
-					content: ImagePreview(url),
+					content: ImagePreview(url), // Later we need to get this thing from chat attachment handler, because there might be different things like audios or something else
 				});
 			}
 		}, 500);
