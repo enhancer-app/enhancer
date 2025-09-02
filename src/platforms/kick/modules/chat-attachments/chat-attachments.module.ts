@@ -1,4 +1,5 @@
 import KickModule from "$kick/kick.module.ts";
+import { ImagePreview } from "$shared/components/image-preview/image-preview.component";
 import { HttpClient } from "$shared/http/http-client.ts";
 import type ChatAttachmentHandler from "$shared/module/chat-attachments/chat-attachment-handler.ts";
 import ImageChatAttachmentHandler from "$shared/module/chat-attachments/image-chat-attachment-handler.ts";
@@ -139,10 +140,9 @@ export default class ChatAttachmentsModule extends KickModule {
 		if (this.inputMonitoringInterval) return;
 		this.inputMonitoringInterval = setInterval(async () => {
 			const chatInputContent = this.kickUtils().getChatInputContent();
-			if (!chatInputContent || chatInputContent === this.previousInputContent) return;
-			this.previousInputContent = chatInputContent;
-			const words = chatInputContent.split(" ");
+			if (!chatInputContent) return;
 
+			const words = chatInputContent.split(" ");
 			const firstWord = words.at(0);
 			const lastWord = words.at(-1);
 			const firstWordData = this.simulateBaseData(firstWord);
@@ -152,11 +152,14 @@ export default class ChatAttachmentsModule extends KickModule {
 				(firstWordData && (await this.resolveChatAttachmentHandler(firstWordData))?.applies) ||
 				(lastWordData && (await this.resolveChatAttachmentHandler(lastWordData))?.applies);
 
-			if (attachmentResolved) {
+			const url = firstWordData?.url?.toString() || lastWordData?.url?.toString();
+			if (attachmentResolved && url) {
+				if (this.previousInputContent === url) return;
+				this.previousInputContent = url;
 				this.emitter.emit("kick:chatPopupMessage", {
 					title: "Image preview",
 					autoclose: 3,
-					content: "This image will be shown in chat.",
+					content: ImagePreview(url), // Later we need to get this thing from chat attachment handler, because there might be different things like audios or something else
 				});
 			}
 		}, 500);
