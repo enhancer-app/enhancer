@@ -1,3 +1,8 @@
+export type TwitchEmoteBarItem = {
+	src: string;
+	alt: string;
+};
+
 export type TwitchStorage = {
-	pinnedStreamers: string[];
+	emoteBarByChannel?: Record<string, TwitchEmoteBarItem[]>;
 };

@@ -100,7 +100,7 @@ export default class TwitchUtils {
 		const node = this.reactUtils.findReactChildren<Chat>(
 			this.reactUtils.getReactInstance(document.querySelector(".stream-chat")),
 			(n) => n.stateNode?.props?.onSendMessage,
-			100,
+			190,
 		);
 		return node?.stateNode;
 	}

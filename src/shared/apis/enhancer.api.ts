@@ -17,10 +17,13 @@ interface ApiResponse<T> {
 export default class EnhancerApi {
 	private currentChannelId = "";
 	private readonly cache = new Map<string, any>();
+	private readonly channelEmotesCache = new Map<string, Set<string>>();
+	private globalEmotesCache: Set<string> | null = null;
 	private isInitialized = false;
 
 	private static readonly GLOBAL_CHANNEL_ID = "0";
 	private static readonly API_URL = "https://api2.enhancer.at";
+	private static readonly EMOTES_API_URL = "https://emotes-api.enhancer.at";
 	//private static readonly API_URL = "http://localhost:8080";
 
 	private static readonly CACHE_KEYS = {
@@ -96,6 +99,43 @@ export default class EnhancerApi {
 			},
 		);
 		return data;
+	}
+
+	async getChannelEmotes(username: string): Promise<Set<string>> {
+		const cached = this.channelEmotesCache.get(username);
+		if (cached) return cached;
+
+		const codes = new Set<string>();
+		const url = `${EnhancerApi.EMOTES_API_URL}/v1/channel/${encodeURIComponent(username)}/emotes/all`;
+
+		try {
+			const response = await this.httpClient.request<Array<{ provider: number; code: string }>>(url, { timeout: 8000 });
+			const data = response.data || [];
+			for (const em of data || []) codes.add(em.code);
+			this.channelEmotesCache.set(username, codes);
+		} catch (error) {
+			this.logger.warn("Failed to fetch channel emotes:", error);
+		}
+
+		return codes;
+	}
+
+	async getGlobalEmotes(): Promise<Set<string>> {
+		if (this.globalEmotesCache) return this.globalEmotesCache;
+
+		const codes = new Set<string>();
+		const url = `${EnhancerApi.EMOTES_API_URL}/v1/global/emotes/all`;
+
+		try {
+			const response = await this.httpClient.request<Array<{ provider: number; code: string }>>(url, { timeout: 8000 });
+			const data = response.data || [];
+			for (const em of data || []) codes.add(em.code);
+			this.globalEmotesCache = codes;
+		} catch (error) {
+			this.logger.warn("Failed to fetch global emotes:", error);
+		}
+
+		return codes;
 	}
 
 	findUserBadgesForCurrentChannel(externalUserId: string): EnhancerBadge[] {
