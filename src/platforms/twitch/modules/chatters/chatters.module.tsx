@@ -156,7 +156,9 @@ export default class ChattersModule extends TwitchModule {
 				await Promise.all(
 					logins.map(async (login) => {
 						try {
-							const { data } = await this.twitchApi().gql<ChattersResponse>(ChattersQuery, { name: login });
+							const { data } = await this.twitchApi().gql<ChattersResponse>(ChattersQuery, {
+								name: login.toLowerCase(),
+							});
 							const counter = this.getOrCreateCounter(login, data.channel.chatters.count);
 							counter.value = data.channel.chatters.count;
 							this.logger.info(`Refreshed chatters for ${login}`, counter.value);
