@@ -29,7 +29,7 @@ export default class TwitchUtils {
 		let name = elements[1];
 		if (name === "popout" || elements[0].includes("dashboard")) name = elements[2];
 		if (name === "moderator" || elements[0].includes("dashboard")) name = elements[2];
-		if (name.endsWith("?")) name = name.substring(0, name.indexOf("?"));
+		if (name.includes("?")) name = name.substring(0, name.indexOf("?"));
 		if (name.endsWith("#")) name = name.substring(0, name.indexOf("#"));
 		return name.toLowerCase();
 	}

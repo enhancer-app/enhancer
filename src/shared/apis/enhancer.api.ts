@@ -87,7 +87,7 @@ export default class EnhancerApi {
 
 	async getWatchTime(username: string): Promise<EnhancerStreamerWatchTimeData[]> {
 		const { data } = await this.httpClient.request<EnhancerStreamerWatchTimeData[]>(
-			`https://beta.xayo.pl/api/chatters/${encodeURIComponent(username)}/watchtime`,
+			`https://xayo.pl/api/chatters/${encodeURIComponent(username)}/watchtime`,
 			{
 				method: "GET",
 				validateStatus: (status) => status === 200,
