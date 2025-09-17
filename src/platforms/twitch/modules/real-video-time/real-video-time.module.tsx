@@ -47,7 +47,7 @@ export default class RealVideoTimeModule extends TwitchModule {
 	private timeCounter = {} as Signal<number>;
 	private currentVideoId: string | undefined;
 	private timeInterval: NodeJS.Timeout | undefined;
-	private videoCreatedAt = new Date(0);
+	private videoCreatedAt = new Date(Number.NaN);
 	private mediaPlayer: MediaPlayerInstance | undefined;
 	private use12HourFormat = signal<boolean>(false);
 
@@ -78,8 +78,18 @@ export default class RealVideoTimeModule extends TwitchModule {
 	}
 
 	private async getVideoCreatedAt(videoId: string) {
-		const { data } = await this.getVideoTime(videoId);
-		return new Date(data.video.createdAt);
+		try {
+			const { data } = await this.getVideoTime(videoId);
+			const createdAt = data?.video?.createdAt;
+			if (!createdAt) {
+				return new Date(Number.NaN);
+			}
+			const date = new Date(createdAt);
+			return Number.isNaN(date.getTime()) ? new Date(Number.NaN) : date;
+		} catch (error) {
+			this.logger.warn("Failed to fetch video createdAt", error);
+			return new Date(Number.NaN);
+		}
 	}
 
 	private createTimeCounter() {
@@ -105,7 +115,12 @@ export default class RealVideoTimeModule extends TwitchModule {
 			return;
 		}
 		this.mediaPlayer = mediaPlayerInstance;
-		this.timeCounter.value = this.videoCreatedAt.getTime() + mediaPlayerInstance.getPosition() * 1000;
+		const createdAtMs = this.videoCreatedAt.getTime();
+		if (!Number.isFinite(createdAtMs)) {
+			this.timeCounter.value = Number.NaN;
+			return;
+		}
+		this.timeCounter.value = createdAtMs + mediaPlayerInstance.getPosition() * 1000;
 	}
 
 	private async getVideoTime(videoId: string) {

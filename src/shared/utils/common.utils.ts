@@ -73,10 +73,15 @@ export default class CommonUtils {
 	}
 
 	timeInMsToTimestamp(timeInMs: number, type: "24" | "12" = "24"): string {
-		if (timeInMs < 0) {
+		if (!Number.isFinite(timeInMs) || timeInMs < 0) {
 			return "--:--:--";
 		}
+
 		const date = new Date(timeInMs);
+		if (Number.isNaN(date.getTime())) {
+			return "--:--:--";
+		}
+
 		const hours = date.getHours();
 		const minutes = date.getMinutes().toString().padStart(2, "0");
 		const seconds = date.getSeconds().toString().padStart(2, "0");
