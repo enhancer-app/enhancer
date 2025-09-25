@@ -29,12 +29,24 @@ export default class PinStreamerModule extends TwitchModule {
 				key: "pin-streamer-hide-sort-description",
 				once: true,
 			},
+			{
+				type: "event",
+				key: "pin-streamer-pinned-update",
+				event: "twitch:pinnedStreamersUpdated",
+				callback: (pinned: string[]) => {
+					this.pinnedStreamers = [...pinned];
+					this.syncPinsWithState();
+					this.forceUpdatePersonalSection();
+				},
+			},
 		],
 		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("pinnedStreamersEnabled"),
 	};
 
 	private observer: MutationObserver | undefined;
 	private pinnedStreamers: string[] = [];
+	private pinStates = new Map<string, Signal<boolean>>();
+	private pinButtons = new Map<string, HTMLButtonElement>();
 
 	private run(elements: Element[]) {
 		this.hookPersonalSectionsRender();
@@ -80,8 +92,11 @@ export default class PinStreamerModule extends TwitchModule {
 		if (!channelID) return;
 		const imageWrapper = channelWrapper.querySelector("div.tw-avatar");
 		if (!imageWrapper) return;
-		const isPinned = signal(this.isPinnedStreamer(channelID));
+		const existingSignal = this.pinStates.get(channelID);
+		const isPinned = existingSignal ?? signal(this.isPinnedStreamer(channelID));
+		this.pinStates.set(channelID, isPinned);
 		const button = this.commonUtils().createElementByParent("pin-streamer-button", "button", imageWrapper);
+		this.pinButtons.set(channelID, button as HTMLButtonElement);
 		button.onclick = async (event) => {
 			event.preventDefault();
 			event.stopPropagation();
@@ -111,6 +126,53 @@ export default class PinStreamerModule extends TwitchModule {
 		this.forceUpdatePersonalSection();
 	}
 
+	private syncPinsWithState() {
+		for (const [channelId, state] of this.pinStates.entries()) {
+			const newValue = this.isPinnedStreamer(channelId);
+			state.value = newValue;
+			const btn = this.pinButtons.get(channelId);
+			if (btn) btn.style.display = newValue ? "inline-block" : "none";
+		}
+	}
+
+	private getSideNavGroup(): Element | null {
+		return document.querySelector("#side-nav .side-nav-section .tw-transition-group");
+	}
+
+	private refreshPinsFromDom() {
+		const container = this.getSideNavGroup();
+		if (!container) return;
+
+		const presentIds = new Set<string>();
+		const items = container.querySelectorAll(
+			'#side-nav .side-nav-section .side-nav-card__link[data-test-selector="followed-channel"]',
+		);
+		for (const item of Array.from(items)) {
+			const el = item as Element;
+			const channelID = this.twitchUtils().getUserIdBySideElement(el);
+			if (!channelID) continue;
+			presentIds.add(channelID);
+			if (!this.pinStates.has(channelID)) {
+				this.pinStates.set(channelID, signal(this.isPinnedStreamer(channelID)));
+			}
+			const existingButton = el.querySelector<HTMLButtonElement>(".pin-streamer-button");
+			if (existingButton) {
+				this.pinButtons.set(channelID, existingButton);
+				const isPinned = this.isPinnedStreamer(channelID);
+				existingButton.style.display = isPinned ? "inline-block" : "none";
+			} else {
+				this.createPin(el);
+			}
+		}
+
+		for (const id of Array.from(this.pinStates.keys())) {
+			if (!presentIds.has(id)) this.pinStates.delete(id);
+		}
+		for (const id of Array.from(this.pinButtons.keys())) {
+			if (!presentIds.has(id)) this.pinButtons.delete(id);
+		}
+	}
+
 	private hookPersonalSectionsRender() {
 		const reactComponent = this.twitchUtils().getPersonalSections();
 		if (!reactComponent) return;
@@ -118,6 +180,7 @@ export default class PinStreamerModule extends TwitchModule {
 		reactComponent.render = (...data: any[]) => {
 			this.logger.debug("Rendering personal section channels");
 			this.updateFollowList();
+			this.refreshPinsFromDom();
 			return originalFunction.apply(reactComponent, data);
 		};
 		this.logger.debug("Hooked into personal section render function");
@@ -178,6 +241,7 @@ export default class PinStreamerModule extends TwitchModule {
 			this.pinnedStreamers.push(channelId);
 		}
 		await this.settingsService().updateSettingsKey("pinnedStreamers", this.pinnedStreamers);
+		this.emitter.emit("twitch:pinnedStreamersUpdated", this.pinnedStreamers);
 		return !isPinned;
 	}
 

@@ -1,4 +1,4 @@
-import { type MessageMenuEvent, MessageMenuOption } from "$shared/components/message-menu/message-menu.component.tsx";
+import type { MessageMenuEvent } from "$shared/components/message-menu/message-menu.component.tsx";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { TwitchSettingsEvents } from "$types/platforms/twitch/twitch.settings.types.ts";
 import type { ComponentChildren } from "preact";
@@ -8,6 +8,7 @@ export type TwitchEvents = {
 	"twitch:chatMessage": (message: TwitchChatMessageEvent) => void | Promise<void>;
 	"twitch:chatPopupMessage": (message: ChatMessagePopupEvent) => void | Promise<void>;
 	"twitch:messageMenu": (message: MessageMenuEvent) => void | Promise<void>;
+	"twitch:pinnedStreamersUpdated": (pinned: string[]) => void | Promise<void>;
 } & TwitchSettingsEvents &
 	CommonEvents;
 

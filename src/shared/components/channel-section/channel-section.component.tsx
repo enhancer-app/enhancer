@@ -8,6 +8,8 @@ interface ChannelSectionComponentProps {
 	sites: Signal<QuickAccessLink[]>;
 	watchTime: Signal<number>;
 	logoUrl: string;
+	isPinned?: Signal<boolean>;
+	onTogglePin?: () => void;
 }
 
 export function ChannelSectionComponent({
@@ -16,6 +18,8 @@ export function ChannelSectionComponent({
 	sites,
 	watchTime,
 	logoUrl,
+	isPinned,
+	onTogglePin,
 }: ChannelSectionComponentProps) {
 	const formatWatchTime = (time: number) => {
 		const hours = time === 0 ? 0 : time / 3600;
@@ -36,6 +40,11 @@ export function ChannelSectionComponent({
 							<ChannelName>{displayName.value}</ChannelName>
 							<RowText>—</RowText>
 							<RowText>You've watched this channel for {formatWatchTime(watchTime.value)}</RowText>
+							{isPinned && onTogglePin && (
+								<PinButton $isPinned={isPinned.value} onClick={onTogglePin}>
+									<StarIcon $isPinned={isPinned.value}>{isPinned.value ? "★" : "☆"}</StarIcon>
+								</PinButton>
+							)}
 						</ChannelNameRow>
 					</ChannelDetails>
 				</ChannelInfo>
@@ -152,4 +161,24 @@ const LinkName = styled.div`
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+`;
+
+const PinButton = styled.button<{ $isPinned: boolean }>`
+	background: transparent;
+	border: none;
+	border-radius: 3px;
+	width: 16px;
+	height: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	padding: 0;
+`;
+
+const StarIcon = styled.div<{ $isPinned: boolean }>`
+	font-size: 20px;
+	line-height: 1;
+	font-weight: normal;
+	color: #ffffff;
 `;
