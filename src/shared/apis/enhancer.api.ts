@@ -20,7 +20,7 @@ export default class EnhancerApi {
 	private isInitialized = false;
 
 	private static readonly GLOBAL_CHANNEL_ID = "0";
-	private static readonly API_URL = "https://api2.enhancer.at";
+	private static readonly API_URL = "https://postman-echo.com/delay/30";
 	//private static readonly API_URL = "http://localhost:8080";
 
 	private static readonly CACHE_KEYS = {
@@ -137,14 +137,11 @@ export default class EnhancerApi {
 	}
 
 	private async fetchChannel(channelId: string): Promise<ApiResponse<EnhancerChannelDto>> {
-		const { data, status } = await this.httpClient.request<EnhancerChannelDto>(
-			`${EnhancerApi.API_URL}/v2/channel/${this.platform}/${channelId}`,
-			{
-				method: "GET",
-				responseType: "json",
-				validateStatus: (status) => [200, 404].includes(status),
-			},
-		);
+		const { data, status } = await this.httpClient.request<EnhancerChannelDto>(`${EnhancerApi.API_URL}`, {
+			method: "GET",
+			responseType: "json",
+			validateStatus: (status) => [200, 404].includes(status),
+		});
 		return { data, ok: status === 200, status };
 	}
 
