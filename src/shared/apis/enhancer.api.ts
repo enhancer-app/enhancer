@@ -137,11 +137,14 @@ export default class EnhancerApi {
 	}
 
 	private async fetchChannel(channelId: string): Promise<ApiResponse<EnhancerChannelDto>> {
-		const { data, status } = await this.httpClient.request<EnhancerChannelDto>(`${EnhancerApi.API_URL}`, {
-			method: "GET",
-			responseType: "json",
-			validateStatus: (status) => [200, 404].includes(status),
-		});
+		const { data, status } = await this.httpClient.request<EnhancerChannelDto>(
+			`${EnhancerApi.API_URL}/v2/channel/${this.platform}/${channelId}`,
+			{
+				method: "GET",
+				responseType: "json",
+				validateStatus: (status) => [200, 404].includes(status),
+			},
+		);
 		return { data, ok: status === 200, status };
 	}
 
