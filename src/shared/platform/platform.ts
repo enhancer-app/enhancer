@@ -35,7 +35,9 @@ export default abstract class Platform<
 	protected async initialize(): Promise<void> {}
 
 	async start() {
-		await this.enhancerApi.initialize(); // TODO Retry if something bad happen :(
+		this.tryInitializeEnhancerApi().catch((err) => {
+			this.logger.error("EnhancerApi init failed:", err);
+		});
 		this.workerApi.start();
 		await this.initialize();
 		await this.loadModules();
@@ -71,6 +73,22 @@ export default abstract class Platform<
 			}
 		}
 		this.appliers.forEach((applier) => applier.start());
+	}
+
+	private async tryInitializeEnhancerApi(retries = 5, delayMs = 5000): Promise<void> {
+		for (let attempt = 1; attempt <= retries; attempt++) {
+			try {
+				await this.enhancerApi.initialize();
+				this.logger.info("EnhancerApi initialized successfully");
+				return;
+			} catch (err) {
+				this.logger.warn(`EnhancerApi init attempt ${attempt} failed:`, err);
+				if (attempt < retries) {
+					await new Promise((res) => setTimeout(res, delayMs));
+				}
+			}
+		}
+		throw new Error(`Failed to initialize EnhancerApi after ${retries} attempts`);
 	}
 
 	getPlatformType() {
