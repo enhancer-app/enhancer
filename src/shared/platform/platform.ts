@@ -88,7 +88,7 @@ export default abstract class Platform<
 				}
 			}
 		}
-		this.logger.error("Failed to initialize EnhancerApi after retries");
+		throw new Error(`Failed to initialize EnhancerApi after ${retries} attempts`);
 	}
 
 	getPlatformType() {
