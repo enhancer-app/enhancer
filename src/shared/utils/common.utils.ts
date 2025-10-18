@@ -76,12 +76,7 @@ export default class CommonUtils {
 		if (!Number.isFinite(timeInMs) || timeInMs < 0) {
 			return "--:--:--";
 		}
-
 		const date = new Date(timeInMs);
-		if (Number.isNaN(date.getTime())) {
-			return "--:--:--";
-		}
-
 		const hours = date.getHours();
 		const minutes = date.getMinutes().toString().padStart(2, "0");
 		const seconds = date.getSeconds().toString().padStart(2, "0");
