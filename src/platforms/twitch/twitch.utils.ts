@@ -187,7 +187,7 @@ export default class TwitchUtils {
 		if (!element) return;
 		const props = this.reactUtils.findReactChildren<ScrollableChatComponent>(
 			this.reactUtils.getReactInstance(element),
-			(n) => n?.stateNode?.props?.scrollToBottom && n?.stateNode?.props?.messagesHash,
+			(n) => n?.stateNode?.props?.setPaused && n?.stateNode?.props?.messagesHash,
 			100,
 		)?.stateNode.props;
 		if (!props) return;
@@ -206,7 +206,8 @@ export default class TwitchUtils {
 		if (sevenTvChat) {
 			sevenTvChat.scrollTop = sevenTvChat.scrollHeight;
 		} else if (nativeChat) {
-			nativeChat.props.scrollToBottom();
+			nativeChat.props.setPaused(true);
+			nativeChat.props.setPaused(false);
 		}
 	}
 
