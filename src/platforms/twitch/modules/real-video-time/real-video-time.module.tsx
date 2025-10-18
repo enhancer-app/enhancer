@@ -83,7 +83,9 @@ export default class RealVideoTimeModule extends TwitchModule {
 			const { data } = await this.getVideoTime(videoId);
 			const createdAt = data?.video?.createdAt;
 			if (!createdAt) return;
-			return new Date(createdAt);
+			const date = new Date(createdAt);
+			if (Number.isNaN(date.getTime())) return;
+			return date;
 		} catch (error) {
 			this.logger.warn("Failed to fetch video createdAt", error);
 		}
