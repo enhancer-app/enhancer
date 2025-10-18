@@ -175,7 +175,7 @@ export type ScrollableChatComponent = {
 		children: HTMLElement[];
 		focusEscape: () => void;
 		messageHash: TwitchChatMessage[];
-		scrollToBottom: () => void;
+		setPaused: (paused: boolean) => void;
 	};
 };
 
