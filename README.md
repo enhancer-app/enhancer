@@ -3,9 +3,9 @@
 
 Download **Enhancer** for your preferred browser:
 
-*   **Google Chrome**: [Click here to download](https://sh.enhancer.at/s/chrome)
-*   **Mozilla Firefox**: [Click here to download](https://sh.enhancer.at/s/firefox)
-*   **Any Chromium-based browser (Brave, Edge, Opera, etc.)**: [Click here to download](https://sh.enhancer.at/s/chrome)
+*   **Google Chrome**: [Click here to download](https://sh.enhancer.at/chrome)
+*   **Mozilla Firefox**: [Click here to download](https://sh.enhancer.at/firefox)
+*   **Any Chromium-based browser (Brave, Edge, Opera, etc.)**: [Click here to download](https://sh.enhancer.at/chrome)
 
 For more information, please visit our page: [enhancer.at](https://enhancer.at)
 
