@@ -109,6 +109,6 @@ export default class KickUtils {
 	}
 
 	isLiveVideo(video: HTMLVideoElement): boolean {
-		return video.duration === Infinity;
+		return video.duration === Number.POSITIVE_INFINITY;
 	}
 }
