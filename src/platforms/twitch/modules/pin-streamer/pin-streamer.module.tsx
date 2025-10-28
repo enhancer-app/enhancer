@@ -73,9 +73,7 @@ export default class PinStreamerModule extends TwitchModule {
 	private createPin(channelWrapper: Element) {
 		if (
 			channelWrapper.querySelector(".pin-streamer-button") ||
-			channelWrapper.querySelector(
-				'a[data-test-selector="similarity-channel"]',
-			) ||
+			channelWrapper.querySelector('a[data-test-selector="similarity-channel"]') ||
 			channelWrapper.querySelector(".side-nav-card__link--promoted-followed")
 		)
 			return;
