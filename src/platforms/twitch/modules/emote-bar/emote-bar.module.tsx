@@ -46,7 +46,7 @@ export default class EmoteBarModule extends TwitchModule {
 				if (!src) return null;
 				const w = img.naturalWidth || img.width;
 				const h = img.naturalHeight || img.height;
-				const isWide = h > 0 && w / h > 1.35;
+				const isWide = h > 0 && w / h > 1;
 				return { src, alt: img.alt || "", isWide } as EmoteItem;
 			})
 			.filter((e): e is EmoteItem => e !== null);
@@ -250,21 +250,26 @@ const EmoteBarWrapper = styled.div`
 	border: 0;
 	padding: 6px 8px;
 	color: #efeff1;
-	display: grid;
-	grid-auto-flow: dense;
-	grid-template-columns: repeat(9, minmax(0, 1fr));
-	grid-template-rows: repeat(2, 1fr);
+	display: flex;
+	flex-wrap: wrap;
+
 	align-items: center;
 	gap: 8px 10px;
-	min-height: 72px;
-	overflow-x: auto;
+
+	/* Still enforces the 2-row limit */
+	height: 92px; /* 36(row) + 8(gap) + 36(row) + 6(pad) + 6(pad) */
+	overflow: hidden;
+
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 6px;
 `;
 
 const EmoteImage = styled.img`
-	width: 36px;
-	height: 36px;
+	/* Width is now 'auto' by default */
+	height: 28px; /* All images will have this height */
 	object-fit: contain;
-    cursor: pointer;
+	cursor: pointer;
+	flex-shrink: 0;
 `;
 
 function EmoteBar({
@@ -272,17 +277,18 @@ function EmoteBar({
 	onInsert,
 	onSend,
 }: { emotes: Signal<EmoteItem[]>; onInsert: (alt: string) => void; onSend: (alt: string) => void }) {
+	// Note: Your 'EmoteItem' type no longer needs the 'isWide' property
+
 	return (
 		<EmoteBarWrapper>
 			{emotes.value.map((item, index) => (
-				<div key={`${item.src}-${index}`} style={{ gridColumn: item.isWide ? "span 2" : "span 1" }}>
-					<EmoteImage
-						src={item.src}
-						alt={item.alt}
-						onClick={(e) => (e.ctrlKey ? onSend(item.alt) : onInsert(item.alt))}
-						style={{ width: item.isWide ? 72 : 36, height: 36 }}
-					/>
-				</div>
+				<EmoteImage
+					key={`${item.src}-${index}`}
+					src={item.src}
+					alt={item.alt}
+					onClick={(e) => (e.ctrlKey ? onSend(item.alt) : onInsert(item.alt))}
+					/* The inline 'style' prop is gone! */
+				/>
 			))}
 		</EmoteBarWrapper>
 	);
