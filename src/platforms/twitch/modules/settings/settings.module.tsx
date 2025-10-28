@@ -113,6 +113,7 @@ export default class SettingsModule extends TwitchModule {
 				description: "Shows a section with watch time and quick access links.",
 				type: "toggle",
 				tabIndex: tabIndexes.General,
+				requiresRefreshToDisable: true,
 			},
 			{
 				id: "chatImagesEnabled",
