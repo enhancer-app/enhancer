@@ -11,6 +11,7 @@ export type KickSettings = {
 	streamLatencyEnabled: boolean;
 	realVideoTimeEnabled: boolean;
 	realVideoTimeFormat12h: boolean;
+	channelSection: boolean;
 };
 
 export type KickSettingsEvents = {

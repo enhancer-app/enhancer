@@ -14,6 +14,7 @@ export default class ChannelSectionModule extends KickModule {
 
 	readonly config: KickModuleConfig = {
 		name: "channel-info",
+		isModuleEnabledCallback: async () => this.settingsService().getSettingsKey("channelSection"),
 		appliers: [
 			{
 				type: "selector",

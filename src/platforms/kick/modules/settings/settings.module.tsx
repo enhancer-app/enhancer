@@ -91,6 +91,13 @@ export default class SettingsModule extends KickModule {
 				tabIndex: tabIndexes.General,
 			},
 			{
+				id: "channelSection",
+				title: "Channel Section",
+				description: "Shows a section with watch time and quick access links.",
+				type: "toggle",
+				tabIndex: tabIndexes.General,
+			},
+			{
 				id: "chatImagesEnabled",
 				title: "Enable Chat Images",
 				description: "Display images sent in chat messages.",
