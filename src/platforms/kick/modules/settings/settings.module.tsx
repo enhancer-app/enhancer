@@ -96,6 +96,7 @@ export default class SettingsModule extends KickModule {
 				description: "Shows a section with watch time and quick access links.",
 				type: "toggle",
 				tabIndex: tabIndexes.General,
+				requiresRefreshToDisable: true,
 			},
 			{
 				id: "chatImagesEnabled",
