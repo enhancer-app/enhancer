@@ -108,6 +108,14 @@ export default class SettingsModule extends TwitchModule {
 				tabIndex: tabIndexes.General,
 			},
 			{
+				id: "channelSection",
+				title: "Channel Section",
+				description: "Shows a section with watch time and quick access links.",
+				type: "toggle",
+				tabIndex: tabIndexes.General,
+				requiresRefreshToDisable: true,
+			},
+			{
 				id: "chatImagesEnabled",
 				title: "Enable Chat Images",
 				description: "Display images sent in chat messages.",
