@@ -108,14 +108,6 @@ export default class SettingsModule extends TwitchModule {
 				tabIndex: tabIndexes.General,
 			},
 			{
-				id: "emoteBarEnabled",
-				title: "Enable Emote Bar",
-				description: "Displays a bar with emotes in chat.",
-				type: "toggle",
-				tabIndex: 1,
-				requiresRefreshToDisable: true,
-			},
-			{
 				id: "chatImagesEnabled",
 				title: "Enable Chat Images",
 				description: "Display images sent in chat messages.",
@@ -194,6 +186,14 @@ export default class SettingsModule extends TwitchModule {
 				max: 100,
 				step: 1,
 				tabIndex: tabIndexes.Chat,
+			},
+			{
+				id: "emoteBarEnabled",
+				title: "Enable Emote Bar",
+				description: "Displays a bar with emotes in chat.",
+				type: "toggle",
+				tabIndex: tabIndexes.Experimental,
+				requiresRefreshToDisable: true,
 			},
 			{
 				id: "quickAccessLinks",

@@ -3,6 +3,7 @@ import { Logger } from "$shared/logger/logger.ts";
 import type {
 	EnhancerBadge,
 	EnhancerChannelDto,
+	EnhancerEmote,
 	EnhancerStreamerWatchTimeData,
 	EnhancerUser,
 } from "$types/apis/enhancer.apis.ts";
@@ -109,7 +110,7 @@ export default class EnhancerApi {
 		const url = `${EnhancerApi.EMOTES_API_URL}/v1/channel/${encodeURIComponent(username)}/emotes/all`;
 
 		try {
-			const response = await this.httpClient.request<Array<{ provider: number; code: string }>>(url, { timeout: 8000 });
+			const response = await this.httpClient.request<EnhancerEmote[]>(url, { timeout: 8000 });
 			const data = response.data || [];
 			for (const em of data || []) codes.add(em.code);
 			this.channelEmotesCache.set(username, codes);
@@ -127,7 +128,7 @@ export default class EnhancerApi {
 		const url = `${EnhancerApi.EMOTES_API_URL}/v1/global/emotes/all`;
 
 		try {
-			const response = await this.httpClient.request<Array<{ provider: number; code: string }>>(url, { timeout: 8000 });
+			const response = await this.httpClient.request<EnhancerEmote[]>(url, { timeout: 8000 });
 			const data = response.data || [];
 			for (const em of data || []) codes.add(em.code);
 			this.globalEmotesCache = codes;

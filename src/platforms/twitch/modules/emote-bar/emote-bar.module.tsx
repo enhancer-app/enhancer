@@ -1,11 +1,10 @@
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchChatMessageEvent } from "$types/platforms/twitch/twitch.events.types.ts";
+import type { EmoteItem } from "$types/platforms/twitch/twitch.utils.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import { render } from "preact";
 import styled from "styled-components";
-
-type EmoteItem = { src: string; alt: string; isWide?: boolean };
 
 export default class EmoteBarModule extends TwitchModule {
 	private emotes: Signal<EmoteItem[]> = signal([]);

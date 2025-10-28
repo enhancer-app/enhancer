@@ -286,3 +286,5 @@ export type GuestStarChannelGuestListProps = {
 	channelID: string;
 	currentUserID: string;
 };
+
+export type EmoteItem = { src: string; alt: string; isWide?: boolean };
