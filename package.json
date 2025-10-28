@@ -2,7 +2,7 @@
 	"name": "enhancer",
 	"module": "src/content/index.ts",
 	"type": "module",
-	"version": "5.1.16",
+	"version": "5.1.17",
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
 		"@preact/preset-vite": "^2.10.2",
@@ -13,7 +13,7 @@
 		"concurrently": "^9.1.2",
 		"husky": "^9.1.7",
 		"jszip": "^3.10.1",
-		"vite": "^7.0.5",
+		"vite": "^7.1.11",
 		"vite-plugin-generate-file": "^0.3.1",
 		"vite-tsconfig-paths": "^5.1.4"
 	},

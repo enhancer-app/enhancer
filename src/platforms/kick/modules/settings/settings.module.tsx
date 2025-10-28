@@ -51,23 +51,28 @@ export default class SettingsModule extends KickModule {
 				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/channel.svg"),
 			},
 			{
+				title: "Experimental",
+				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/experimental.svg"),
+			},
+			{
 				title: "About",
 				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/about.svg"),
 			},
-		];
+		] as const;
+		const tabIndexes = Object.fromEntries(this.SETTINGS_TABS.map((tab, index) => [tab.title, index]));
 		const brandIcons = {
 			website: await this.commonUtils().getAssetFile(this.workerService(), "brands/website.svg"),
 			github: await this.commonUtils().getAssetFile(this.workerService(), "brands/github.svg"),
 			twitter: await this.commonUtils().getAssetFile(this.workerService(), "brands/twitter.svg"),
 			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
-		};
+		} as const;
 		this.SETTING_DEFINITIONS = [
 			{
 				id: "streamLatencyEnabled",
 				title: "Enable Stream Latency",
 				description: "Shows the current stream delay on top of the chat.",
 				type: "toggle",
-				tabIndex: 0,
+				tabIndex: tabIndexes.General,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -75,7 +80,7 @@ export default class SettingsModule extends KickModule {
 				title: "Enable Real Video Time",
 				description: "Displays the real-world time of the VOD.",
 				type: "toggle",
-				tabIndex: 0,
+				tabIndex: tabIndexes.General,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -83,7 +88,15 @@ export default class SettingsModule extends KickModule {
 				title: "Use 12-Hour Time Format",
 				description: "Display real video time in 12-hour format (AM/PM) instead of 24-hour format.",
 				type: "toggle",
-				tabIndex: 0,
+				tabIndex: tabIndexes.General,
+			},
+			{
+				id: "channelSection",
+				title: "Channel Section",
+				description: "Shows a section with watch time and quick access links.",
+				type: "toggle",
+				tabIndex: tabIndexes.General,
+				requiresRefreshToDisable: true,
 			},
 			{
 				id: "chatImagesEnabled",
@@ -93,21 +106,21 @@ export default class SettingsModule extends KickModule {
 				confirmOnEnable: true,
 				confirmationMessage:
 					"Enhancer is not responsible for the content of images sent in the chat by users. By enabling this option, you can see images in the chat that may not look good. We do not moderate them in any way, we simply display them. Are you sure you want to enable this option?",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 			},
 			{
 				id: "chatImagesOnHover",
 				title: "Show Images on Hover",
 				description: "Images are hidden until you hover your mouse to reveal them.",
 				type: "toggle",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 			},
 			{
 				id: "chatImagesSize",
 				title: "Chat Image Size",
 				description: "Maximum size of images allowed in chat messages (in megabytes).",
 				type: "number",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 				min: 1,
 				step: 1,
 			},
@@ -116,14 +129,14 @@ export default class SettingsModule extends KickModule {
 				title: "Enable Chat Badges",
 				description: "Show custom chat badges from Enhancer extension.",
 				type: "toggle",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 			},
 			{
 				id: "chatNicknameCustomizationEnabled",
 				title: "Enable Nickname Customization",
 				description: "Show custom chat nickname customizations from Enhancer extension in chat.",
 				type: "toggle",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 			},
 			// {
 			// 	id: "chatMessageMenuEnabled",
@@ -137,7 +150,7 @@ export default class SettingsModule extends KickModule {
 				title: "Quick Access Links",
 				description: "Manage your quick access links with custom names and URLs",
 				type: "array",
-				tabIndex: 2,
+				tabIndex: tabIndexes.Channel,
 				arrayItemFields: [
 					{ name: "title", placeholder: "Enter link name..." },
 					{ name: "url", placeholder: "Enter URL..." },
@@ -148,7 +161,7 @@ export default class SettingsModule extends KickModule {
 				title: "Watchtime List",
 				description: "Watchtime List",
 				type: "text",
-				tabIndex: 2,
+				tabIndex: tabIndexes.Channel,
 				content: () => {
 					return <WatchtimeListComponent platform="kick" workerService={workerService} />;
 				},
@@ -159,7 +172,7 @@ export default class SettingsModule extends KickModule {
 				title: "About This Extension",
 				description: "Information about the extension",
 				type: "text",
-				tabIndex: 3,
+				tabIndex: tabIndexes.About,
 				content: () => {
 					return <EnhancerAboutComponent icons={brandIcons} />;
 				},

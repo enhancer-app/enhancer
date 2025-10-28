@@ -56,6 +56,7 @@ export default class StreamLatencyModule extends KickModule {
 			return;
 		}
 		this.setLive(true);
+		if (video.paused) return;
 		this.latencyCounter.value = this.computeLatency(video);
 	}
 
