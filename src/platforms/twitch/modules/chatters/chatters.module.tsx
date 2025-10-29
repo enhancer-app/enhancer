@@ -1,9 +1,7 @@
 import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import { ChattersQuery } from "$twitch/apis/twitch-queries.ts";
 import type { ChattersResponse } from "$types/platforms/twitch/twitch.api.types.ts";
-import type { TwitchEvents } from "$types/platforms/twitch/twitch.events.types.ts";
-import type { GuestStarChannelGuestListProps } from "$types/platforms/twitch/twitch.utils.types.ts";
-import { ModuleConfig, type TwitchModuleConfig } from "$types/shared/module/module.types.ts";
+import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import { render } from "preact";
 import styled from "styled-components";
@@ -69,13 +67,13 @@ export default class ChattersModule extends TwitchModule {
 		return container?.querySelector("p")?.textContent ?? null;
 	}
 
-	private getUniqueLogins(guestList: GuestStarChannelGuestListProps | undefined): string[] {
+	private getUniqueLogins(channelList: string[] | undefined): string[] {
 		return [
 			...new Set<string>(
 				[
 					this.twitchUtils().getCurrentChannelByUrl(),
 					this.twitchUtils().getCurrentChannelFromDirectTwitchPlayer(),
-					...(guestList?.guestList?.map((guest) => guest.user.login) ?? []),
+					...(channelList ?? []),
 				].filter(Boolean) as string[],
 			),
 		];
@@ -100,7 +98,7 @@ export default class ChattersModule extends TwitchModule {
 					content={
 						<span>Chatters are logged-in users in a Twitch stream’s chatroom. Click here to refresh the counter.</span>
 					}
-					position="bottom"
+					position="right"
 				>
 					<ChattersComponent click={this.refreshChatters.bind(this)} counter={this.totalChattersCounter} />
 				</TooltipComponent>,
@@ -146,9 +144,10 @@ export default class ChattersModule extends TwitchModule {
 
 	private async refreshChatters(loginsToUpdate: string[] = []) {
 		await this.commonUtils().waitFor(
-			() => this.getGuestListOrIsAllowedPage(),
+			() => this.getLoginsOrIsAllowedPage(),
 			async (guestList) => {
 				const uniqueLogins = this.getUniqueLogins(guestList === true ? undefined : guestList);
+				this.logger.debug("Refreshing chatters for", uniqueLogins);
 
 				const logins =
 					loginsToUpdate.length > 0 ? uniqueLogins.filter((login) => loginsToUpdate.includes(login)) : uniqueLogins;
@@ -182,12 +181,20 @@ export default class ChattersModule extends TwitchModule {
 		);
 	}
 
-	private getGuestListOrIsAllowedPage() {
-		return (
-			this.twitchUtils().isDirectTwitchPlayer() ||
-			this.twitchUtils().isModeratorView() ||
-			this.twitchUtils().getGuestList()
+	private getLoginsOrIsAllowedPage() {
+		return this.twitchUtils().isDirectTwitchPlayer() || this.twitchUtils().isModeratorView() || this.getLogins();
+	}
+
+	private getLogins(): string[] {
+		const streamInfo = this.twitchUtils().getStreamInfo();
+		const organizerLogin = streamInfo?.channelLogin;
+		const costreamerLogins = streamInfo?.costreamDetails?.topCostreamers.map((streamer) => streamer.login) ?? [];
+		const guestStarLogins = streamInfo?.guestStarGuests.map((guest) => guest.user.login) ?? [];
+		const allLoginsWithDuplicates = [organizerLogin, ...costreamerLogins, ...guestStarLogins];
+		const validLogins = allLoginsWithDuplicates.filter(
+			(login): login is string => login !== undefined && login !== null,
 		);
+		return Array.from(new Set(validLogins));
 	}
 
 	private updateTotalChattersCounter() {
