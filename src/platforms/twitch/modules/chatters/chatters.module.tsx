@@ -145,8 +145,8 @@ export default class ChattersModule extends TwitchModule {
 	private async refreshChatters(loginsToUpdate: string[] = []) {
 		await this.commonUtils().waitFor(
 			() => this.getLoginsOrIsAllowedPage(),
-			async (guestList) => {
-				const uniqueLogins = this.getUniqueLogins(guestList === true ? undefined : guestList);
+			async (channelList) => {
+				const uniqueLogins = this.getUniqueLogins(channelList === true ? undefined : channelList);
 				this.logger.debug("Refreshing chatters for", uniqueLogins);
 
 				const logins =
