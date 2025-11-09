@@ -20,7 +20,7 @@ export default class EnhancerApi {
 	private isInitialized = false;
 
 	private static readonly GLOBAL_CHANNEL_ID = "0";
-	private static readonly API_URL = "https://api2.enhancer.at";
+	private static readonly API_URL = "https://api.enhancer.at";
 	//private static readonly API_URL = "http://localhost:8080";
 
 	private static readonly CACHE_KEYS = {
