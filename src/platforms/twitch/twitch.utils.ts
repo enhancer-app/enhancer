@@ -10,11 +10,11 @@ import type {
 	ChatInputComponent,
 	CurrentLiveStatusComponent,
 	FollowedSectionComponenet,
-	GuestStarChannelGuestListProps,
 	MediaPlayerComponent,
 	PersistentPlayerComponent,
 	RootComponent,
 	ScrollableChatComponent,
+	StreamInfoTwitchStreamData,
 	TwitchChatCommand,
 	TwitchChatMessageComponent,
 } from "$types/platforms/twitch/twitch.utils.types";
@@ -269,18 +269,13 @@ export default class TwitchUtils {
 		)?.pendingProps.value.client;
 	}
 
-	getGuestList(): GuestStarChannelGuestListProps | undefined {
-		const props = this.reactUtils.findReactChildren<GuestStarChannelGuestListProps>(
+	getStreamInfo() {
+		const props = this.reactUtils.findReactChildren<never, never, StreamInfoTwitchStreamData>(
 			this.reactUtils.getReactInstance(document.querySelector("#live-channel-stream-information")),
-			(n) => {
-				const nodeProps = n?.stateNode?.props;
-				if (nodeProps?.name === "GuestStarChannelGuestList") {
-					return nodeProps;
-				}
-				return false;
-			},
+			(n) => (n?.pendingProps?.costreamDetails !== undefined && n?.pendingProps?.costreamViewCount !== undefined) ||
+				(n?.pendingProps?.guestStarGuests !== undefined),
 			100,
-		)?.pendingProps.children.props.children.props.children.props;
+		)?.pendingProps;
 		if (!props) return;
 		return props;
 	}
