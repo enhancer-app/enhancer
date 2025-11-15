@@ -6,6 +6,8 @@ import type { ChannelChatRoom, ChannelChatRoomInfo, ChannelInfo } from "$types/p
 export default class KickUtils {
 	constructor(protected readonly reactUtils: ReactUtils) {}
 
+	private static readonly FIREFOX_LIVE_VIDEO_THRESHOLD = 5_000_000_000_000;
+
 	getMessageData(messageElement: Element): KickChatMessageData | null {
 		const props = this.reactUtils.findReactChildren<KickChatMessageData>(
 			this.reactUtils.getReactInstance(messageElement),
@@ -109,6 +111,6 @@ export default class KickUtils {
 	}
 
 	isLiveVideo(video: HTMLVideoElement): boolean {
-		return video.duration === Number.POSITIVE_INFINITY;
+		return video.duration === Number.POSITIVE_INFINITY || video.duration > KickUtils.FIREFOX_LIVE_VIDEO_THRESHOLD;
 	}
 }
