@@ -109,6 +109,7 @@ export default class KickUtils {
 	}
 
 	isLiveVideo(video: HTMLVideoElement): boolean {
-		return video.duration === Number.POSITIVE_INFINITY;
+		const FIREFOX_THRESHOLD = 5_000_000_000_000;
+		return video.duration === Number.POSITIVE_INFINITY || video.duration > FIREFOX_THRESHOLD;
 	}
 }
