@@ -192,7 +192,7 @@ export default class ChattersModule extends TwitchModule {
 		const guestStarLogins = streamInfo?.guestStarGuests.map((guest) => guest.user.login) ?? [];
 		const allLoginsWithDuplicates = [organizerLogin, ...costreamerLogins, ...guestStarLogins];
 		const validLogins = allLoginsWithDuplicates.filter(
-			(login): login is string => login !== undefined && login !== null,
+			(login): login is string => login != null,
 		);
 		return Array.from(new Set(validLogins));
 	}

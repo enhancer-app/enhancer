@@ -318,7 +318,7 @@ interface StreamInfoCostreamDetails {
 	totalViewersCount: number;
 	organizer: StreamInfoUser;
 	costreamersCount: number;
-	role: "ORGANIZER";
+	role: "ORGANIZER" | string;
 	topCostreamers: StreamInfoCostreamer[];
 }
 
