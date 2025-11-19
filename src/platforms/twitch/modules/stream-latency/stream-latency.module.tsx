@@ -47,6 +47,8 @@ export default class StreamLatencyModule extends TwitchModule {
 				<LatencyComponent
 					isLive={this.isLiveState}
 					latencyCounter={this.latencyCounter}
+					// TODO: Placeholder for now to avoid errors
+					playbackRate={signal(1)}
 					click={this.resetPlayer.bind(this)}
 				/>,
 				element,
