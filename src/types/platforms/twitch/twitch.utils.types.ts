@@ -60,7 +60,7 @@ export type MediaPlayerContentType =
 	| { vodID: string; type: "vod" };
 
 export type MediaPlayerInstance = {
-	core: { state: { liveLatency: number; ingestLatency: number }; paused: boolean };
+	core: { state: { liveLatency: number; ingestLatency: number; playbackRate?: number }; paused: boolean };
 	seekTo: (time: number) => void;
 	getPosition(): number;
 };

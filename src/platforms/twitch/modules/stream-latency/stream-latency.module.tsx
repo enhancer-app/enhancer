@@ -8,6 +8,8 @@ export default class StreamLatencyModule extends TwitchModule {
 	private latencyCounter = {} as Signal<number>;
 	private isLiveState = {} as Signal<boolean>;
 	private updateInterval: NodeJS.Timeout | undefined;
+	private playbackRate = signal(1);
+	private threshold = signal(5);
 
 	readonly config: TwitchModuleConfig = {
 		name: "stream-latency",
@@ -47,8 +49,7 @@ export default class StreamLatencyModule extends TwitchModule {
 				<LatencyComponent
 					isLive={this.isLiveState}
 					latencyCounter={this.latencyCounter}
-					// TODO: Placeholder for now to avoid errors
-					playbackRate={signal(1)}
+					playbackRate={this.playbackRate}
 					click={this.resetPlayer.bind(this)}
 				/>,
 				element,
@@ -69,6 +70,32 @@ export default class StreamLatencyModule extends TwitchModule {
 		const latency = this.getLatency();
 		if (latency === undefined || latency < 0) return;
 		this.latencyCounter.value = latency;
+
+		try {
+			const video = this.twitchUtils().getMediaPlayerInstance();
+			if (!video) return;
+			const videoPlayer = video.core.state;
+			if (!videoPlayer || !videoPlayer.playbackRate) return;
+
+			this.playbackRate.value = Number.parseFloat(videoPlayer.playbackRate.toFixed(2));
+
+			if (this.latencyCounter.value > this.threshold.value) {
+				const min = 1.03;
+				const max = 1.1;
+				const maxSpeedLatency = this.threshold.value * 3;
+
+				videoPlayer.playbackRate =
+					this.latencyCounter.value > maxSpeedLatency
+						? max
+						: min +
+							((max - min) * (this.latencyCounter.value - this.threshold.value)) /
+								(maxSpeedLatency - this.threshold.value);
+			} else {
+				videoPlayer.playbackRate = 1;
+			}
+		} catch (error) {
+			console.error(error);
+		}
 	}
 
 	private resetPlayer() {
