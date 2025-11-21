@@ -76,7 +76,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Stream Latency",
 				description: "Shows the current stream delay on top of the chat.",
 				type: "toggle",
-				tabIndex: tabIndexes.General,
+				tabIndex: tabIndexes.Latency,
 				requiresRefreshToDisable: true,
 			},
 			{
