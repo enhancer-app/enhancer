@@ -233,6 +233,38 @@ export default class SettingsModule extends TwitchModule {
 				},
 				hideInfo: true,
 			},
+			{
+				id: "streamLatencyReducerEnabled",
+				title: "Enable Stream Latency Reducer",
+				description: "Reduces stream latency by adjusting playback rate.",
+				type: "toggle",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerMinRate",
+				title: "Minimum Playback Rate",
+				description: "The minimum playback rate the stream will be speeded up to.",
+				type: "number",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerMaxRate",
+				title: "Maximum Playback Rate",
+				description: "The maximum playback rate the stream will be speeded up to.",
+				type: "number",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerThreshold",
+				title: "Latency Threshold",
+				description: "The latency threshold (in seconds) at which the playback rate will be speeded up.",
+				type: "number",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
 		];
 	}
 
