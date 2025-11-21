@@ -60,15 +60,11 @@ export type MediaPlayerContentType =
 	| { vodID: string; type: "vod" };
 
 export type MediaPlayerInstance = {
-<<<<<<< HEAD
-	core: { state: { liveLatency: number; ingestLatency: number; playbackRate?: number }; paused: boolean };
-=======
 	core: {
 		state: { liveLatency: number; ingestLatency: number };
 		paused: boolean;
 		renderSurface: { video: { element: () => HTMLVideoElement } };
 	};
->>>>>>> 4d3837f (feat(twitch): extend twitch media player instance types to include access to raw video element)
 	seekTo: (time: number) => void;
 	getPosition(): number;
 };
