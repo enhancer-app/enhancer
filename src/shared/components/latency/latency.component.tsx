@@ -4,7 +4,6 @@ import styled from "styled-components";
 
 interface LatencyComponentProps {
 	latencyCounter: Signal<number>;
-	playbackRate: Signal<number>;
 	isLive: Signal<boolean>;
 	click: () => void;
 }
@@ -38,7 +37,7 @@ const StatusDot = styled.span<{ isLive: boolean }>`
 	background-color: ${({ isLive }) => (isLive ? "#ff4d4d" : "#888")};
 `;
 
-export function LatencyComponent({ click, latencyCounter, playbackRate, isLive }: LatencyComponentProps) {
+export function LatencyComponent({ click, latencyCounter, isLive }: LatencyComponentProps) {
 	const formatLatency = () => {
 		if (latencyCounter.value === undefined || latencyCounter.value < 0 || Number.isNaN(latencyCounter.value)) {
 			return "Loading...";
@@ -50,9 +49,7 @@ export function LatencyComponent({ click, latencyCounter, playbackRate, isLive }
 		<TooltipComponent content={"Stream delay. Click to refresh player."} position={"bottom"}>
 			<LatencyWrapper onClick={click}>
 				<StatusDot isLive={isLive.value} />
-				{isLive.value
-					? `Latency: ${formatLatency()} ${playbackRate.value !== 1 ? ` (x${playbackRate.value})` : ""}`
-					: "OFFLINE"}
+				{isLive.value ? `Latency: ${formatLatency()}` : "OFFLINE"}
 			</LatencyWrapper>
 		</TooltipComponent>
 	);
