@@ -15,8 +15,10 @@ export type TwitchSettings = {
 	pinnedStreamers: string[];
 	streamLatencyEnabled: boolean;
 	streamLatencyReducerEnabled: boolean;
-	streamLatencyReducerCatchUpRate: number;
-	streamLatencyReducerThreshold: number;
+	streamLatencyReducerMinRate: number;
+	streamLatencyReducerMaxRate: number;
+	streamLatencyReducerMinThreshold: number;
+	streamLatencyReducerMaxThreshold: number;
 	realVideoTimeEnabled: boolean;
 	realVideoTimeFormat12h: boolean;
 	pinnedStreamersEnabled: boolean;
