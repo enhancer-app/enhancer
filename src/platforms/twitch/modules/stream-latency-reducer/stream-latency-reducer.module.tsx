@@ -21,26 +21,42 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 	private async run() {
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(async () => {
-			const latency = this.getLatency();
 			const status = await this.getPlaybackRateStatus();
-			const { threshold } = await this.getSettings();
-			if (latency && latency >= threshold && status === "caughtUp") {
-				this.setPlaybackRateMode("catchUp");
+			const { minThreshold, maxThreshold } = await this.getSettings();
+			let latency = this.getLatency();
+			if (!latency) return;
+			// add offset of 0.5 seconds to the latency when caught up.
+			// prevents rapid rate changes when caught up
+			if (status === "caughtUp") {
+				latency -= 0.5;
 			}
-			if (latency && latency < threshold && status === "catchingUp") {
+			if (latency >= maxThreshold) {
+				if (status === "catchingUpMax") return;
+				this.setPlaybackRateMode("catchUpMax");
+			} else if (latency >= minThreshold) {
+				if (status === "catchingUpMin") return;
+				this.setPlaybackRateMode("catchUpMin");
+			} else {
+				if (status === "caughtUp") return;
 				this.setPlaybackRateMode("reset");
 			}
 		}, 1000);
 	}
 
-	private async setPlaybackRateMode(mode: "catchUp" | "reset") {
+	private async setPlaybackRateMode(mode: "catchUpMin" | "catchUpMax" | "reset") {
 		const mediaPlayer = this.getPlayer();
 		if (!mediaPlayer) return;
 		const video = mediaPlayer.core.renderSurface.video.element();
-		if (mode === "catchUp") {
-			const { catchUpRate } = await this.getSettings();
-			this.logger.debug(`Max latency reached, speeding up playback rate to ${catchUpRate}x`);
-			video.playbackRate = catchUpRate;
+		if (mode === "catchUpMax") {
+			const { maxRate } = await this.getSettings();
+			this.preventFFZOverride(video, maxRate);
+			this.logger.debug(`Max latency reached, speeding up playback rate to ${maxRate}x`);
+			video.playbackRate = maxRate;
+		} else if (mode === "catchUpMin") {
+			const { minRate } = await this.getSettings();
+			this.preventFFZOverride(video, minRate);
+			this.logger.debug(`Min latency reached, speeding up playback rate to ${minRate}x`);
+			video.playbackRate = minRate;
 		} else {
 			this.logger.debug("Latency caught up, resetting playback rate to 1x");
 			video.playbackRate = 1;
@@ -52,16 +68,39 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		if (!mediaPlayer) return;
 		const playbackRate = this.twitchUtils().getMediaPlayerPlaybackRate();
 		if (!playbackRate) return;
-		const { catchUpRate } = await this.getSettings();
-		if (playbackRate >= Math.abs(catchUpRate)) return "catchingUp";
+		const { maxRate, minRate } = await this.getSettings();
+		if (playbackRate >= Math.abs(maxRate)) return "catchingUpMax";
+		if (playbackRate >= Math.abs(minRate)) return "catchingUpMin";
 		if (playbackRate <= Math.abs(1)) return "caughtUp";
 		return "invalid";
 	}
 
 	private async getSettings() {
-		const catchUpRate = await this.settingsService().getSettingsKey("streamLatencyReducerCatchUpRate");
-		const threshold = await this.settingsService().getSettingsKey("streamLatencyReducerThreshold");
-		return { catchUpRate, threshold };
+		const minRate = await this.settingsService().getSettingsKey("streamLatencyReducerMinRate");
+		const maxRate = await this.settingsService().getSettingsKey("streamLatencyReducerMaxRate");
+		const minThreshold = await this.settingsService().getSettingsKey("streamLatencyReducerMinThreshold");
+		const maxThreshold = await this.settingsService().getSettingsKey("streamLatencyReducerMaxThreshold");
+		return { minRate, maxRate, minThreshold, maxThreshold };
+	}
+
+	private preventFFZOverride(video: HTMLVideoElement, rate: number) {
+		if (
+			this.getFFZAllowCatchup() === false &&
+			video &&
+			"setFFZPlaybackRate" in video &&
+			// check for modified playbackRate property by FFZ
+			Object.prototype.hasOwnProperty.call(video, "playbackRate")
+		) {
+			this.logger.debug("FFZ playback rate override prevented");
+			video.playbackRate = rate;
+		}
+	}
+
+	private getFFZAllowCatchup() {
+		const ffz = (window as any).ffz;
+		if (ffz) {
+			return ffz.settings.get("player.allow-catchup") as boolean;
+		}
 	}
 
 	private getLatency() {
