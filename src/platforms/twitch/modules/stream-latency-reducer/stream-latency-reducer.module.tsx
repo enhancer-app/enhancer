@@ -25,19 +25,19 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 			const status = await this.getPlaybackRateStatus();
 			const { threshold } = await this.getSettings();
 			if (latency && latency >= threshold && status === "caughtUp") {
-				this.setPlaybackRate("catchUp");
+				this.setPlaybackRateMode("catchUp");
 			}
 			if (latency && latency < threshold && status === "catchingUp") {
-				this.setPlaybackRate("reset");
+				this.setPlaybackRateMode("reset");
 			}
 		}, 1000);
 	}
 
-	private async setPlaybackRate(method: "catchUp" | "reset") {
+	private async setPlaybackRateMode(mode: "catchUp" | "reset") {
 		const mediaPlayer = this.getPlayer();
 		if (!mediaPlayer) return;
 		const video = mediaPlayer.core.renderSurface.video.element();
-		if (method === "catchUp") {
+		if (mode === "catchUp") {
 			const { catchUpRate } = await this.getSettings();
 			this.logger.debug(`Max latency reached, speeding up playback rate to ${catchUpRate}x`);
 			video.playbackRate = catchUpRate;
@@ -50,10 +50,11 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 	private async getPlaybackRateStatus() {
 		const mediaPlayer = this.getPlayer();
 		if (!mediaPlayer) return;
-		const video = mediaPlayer.core.renderSurface.video.element();
+		const playbackRate = this.twitchUtils().getMediaPlayerPlaybackRate();
+		if (!playbackRate) return;
 		const { catchUpRate } = await this.getSettings();
-		if (video.playbackRate >= Math.abs(catchUpRate)) return "catchingUp";
-		if (video.playbackRate <= Math.abs(1)) return "caughtUp";
+		if (playbackRate >= Math.abs(catchUpRate)) return "catchingUp";
+		if (playbackRate <= Math.abs(1)) return "caughtUp";
 		return "invalid";
 	}
 
