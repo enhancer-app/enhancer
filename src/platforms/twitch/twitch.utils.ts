@@ -280,4 +280,10 @@ export default class TwitchUtils {
 		if (!props) return;
 		return props;
 	}
+
+	getMediaPlayerPlaybackRate() {
+		const mediaPlayer = this.getMediaPlayerInstance();
+		if (!mediaPlayer) return;
+		return mediaPlayer.core.renderSurface.video.element().playbackRate;
+	}
 }
