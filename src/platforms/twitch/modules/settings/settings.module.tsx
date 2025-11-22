@@ -72,14 +72,6 @@ export default class SettingsModule extends TwitchModule {
 		} as const;
 		this.SETTING_DEFINITIONS = [
 			{
-				id: "streamLatencyEnabled",
-				title: "Enable Stream Latency",
-				description: "Shows the current stream delay on top of the chat.",
-				type: "toggle",
-				tabIndex: tabIndexes.Latency,
-				requiresRefreshToDisable: true,
-			},
-			{
 				id: "realVideoTimeEnabled",
 				title: "Enable Real Video Time",
 				description: "Displays the real-world time of the VOD.",
@@ -223,15 +215,12 @@ export default class SettingsModule extends TwitchModule {
 				hideInfo: true,
 			},
 			{
-				id: "about",
-				title: "About This Extension",
-				description: "Information about the extension",
-				type: "text",
-				tabIndex: tabIndexes.About,
-				content: () => {
-					return <EnhancerAboutComponent icons={brandIcons} />;
-				},
-				hideInfo: true,
+				id: "streamLatencyEnabled",
+				title: "Enable Stream Latency",
+				description: "Shows the current stream delay on top of the chat.",
+				type: "toggle",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
 			},
 			{
 				id: "streamLatencyReducerEnabled",
@@ -258,6 +247,17 @@ export default class SettingsModule extends TwitchModule {
 				min: 0,
 				step: 0.25,
 				tabIndex: tabIndexes.Latency,
+			},
+			{
+				id: "about",
+				title: "About This Extension",
+				description: "Information about the extension",
+				type: "text",
+				tabIndex: tabIndexes.About,
+				content: () => {
+					return <EnhancerAboutComponent icons={brandIcons} />;
+				},
+				hideInfo: true,
 			},
 		];
 	}
