@@ -7,6 +7,7 @@ import TwitchModule from "../../twitch.module.ts";
 export default class StreamLatencyModule extends TwitchModule {
 	private latencyCounter = {} as Signal<number>;
 	private isLiveState = {} as Signal<boolean>;
+	private playbackRate = {} as Signal<number>;
 	private updateInterval: NodeJS.Timeout | undefined;
 
 	readonly config: TwitchModuleConfig = {
@@ -37,6 +38,9 @@ export default class StreamLatencyModule extends TwitchModule {
 		this.createLatencyCounter();
 		this.updateLatency();
 
+		this.createPlaybackRateSignal();
+		this.watchPlaybackRate();
+
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(async () => this.updateLatency(), 1000);
 
@@ -47,6 +51,7 @@ export default class StreamLatencyModule extends TwitchModule {
 				<LatencyComponent
 					isLive={this.isLiveState}
 					latencyCounter={this.latencyCounter}
+					playbackRate={this.playbackRate}
 					click={this.resetPlayer.bind(this)}
 				/>,
 				element,
@@ -67,6 +72,15 @@ export default class StreamLatencyModule extends TwitchModule {
 		const latency = this.getLatency();
 		if (latency === undefined || latency < 0) return;
 		this.latencyCounter.value = latency;
+	}
+
+	private watchPlaybackRate() {
+		const video = this.twitchUtils().getMediaPlayerInstance()?.core.renderSurface.video.element();
+		if (!video) return;
+		video.addEventListener("ratechange", () => {
+			const newRate = video.playbackRate;
+			this.playbackRate.value = newRate;
+		});
 	}
 
 	private resetPlayer() {
@@ -97,6 +111,16 @@ export default class StreamLatencyModule extends TwitchModule {
 			return;
 		}
 		return mediaPlayer.core.state.ingestLatency;
+	}
+
+	private createPlaybackRateSignal() {
+		if ("value" in this.playbackRate) return;
+		const video = this.twitchUtils().getMediaPlayerInstance()?.core.renderSurface.video.element();
+		if (!video) {
+			this.playbackRate = signal(1);
+			return;
+		}
+		this.playbackRate = signal(video.playbackRate);
 	}
 
 	private createLatencyCounter() {
