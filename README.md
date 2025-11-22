@@ -18,7 +18,8 @@ For more information, please visit our page: [enhancer.at](https://enhancer.at)
 
 <details>
 <summary>
-If you are using the developer version (`bun run dev`) in Chrome, you may need to allow **Local Network Access**.
+If you are using the developer version (`bun run dev`) in Chrome, you may need to allow Local Network Access.
 </summary>
-![chrome-local-network-access.png](docs/images/chrome-local-network-access.png)
+  
+<img src="https://github.com/enhancer-app/enhancer/blob/master/docs/images/chrome-local-network-access.png?raw=true" />
 </details>
