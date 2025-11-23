@@ -1,2 +1,2 @@
-bun run biome:check-staged
-git add .
+bun run typecheck
+bun run biome:check

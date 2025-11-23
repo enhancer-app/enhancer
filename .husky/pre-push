@@ -1,0 +1,3 @@
+bun run typecheck
+bun run biome:check
+bun run build
