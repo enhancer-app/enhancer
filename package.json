@@ -38,7 +38,7 @@
 		"biome:format": "biome format --write .",
 		"biome:ci": "biome check .",
 		"biome:watch": "biome check --watch .",
-		"dev": "ENVIRONMENT=development concurrently \"bun run biome:check-staged\" \"bun run typecheck:watch\" \"vite build --watch\" \"vite\"",
+		"dev": "ENVIRONMENT=development concurrently \"bun run biome:check\" \"bun run typecheck:watch\" \"vite build --watch\" \"vite\"",
 		"build": "ENVIRONMENT=production bun run biome:ci && bun run typecheck && vite build",
 		"pack": "bun run scripts/pack.ts",
 		"prepare": "husky"
