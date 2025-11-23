@@ -31,6 +31,7 @@ export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 		"i.nuuls.com",
 		"kappa.lol",
 		"files.igor.ovh",
+		"prnt.sc",
 		"files.catbox.moe",
 	];
 	static readonly CORSGO_PROXY_URL_PARSER = (url: URL) => {
