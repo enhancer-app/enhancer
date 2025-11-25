@@ -59,7 +59,9 @@ export function LatencyComponent({ click, latencyCounter, isLive, playbackRate }
 				{isLive.value ? (
 					<p>
 						Latency: {formatLatency()}{" "}
-						{playbackRate.value && playbackRate.value !== 1 && <PlaybackRate>({playbackRate.value}x)</PlaybackRate>}
+						{playbackRate.value && playbackRate.value !== 1 && (
+							<PlaybackRate>({playbackRate.value.toFixed(2)}x)</PlaybackRate>
+						)}
 					</p>
 				) : (
 					"OFFLINE"
