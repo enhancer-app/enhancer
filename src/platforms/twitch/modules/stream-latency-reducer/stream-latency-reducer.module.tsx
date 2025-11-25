@@ -41,6 +41,68 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 				this.setPlaybackRateMode("reset");
 			}
 		}, 1000);
+
+		//! DEV ONLY, delete before release
+		setTimeout(() => {
+			this.logger.debug("Added dev window");
+			const devRoot = document.createElement("div");
+			document.querySelector(".video-player__overlay")?.appendChild(devRoot);
+			devRoot.style.position = "absolute";
+			devRoot.style.right = "0";
+			devRoot.style.top = "0";
+			devRoot.style.width = "fit-content";
+			devRoot.style.height = "fit-content";
+			devRoot.style.backgroundColor = "red";
+			devRoot.style.padding = "10px";
+			devRoot.textContent = "test";
+
+			setInterval(async () => {
+				devRoot.innerHTML = `Latency: ${this.getLatency()?.toFixed(2)} <br>
+					Playback Rate: ${this.twitchUtils().getMediaPlayerPlaybackRate()?.toFixed(2)} <br>
+					Status: ${await this.getPlaybackRateStatus()} <br>
+					Min Rate: ${await this.getSettings().then((s) => s.minRate)} <br>
+					Max Rate: ${await this.getSettings().then((s) => s.maxRate)} <br>
+					Min Threshold: ${await this.getSettings().then((s) => s.minThreshold)} <br>
+					Max Threshold: ${await this.getSettings().then((s) => s.maxThreshold)}
+					`;
+			}, 100);
+		}, 3000);
+
+		this.updatePlaybackRate();
+	}
+
+	private updatePlaybackRate() {
+		const video = this.getPlayer();
+		if (!video) return;
+
+		if (!video.setEnhancedPlaybackRate) this.installPlaybackRate(video);
+
+		video.setEnhancedPlaybackRate(video.playbackRate);
+	}
+
+	private installPlaybackRate(video: any) {
+		if (video.setFFZPlaybackRate) return;
+
+		let playbackRate = video.playbackRate;
+
+		const installProperty = () => {
+			Object.defineProperty(video, "playbackRate", {
+				configurable: true,
+				get() {
+					return playbackRate;
+				},
+				set(val) {
+					video.setEnhancedPlaybackRate(val);
+				},
+			});
+		};
+
+		video.setEnhancedPlaybackRate = (rate: number) => {
+			video.playbackRat = undefined;
+			playbackRate = rate;
+			video.playbackRate = rate;
+			installProperty();
+		};
 	}
 
 	private async setPlaybackRateMode(mode: "catchUpMin" | "catchUpMax" | "reset") {
