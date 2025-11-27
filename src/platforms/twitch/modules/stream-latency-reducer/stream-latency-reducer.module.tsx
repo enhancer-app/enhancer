@@ -67,42 +67,6 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 					`;
 			}, 100);
 		}, 3000);
-
-		this.updatePlaybackRate();
-	}
-
-	private updatePlaybackRate() {
-		const video = this.getPlayer();
-		if (!video) return;
-
-		if (!video.setEnhancedPlaybackRate) this.installPlaybackRate(video);
-
-		video.setEnhancedPlaybackRate(video.playbackRate);
-	}
-
-	private installPlaybackRate(video: any) {
-		if (video.setFFZPlaybackRate) return;
-
-		let playbackRate = video.playbackRate;
-
-		const installProperty = () => {
-			Object.defineProperty(video, "playbackRate", {
-				configurable: true,
-				get() {
-					return playbackRate;
-				},
-				set(val) {
-					video.setEnhancedPlaybackRate(val);
-				},
-			});
-		};
-
-		video.setEnhancedPlaybackRate = (rate: number) => {
-			video.playbackRat = undefined;
-			playbackRate = rate;
-			video.playbackRate = rate;
-			installProperty();
-		};
 	}
 
 	private async setPlaybackRateMode(mode: "catchUpMin" | "catchUpMax" | "reset") {
@@ -111,12 +75,12 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		const video = mediaPlayer.core.renderSurface.video.element();
 		if (mode === "catchUpMax") {
 			const { maxRate } = await this.getSettings();
-			this.preventFFZOverride(video, maxRate);
+			this.preventFFZOverride(video);
 			this.logger.debug(`Max latency reached, speeding up playback rate to ${maxRate}x`);
 			video.playbackRate = maxRate;
 		} else if (mode === "catchUpMin") {
 			const { minRate } = await this.getSettings();
-			this.preventFFZOverride(video, minRate);
+			this.preventFFZOverride(video);
 			this.logger.debug(`Min latency reached, speeding up playback rate to ${minRate}x`);
 			video.playbackRate = minRate;
 		} else {
@@ -145,22 +109,30 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		return { minRate, maxRate, minThreshold, maxThreshold };
 	}
 
-	private preventFFZOverride(video: HTMLVideoElement, rate: number) {
+	private preventFFZOverride(video: HTMLVideoElement & { setFFZPlaybackRatePatched?: boolean }) {
+		if (video.setFFZPlaybackRatePatched) return;
+
 		if (
 			this.getFFZAllowCatchup() === false &&
 			video &&
 			"setFFZPlaybackRate" in video &&
-			// check for modified playbackRate property by FFZ
+			// check for modified playbackRate property
 			Object.prototype.hasOwnProperty.call(video, "playbackRate")
 		) {
+			video.setFFZPlaybackRate = () => {};
+			video.setFFZPlaybackRatePatched = true;
+			// deleting the playbackRate property resets it to be used normally
+			// @ts-ignore - playbackRate's existence is implied by the check above
+			// biome-ignore lint/performance/noDelete: setting to undefined does not reset it completely
+			delete video.playbackRate;
 			this.logger.debug("FFZ playback rate override prevented");
-			video.playbackRate = rate;
 		}
 	}
 
 	private getFFZAllowCatchup() {
 		const ffz = (window as any).ffz;
 		if (ffz) {
+			// check for allow-catchup setting in FFZ
 			return ffz.settings.get("player.allow-catchup") as boolean;
 		}
 	}
