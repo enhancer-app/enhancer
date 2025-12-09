@@ -89,15 +89,14 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 
 			try {
 				if (TwitchLowLatencyEnabled && !(this as any)._enhancerAllowRateChange) return rate;
-			} catch { }
+			} catch {}
 
 			return orig_playbackRate_set.call(this, rate);
 		}
 
-
 		let orig_playbackRate_set: any;
 		try {
-			orig_playbackRate_set = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "playbackRate")?.set
+			orig_playbackRate_set = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "playbackRate")?.set;
 		} catch (error) {
 			this.logger.error(error);
 		}
@@ -109,7 +108,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 						set: playbackRateSetHook,
 						get: Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "playbackRate")?.get,
 					});
-				} catch { }
+				} catch {}
 			}
 		}
 	}
