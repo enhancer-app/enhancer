@@ -103,7 +103,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		if (orig_playbackRate_set !== undefined) {
 			if (orig_playbackRate_set !== playbackRateSetHook) {
 				try {
-					this.logger.info("Applying patch for playbackRate. 4");
+					this.logger.info("Applying patch for playbackRate.");
 					Object.defineProperty(HTMLVideoElement.prototype, "playbackRate", {
 						set: playbackRateSetHook,
 						get: Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "playbackRate")?.get,
@@ -114,6 +114,22 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 	}
 
 	private changePlaybackSpeed(video: HTMLVideoElement, rate: number) {
+		if (
+			this.getFFZAllowCatchup() === false &&
+			video &&
+			Object.getOwnPropertyDescriptor(video, "playbackRate")?.set !== undefined
+		) {
+			try {
+				// Needed to remove setter, which is then inherited
+				// @ts-ignore - playbackRate's existence is implied by the check above
+				// biome-ignore lint/performance/noDelete: setting to undefined does not reset it completely
+				delete video.playbackRate;
+			} catch (error) {
+				this.logger.error(error);
+			}
+			this.logger.debug("Patched playbackRate modified by FFZ");
+		}
+
 		(video as any)._enhancerAllowRateChange = true;
 		video.playbackRate = rate;
 		(video as any)._enhancerAllowRateChange = false;
@@ -154,19 +170,6 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		const minThreshold = await this.settingsService().getSettingsKey("streamLatencyReducerMinThreshold");
 		const maxThreshold = await this.settingsService().getSettingsKey("streamLatencyReducerMaxThreshold");
 		return { minRate, maxRate, minThreshold, maxThreshold };
-	}
-
-	private preventFFZOverride(video: HTMLVideoElement, rate: number) {
-		if (
-			this.getFFZAllowCatchup() === false &&
-			video &&
-			"setFFZPlaybackRate" in video &&
-			// check for modified playbackRate property by FFZ
-			Object.prototype.hasOwnProperty.call(video, "playbackRate")
-		) {
-			this.logger.debug("FFZ playback rate override prevented");
-			video.playbackRate = rate;
-		}
 	}
 
 	private getFFZAllowCatchup() {
