@@ -1,3 +1,4 @@
+import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import Settings, { SettingsOverlay } from "$shared/components/settings/settings.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
@@ -24,6 +25,12 @@ export default class SettingsModule extends TwitchModule {
 				event: "extension:settings-open",
 				callback: this.openSettings.bind(this),
 				key: "settings-open",
+			},
+			{
+				type: "event",
+				event: "extension:settings-refresh",
+				callback: this.loadSettings.bind(this),
+				key: "settings-refresh",
 			},
 		],
 	};
@@ -215,6 +222,17 @@ export default class SettingsModule extends TwitchModule {
 				tabIndex: tabIndexes.Channel,
 				content: () => {
 					return <WatchtimeListComponent platform="twitch" workerService={workerService} />;
+				},
+				hideInfo: true,
+			},
+			{
+				id: "export-import",
+				title: "Export/Import Data",
+				description: "Export and import your settings and watchtime data",
+				type: "text",
+				tabIndex: tabIndexes.General,
+				content: () => {
+					return <ExportImportComponent platform="twitch" workerService={workerService} emitter={this.emitter} />;
 				},
 				hideInfo: true,
 			},

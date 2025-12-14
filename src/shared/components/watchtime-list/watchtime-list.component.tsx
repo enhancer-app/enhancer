@@ -11,7 +11,6 @@ const Container = styled.div`
 `;
 
 const Header = styled.div`
-	margin-bottom: 20px;
 	padding: 20px 30px;
 	background: linear-gradient(
 		135deg,
@@ -56,6 +55,7 @@ const ActionText = styled.span`
 
 const ExportSection = styled.div<{ $visible: boolean }>`
 	display: ${(props) => (props.$visible ? "flex" : "none")};
+	margin-top: 20px;
 	gap: 12px;
 	justify-content: center;
 	margin-bottom: 20px;

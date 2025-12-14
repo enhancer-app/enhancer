@@ -41,6 +41,12 @@ export interface AddWatchtimePayload {
 	channel: string;
 }
 
+export interface ImportWatchtimePayload {
+	platform: PlatformType;
+	username: string;
+	time: number;
+}
+
 export interface GetWatchtimePayload {
 	platform: PlatformType;
 	channel: string;
@@ -85,6 +91,10 @@ export interface WorkerApiActions {
 	};
 	addWatchtime: {
 		payload: AddWatchtimePayload;
+		response: WatchtimeResponse | null;
+	};
+	importWatchtime: {
+		payload: ImportWatchtimePayload;
 		response: WatchtimeResponse | null;
 	};
 	getWatchtime: {

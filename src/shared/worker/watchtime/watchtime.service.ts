@@ -62,6 +62,24 @@ export class WatchtimeService {
 		return await this.database.getAllWatchtimePaginated(platform, page, pageSize);
 	}
 
+	async importWatchtime(platform: PlatformType, username: string, time: number): Promise<WatchtimeRecord | null> {
+		const now = Date.now();
+		const normalizedUsername = username.toLowerCase();
+		const id = this.createChannelKey(platform, normalizedUsername);
+
+		const watchtimeRecord: WatchtimeRecord = {
+			id,
+			platform,
+			username: normalizedUsername,
+			time,
+			firstUpdate: now,
+			lastUpdate: now,
+		};
+
+		await this.database.setWatchtime(watchtimeRecord);
+		return await this.database.getWatchtime(platform, normalizedUsername);
+	}
+
 	stop(): void {
 		if (this.updateInterval) {
 			clearInterval(this.updateInterval);
