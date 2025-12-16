@@ -82,7 +82,7 @@ export class WatchtimeService {
 		};
 
 		await this.database.setWatchtime(watchtimeRecord);
-return watchtimeRecord;
+		return watchtimeRecord;
 	}
 
 	stop(): void {
