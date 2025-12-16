@@ -1,14 +1,7 @@
 import type { Logger } from "$shared/logger/logger.ts";
 import { MessageHandler } from "$shared/worker/message.handler.ts";
+import type { ImportWatchtimePayload, PlatformType, WatchtimeResponse } from "$types/shared/worker/worker.types.ts";
 import type { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
-import type { PlatformType } from "$types/shared/platform.types.ts";
-import type { WatchtimeResponse } from "$types/shared/worker/worker.types.ts";
-
-interface ImportWatchtimePayload {
-	platform: PlatformType;
-	username: string;
-	time: number;
-}
 
 export class ImportWatchtimeHandler extends MessageHandler {
 	constructor(
@@ -32,6 +25,12 @@ export class ImportWatchtimeHandler extends MessageHandler {
 		this.logger.debug(
 			`Importing watchtime for ${payload.platform} channel: ${payload.username}, time: ${payload.time}`,
 		);
-		return await this.watchtimeService.importWatchtime(payload.platform, payload.username, payload.time);
+		return await this.watchtimeService.importWatchtime(
+			payload.platform,
+			payload.username,
+			payload.time,
+			payload.firstUpdate,
+			payload.lastUpdate,
+		);
 	}
 }

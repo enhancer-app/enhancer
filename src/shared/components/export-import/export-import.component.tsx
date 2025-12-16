@@ -214,6 +214,8 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 							platform,
 							username: record.username,
 							time: record.time,
+							firstUpdate: record.firstUpdate,
+							lastUpdate: record.lastUpdate,
 						});
 						importedWatchtime++;
 					}

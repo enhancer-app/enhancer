@@ -1,7 +1,6 @@
 import { Logger } from "$shared/logger/logger.ts";
 import { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
-import type { PlatformType } from "$types/shared/platform.types.ts";
-import type { WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
+import type { ImportWatchtimePayload, PlatformType, WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
 
 export class WatchtimeService {
 	private readonly logger = new Logger({ context: "watchtime-service" });
@@ -62,7 +61,13 @@ export class WatchtimeService {
 		return await this.database.getAllWatchtimePaginated(platform, page, pageSize);
 	}
 
-	async importWatchtime(platform: PlatformType, username: string, time: number): Promise<WatchtimeRecord | null> {
+	async importWatchtime(
+		platform: PlatformType,
+		username: string,
+		time: number,
+		firstUpdate?: number,
+		lastUpdate?: number,
+	): Promise<WatchtimeRecord | null> {
 		const now = Date.now();
 		const normalizedUsername = username.toLowerCase();
 		const id = this.createChannelKey(platform, normalizedUsername);
@@ -72,8 +77,8 @@ export class WatchtimeService {
 			platform,
 			username: normalizedUsername,
 			time,
-			firstUpdate: now,
-			lastUpdate: now,
+			firstUpdate: firstUpdate || now,
+			lastUpdate: lastUpdate || now,
 		};
 
 		await this.database.setWatchtime(watchtimeRecord);
