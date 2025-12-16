@@ -94,7 +94,7 @@ const StatusOverlay = styled.div<{ type: "success" | "error" }>`
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 	animation: slideIn 0.3s ease;
 
-	background: ${(props) => (props.type === "success" ? "#1f1f1f" : "#1f1f1f")};
+background: #1f1f1f;
 
 	color: ${(props) => (props.type === "success" ? "#66bb6a" : "#ff5252")};
 

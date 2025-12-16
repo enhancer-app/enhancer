@@ -82,7 +82,7 @@ export class WatchtimeService {
 		};
 
 		await this.database.setWatchtime(watchtimeRecord);
-		return await this.database.getWatchtime(platform, normalizedUsername);
+return watchtimeRecord;
 	}
 
 	stop(): void {
