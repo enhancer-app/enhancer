@@ -22,73 +22,20 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(async () => {
 			const status = await this.getPlaybackRateStatus();
-			const { minThreshold, maxThreshold } = await this.getSettings();
-			let latency = this.getLatency();
-			if (!latency) return;
 
-			// this.logger.debug(`Latency: ${latency}, minThreshold: ${minThreshold}, maxThreshold: ${maxThreshold}`);
-
-			// add offset of 0.5 seconds to the latency when caught up.
-			// prevents rapid rate changes when caught up
-			if (status === "caughtUp") {
-				latency -= 0.5;
-			}
-			if (latency >= maxThreshold) {
-				// this.logger.debug("Max latency reached");
-				// if (status === "catchingUpMax") return;
+			if (status === "catchingUpMax") {
 				this.setPlaybackRateMode("catchUpMax");
-			} else if (latency >= minThreshold) {
-				// this.logger.debug("Min latency reached");
-				// if (status === "catchingUpMin") return;
+			} else if (status === "catchingUpMin") {
 				this.setPlaybackRateMode("catchUpMin");
 			} else {
-				// if (status === "caughtUp") return;
 				this.setPlaybackRateMode("reset");
 			}
 		}, 1000);
 
-		//! DEV ONLY, delete before release
-		setTimeout(() => {
-			this.logger.debug("Added dev window");
-			const devRoot = document.createElement("div");
-			document.querySelector(".video-player__overlay")?.appendChild(devRoot);
-			devRoot.style.position = "absolute";
-			devRoot.style.right = "0";
-			devRoot.style.top = "0";
-			devRoot.style.width = "fit-content";
-			devRoot.style.height = "fit-content";
-			devRoot.style.backgroundColor = "red";
-			devRoot.style.padding = "10px";
-			devRoot.textContent = "test";
-
-			const devLatencyButton = document.createElement("button");
-			devLatencyButton.textContent = "Add Latency";
-			devRoot.appendChild(devLatencyButton);
-			devLatencyButton.onclick = () => {
-				const video = document.querySelector(".video-ref")?.querySelector("video");
-				if (!video) return;
-				video.currentTime -= 5;
-			};
-
-			setInterval(async () => {
-				devRoot.innerText = `Latency: ${this.getLatency()?.toFixed(2)}
-					Playback Rate: ${this.twitchUtils().getMediaPlayerPlaybackRate()?.toFixed(2)}
-					Status: ${await this.getPlaybackRateStatus()}
-					Min Rate: ${await this.getSettings().then((s) => s.minRate)}
-					Max Rate: ${await this.getSettings().then((s) => s.maxRate)}
-					Min Threshold: ${await this.getSettings().then((s) => s.minThreshold)}
-					Max Threshold: ${await this.getSettings().then((s) => s.maxThreshold)}
-					`;
-				devRoot.appendChild(devLatencyButton);
-			}, 1000);
-		}, 3000);
-
-		function playbackRateSetHook(rate: number) {
-			// TODO: Implement detecting Twitch Low Latency mode
-			const TwitchLowLatencyEnabled = true;
-
+		async function playbackRateSetHook(this: HTMLVideoElement, rate: number) {
+			// Workaround for twitch native delay reducer interfering, block any other attempts of changing playbackRate other that ours
 			try {
-				if (TwitchLowLatencyEnabled && !(this as any)._enhancerAllowRateChange) return rate;
+				if (true && !(this as any)._enhancerAllowRateChange) return rate;
 			} catch {}
 
 			return orig_playbackRate_set.call(this, rate);
@@ -100,16 +47,14 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		} catch (error) {
 			this.logger.error(error);
 		}
-		if (orig_playbackRate_set !== undefined) {
-			if (orig_playbackRate_set !== playbackRateSetHook) {
-				try {
-					this.logger.info("Applying patch for playbackRate.");
-					Object.defineProperty(HTMLVideoElement.prototype, "playbackRate", {
-						set: playbackRateSetHook,
-						get: Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "playbackRate")?.get,
-					});
-				} catch {}
-			}
+		if (orig_playbackRate_set !== undefined && orig_playbackRate_set !== playbackRateSetHook) {
+			try {
+				this.logger.info("Applying patch for playbackRate.");
+				Object.defineProperty(HTMLVideoElement.prototype, "playbackRate", {
+					set: playbackRateSetHook,
+					get: Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "playbackRate")?.get,
+				});
+			} catch {}
 		}
 	}
 
@@ -127,7 +72,6 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 			} catch (error) {
 				this.logger.error(error);
 			}
-			this.logger.debug("Patched playbackRate modified by FFZ");
 		}
 
 		(video as any)._enhancerAllowRateChange = true;
@@ -140,10 +84,19 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		if (!video) return;
 
 		let targetRate = 1;
+		const latency = this.getLatency();
+		if (!latency) return;
+
+		const minRate = (await this.getSettings()).minRate;
+		const maxRate = (await this.getSettings()).maxRate;
+		const minSpeedThreshold = (await this.getSettings()).minThreshold;
+		const maxSpeedThreshold = (await this.getSettings()).maxThreshold;
+
 		if (mode === "catchUpMax") {
-			targetRate = (await this.getSettings()).maxRate;
+			targetRate = maxRate;
 		} else if (mode === "catchUpMin") {
-			targetRate = (await this.getSettings()).minRate;
+			targetRate =
+				minRate + ((maxRate - minRate) * (latency - minSpeedThreshold)) / (maxSpeedThreshold - minSpeedThreshold);
 		}
 
 		this.changePlaybackSpeed(video, targetRate);
@@ -152,10 +105,11 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 	private async getPlaybackRateStatus() {
 		const mediaPlayer = this.getPlayer();
 		if (!mediaPlayer) return;
-		const playbackRate = this.twitchUtils().getMediaPlayerPlaybackRate();
-		if (!playbackRate) return;
 		const latency = this.getLatency();
 		if (!latency) return "invalid";
+
+		// Disable reducer without Low Latency mode
+		if (window.localStorage.getItem("lowLatencyModeEnabled") === "false") return "caughtUp";
 
 		const { maxThreshold, minThreshold } = await this.getSettings();
 		if (latency >= Math.abs(maxThreshold)) return "catchingUpMax";

@@ -21,7 +21,7 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	streamLatencyReducerEnabled: false,
 	streamLatencyReducerMaxRate: 1.1,
 	streamLatencyReducerMinRate: 1.05,
-	streamLatencyReducerMaxThreshold: 5,
+	streamLatencyReducerMaxThreshold: 6,
 	streamLatencyReducerMinThreshold: 3,
 	realVideoTimeEnabled: true,
 	realVideoTimeFormat12h: false,
