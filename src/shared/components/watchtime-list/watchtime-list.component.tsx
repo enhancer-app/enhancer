@@ -1,4 +1,6 @@
 import type WorkerService from "$shared/worker/worker.service.ts";
+import type { PlatformType } from "$types/shared/worker/worker.types.ts";
+import type { Emitter } from "nanoevents";
 import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
 
@@ -240,15 +242,19 @@ export interface WatchtimeRecord {
 	lastUpdate: number;
 }
 
-export type PlatformType = "twitch" | "kick";
-
 interface WatchtimeListComponentProps {
 	platform: PlatformType;
 	pageSize?: number;
 	workerService: WorkerService;
+	emitter?: any;
 }
 
-export function WatchtimeListComponent({ platform, pageSize = 5, workerService }: WatchtimeListComponentProps) {
+export function WatchtimeListComponent({
+	platform,
+	pageSize = 5,
+	workerService,
+	emitter,
+}: WatchtimeListComponentProps) {
 	const [expanded, setExpanded] = useState(false);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [data, setData] = useState<PaginatedWatchtimeResponse | null>(null);
@@ -301,6 +307,23 @@ export function WatchtimeListComponent({ platform, pageSize = 5, workerService }
 			loadData(1);
 		}
 	}, [expanded]);
+
+	useEffect(() => {
+		if (!emitter) return;
+
+		const handleWatchtimeRefresh = async () => {
+			if (expanded) {
+				await loadData(1);
+				setCurrentPage(1);
+			}
+		};
+
+		emitter.on("extension:watchtime-refresh", handleWatchtimeRefresh);
+
+		return () => {
+			emitter.off("extension:watchtime-refresh", handleWatchtimeRefresh);
+		};
+	}, [emitter, expanded, loadData, setCurrentPage]);
 
 	const handleNextPage = async () => {
 		if (data && data.data.length === pageSize) {

@@ -1,6 +1,6 @@
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
-import type { WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
+import type { PlatformType, WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
 import type { Emitter } from "nanoevents";
 import { useState } from "preact/hooks";
 import styled from "styled-components";
@@ -94,7 +94,7 @@ const StatusOverlay = styled.div<{ type: "success" | "error" }>`
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 	animation: slideIn 0.3s ease;
 
-background: #1f1f1f;
+	background: #1f1f1f;
 
 	color: ${(props) => (props.type === "success" ? "#66bb6a" : "#ff5252")};
 
@@ -110,8 +110,6 @@ export interface ExportImportData {
 	settings: Record<string, unknown>;
 	watchtime: WatchtimeRecord[];
 }
-
-export type PlatformType = "twitch" | "kick";
 
 interface ExportImportComponentProps {
 	platform: PlatformType;
@@ -220,6 +218,11 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 						importedWatchtime++;
 					}
 				}
+			}
+
+			// Emit watchtime refresh event if any watchtime records were imported
+			if (importedWatchtime > 0) {
+				emitter.emit("extension:watchtime-refresh");
 			}
 
 			showStatus(`Imported ${importedSettings} settings and ${importedWatchtime} records`, "success");

@@ -221,7 +221,7 @@ export default class SettingsModule extends TwitchModule {
 				type: "text",
 				tabIndex: tabIndexes.Channel,
 				content: () => {
-					return <WatchtimeListComponent platform="twitch" workerService={workerService} />;
+					return <WatchtimeListComponent platform="twitch" workerService={workerService} emitter={this.emitter} />;
 				},
 				hideInfo: true,
 			},

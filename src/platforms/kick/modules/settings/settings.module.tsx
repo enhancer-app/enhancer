@@ -170,7 +170,7 @@ export default class SettingsModule extends KickModule {
 				type: "text",
 				tabIndex: tabIndexes.Channel,
 				content: () => {
-					return <WatchtimeListComponent platform="kick" workerService={workerService} />;
+					return <WatchtimeListComponent platform="kick" workerService={workerService} emitter={this.emitter} />;
 				},
 				hideInfo: true,
 			},
