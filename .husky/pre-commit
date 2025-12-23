@@ -1,2 +1,2 @@
-bun run typecheck
-bun run biome:check
+npm run typecheck
+npx @biomejs/biome check .

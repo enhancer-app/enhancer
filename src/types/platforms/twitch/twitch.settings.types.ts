@@ -10,6 +10,7 @@ export type TwitchSettings = {
 	chatMessageMenuUseAddInsteadOfSet: boolean;
 	chatMentionSoundEnabled: boolean;
 	chatMentionSoundSource: string;
+	chatMentionSoundFile: string;
 	chatMentionSoundVolume: number;
 	quickAccessLinks: QuickAccessLink[];
 	pinnedStreamers: string[];

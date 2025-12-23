@@ -32,6 +32,12 @@ export default class ChatMentionSoundModule extends TwitchModule {
 			{
 				type: "event",
 				key: "chat-mention-sound",
+				event: "twitch:settings:chatMentionSoundFile",
+				callback: this.updateAudioFile.bind(this),
+			},
+			{
+				type: "event",
+				key: "chat-mention-sound",
 				event: "twitch:settings:chatMentionSoundVolume",
 				callback: this.updateAudioVolume.bind(this),
 			},
@@ -41,18 +47,50 @@ export default class ChatMentionSoundModule extends TwitchModule {
 
 	async initialize() {
 		this.defaultSound = await this.commonUtils().getAssetFile(this.workerService(), "modules/mention-sound.ogg", "");
-		this.updateAudioSource(await this.settingsService().getSettingsKey("chatMentionSoundSource"));
+		await this.loadAudioSource();
 		this.updateAudioVolume((await this.settingsService().getSettingsKey("chatMentionSoundVolume")) ?? 50);
+	}
+
+	private async loadAudioSource() {
+		const fileData = await this.settingsService().getSettingsKey("chatMentionSoundFile");
+		const urlSource = await this.settingsService().getSettingsKey("chatMentionSoundSource");
+
+		// Prioritize file upload over URL (new feature takes precedence)
+		if (fileData && fileData.length > 0) {
+			this.audio.src = fileData;
+		} else if (urlSource && urlSource.length > 3 && this.commonUtils().isValidUrl(urlSource)) {
+			this.audio.src = urlSource;
+		} else {
+			this.audio.src = this.defaultSound;
+		}
+		this.audio.load();
 	}
 
 	private updateAudioVolume(volume: number) {
 		this.audio.volume = volume / 100;
 	}
 
+	private updateAudioFile(fileData: string) {
+		// Prioritize file upload over URL
+		if (fileData && fileData.length > 0) {
+			this.audio.src = fileData;
+			this.audio.load();
+		} else {
+			// If file is cleared, fall back to URL or default
+			this.loadAudioSource();
+		}
+	}
+
 	private updateAudioSource(sourceUrl: string) {
-		const isCustomSound = sourceUrl.length > 3 && this.commonUtils().isValidUrl(sourceUrl);
-		this.audio.src = isCustomSound ? sourceUrl : this.defaultSound;
-		this.audio.load();
+		// Only use URL if no file is uploaded (backward compatibility)
+		const fileData = this.settingsService().getSettingsKey("chatMentionSoundFile");
+		fileData.then((file) => {
+			if (!file || file.length === 0) {
+				const isCustomSound = sourceUrl.length > 3 && this.commonUtils().isValidUrl(sourceUrl);
+				this.audio.src = isCustomSound ? sourceUrl : this.defaultSound;
+				this.audio.load();
+			}
+		});
 	}
 
 	private setCurrentUsername() {

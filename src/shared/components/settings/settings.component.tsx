@@ -225,6 +225,68 @@ const NumberInput = styled(TextInput)`
 	min-width: 100px;
 `;
 
+const FileInputContainer = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	min-width: 200px;
+`;
+
+const FileInputWrapper = styled.div`
+	position: relative;
+`;
+
+const FileInputLabel = styled.label`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	background: #9147ff;
+	border: none;
+	color: white;
+	padding: 10px 15px;
+	border-radius: 7px;
+	cursor: pointer;
+	font-size: 11px;
+	transition: background-color 0.2s;
+
+	&:hover {
+		background: #7a3cc8;
+	}
+`;
+
+const HiddenFileInput = styled.input`
+	display: none;
+`;
+
+const FileNameDisplay = styled.div`
+	background: #232323;
+	border: 1px solid #232323;
+	color: #ccc;
+	font-size: 11px;
+	border-radius: 7px;
+	padding: 10px;
+	min-height: 38px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+`;
+
+const ClearFileButton = styled.button`
+	background: #ff4757;
+	border: none;
+	color: white;
+	padding: 5px 10px;
+	border-radius: 5px;
+	cursor: pointer;
+	font-size: 10px;
+	margin-left: auto;
+	transition: background-color 0.2s;
+
+	&:hover {
+		background: #d63649;
+	}
+`;
+
 const Select = styled.select`
 	background: #0d0d0d;
 	padding: 10px;
@@ -401,6 +463,24 @@ const Settings = <T,>({
 		updateSetting(key, newArray);
 	};
 
+	const handleFileChange = (event: Event, settingId: keyof T) => {
+		const target = event.target as HTMLInputElement;
+		const file = target.files?.[0];
+
+		if (!file) return;
+
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			const result = e.target?.result as string;
+			updateSetting(settingId, result);
+		};
+		reader.readAsDataURL(file);
+	};
+
+	const clearFile = (settingId: keyof T) => {
+		updateSetting(settingId, "");
+	};
+
 	const handleToggleChange = (event: Event, setting: SettingDefinition<T>, checked: boolean) => {
 		event.stopPropagation();
 
@@ -574,6 +654,46 @@ const Settings = <T,>({
 					console.error("Enhancer Error when rendering component", e);
 				}
 				return null;
+			}
+			case "file": {
+				const fileValue = value as string;
+				const hasFile = fileValue && fileValue.length > 0;
+				const fileName = hasFile ? "Custom file uploaded" : "No file selected";
+
+				return (
+					<FileInputContainer>
+						<FileInputWrapper>
+							<FileInputLabel htmlFor={`file-${setting.id as string}`}>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="16"
+									height="16"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								>
+									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+									<polyline points="17 8 12 3 7 8" />
+									<line x1="12" y1="3" x2="12" y2="15" />
+								</svg>
+								Choose File
+							</FileInputLabel>
+							<HiddenFileInput
+								id={`file-${setting.id as string}`}
+								type="file"
+								accept={setting.accept || "audio/*"}
+								onChange={(e) => handleFileChange(e, setting.id as keyof T)}
+							/>
+						</FileInputWrapper>
+						<FileNameDisplay>
+							<span style={{ fontSize: "11px", color: hasFile ? "#9147ff" : "#ccc" }}>{fileName}</span>
+							{hasFile && <ClearFileButton onClick={() => clearFile(setting.id as keyof T)}>Clear</ClearFileButton>}
+						</FileNameDisplay>
+					</FileInputContainer>
+				);
 			}
 			default:
 				return null;

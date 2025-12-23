@@ -178,16 +178,16 @@ export default class SettingsModule extends TwitchModule {
 				tabIndex: tabIndexes.Chat,
 			},
 			{
-				id: "chatMentionSoundSource",
-				title: "Custom Mention Sound URL",
+				id: "chatMentionSoundFile",
+				title: "Custom Mention Sound File",
 				description:
-					"Set a custom audio file to play when you are mentioned in chat. Leave it empty for default sound.",
-				type: "input",
+					"Upload a custom audio file to play when you are mentioned in chat. Leave empty to use the default sound.",
+				type: "file",
 				tabIndex: tabIndexes.Chat,
 			},
 			{
 				id: "chatMentionSoundVolume",
-				title: "Custom Mention Sound",
+				title: "Custom Mention Sound Volume",
 				description: "Adjust the volume level for your mention notification sound.",
 				type: "number",
 				min: 0,

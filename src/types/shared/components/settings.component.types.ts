@@ -47,6 +47,12 @@ export type TextSettingDefinition<T = any> = {
 	content: () => h.JSX.Element;
 } & CommonSettingDefinition<T>;
 
+export type FileSettingDefinition<T = any> = {
+	type: "file";
+	accept?: string;
+	placeholder?: string;
+} & CommonSettingDefinition<T>;
+
 export type SettingDefinition<T = any> =
 	| ToggleSettingDefinition<T>
 	| InputSettingDefinition<T>
@@ -54,7 +60,8 @@ export type SettingDefinition<T = any> =
 	| SelectSettingDefinition<T>
 	| RadioSettingDefinition<T>
 	| ArraySettingDefinition<T>
-	| TextSettingDefinition<T>;
+	| TextSettingDefinition<T>
+	| FileSettingDefinition<T>;
 
 export type TabDefinition = {
 	title: string;
