@@ -81,16 +81,14 @@ export default class ChatMentionSoundModule extends TwitchModule {
 		}
 	}
 
-	private updateAudioSource(sourceUrl: string) {
+	private async updateAudioSource(sourceUrl: string) {
 		// Only use URL if no file is uploaded (backward compatibility)
-		const fileData = this.settingsService().getSettingsKey("chatMentionSoundFile");
-		fileData.then((file) => {
-			if (!file || file.length === 0) {
-				const isCustomSound = sourceUrl.length > 3 && this.commonUtils().isValidUrl(sourceUrl);
-				this.audio.src = isCustomSound ? sourceUrl : this.defaultSound;
-				this.audio.load();
-			}
-		});
+		const fileData = await this.settingsService().getSettingsKey("chatMentionSoundFile");
+		if (!fileData || fileData.length === 0) {
+			const isCustomSound = sourceUrl.length > 3 && this.commonUtils().isValidUrl(sourceUrl);
+			this.audio.src = isCustomSound ? sourceUrl : this.defaultSound;
+			this.audio.load();
+		}
 	}
 
 	private setCurrentUsername() {
