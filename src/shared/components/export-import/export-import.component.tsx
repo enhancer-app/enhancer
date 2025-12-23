@@ -1,5 +1,6 @@
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
+import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import type { PlatformType, WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
 import type { Emitter } from "nanoevents";
 import { useState } from "preact/hooks";
@@ -200,7 +201,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			let importedWatchtime = 0;
 
 			if (data.settings) {
-				await workerService.send("updateSettings", { platform, settings: data.settings as any });
+				await workerService.send("updateSettings", { platform, settings: data.settings as PlatformSettings });
 				importedSettings = Object.keys(data.settings).length;
 				emitter.emit("extension:settings-refresh");
 			}
