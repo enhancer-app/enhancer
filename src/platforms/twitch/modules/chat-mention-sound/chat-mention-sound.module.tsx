@@ -81,11 +81,11 @@ export default class ChatMentionSoundModule extends TwitchModule {
 			// Clear the deprecated URL field when uploading a file (one-time migration)
 			const currentUrlSource = await this.settingsService().getSettingsKey("chatMentionSoundSource");
 			if (currentUrlSource && currentUrlSource.length > 0) {
+				this.logger.debug("Removing deprecated url", currentUrlSource);
 				await this.settingsService().updateSettingsKey("chatMentionSoundSource", "");
 			}
 		} else {
-			// If file is cleared, fall back to URL or default
-			this.loadAudioSource();
+			await this.loadAudioSource();
 		}
 	}
 
