@@ -130,12 +130,13 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 	const [status, setStatus] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
 	useEffect(() => {
-		if (status) {
-			const timer = setTimeout(() => {
-				setStatus(null);
-			}, 5000);
-			return () => clearTimeout(timer);
-		}
+		if (!status) return;
+
+		const timer = setTimeout(() => {
+			setStatus(null);
+		}, 5000);
+
+		return () => clearTimeout(timer);
 	}, [status]);
 
 	const showStatus = (message: string, type: "success" | "error") => {
@@ -261,20 +262,28 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			if (data.watchtime && Array.isArray(data.watchtime)) {
 				const recordsToImport = data.watchtime.filter((record) => record.platform === platform);
 
-				const results = await Promise.allSettled(
-					recordsToImport.map((record) =>
-						workerService.send("importWatchtime", {
-							platform,
-							username: record.username,
-							time: record.time,
-							firstUpdate: record.firstUpdate,
-							lastUpdate: record.lastUpdate,
-						}),
-					),
-				);
+				// Process in batches to avoid overwhelming the worker service
+				const BATCH_SIZE = 100;
+				const allResults: PromiseSettledResult<unknown>[] = [];
+
+				for (let i = 0; i < recordsToImport.length; i += BATCH_SIZE) {
+					const batch = recordsToImport.slice(i, i + BATCH_SIZE);
+					const batchResults = await Promise.allSettled(
+						batch.map((record) =>
+							workerService.send("importWatchtime", {
+								platform,
+								username: record.username,
+								time: record.time,
+								firstUpdate: record.firstUpdate,
+								lastUpdate: record.lastUpdate,
+							}),
+						),
+					);
+					allResults.push(...batchResults);
+				}
 
 				// Count successes and failures
-				results.forEach((result, index) => {
+				allResults.forEach((result, index) => {
 					if (result.status === "fulfilled") {
 						importedWatchtime++;
 					} else {
