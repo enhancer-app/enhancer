@@ -262,28 +262,20 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			if (data.watchtime && Array.isArray(data.watchtime)) {
 				const recordsToImport = data.watchtime.filter((record) => record.platform === platform);
 
-				// Process in batches to avoid overwhelming the worker service
-				const BATCH_SIZE = 100;
-				const allResults: PromiseSettledResult<unknown>[] = [];
-
-				for (let i = 0; i < recordsToImport.length; i += BATCH_SIZE) {
-					const batch = recordsToImport.slice(i, i + BATCH_SIZE);
-					const batchResults = await Promise.allSettled(
-						batch.map((record) =>
-							workerService.send("importWatchtime", {
-								platform,
-								username: record.username,
-								time: record.time,
-								firstUpdate: record.firstUpdate,
-								lastUpdate: record.lastUpdate,
-							}),
-						),
-					);
-					allResults.push(...batchResults);
-				}
+				const results = await Promise.allSettled(
+					recordsToImport.map((record) =>
+						workerService.send("importWatchtime", {
+							platform,
+							username: record.username,
+							time: record.time,
+							firstUpdate: record.firstUpdate,
+							lastUpdate: record.lastUpdate,
+						}),
+					),
+				);
 
 				// Count successes and failures
-				allResults.forEach((result, index) => {
+				results.forEach((result, index) => {
 					if (result.status === "fulfilled") {
 						importedWatchtime++;
 					} else {
