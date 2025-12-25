@@ -496,10 +496,38 @@ const Settings = <T,>({
 
 		if (!file) return;
 
+		// Validate file type (audio files only)
+		const validAudioTypes = [
+			"audio/mpeg",
+			"audio/mp3",
+			"audio/ogg",
+			"audio/wav",
+			"audio/webm",
+			"audio/aac",
+			"audio/flac",
+		];
+		if (!validAudioTypes.includes(file.type)) {
+			console.error(`Invalid file type: ${file.type}. Only audio files are allowed.`);
+			target.value = "";
+			return;
+		}
+
+		// Validate file size (max 5MB)
+		const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+		if (file.size > maxSizeBytes) {
+			console.error(`File size ${(file.size / 1024 / 1024).toFixed(2)}MB exceeds maximum allowed size of 5MB.`);
+			target.value = "";
+			return;
+		}
+
 		const reader = new FileReader();
 		reader.onload = (e) => {
 			const result = e.target?.result as string;
 			updateSetting(setting.id as keyof T, result);
+		};
+		reader.onerror = () => {
+			console.error("Failed to read file for setting:", setting.id, reader.error);
+			// Could emit an event or call a callback here for UI feedback
 		};
 		reader.readAsDataURL(file);
 		target.value = "";

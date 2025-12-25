@@ -58,7 +58,7 @@ export default class ChatMentionSoundModule extends TwitchModule {
 		const urlSource = await this.settingsService().getSettingsKey("chatMentionSoundSource");
 
 		// Prioritize file upload over URL (new feature takes precedence)
-		if (fileData?.length > 0) {
+		if (this.isValidFileData(fileData)) {
 			this.audio.src = fileData;
 		} else if (urlSource && urlSource.length > 3 && this.commonUtils().isValidUrl(urlSource)) {
 			this.audio.src = urlSource;
@@ -72,9 +72,18 @@ export default class ChatMentionSoundModule extends TwitchModule {
 		this.audio.volume = volume / 100;
 	}
 
+	/**
+	 * Helper method to validate if fileData is a valid data URL
+	 * @param fileData - The file data to validate
+	 * @returns true if fileData is a valid data URL
+	 */
+	private isValidFileData(fileData: string | undefined): boolean {
+		return !!fileData && fileData.length > 0 && fileData.startsWith("data:");
+	}
+
 	private async updateAudioFile(fileData: string) {
 		// Prioritize file upload over URL
-		if (fileData && fileData.length > 0) {
+		if (this.isValidFileData(fileData)) {
 			this.audio.src = fileData;
 			this.audio.load();
 
@@ -92,7 +101,7 @@ export default class ChatMentionSoundModule extends TwitchModule {
 	private async updateAudioSource(sourceUrl: string) {
 		// Only use URL if no file is uploaded (backward compatibility)
 		const fileData = await this.settingsService().getSettingsKey("chatMentionSoundFile");
-		if (!fileData || fileData.length === 0) {
+		if (!this.isValidFileData(fileData)) {
 			const isCustomSound = sourceUrl.length > 3 && this.commonUtils().isValidUrl(sourceUrl);
 			this.audio.src = isCustomSound ? sourceUrl : this.defaultSound;
 			this.audio.load();
