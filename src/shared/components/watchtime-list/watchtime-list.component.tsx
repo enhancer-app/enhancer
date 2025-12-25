@@ -1,4 +1,5 @@
 import type WorkerService from "$shared/worker/worker.service.ts";
+import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformType } from "$types/shared/worker/worker.types.ts";
 import type { Emitter } from "nanoevents";
 import { useEffect, useState } from "preact/hooks";
@@ -246,7 +247,7 @@ interface WatchtimeListComponentProps {
 	platform: PlatformType;
 	pageSize?: number;
 	workerService: WorkerService;
-	emitter?: any;
+	emitter?: Emitter<CommonEvents>;
 }
 
 export function WatchtimeListComponent({
@@ -318,10 +319,10 @@ export function WatchtimeListComponent({
 			}
 		};
 
-		emitter.on("extension:watchtime-refresh", handleWatchtimeRefresh);
+		const unbind = emitter.on("extension:watchtime-refresh", handleWatchtimeRefresh);
 
 		return () => {
-			emitter.off("extension:watchtime-refresh", handleWatchtimeRefresh);
+			unbind();
 		};
 	}, [emitter, expanded, loadData, setCurrentPage]);
 

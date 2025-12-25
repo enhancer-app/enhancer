@@ -3,7 +3,7 @@ import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import type { PlatformType, WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
 import type { Emitter } from "nanoevents";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
 
 const Container = styled.div`
@@ -46,7 +46,6 @@ const ButtonGroup = styled.div`
 	gap: 12px;
 	flex-shrink: 0;
 	padding-left: 24px;
-	border-left: 1px solid rgba(255, 255, 255, 0.1);
 `;
 
 const ActionButton = styled.button`
@@ -107,7 +106,14 @@ const StatusOverlay = styled.div<{ type: "success" | "error" }>`
 	}
 `;
 
+export interface ExportImportMetadata {
+	version: string;
+	platform: PlatformType;
+	exportDate: string;
+}
+
 export interface ExportImportData {
+	meta: ExportImportMetadata;
 	settings: Record<string, unknown>;
 	watchtime: WatchtimeRecord[];
 }
@@ -122,9 +128,18 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 	const [loading, setLoading] = useState(false);
 	const [status, setStatus] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
+	useEffect(() => {
+		if (!status) return;
+
+		const timer = setTimeout(() => {
+			setStatus(null);
+		}, 5000);
+
+		return () => clearTimeout(timer);
+	}, [status]);
+
 	const showStatus = (message: string, type: "success" | "error") => {
 		setStatus({ message, type });
-		setTimeout(() => setStatus(null), 5000);
 	};
 
 	const fetchAllWatchtime = async (platform: PlatformType): Promise<WatchtimeRecord[]> => {
@@ -164,6 +179,11 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			const watchtime = await fetchAllWatchtime(platform);
 
 			const exportData: ExportImportData = {
+				meta: {
+					version: window.enhancer.version,
+					platform,
+					exportDate: new Date().toISOString(),
+				},
 				settings: settings || {},
 				watchtime,
 			};
@@ -190,35 +210,78 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 		setStatus(null);
 		try {
 			const text = await file.text();
-			const data: ExportImportData = JSON.parse(text);
 
+			// Parse JSON with specific error handling
+			let data: ExportImportData;
+			try {
+				data = JSON.parse(text);
+			} catch (parseError) {
+				showStatus("Invalid JSON format in backup file", "error");
+				return;
+			}
+
+			// Validate metadata
+			if (!data.meta) {
+				showStatus("Invalid backup file: missing metadata", "error");
+				return;
+			}
+
+			if (data.meta.platform !== platform) {
+				showStatus(
+					`Platform mismatch: This backup is for ${data.meta.platform}, but you're trying to import to ${platform}`,
+					"error",
+				);
+				return;
+			}
+
+			// Validate structure
 			if (!data.settings && !data.watchtime) {
-				showStatus("Invalid backup file", "error");
+				showStatus("Invalid backup file: no data found", "error");
 				return;
 			}
 
 			let importedSettings = 0;
 			let importedWatchtime = 0;
+			let failedWatchtime = 0;
 
+			// Import settings
 			if (data.settings) {
-				await workerService.send("updateSettings", { platform, settings: data.settings as PlatformSettings });
-				importedSettings = Object.keys(data.settings).length;
-				emitter.emit("extension:settings-refresh");
+				try {
+					await workerService.send("updateSettings", { platform, settings: data.settings as PlatformSettings });
+					importedSettings = Object.keys(data.settings).length;
+					emitter.emit("extension:settings-refresh");
+				} catch (error) {
+					console.error("Failed to import settings:", error);
+					showStatus("Failed to import settings", "error");
+					return;
+				}
 			}
 
+			// Import watchtime records concurrently with error handling
 			if (data.watchtime && Array.isArray(data.watchtime)) {
-				for (const record of data.watchtime) {
-					if (record.platform === platform) {
-						await workerService.send("importWatchtime", {
+				const recordsToImport = data.watchtime.filter((record) => record.platform === platform);
+
+				const results = await Promise.allSettled(
+					recordsToImport.map((record) =>
+						workerService.send("importWatchtime", {
 							platform,
 							username: record.username,
 							time: record.time,
 							firstUpdate: record.firstUpdate,
 							lastUpdate: record.lastUpdate,
-						});
+						}),
+					),
+				);
+
+				// Count successes and failures
+				results.forEach((result, index) => {
+					if (result.status === "fulfilled") {
 						importedWatchtime++;
+					} else {
+						failedWatchtime++;
+						console.error(`Failed to import record for ${recordsToImport[index].username}:`, result.reason);
 					}
-				}
+				});
 			}
 
 			// Emit watchtime refresh event if any watchtime records were imported
@@ -226,7 +289,21 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 				emitter.emit("extension:watchtime-refresh");
 			}
 
-			showStatus(`Imported ${importedSettings} settings and ${importedWatchtime} records`, "success");
+			// Show detailed status
+			const parts = [];
+			if (importedSettings > 0) {
+				parts.push(`${importedSettings} settings`);
+			}
+			if (importedWatchtime > 0) {
+				parts.push(`${importedWatchtime} watchtime records`);
+			}
+			if (failedWatchtime > 0) {
+				parts.push(`${failedWatchtime} failed`);
+			}
+
+			const message = parts.length > 0 ? `Imported ${parts.join(", ")}` : "No data imported";
+			const type = failedWatchtime > 0 && importedWatchtime === 0 ? "error" : "success";
+			showStatus(message, type);
 		} catch (error) {
 			console.error("Import error:", error);
 			showStatus("Failed to import data", "error");
