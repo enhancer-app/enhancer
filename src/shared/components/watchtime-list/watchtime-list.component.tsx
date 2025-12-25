@@ -1,4 +1,7 @@
 import type WorkerService from "$shared/worker/worker.service.ts";
+import type { CommonEvents } from "$types/platforms/common.events.ts";
+import type { PlatformType } from "$types/shared/worker/worker.types.ts";
+import type { Emitter } from "nanoevents";
 import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
 
@@ -11,7 +14,6 @@ const Container = styled.div`
 `;
 
 const Header = styled.div`
-	margin-bottom: 20px;
 	padding: 20px 30px;
 	background: linear-gradient(
 		135deg,
@@ -56,6 +58,7 @@ const ActionText = styled.span`
 
 const ExportSection = styled.div<{ $visible: boolean }>`
 	display: ${(props) => (props.$visible ? "flex" : "none")};
+	margin-top: 20px;
 	gap: 12px;
 	justify-content: center;
 	margin-bottom: 20px;
@@ -240,15 +243,19 @@ export interface WatchtimeRecord {
 	lastUpdate: number;
 }
 
-export type PlatformType = "twitch" | "kick";
-
 interface WatchtimeListComponentProps {
 	platform: PlatformType;
 	pageSize?: number;
 	workerService: WorkerService;
+	emitter?: Emitter<CommonEvents>;
 }
 
-export function WatchtimeListComponent({ platform, pageSize = 5, workerService }: WatchtimeListComponentProps) {
+export function WatchtimeListComponent({
+	platform,
+	pageSize = 5,
+	workerService,
+	emitter,
+}: WatchtimeListComponentProps) {
 	const [expanded, setExpanded] = useState(false);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [data, setData] = useState<PaginatedWatchtimeResponse | null>(null);
@@ -301,6 +308,23 @@ export function WatchtimeListComponent({ platform, pageSize = 5, workerService }
 			loadData(1);
 		}
 	}, [expanded]);
+
+	useEffect(() => {
+		if (!emitter) return;
+
+		const handleWatchtimeRefresh = async () => {
+			if (expanded) {
+				await loadData(1);
+				setCurrentPage(1);
+			}
+		};
+
+		const unbind = emitter.on("extension:watchtime-refresh", handleWatchtimeRefresh);
+
+		return () => {
+			unbind();
+		};
+	}, [emitter, expanded, loadData, setCurrentPage]);
 
 	const handleNextPage = async () => {
 		if (data && data.data.length === pageSize) {
