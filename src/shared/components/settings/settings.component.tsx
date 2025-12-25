@@ -504,6 +504,7 @@ const Settings = <T,>({
 			updateSetting(setting.id as keyof T, result);
 		};
 		reader.readAsDataURL(file);
+		target.value = "";
 	};
 
 	const clearFile = (settingId: keyof T) => {
