@@ -460,7 +460,7 @@ const Settings = <T,>({
 		updateSetting(key, newArray);
 	};
 
-	const handleFileChange = (event: Event, settingId: keyof T) => {
+	const handleFileChange = (event: Event, setting: SettingDefinition<T>) => {
 		const target = event.target as HTMLInputElement;
 		const file = target.files?.[0];
 
@@ -469,7 +469,17 @@ const Settings = <T,>({
 		const reader = new FileReader();
 		reader.onload = (e) => {
 			const result = e.target?.result as string;
-			updateSetting(settingId, result);
+			const settingId = setting.id as keyof T;
+
+			// Update the file setting
+			const newSettings = { ...settings, [settingId]: result };
+
+			// Clear the deprecated field if specified
+			if (setting.type === "file" && setting.clearOnUpload) {
+				newSettings[setting.clearOnUpload] = "" as any;
+			}
+
+			onSettingsChange(newSettings, settingId);
 		};
 		reader.readAsDataURL(file);
 	};
@@ -719,7 +729,7 @@ const Settings = <T,>({
 									id={`file-${setting.id as string}`}
 									type="file"
 									accept={setting.accept || "audio/*"}
-									onChange={(e) => handleFileChange(e, setting.id as keyof T)}
+									onChange={(e) => handleFileChange(e, setting)}
 								/>
 							</>
 						)}
