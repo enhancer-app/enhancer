@@ -50,7 +50,7 @@ export type TextSettingDefinition<T = any> = {
 export type FileSettingDefinition<T = any> = {
 	type: "file";
 	accept?: string;
-	placeholder?: string;
+
 } & CommonSettingDefinition<T>;
 
 export type SettingDefinition<T = any> =
