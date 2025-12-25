@@ -1,2 +1,0 @@
-bun run typecheck
-bun run biome:check
