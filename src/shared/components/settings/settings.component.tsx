@@ -147,7 +147,7 @@ const Setting = styled.div`
 	padding: 20px;
 	border-bottom: 1px solid #232323;
 	justify-content: space-between;
-	align-items: center; /* Changed from flex-start to center vertically */
+	align-items: center;
 	gap: 20px;
 `;
 
@@ -225,7 +225,6 @@ const NumberInput = styled(TextInput)`
 	min-width: 100px;
 `;
 
-/* UPDATED FILE INPUT COMPONENTS */
 const FileInputContainer = styled.div`
 	background: #0d0d0d;
 	border: 1px solid #232323;
@@ -314,7 +313,6 @@ const RemoveFileButton = styled.button`
 		color: #ff4757;
 	}
 `;
-/* END UPDATED FILE INPUT COMPONENTS */
 
 const Select = styled.select`
 	background: #0d0d0d;

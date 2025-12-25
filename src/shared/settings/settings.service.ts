@@ -29,6 +29,7 @@ export default class SettingsService<T extends PlatformSettings> {
 	async updateSettings(settings: T) {
 		const result = await this.workerService.send("updateSettings", { platform: this.platformType, settings });
 		if (!result) return false;
+		// TODO emit refresh settings
 		return result.success;
 	}
 }
