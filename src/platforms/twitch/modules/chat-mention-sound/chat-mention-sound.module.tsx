@@ -72,11 +72,17 @@ export default class ChatMentionSoundModule extends TwitchModule {
 		this.audio.volume = volume / 100;
 	}
 
-	private updateAudioFile(fileData: string) {
+	private async updateAudioFile(fileData: string) {
 		// Prioritize file upload over URL
 		if (fileData && fileData.length > 0) {
 			this.audio.src = fileData;
 			this.audio.load();
+
+			// Clear the deprecated URL field when uploading a file (one-time migration)
+			const currentUrlSource = await this.settingsService().getSettingsKey("chatMentionSoundSource");
+			if (currentUrlSource && currentUrlSource.length > 0) {
+				await this.settingsService().updateSettingsKey("chatMentionSoundSource", "");
+			}
 		} else {
 			// If file is cleared, fall back to URL or default
 			this.loadAudioSource();

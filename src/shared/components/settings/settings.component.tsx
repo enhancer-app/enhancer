@@ -501,17 +501,7 @@ const Settings = <T,>({
 		const reader = new FileReader();
 		reader.onload = (e) => {
 			const result = e.target?.result as string;
-			const settingId = setting.id as keyof T;
-
-			// Update the file setting
-			const newSettings = { ...settings, [settingId]: result };
-
-			// Clear the deprecated field if specified
-			if (setting.type === "file" && setting.clearOnUpload) {
-				newSettings[setting.clearOnUpload] = "" as any;
-			}
-
-			onSettingsChange(newSettings, settingId);
+			updateSetting(setting.id as keyof T, result);
 		};
 		reader.readAsDataURL(file);
 	};

@@ -51,8 +51,6 @@ export type FileSettingDefinition<T = any> = {
 	type: "file";
 	accept?: string;
 	placeholder?: string;
-	/** Field to clear when a file is uploaded (useful for migrating from deprecated fields) */
-	clearOnUpload?: keyof T;
 } & CommonSettingDefinition<T>;
 
 export type SettingDefinition<T = any> =
