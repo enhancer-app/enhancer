@@ -46,7 +46,6 @@ const ButtonGroup = styled.div`
 	gap: 12px;
 	flex-shrink: 0;
 	padding-left: 24px;
-	border-left: 1px solid rgba(255, 255, 255, 0.1);
 `;
 
 const ActionButton = styled.button`
@@ -181,7 +180,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 
 			const exportData: ExportImportData = {
 				meta: {
-					version: chrome.runtime.getManifest().version,
+					version: window.enhancer.version,
 					platform,
 					exportDate: new Date().toISOString(),
 				},
