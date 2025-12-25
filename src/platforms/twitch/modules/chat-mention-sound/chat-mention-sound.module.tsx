@@ -23,6 +23,8 @@ export default class ChatMentionSoundModule extends TwitchModule {
 				event: "twitch:chatInitialized",
 				callback: this.setCurrentUsername.bind(this),
 			},
+			// Deprecated: URL-based sound source. Kept for backward compatibility.
+			// New users should use chatMentionSoundFile (file upload) instead.
 			{
 				type: "event",
 				key: "chat-mention-sound",

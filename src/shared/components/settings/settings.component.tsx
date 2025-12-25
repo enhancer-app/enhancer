@@ -227,13 +227,14 @@ const NumberInput = styled(TextInput)`
 
 const FileInputContainer = styled.div`
 	display: flex;
-	flex-direction: column;
+	align-items: center;
 	gap: 10px;
+	background: #232323;
+	border: 1px solid #232323;
+	border-radius: 7px;
+	padding: 10px;
+	min-height: 38px;
 	min-width: 200px;
-`;
-
-const FileInputWrapper = styled.div`
-	position: relative;
 `;
 
 const FileInputLabel = styled.label`
@@ -243,8 +244,8 @@ const FileInputLabel = styled.label`
 	background: #9147ff;
 	border: none;
 	color: white;
-	padding: 10px 15px;
-	border-radius: 7px;
+	padding: 8px 12px;
+	border-radius: 5px;
 	cursor: pointer;
 	font-size: 11px;
 	transition: background-color 0.2s;
@@ -258,32 +259,28 @@ const HiddenFileInput = styled.input`
 	display: none;
 `;
 
-const FileNameDisplay = styled.div`
-	background: #232323;
-	border: 1px solid #232323;
-	color: #ccc;
+const FileStatusText = styled.span`
 	font-size: 11px;
-	border-radius: 7px;
-	padding: 10px;
-	min-height: 38px;
+	color: #9147ff;
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 6px;
+	flex: 1;
 `;
 
-const ClearFileButton = styled.button`
-	background: #ff4757;
+const RemoveFileButton = styled.button`
+	background: none;
 	border: none;
-	color: white;
-	padding: 5px 10px;
-	border-radius: 5px;
+	color: #ff4757;
 	cursor: pointer;
-	font-size: 10px;
-	margin-left: auto;
-	transition: background-color 0.2s;
+	padding: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: color 0.2s;
 
 	&:hover {
-		background: #d63649;
+		color: #d63649;
 	}
 `;
 
@@ -658,40 +655,74 @@ const Settings = <T,>({
 			case "file": {
 				const fileValue = value as string;
 				const hasFile = fileValue && fileValue.length > 0;
-				const fileName = hasFile ? "Custom file uploaded" : "No file selected";
 
 				return (
 					<FileInputContainer>
-						<FileInputWrapper>
-							<FileInputLabel htmlFor={`file-${setting.id as string}`}>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="16"
-									height="16"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									strokeWidth="2"
-									strokeLinecap="round"
-									strokeLinejoin="round"
-								>
-									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-									<polyline points="17 8 12 3 7 8" />
-									<line x1="12" y1="3" x2="12" y2="15" />
-								</svg>
-								Choose File
-							</FileInputLabel>
-							<HiddenFileInput
-								id={`file-${setting.id as string}`}
-								type="file"
-								accept={setting.accept || "audio/*"}
-								onChange={(e) => handleFileChange(e, setting.id as keyof T)}
-							/>
-						</FileInputWrapper>
-						<FileNameDisplay>
-							<span style={{ fontSize: "11px", color: hasFile ? "#9147ff" : "#ccc" }}>{fileName}</span>
-							{hasFile && <ClearFileButton onClick={() => clearFile(setting.id as keyof T)}>Clear</ClearFileButton>}
-						</FileNameDisplay>
+						{hasFile ? (
+							<>
+								<FileStatusText>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="16"
+										height="16"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									>
+										<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+										<polyline points="22 4 12 14.01 9 11.01" />
+									</svg>
+									File uploaded
+								</FileStatusText>
+								<RemoveFileButton onClick={() => clearFile(setting.id as keyof T)} title="Remove file">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="16"
+										height="16"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									>
+										<path stroke="none" d="M0 0h24v24H0z" fill="none" />
+										<path d="M18 6l-12 12" />
+										<path d="M6 6l12 12" />
+									</svg>
+								</RemoveFileButton>
+							</>
+						) : (
+							<>
+								<FileInputLabel htmlFor={`file-${setting.id as string}`}>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="16"
+										height="16"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									>
+										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+										<polyline points="17 8 12 3 7 8" />
+										<line x1="12" y1="3" x2="12" y2="15" />
+									</svg>
+									Upload File
+								</FileInputLabel>
+								<HiddenFileInput
+									id={`file-${setting.id as string}`}
+									type="file"
+									accept={setting.accept || "audio/*"}
+									onChange={(e) => handleFileChange(e, setting.id as keyof T)}
+								/>
+							</>
+						)}
 					</FileInputContainer>
 				);
 			}
