@@ -1,9 +1,11 @@
 import data from "./package.json";
 
-export function getManifest() {
+export function getManifest(isDevelopment: boolean) {
+	let name = "Enhancer";
+	if (isDevelopment) name += " (development)";
 	return {
 		manifest_version: 3,
-		name: "Enhancer",
+		name,
 		description: "Enhancer is open-sourced and free extension, which adds what is missing on streaming platforms.",
 		version: data.version,
 		action: {

@@ -147,7 +147,7 @@ const Setting = styled.div`
 	padding: 20px;
 	border-bottom: 1px solid #232323;
 	justify-content: space-between;
-	align-items: flex-start;
+	align-items: center; /* Changed from flex-start to center vertically */
 	gap: 20px;
 `;
 
@@ -225,64 +225,96 @@ const NumberInput = styled(TextInput)`
 	min-width: 100px;
 `;
 
+/* UPDATED FILE INPUT COMPONENTS */
 const FileInputContainer = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	background: #232323;
+	background: #0d0d0d;
 	border: 1px solid #232323;
 	border-radius: 7px;
-	padding: 10px;
-	min-height: 38px;
+	padding: 4px;
 	min-width: 200px;
-`;
-
-const FileInputLabel = styled.label`
-	display: inline-flex;
+	min-height: 38px;
+	display: flex;
 	align-items: center;
-	gap: 8px;
-	background: #9147ff;
-	border: none;
-	color: white;
-	padding: 8px 12px;
-	border-radius: 5px;
-	cursor: pointer;
-	font-size: 11px;
-	transition: background-color 0.2s;
+	position: relative;
+	transition: border-color 0.2s ease;
 
 	&:hover {
-		background: #7a3cc8;
+		border-color: #333333;
 	}
+`;
+
+const UploadTriggerLabel = styled.label`
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: 100%;
+	height: 100%;
+	color: white; /* Changed text color to white */
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	padding: 6px;
+	border-radius: 5px;
+	transition: background-color 0.2s ease;
+
+	svg {
+		width: 16px;
+		height: 16px;
+		color: #9147ff; /* Icon remains purple */
+	}
+
+	&:hover {
+		background: #232323;
+	}
+`;
+
+const FileStatus = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: 1;
+	padding-left: 8px;
+	color: #ccc;
+	font-size: 11px;
+
+	svg {
+		color: #9147ff;
+		flex-shrink: 0;
+	}
+`;
+
+const FileName = styled.span`
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 `;
 
 const HiddenFileInput = styled.input`
 	display: none;
 `;
 
-const FileStatusText = styled.span`
-	font-size: 11px;
-	color: #9147ff;
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	flex: 1;
-`;
-
 const RemoveFileButton = styled.button`
-	background: none;
+	background: transparent;
 	border: none;
-	color: #ff4757;
+	color: #565656;
 	cursor: pointer;
 	padding: 4px;
+	height: 28px;
+	width: 28px;
+	border-radius: 5px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	transition: color 0.2s;
+	transition: all 0.2s ease;
+	margin-left: auto;
 
 	&:hover {
-		color: #d63649;
+		background: rgba(255, 71, 87, 0.1);
+		color: #ff4757;
 	}
 `;
+/* END UPDATED FILE INPUT COMPONENTS */
 
 const Select = styled.select`
 	background: #0d0d0d;
@@ -660,7 +692,7 @@ const Settings = <T,>({
 					<FileInputContainer>
 						{hasFile ? (
 							<>
-								<FileStatusText>
+								<FileStatus>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										width="16"
@@ -672,11 +704,10 @@ const Settings = <T,>({
 										strokeLinecap="round"
 										strokeLinejoin="round"
 									>
-										<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-										<polyline points="22 4 12 14.01 9 11.01" />
+										<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
 									</svg>
-									File uploaded
-								</FileStatusText>
+									<FileName>File uploaded</FileName>
+								</FileStatus>
 								<RemoveFileButton onClick={() => clearFile(setting.id as keyof T)} title="Remove file">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
@@ -696,32 +727,30 @@ const Settings = <T,>({
 								</RemoveFileButton>
 							</>
 						) : (
-							<>
-								<FileInputLabel htmlFor={`file-${setting.id as string}`}>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="16"
-										height="16"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										strokeWidth="2"
-										strokeLinecap="round"
-										strokeLinejoin="round"
-									>
-										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-										<polyline points="17 8 12 3 7 8" />
-										<line x1="12" y1="3" x2="12" y2="15" />
-									</svg>
-									Upload File
-								</FileInputLabel>
+							<UploadTriggerLabel htmlFor={`file-${setting.id as string}`}>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="16"
+									height="16"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								>
+									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+									<polyline points="17 8 12 3 7 8" />
+									<line x1="12" y1="3" x2="12" y2="15" />
+								</svg>
+								Upload File
 								<HiddenFileInput
 									id={`file-${setting.id as string}`}
 									type="file"
 									accept={setting.accept || "audio/*"}
 									onChange={(e) => handleFileChange(e, setting.id as keyof T)}
 								/>
-							</>
+							</UploadTriggerLabel>
 						)}
 					</FileInputContainer>
 				);

@@ -26,7 +26,7 @@ export default defineConfig({
 		generateFilePlugin({
 			type: "json",
 			output: "./manifest.json",
-			data: getManifest(),
+			data: getManifest(isDevelopment),
 		}),
 	],
 	build: {
