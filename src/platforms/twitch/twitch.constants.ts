@@ -10,6 +10,7 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	chatMessageMenuUseAddInsteadOfSet: false,
 	chatMentionSoundEnabled: false,
 	chatMentionSoundSource: "",
+	chatMentionSoundFile: "",
 	chatMentionSoundVolume: 50,
 	pinnedStreamers: [],
 	quickAccessLinks: [
