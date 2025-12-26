@@ -314,6 +314,16 @@ const RemoveFileButton = styled.button`
 	}
 `;
 
+const FileUploadError = styled.div`
+	color: #ff4757;
+	font-size: 11px;
+	margin-top: 6px;
+	padding: 6px 8px;
+	background: rgba(255, 71, 87, 0.1);
+	border-radius: 5px;
+	border-left: 2px solid #ff4757;
+`;
+
 const Select = styled.select`
 	background: #0d0d0d;
 	padding: 10px;
@@ -463,6 +473,7 @@ const Settings = <T,>({
 	} | null>(null);
 
 	const [justTurnedOff, setJustTurnedOff] = useState<keyof T | null>(null);
+	const [fileUploadError, setFileUploadError] = useState<string | null>(null);
 
 	const updateSetting = (key: keyof T, value: unknown) => {
 		const newSettings = { ...settings, [key]: value };
@@ -496,9 +507,14 @@ const Settings = <T,>({
 
 		if (!file) return;
 
+		// Clear any previous error
+		setFileUploadError(null);
+
 		// Validate file type if validTypes are specified
 		if (setting.type === "file" && setting.validTypes && setting.validTypes.length > 0) {
 			if (!setting.validTypes.includes(file.type)) {
+				const errorMsg = "Invalid file type. Please select a valid audio file.";
+				setFileUploadError(errorMsg);
 				console.error(`Invalid file type: ${file.type}. Allowed types: ${setting.validTypes.join(", ")}`);
 				target.value = "";
 				return;
@@ -510,7 +526,9 @@ const Settings = <T,>({
 			if (file.size > setting.maxSizeBytes) {
 				const maxSizeMB = (setting.maxSizeBytes / 1024 / 1024).toFixed(2);
 				const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-				console.error(`File size ${fileSizeMB}MB exceeds maximum allowed size of ${maxSizeMB}MB.`);
+				const errorMsg = `File size (${fileSizeMB}MB) exceeds maximum allowed size of ${maxSizeMB}MB.`;
+				setFileUploadError(errorMsg);
+				console.error(errorMsg);
 				target.value = "";
 				return;
 			}
@@ -522,6 +540,8 @@ const Settings = <T,>({
 			updateSetting(setting.id as keyof T, result);
 		};
 		reader.onerror = () => {
+			const errorMsg = "Failed to read the selected file. Please try again.";
+			setFileUploadError(errorMsg);
 			console.error("Failed to read file for setting:", setting.id, reader.error);
 		};
 		reader.readAsDataURL(file);
@@ -530,6 +550,7 @@ const Settings = <T,>({
 
 	const clearFile = (settingId: keyof T) => {
 		updateSetting(settingId, "");
+		setFileUploadError(null); // Clear error when file is removed
 	};
 
 	const handleToggleChange = (event: Event, setting: SettingDefinition<T>, checked: boolean) => {
@@ -711,10 +732,46 @@ const Settings = <T,>({
 				const hasFile = fileValue && fileValue.length > 0;
 
 				return (
-					<FileInputContainer>
-						{hasFile ? (
-							<>
-								<FileStatus>
+					<>
+						<FileInputContainer>
+							{hasFile ? (
+								<>
+									<FileStatus>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="16"
+											height="16"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											strokeWidth="2"
+											strokeLinecap="round"
+											strokeLinejoin="round"
+										>
+											<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+										</svg>
+										<FileName>File uploaded</FileName>
+									</FileStatus>
+									<RemoveFileButton onClick={() => clearFile(setting.id as keyof T)} title="Remove file">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="16"
+											height="16"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											strokeWidth="2"
+											strokeLinecap="round"
+											strokeLinejoin="round"
+										>
+											<path stroke="none" d="M0 0h24v24H0z" fill="none" />
+											<path d="M18 6l-12 12" />
+											<path d="M6 6l12 12" />
+										</svg>
+									</RemoveFileButton>
+								</>
+							) : (
+								<UploadTriggerLabel htmlFor={`file-${setting.id as string}`}>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										width="16"
@@ -726,55 +783,22 @@ const Settings = <T,>({
 										strokeLinecap="round"
 										strokeLinejoin="round"
 									>
-										<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+										<polyline points="17 8 12 3 7 8" />
+										<line x1="12" y1="3" x2="12" y2="15" />
 									</svg>
-									<FileName>File uploaded</FileName>
-								</FileStatus>
-								<RemoveFileButton onClick={() => clearFile(setting.id as keyof T)} title="Remove file">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="16"
-										height="16"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										strokeWidth="2"
-										strokeLinecap="round"
-										strokeLinejoin="round"
-									>
-										<path stroke="none" d="M0 0h24v24H0z" fill="none" />
-										<path d="M18 6l-12 12" />
-										<path d="M6 6l12 12" />
-									</svg>
-								</RemoveFileButton>
-							</>
-						) : (
-							<UploadTriggerLabel htmlFor={`file-${setting.id as string}`}>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="16"
-									height="16"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									strokeWidth="2"
-									strokeLinecap="round"
-									strokeLinejoin="round"
-								>
-									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-									<polyline points="17 8 12 3 7 8" />
-									<line x1="12" y1="3" x2="12" y2="15" />
-								</svg>
-								Upload File
-								<HiddenFileInput
-									id={`file-${setting.id as string}`}
-									type="file"
-									accept={setting.accept || "audio/*"}
-									onChange={(e) => handleFileChange(e, setting)}
-								/>
-							</UploadTriggerLabel>
-						)}
-					</FileInputContainer>
+									Upload File
+									<HiddenFileInput
+										id={`file-${setting.id as string}`}
+										type="file"
+										accept={setting.accept || "audio/*"}
+										onChange={(e) => handleFileChange(e, setting)}
+									/>
+								</UploadTriggerLabel>
+							)}
+						</FileInputContainer>
+						{fileUploadError && <FileUploadError>{fileUploadError}</FileUploadError>}
+					</>
 				);
 			}
 			default:
