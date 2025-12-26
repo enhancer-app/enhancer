@@ -50,6 +50,10 @@ export type TextSettingDefinition<T = any> = {
 export type FileSettingDefinition<T = any> = {
 	type: "file";
 	accept?: string;
+	/** Array of valid MIME types for file validation */
+	validTypes?: string[];
+	/** Maximum file size in bytes (optional) */
+	maxSizeBytes?: number;
 } & CommonSettingDefinition<T>;
 
 export type SettingDefinition<T = any> =

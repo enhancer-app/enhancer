@@ -184,6 +184,7 @@ export default class SettingsModule extends TwitchModule {
 					"Upload a custom audio file to play when you are mentioned in chat. Leave empty to use the default sound.",
 				type: "file",
 				tabIndex: tabIndexes.Chat,
+				validTypes: ["audio/mpeg", "audio/mp3", "audio/ogg", "audio/wav", "audio/webm", "audio/aac", "audio/flac"],
 			},
 			{
 				id: "chatMentionSoundVolume",
