@@ -322,6 +322,7 @@ const FileUploadError = styled.div`
 	background: rgba(255, 71, 87, 0.1);
 	border-radius: 5px;
 	border-left: 2px solid #ff4757;
+	text-align: center;
 `;
 
 const Select = styled.select`
@@ -513,7 +514,7 @@ const Settings = <T,>({
 		// Validate file type if validTypes are specified
 		if (setting.type === "file" && setting.validTypes && setting.validTypes.length > 0) {
 			if (!setting.validTypes.includes(file.type)) {
-				const errorMsg = "Invalid file type. Please select a valid audio file.";
+				const errorMsg = "Invalid file type.";
 				setFileUploadError(errorMsg);
 				console.error(`Invalid file type: ${file.type}. Allowed types: ${setting.validTypes.join(", ")}`);
 				target.value = "";
