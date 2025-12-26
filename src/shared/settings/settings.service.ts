@@ -1,11 +1,14 @@
 import type WorkerService from "$shared/worker/worker.service.ts";
+import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
+import type { Emitter } from "nanoevents";
 
 export default class SettingsService<T extends PlatformSettings> {
 	constructor(
 		private readonly platformType: PlatformType,
 		private readonly workerService: WorkerService,
+		private readonly emitter: Emitter<CommonEvents>,
 	) {}
 
 	async getSettings(): Promise<T> {
@@ -29,7 +32,7 @@ export default class SettingsService<T extends PlatformSettings> {
 	async updateSettings(settings: T) {
 		const result = await this.workerService.send("updateSettings", { platform: this.platformType, settings });
 		if (!result) return false;
-		// TODO emit refresh settings
-		return result.success;
+		this.emitter.emit("extension:settings-refresh");
+		result.success;
 	}
 }

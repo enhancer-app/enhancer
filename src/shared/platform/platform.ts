@@ -29,7 +29,7 @@ export default abstract class Platform<
 
 	protected constructor(protected readonly config: PlatformConfig) {
 		this.enhancerApi = new EnhancerApi(config.type);
-		this.settingsService = new SettingsService<TSettings>(config.type, this.workerApi);
+		this.settingsService = new SettingsService<TSettings>(config.type, this.workerApi, this.emitter);
 	}
 
 	protected async initialize(): Promise<void> {}
