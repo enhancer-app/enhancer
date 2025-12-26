@@ -44,13 +44,9 @@ export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 			url.host = "media.discordapp.net";
 			return url;
 		},
-		"imgur.com": (url) => {
-			url.host = "i.imgur.com";
-			url.pathname = `${url.pathname}.gif`;
-			return url;
-		},
 		"prnt.sc": ImageChatAttachmentHandler.CORSGO_PROXY_URL_PARSER,
 		"files.catbox.moe": ImageChatAttachmentHandler.CORSGO_PROXY_URL_PARSER,
+		"imgur.com": ImageChatAttachmentHandler.CORSGO_PROXY_URL_PARSER,
 	};
 
 	static readonly DISCORD_CACHE_PREVIEW_PARSER = (url: URL) => {
