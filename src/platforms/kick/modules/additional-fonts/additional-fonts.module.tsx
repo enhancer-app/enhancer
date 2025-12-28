@@ -4,7 +4,7 @@ import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class AdditionalFontsModule extends KickModule {
 	private static FONT_LIST: string[] = ["Cherry Bomb One", "Fredoka", "Darumadrop One", "Dela Gothic One", "Potta One", "Shrikhand"];
-	
+
 	readonly config: KickModuleConfig = {
 		name: "additional-fonts",
 		isModuleEnabledCallback: async () => this.settingsService().getSettingsKey("loadAdditionalFonts"),
