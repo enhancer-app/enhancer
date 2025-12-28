@@ -6,10 +6,12 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	chatImagesSize: 15,
 	chatBadgesEnabled: true,
 	chatNicknameCustomizationEnabled: true,
+	loadAdditionalFonts: true,
 	chatMessageMenuEnabled: true,
 	chatMessageMenuUseAddInsteadOfSet: false,
 	chatMentionSoundEnabled: false,
 	chatMentionSoundSource: "",
+	chatMentionSoundFile: "",
 	chatMentionSoundVolume: 50,
 	pinnedStreamers: [],
 	quickAccessLinks: [
@@ -23,4 +25,5 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	pinnedStreamersEnabled: true,
 	xayoWatchtimeEnabled: true,
 	emoteBarEnabled: false,
+	channelSection: true,
 };

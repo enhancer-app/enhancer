@@ -1,6 +1,7 @@
 import KickApi from "$kick/apis/kick.api.ts";
 import type KickModule from "$kick/kick.module.ts";
 import KickUtils from "$kick/kick.utils.ts";
+import AdditionalFontsModule from "$kick/modules/additional-fonts/additional-fonts.module.tsx";
 import ChannelSectionModule from "$kick/modules/channel-section/channel-section.module.tsx";
 import ChatAttachmentsModule from "$kick/modules/chat-attachments/chat-attachments.module.ts";
 import ChatBadgesModule from "$kick/modules/chat-badges/chat-badges.module.tsx";
@@ -54,6 +55,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			new ChatMessagePopupModule(...dependencies),
 			// new MessageMenuModule(...dependencies),
 			// new ChatMessageMenuModule(...dependencies),
+			new AdditionalFontsModule(...dependencies),
 		];
 	}
 

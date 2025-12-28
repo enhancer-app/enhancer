@@ -1,6 +1,8 @@
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 
+export type { PlatformType };
+
 export interface ExtensionMessageDetail {
 	messageId: string;
 	action: string;
@@ -39,6 +41,14 @@ export interface WatchtimeRecord {
 export interface AddWatchtimePayload {
 	platform: PlatformType;
 	channel: string;
+}
+
+export interface ImportWatchtimePayload {
+	platform: PlatformType;
+	username: string;
+	time: number;
+	firstUpdate?: number;
+	lastUpdate?: number;
 }
 
 export interface GetWatchtimePayload {
@@ -85,6 +95,10 @@ export interface WorkerApiActions {
 	};
 	addWatchtime: {
 		payload: AddWatchtimePayload;
+		response: WatchtimeResponse | null;
+	};
+	importWatchtime: {
+		payload: ImportWatchtimePayload;
 		response: WatchtimeResponse | null;
 	};
 	getWatchtime: {

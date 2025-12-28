@@ -137,4 +137,23 @@ export class WatchtimeDatabase {
 			};
 		});
 	}
+
+	async setWatchtime(watchtime: WatchtimeRecord): Promise<void> {
+		if (!this.database) {
+			throw new Error("Database not initialized");
+		}
+
+		return new Promise((resolve, reject) => {
+			// biome-ignore lint/style/noNonNullAssertion: checking it above
+			const tx = this.database!.transaction(this.storeName, "readwrite");
+			const store = tx.objectStore(this.storeName);
+			const request = store.put(watchtime);
+
+			request.onsuccess = () => resolve();
+			request.onerror = () => {
+				this.logger.error("Failed to set watchtime:", request.error);
+				reject(request.error);
+			};
+		});
+	}
 }

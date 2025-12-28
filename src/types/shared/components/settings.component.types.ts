@@ -47,6 +47,15 @@ export type TextSettingDefinition<T = any> = {
 	content: () => h.JSX.Element;
 } & CommonSettingDefinition<T>;
 
+export type FileSettingDefinition<T = any> = {
+	type: "file";
+	accept?: string;
+	/** Array of valid MIME types for file validation */
+	validTypes?: string[];
+	/** Maximum file size in bytes (optional) */
+	maxSizeBytes?: number;
+} & CommonSettingDefinition<T>;
+
 export type SettingDefinition<T = any> =
 	| ToggleSettingDefinition<T>
 	| InputSettingDefinition<T>
@@ -54,7 +63,8 @@ export type SettingDefinition<T = any> =
 	| SelectSettingDefinition<T>
 	| RadioSettingDefinition<T>
 	| ArraySettingDefinition<T>
-	| TextSettingDefinition<T>;
+	| TextSettingDefinition<T>
+	| FileSettingDefinition<T>;
 
 export type TabDefinition = {
 	title: string;

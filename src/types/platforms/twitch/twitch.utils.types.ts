@@ -261,30 +261,82 @@ export type ApolloClient = {
 	}) => Promise<Record<string, any>>;
 };
 
-export type GuestStarChannelGuestListUser = {
+interface StreamInfoGame {
+	__typename: "Game";
+	id: string;
+	displayName: string;
+}
+
+interface StreamInfoBroadcastSettings {
+	__typename: "BroadcastSettings";
+	id: string;
+	title: string;
+}
+
+interface StreamInfoStream {
+	__typename: "Stream";
+	id: string;
+	viewersCount: number;
+	game: StreamInfoGame;
+}
+
+interface StreamInfoGuestStarUser {
+	__typename: "User";
 	id: string;
 	login: string;
 	displayName: string;
 	profileImageURL: string;
 	primaryColorHex: string | null;
-	description: string;
-};
+	description: string | null;
+}
 
-export type GuestStarChannelGuestListSlot = {
+interface StreamInfoGuestStarGuest {
+	__typename: "Collaborator";
 	id: string;
-	slotID: string;
-	user: GuestStarChannelGuestListUser;
-};
+	role: "MEMBER" | string;
+	status: "ACTIVE" | string;
+	user: StreamInfoGuestStarUser;
+}
 
-export type GuestStarChannelGuestListProps = {
-	containerWidth: number;
-	guestList: GuestStarChannelGuestListSlot[];
-	isLive: boolean;
-	requestQueueMessage: string | null;
-	sessionID: string;
+interface StreamInfoUser {
+	__typename: "User";
+	id: string;
+	profileImageURL: string;
+	login: string;
+	displayName: string;
+	profileURL: string;
+	stream?: StreamInfoStream | null;
+	broadcastSettings?: StreamInfoBroadcastSettings | null;
+}
+
+interface StreamInfoCostreamer extends StreamInfoUser {
+	stream: StreamInfoStream;
+	broadcastSettings: StreamInfoBroadcastSettings;
+}
+
+interface StreamInfoCostreamDetails {
+	totalViewersCount: number;
+	organizer: StreamInfoUser;
+	costreamersCount: number;
+	role: "ORGANIZER" | string;
+	topCostreamers: StreamInfoCostreamer[];
+}
+
+export interface StreamInfoTwitchStreamData {
 	channelLogin: string;
 	channelID: string;
-	currentUserID: string;
-};
+	displayName: string;
+	profileImageURL: string;
+	broadcastTitle: string;
+	liveSince: string;
+	viewCount: number;
+	collabViewCount: number | null;
+	guestStarGuests: StreamInfoGuestStarGuest[];
+	guestStarSessionID: string | null;
+	guestStarHostID: string | null;
+	broadcastID: string;
+	costreamViewCount: number | null;
+	costreamDetails: StreamInfoCostreamDetails | null;
+}
 
 export type EmoteItem = { src: string; alt: string; isWide?: boolean };

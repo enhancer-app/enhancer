@@ -2,7 +2,7 @@
 	"name": "enhancer",
 	"module": "src/content/index.ts",
 	"type": "module",
-	"version": "5.1.16",
+	"version": "5.1.21",
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
 		"@preact/preset-vite": "^2.10.2",
@@ -32,10 +32,15 @@
 	"scripts": {
 		"typecheck": "tsc --noEmit",
 		"typecheck:watch": "tsc --noEmit --watch",
-		"dev": "ENVIRONMENT=development concurrently \"bun run lint\" \"bun run typecheck:watch\" \"vite build --watch\" \"vite\"",
-		"build": "ENVIRONMENT=production bun run lint && bun run typecheck && vite build",
+		"lint": "bun run biome:check",
+		"biome:check": "biome check --write .",
+		"biome:check-staged": "biome check --write --staged",
+		"biome:format": "biome format --write .",
+		"biome:ci": "biome check .",
+		"biome:watch": "biome check --watch .",
+		"dev": "ENVIRONMENT=development concurrently \"bun run biome:check\" \"bun run typecheck:watch\" \"vite build --watch\" \"vite\"",
+		"build": "ENVIRONMENT=production bun run biome:ci && bun run typecheck && vite build",
 		"pack": "bun run scripts/pack.ts",
-		"lint": "biome check --write .",
 		"prepare": "husky"
 	},
 	"trustedDependencies": ["@biomejs/biome", "esbuild"]

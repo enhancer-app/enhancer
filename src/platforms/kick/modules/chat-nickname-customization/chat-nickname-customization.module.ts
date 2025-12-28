@@ -1,8 +1,11 @@
 import KickModule from "$kick/kick.module.ts";
-import type { KickChatMessageEvent } from "$types/platforms/kick/kick.events.types.ts";
+import { ChatNicknameCustomizationHelper } from "$shared/module/helpers/chat-nickname-customization.helper.ts";
+import type { KickChatMessageData, KickChatMessageEvent } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class ChatNicknameCustomizationModule extends KickModule {
+	private readonly chatNicknameCustomizationHelper = new ChatNicknameCustomizationHelper();
+
 	config: KickModuleConfig = {
 		name: "chat-nickname-customization",
 		appliers: [
@@ -15,6 +18,8 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 		],
 		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chatNicknameCustomizationEnabled"),
 	};
+
+	private static DEFAULT_FONT = "Inter, Inter Fallback";
 
 	private async handleMessage({ message, element }: KickChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
@@ -34,17 +39,22 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 			if (userCustomization.hasGlow) {
 				this.applyGlowEffect(usernameElement, message);
 			}
+			if (userCustomization.customFont) {
+				this.chatNicknameCustomizationHelper.applyCustomFont(
+					usernameElement,
+					userCustomization.customFont,
+					ChatNicknameCustomizationModule.DEFAULT_FONT,
+				);
+			}
 		});
 	}
 
-	private applyGlowEffect(usernameElement: HTMLElement, messageData: any) {
+	private applyGlowEffect(usernameElement: HTMLElement, messageData: KickChatMessageData) {
 		const color =
 			usernameElement.style.color ||
 			(usernameElement.firstChild?.firstChild && (usernameElement.firstChild.firstChild as HTMLElement).style.color) ||
 			messageData.sender.identity.color ||
 			"white";
-		usernameElement.style.textShadow = `${color} 0 0 10px`;
-		usernameElement.style.color = color;
-		usernameElement.style.fontWeight = "bold";
+		this.chatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
 	}
 }
