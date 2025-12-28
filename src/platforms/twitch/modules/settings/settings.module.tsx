@@ -123,6 +123,14 @@ export default class SettingsModule extends TwitchModule {
 				requiresRefreshToDisable: true,
 			},
 			{
+				id: "loadAdditionalFonts",
+				title: "Enable Loading Additional Fonts",
+				description: "Loads additional font assets used by Enhancer for enhanced visual variety.",
+				type: "toggle",
+				tabIndex: tabIndexes.General,
+				requiresRefreshToDisable: true,
+			},
+			{
 				id: "chatImagesEnabled",
 				title: "Enable Chat Images",
 				description: "Display images sent in chat messages.",
