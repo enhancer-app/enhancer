@@ -9,7 +9,7 @@ export default class AdditionalFontsModule extends KickModule {
 		appliers: [
 			{
 				type: "selector",
-				key: "channel-info",
+				key: "additional-fonts",
 				selectors: ["head"],
 				callback: this.run.bind(this),
 				once: true,
@@ -17,9 +17,8 @@ export default class AdditionalFontsModule extends KickModule {
 		],
 	};
 
-	async initialize() {}
-
 	private async run(elements: Element[]) {
+		this.logger.debug("testing wtf");
 		if (elements.length === 0) return;
 		const familyQuery = AdditionalFontsModule.FONT_LIST.map((font) => `family=${font.replace(/\s+/g, "+")}`).join("&");
 		const url = `https://fonts.googleapis.com/css2?${familyQuery}&display=swap`;

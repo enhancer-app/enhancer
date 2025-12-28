@@ -18,6 +18,8 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chatNicknameCustomizationEnabled"),
 	};
 
+	private static DEFAULT_FONT = "var(--font-base)";
+
 	private async handleMessage({ message, element }: TwitchChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
 		const usernameElement =
@@ -60,7 +62,7 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 
 	private applyCustomFont(usernameElement: HTMLElement, customFont: string) {
 		if (!customFont || customFont.trim() === "") {
-			usernameElement.style.fontFamily = "var(--font-base)";
+			usernameElement.style.fontFamily = ChatNicknameCustomizationModule.DEFAULT_FONT;
 			return;
 		}
 
@@ -69,6 +71,6 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 			.map((font) => `'${font.trim()}'`)
 			.join(", ");
 
-		usernameElement.style.fontFamily = `${fontStack}, var(--font-base)`;
+		usernameElement.style.fontFamily = `${fontStack}, ${ChatNicknameCustomizationModule.DEFAULT_FONT}`;
 	}
 }
