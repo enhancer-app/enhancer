@@ -1,8 +1,7 @@
 import TwitchModule from "$twitch/twitch.module.ts";
+import { ChatNicknameCustomizationHelper } from "$shared/module/helpers/chat-nickname-customization.helper.ts";
 import type { TwitchChatMessageEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { render } from "preact";
-import styled, { css } from "styled-components";
 
 export default class ChatNicknameCustomizationModule extends TwitchModule {
 	config: TwitchModuleConfig = {
@@ -40,7 +39,11 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 		//TODO remove
 		userCustomization.customFont = "Potta One";
 		if (userCustomization.customFont) {
-			this.applyCustomFont(usernameElement, userCustomization.customFont);
+			ChatNicknameCustomizationHelper.applyCustomFont(
+				usernameElement,
+				userCustomization.customFont,
+				ChatNicknameCustomizationModule.DEFAULT_FONT
+			);
 		}
 	}
 
@@ -56,21 +59,6 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 		} catch (error) {
 			color = userMessageColor || "white";
 		}
-		usernameElement.style.textShadow = `${color} 0 0 10px`;
-		usernameElement.style.fontWeight = "bold";
-	}
-
-	private applyCustomFont(usernameElement: HTMLElement, customFont: string) {
-		if (!customFont || customFont.trim() === "") {
-			usernameElement.style.fontFamily = ChatNicknameCustomizationModule.DEFAULT_FONT;
-			return;
-		}
-
-		const fontStack = customFont
-			.split(",")
-			.map((font) => `'${font.trim()}'`)
-			.join(", ");
-
-		usernameElement.style.fontFamily = `${fontStack}, ${ChatNicknameCustomizationModule.DEFAULT_FONT}`;
+		ChatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
 	}
 }

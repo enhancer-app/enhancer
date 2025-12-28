@@ -1,4 +1,5 @@
 import KickModule from "$kick/kick.module.ts";
+import { ChatNicknameCustomizationHelper } from "$shared/module/helpers/chat-nickname-customization.helper.ts";
 import type { KickChatMessageData, KickChatMessageEvent } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
@@ -39,7 +40,11 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 			//TODO remove
 			userCustomization.customFont = "Potta One";
 			if (userCustomization.customFont) {
-				this.applyCustomFont(usernameElement, userCustomization.customFont);
+				ChatNicknameCustomizationHelper.applyCustomFont(
+					usernameElement,
+					userCustomization.customFont,
+					ChatNicknameCustomizationModule.DEFAULT_FONT
+				);
 			}
 		});
 	}
@@ -50,26 +55,6 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 			(usernameElement.firstChild?.firstChild && (usernameElement.firstChild.firstChild as HTMLElement).style.color) ||
 			messageData.sender.identity.color ||
 			"white";
-		usernameElement.style.textShadow = `${color} 0 0 10px`;
-		usernameElement.style.color = color;
-		usernameElement.style.fontWeight = "bold";
-	}
-
-	private applyCustomFont(usernameElement: HTMLElement, customFont: string) {
-		if (!customFont || customFont.trim() === "") {
-			usernameElement.style.fontFamily = ChatNicknameCustomizationModule.DEFAULT_FONT;
-			return;
-		}
-
-		const fontStack = customFont
-			.split(",")
-			.map((font) => `'${font.trim()}'`)
-			.join(", ");
-
-		usernameElement.style.fontFamily = `${fontStack}, ${ChatNicknameCustomizationModule.DEFAULT_FONT}`;
-	}
-
-	private applyBoldName(usernameElement: HTMLElement) {
-		usernameElement.style.fontWeight = "bold";
+		ChatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
 	}
 }
