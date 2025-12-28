@@ -33,22 +33,42 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 		}
 
 		if (userCustomization.hasGlow) {
-			this.applyGlow(usernameElement, message.user.color);
+			// this.applyGlow(usernameElement, message.user.color);
+		}
+		//TODO remove
+		userCustomization.customFont = "Potta One";
+		if (userCustomization.customFont) {
+			this.applyCustomFont(usernameElement, userCustomization.customFont);
 		}
 	}
 
-	private applyGlow(element: HTMLElement, userMessageColor: string | undefined) {
+	private applyGlow(usernameElement: HTMLElement, userMessageColor: string | undefined) {
 		let color: string;
 		try {
 			color =
-				element.style.color ||
-				(element.firstChild?.firstChild && (element.firstChild.firstChild as HTMLElement).style.color) ||
+				usernameElement.style.color ||
+				(usernameElement.firstChild?.firstChild &&
+					(usernameElement.firstChild.firstChild as HTMLElement).style.color) ||
 				userMessageColor ||
 				"white";
 		} catch (error) {
 			color = userMessageColor || "white";
 		}
-		element.style.textShadow = `${color} 0 0 10px`;
-		element.style.fontWeight = "bold";
+		usernameElement.style.textShadow = `${color} 0 0 10px`;
+		usernameElement.style.fontWeight = "bold";
+	}
+
+	private applyCustomFont(usernameElement: HTMLElement, customFont: string) {
+		if (!customFont || customFont.trim() === "") {
+			usernameElement.style.fontFamily = "var(--font-base)";
+			return;
+		}
+
+		const fontStack = customFont
+			.split(",")
+			.map((font) => `'${font.trim()}'`)
+			.join(", ");
+
+		usernameElement.style.fontFamily = `${fontStack}, var(--font-base)`;
 	}
 }

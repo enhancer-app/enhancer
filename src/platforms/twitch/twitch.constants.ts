@@ -6,6 +6,7 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	chatImagesSize: 15,
 	chatBadgesEnabled: true,
 	chatNicknameCustomizationEnabled: true,
+	loadAdditionalFonts: true,
 	chatMessageMenuEnabled: true,
 	chatMessageMenuUseAddInsteadOfSet: false,
 	chatMentionSoundEnabled: false,

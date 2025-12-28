@@ -6,6 +6,7 @@ export const KICK_DEFAULT_SETTINGS: KickSettings = {
 	chatImagesSize: 15,
 	chatBadgesEnabled: true,
 	chatNicknameCustomizationEnabled: true,
+	loadAdditionalFonts: true,
 	chatMessageMenuEnabled: true,
 	quickAccessLinks: [{ title: "Streams Charts", url: "https://streamscharts.com/channels/%username%?platform=kick" }],
 	streamLatencyEnabled: true,

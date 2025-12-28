@@ -14,6 +14,7 @@ export type EnhancerUser = {
 	badgesIds: string[];
 	customNickname: string | null;
 	hasGlow: boolean;
+	customFont: string;
 };
 
 export type EnhancerBadgeSize = "1x" | "2x" | "4x";
