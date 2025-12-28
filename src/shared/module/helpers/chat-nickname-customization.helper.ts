@@ -18,8 +18,4 @@ export class ChatNicknameCustomizationHelper {
 
 		usernameElement.style.fontFamily = `${fontStack}, ${defaultFont}`;
 	}
-
-	static applyBoldName(usernameElement: HTMLElement): void {
-		usernameElement.style.fontWeight = "bold";
-	}
 }
