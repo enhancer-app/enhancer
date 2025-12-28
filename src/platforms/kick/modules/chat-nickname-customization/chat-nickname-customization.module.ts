@@ -45,7 +45,7 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 				this.chatNicknameCustomizationHelper.applyCustomFont(
 					usernameElement,
 					userCustomization.customFont,
-					ChatNicknameCustomizationModule.DEFAULT_FONT
+					ChatNicknameCustomizationModule.DEFAULT_FONT,
 				);
 			}
 		});

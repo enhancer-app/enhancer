@@ -1,5 +1,5 @@
-import TwitchModule from "$twitch/twitch.module.ts";
 import { ChatNicknameCustomizationHelper } from "$shared/module/helpers/chat-nickname-customization.helper.ts";
+import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchChatMessageEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
@@ -44,7 +44,7 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 			this.chatNicknameCustomizationHelper.applyCustomFont(
 				usernameElement,
 				userCustomization.customFont,
-				ChatNicknameCustomizationModule.DEFAULT_FONT
+				ChatNicknameCustomizationModule.DEFAULT_FONT,
 			);
 		}
 	}

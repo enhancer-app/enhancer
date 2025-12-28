@@ -3,7 +3,14 @@ import { AdditionalFontsHelper } from "$shared/module/helpers/additional-fonts.h
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class AdditionalFontsModule extends KickModule {
-	private static FONT_LIST: string[] = ["Cherry Bomb One", "Fredoka", "Darumadrop One", "Dela Gothic One", "Potta One", "Shrikhand"];
+	private static FONT_LIST: string[] = [
+		"Cherry Bomb One",
+		"Fredoka",
+		"Darumadrop One",
+		"Dela Gothic One",
+		"Potta One",
+		"Shrikhand",
+	];
 	private readonly additionalFontsHelper = new AdditionalFontsHelper();
 
 	readonly config: KickModuleConfig = {

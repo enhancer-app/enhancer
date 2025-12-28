@@ -1,5 +1,5 @@
-import TwitchModule from "$twitch/twitch.module.ts";
 import { AdditionalFontsHelper } from "$shared/module/helpers/additional-fonts.helper.ts";
+import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class AdditionalFontsModule extends TwitchModule {
