@@ -4,6 +4,8 @@ import type { KickChatMessageData, KickChatMessageEvent } from "$types/platforms
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class ChatNicknameCustomizationModule extends KickModule {
+	private readonly chatNicknameCustomizationHelper = new ChatNicknameCustomizationHelper();
+
 	config: KickModuleConfig = {
 		name: "chat-nickname-customization",
 		appliers: [
@@ -40,7 +42,7 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 			//TODO remove
 			userCustomization.customFont = "Potta One";
 			if (userCustomization.customFont) {
-				ChatNicknameCustomizationHelper.applyCustomFont(
+				this.chatNicknameCustomizationHelper.applyCustomFont(
 					usernameElement,
 					userCustomization.customFont,
 					ChatNicknameCustomizationModule.DEFAULT_FONT
@@ -55,6 +57,6 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 			(usernameElement.firstChild?.firstChild && (usernameElement.firstChild.firstChild as HTMLElement).style.color) ||
 			messageData.sender.identity.color ||
 			"white";
-		ChatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
+		this.chatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
 	}
 }

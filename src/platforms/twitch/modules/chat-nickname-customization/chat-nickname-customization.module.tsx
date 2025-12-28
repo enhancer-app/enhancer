@@ -4,6 +4,8 @@ import type { TwitchChatMessageEvent } from "$types/platforms/twitch/twitch.even
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class ChatNicknameCustomizationModule extends TwitchModule {
+	private readonly chatNicknameCustomizationHelper = new ChatNicknameCustomizationHelper();
+
 	config: TwitchModuleConfig = {
 		name: "chat-nickname-customization",
 		appliers: [
@@ -39,7 +41,7 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 		//TODO remove
 		userCustomization.customFont = "Potta One";
 		if (userCustomization.customFont) {
-			ChatNicknameCustomizationHelper.applyCustomFont(
+			this.chatNicknameCustomizationHelper.applyCustomFont(
 				usernameElement,
 				userCustomization.customFont,
 				ChatNicknameCustomizationModule.DEFAULT_FONT
@@ -59,6 +61,6 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 		} catch (error) {
 			color = userMessageColor || "white";
 		}
-		ChatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
+		this.chatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
 	}
 }

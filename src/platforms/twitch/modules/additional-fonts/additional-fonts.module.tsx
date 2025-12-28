@@ -4,6 +4,7 @@ import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class AdditionalFontsModule extends TwitchModule {
 	private static FONT_LIST: string[] = ["Cherry Bomb One", "Fredoka", "Darumadrop One", "Dela Gothic One", "Potta One"];
+	private readonly additionalFontsHelper = new AdditionalFontsHelper();
 
 	readonly config: TwitchModuleConfig = {
 		name: "additional-fonts",
@@ -20,6 +21,6 @@ export default class AdditionalFontsModule extends TwitchModule {
 	};
 
 	private async run(elements: Element[]) {
-		AdditionalFontsHelper.loadFonts(elements, AdditionalFontsModule.FONT_LIST);
+		this.additionalFontsHelper.loadFonts(elements, AdditionalFontsModule.FONT_LIST);
 	}
 }

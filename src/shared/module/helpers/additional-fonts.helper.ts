@@ -1,5 +1,5 @@
 export class AdditionalFontsHelper {
-	static loadFonts(elements: Element[], fontList: string[]): void {
+	loadFonts(elements: Element[], fontList: string[]): void {
 		if (elements.length === 0) return;
 		const familyQuery = fontList.map((font) => `family=${font.replace(/\s+/g, "+")}`).join("&");
 		const url = `https://fonts.googleapis.com/css2?${familyQuery}&display=swap`;
