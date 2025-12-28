@@ -6,6 +6,7 @@ export class AdditionalFontsHelper {
 		const fontLink = document.createElement("link");
 		fontLink.rel = "stylesheet";
 		fontLink.href = url;
+		// doing this magic so it won't impact the main page load
 		fontLink.setAttribute("media", "print");
 		fontLink.setAttribute("onload", "this.media='all'");
 		fontLink.classList.add("enhancer-additional-font");
