@@ -68,8 +68,4 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 
 		usernameElement.style.fontFamily = `${fontStack}, ${ChatNicknameCustomizationModule.DEFAULT_FONT}`;
 	}
-
-	private applyBoldName(usernameElement: HTMLElement) {
-		usernameElement.style.fontWeight = "bold";
-	}
 }
