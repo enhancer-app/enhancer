@@ -173,7 +173,7 @@ export default class SettingsModule extends TwitchModule {
 			{
 				id: "chatMessageMenuEnabled",
 				title: "Enable Chat Message Menu",
-				description: "Loads extra font assets to provide a wider variety of styles.",
+				description: "Show a menu with message options when you right-click a chat message.",
 				type: "toggle",
 				tabIndex: tabIndexes.Chat,
 			},
