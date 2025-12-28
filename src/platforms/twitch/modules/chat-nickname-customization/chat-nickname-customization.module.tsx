@@ -38,8 +38,6 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 		if (userCustomization.hasGlow) {
 			this.applyGlow(usernameElement, message.user.color);
 		}
-		//TODO remove
-		userCustomization.customFont = "Potta One";
 		if (userCustomization.customFont) {
 			this.chatNicknameCustomizationHelper.applyCustomFont(
 				usernameElement,
