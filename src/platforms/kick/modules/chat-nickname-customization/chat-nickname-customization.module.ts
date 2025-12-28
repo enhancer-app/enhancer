@@ -34,6 +34,8 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 			if (userCustomization.hasGlow) {
 				this.applyGlowEffect(usernameElement, message);
 			}
+			//TODO remove
+			userCustomization.customFont = "Potta One";
 			if (userCustomization.customFont) {
 				this.applyCustomFont(usernameElement, userCustomization.customFont);
 			}
