@@ -1,5 +1,7 @@
 import { Logger } from "$shared/logger/logger.ts";
+import { FollowSyncManager } from "$shared/worker/follow-sync/follow-sync.manager.ts";
 import { SharedStorageService } from "$shared/worker/shared-storage/shared-storage.service.ts";
+import { StreamerStatusManager } from "$shared/worker/streamer-status/streamer-status.manager.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
 import { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
@@ -9,6 +11,8 @@ export default class WorkerBackground {
 	private readonly watchtimeService = new WatchtimeService();
 	private readonly settingsService = new SettingsService();
 	private readonly sharedStorageService = new SharedStorageService();
+	private readonly followSyncManager = new FollowSyncManager(this.sharedStorageService);
+	private readonly streamerStatusManager = new StreamerStatusManager();
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.watchtimeService,
@@ -30,6 +34,11 @@ export default class WorkerBackground {
 			this.settingsService.initialize(),
 			this.sharedStorageService.initialize(),
 		]);
+		
+		// Start background managers
+		this.followSyncManager.start();
+		this.streamerStatusManager.start();
+		
 		this.isInitialized = true;
 		this.logger.info("Background worker started");
 
