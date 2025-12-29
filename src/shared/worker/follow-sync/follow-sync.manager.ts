@@ -26,6 +26,11 @@ export class FollowSyncManager {
 		}
 	}
 
+	/**
+	 * Periodic sync trigger (actual sync happens in content scripts)
+	 * This method serves as a scheduled trigger but doesn't perform actual syncing
+	 * because the background script cannot access platform-specific APIs (like cookies, DOM, etc).
+	 */
 	private async syncAll() {
 		try {
 			this.logger.debug("Running periodic follow sync (scheduled)");

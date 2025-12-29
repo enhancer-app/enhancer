@@ -7,7 +7,7 @@ import { type Signal, signal } from "@preact/signals";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
-//
+
 export default class KickStreamersModule extends TwitchModule {
 	readonly config: TwitchModuleConfig = {
 		name: "kick-streamers",
@@ -22,15 +22,15 @@ export default class KickStreamersModule extends TwitchModule {
 		],
 		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("showFollowsFromOtherPlatforms"),
 	};
-//
+
 	private static readonly UPDATE_INTERVAL_MS = 2 * 60 * 1000;
 	private updateInterval: NodeJS.Timeout | undefined;
-//
+
 	private readonly kickApi = new KickApi();
 	private cachedKickStreamers: string[] | null = null;
 	private readonly streamers: Signal<StreamerInfo[]> = signal([]);
 	private platformIcons: Record<string, string> = {};
-//
+
 	async initialize() {
 		try {
 			const kick = await this.commonUtils().getAssetFile(this.workerService(), "brands/kick.svg");
@@ -47,7 +47,7 @@ export default class KickStreamersModule extends TwitchModule {
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(() => void this.refreshStatuses(), KickStreamersModule.UPDATE_INTERVAL_MS);
 	}
-//
+
 	private mountSection(elements: Element[]) {
 		if (document.querySelector(`.${this.getId()}`)) return;
 		const parent = elements.at(0);
@@ -62,7 +62,7 @@ export default class KickStreamersModule extends TwitchModule {
 			wrapper,
 		);
 	}
-//
+
 	private async refreshStatuses() {
 		try {
 			await this.loadStreamersFromCommon();
@@ -93,7 +93,7 @@ export default class KickStreamersModule extends TwitchModule {
 			this.logger.error("Failed to refresh Kick statuses", error);
 		}
 	}
-//
+
 	private async loadStreamersFromCommon(): Promise<void> {
 		try {
 			const sharedFollows = await this.sharedStorageDataService().getStorageKey("sharedFollows");
@@ -105,7 +105,7 @@ export default class KickStreamersModule extends TwitchModule {
 			this.cachedKickStreamers = [];
 		}
 	}
-//
+
 	private mapChannelToInfo(channel: ChannelResponse): KickStreamerInfo {
 		const isLive = Boolean(channel.livestream?.is_live);
 		const category =
@@ -120,7 +120,7 @@ export default class KickStreamersModule extends TwitchModule {
 		};
 	}
 }
-//
+
 function KickStreamersSection({
 	streamers,
 	onRefresh,
@@ -133,9 +133,9 @@ function KickStreamersSection({
 	const rootRef = useRef<HTMLDivElement>(null);
 	const [compact, setCompact] = useState(false);
 	const [visibleCount, setVisibleCount] = useState(5);
-//
+
 	const truncate = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}...` : text);
-//
+
 	useEffect(() => {
 		const element = rootRef.current;
 		if (!element) return;
@@ -146,7 +146,7 @@ function KickStreamersSection({
 		ro.observe(element);
 		return () => ro.disconnect();
 	}, []);
-//
+
 	return (
 		<SectionWrapper ref={rootRef}>
 			{!compact && (
@@ -202,11 +202,11 @@ function KickStreamersSection({
 		</SectionWrapper>
 	);
 }
-//
+
 const SectionWrapper = styled.div`
 	margin: 12px 0 0 0;
 `;
-//
+
 const SectionHeader = styled.div`
 	display: flex;
 	align-items: center;
@@ -217,7 +217,7 @@ const SectionHeader = styled.div`
 	font-weight: 700;
 	text-transform: none;
 `;
-//
+
 const RefreshButton = styled.button`
 	background: transparent;
 	border: none;
@@ -227,17 +227,17 @@ const RefreshButton = styled.button`
 	padding: 2px 4px;
 	border-radius: 3px;
 	transition: background 0.2s ease;
-//
+
 	&:hover {
 		background: rgba(255, 255, 255, 0.08);
 	}
 `;
-//
+
 const List = styled.div`
 	display: flex;
 	flex-direction: column;
 `;
-//
+
 const Item = styled.a<{ $offline: boolean; $compact?: boolean }>`
 	display: flex;
 	align-items: center;
@@ -248,32 +248,32 @@ const Item = styled.a<{ $offline: boolean; $compact?: boolean }>`
 	color: inherit;
 	opacity: ${(props) => (props.$offline ? 0.6 : 1)};
 	justify-content: ${(props) => (props.$compact ? "center" : "flex-start")};
-//
+
 	&:hover {
 		background: rgba(255, 255, 255, 0.08);
 		text-decoration: none;
 	}
 `;
-//
+
 const Avatar = styled.img<{ $compact?: boolean }>`
 	width: ${(props) => (props.$compact ? 32 : 30)}px;
 	height: ${(props) => (props.$compact ? 32 : 30)}px;
 	border-radius: 50%;
 	background: #232323;
 `;
-//
+
 const AvatarWrapper = styled.div<{ $compact?: boolean }>`
 	position: relative;
 	display: inline-block;
 	line-height: 0;
 `;
-//
+
 const ItemBody = styled.div`
 	display: flex;
 	flex-direction: column;
 	line-height: 1.1;
 `;
-//
+
 const Name = styled.div`
 	font-size: 14px;
 	font-weight: 600;
@@ -282,7 +282,7 @@ const Name = styled.div`
 	align-items: center;
 	gap: 6px;
 `;
-//
+
 const PlatformBadge = styled.img`
 	position: absolute;
 	bottom: -2px;
@@ -294,12 +294,12 @@ const PlatformBadge = styled.img`
 	border-radius: 0;
 	z-index: 1;
 `;
-//
+
 const Game = styled.div`
 	font-size: 13px;
 	color: #adadb8;
 `;
-//
+
 const RightStatus = styled.div`
 	margin-left: auto;
 	font-size: 14px;
@@ -308,7 +308,7 @@ const RightStatus = styled.div`
 	align-items: center;
 	gap: 6px;
 `;
-//
+
 const LiveDot = styled.span`
     display: inline-block;
     width: 8px;
@@ -316,19 +316,19 @@ const LiveDot = styled.span`
     border-radius: 50%;
     background: #eb0400;
 `;
-//
+
 const RightViewers = styled.span`
 	font-size: 13px;
 	color: #ffffff;
 `;
-//
+
 const Footer = styled.div`
 	display: flex;
 	justify-content: center;
 	padding: 6px 8px 0 8px;
 	gap: 16px;
 `;
-//
+
 const ExpandButton = styled.button`
 	background: transparent;
 	border: none;
@@ -338,11 +338,11 @@ const ExpandButton = styled.button`
 	padding: 2px 4px;
 	border-radius: 3px;
 	transition: background 0.2s ease;
-//
+
 	&:hover {
 		background: rgba(255, 255, 255, 0.08);
 	}
 `;
-//
+
 const formatViewers = (viewers: number) =>
 	Math.abs(viewers) < 10000 ? viewers.toString() : viewers.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
