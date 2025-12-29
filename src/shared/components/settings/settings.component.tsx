@@ -598,7 +598,10 @@ const Settings = <T,>({
 	const handleArrayRemove = (key: keyof T, index: number, item: unknown) => {
 		// For quickAccessLinks, show confirmation popup
 		if (key === "quickAccessLinks") {
-			const itemTitle = typeof item === "object" && item !== null ? (item as Record<string, string>).title : "";
+			const itemTitle =
+				typeof item === "object" && item !== null && "title" in item && typeof item.title === "string"
+					? item.title
+					: "";
 			setPendingArrayRemove({
 				key,
 				index,
@@ -935,7 +938,7 @@ const Settings = <T,>({
 						<ModalMessage>
 							{pendingArrayRemove.itemTitle
 								? `Are you sure you want to remove "${pendingArrayRemove.itemTitle}" from Quick Access Links?`
-								: "Are you sure you want to remove this item?"}
+								: "Are you sure you want to remove this Quick Access Link?"}
 						</ModalMessage>
 						<ModalButtonContainer>
 							<ModalButton primary onClick={confirmArrayRemove}>
