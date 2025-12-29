@@ -2,7 +2,7 @@ import type KickApi from "$kick/apis/kick.api.ts";
 import type KickUtils from "$kick/kick.utils.ts";
 import type EnhancerApi from "$shared/apis/enhancer.api.ts";
 import Module from "$shared/module/module.ts";
-import type CommonDataService from "$shared/settings/common.service.ts";
+import type SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
 import type SettingsService from "$shared/settings/settings.service.ts";
 import type StorageRepository from "$shared/storage/storage-repository.ts";
 import type UtilsRepository from "$shared/utils/utils.repository.ts";
@@ -17,14 +17,14 @@ export default abstract class KickModule extends Module<KickEvents, KickStorage,
 		emitter: Emitter<KickEvents>,
 		storageRepository: StorageRepository<KickStorage>,
 		settingsService: SettingsService<KickSettings>,
-		commonDataService: CommonDataService,
+		sharedStorageDataService: SharedStorageDataService,
 		utilsRepository: UtilsRepository,
 		enhancerApi: EnhancerApi,
 		workerApi: WorkerService,
 		private readonly _kickUtils: KickUtils,
 		private readonly _kickApi: KickApi,
 	) {
-		super(emitter, storageRepository, settingsService, commonDataService, utilsRepository, enhancerApi, workerApi);
+		super(emitter, storageRepository, settingsService, sharedStorageDataService, utilsRepository, enhancerApi, workerApi);
 	}
 
 	protected kickUtils() {

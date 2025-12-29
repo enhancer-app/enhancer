@@ -3,7 +3,7 @@ import TwitchModule from "$twitch/twitch.module.ts";
 import type { KickModuleConfig, TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class SharedFollowsModule extends TwitchModule {
-	private readonly twitchFollowsSyncer = new TwitchFollowSyncer(this.commonDataService(), this.twitchUtils());
+	private readonly twitchFollowsSyncer = new TwitchFollowSyncer(this.sharedStorageDataService(), this.twitchUtils());
 
 	config: TwitchModuleConfig = {
 		name: "shared-follows",

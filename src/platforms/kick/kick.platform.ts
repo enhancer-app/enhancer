@@ -34,7 +34,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			this.emitter,
 			this.storageRepository,
 			this.settingsService,
-			this.commonDataService,
+			this.sharedStorageDataService,
 			this.utilsRepository,
 			this.enhancerApi,
 			this.workerApi,

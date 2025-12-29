@@ -1,6 +1,6 @@
 import { HttpClient } from "$shared/http/http-client.ts";
 import FollowSyncer from "$shared/module/shared-follows/follow-syncer.ts";
-import type CommonDataService from "$shared/settings/common.service.ts";
+import type SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
 import type CommonUtils from "$shared/utils/common.utils.ts";
 import type { FollowedChannelsResponse } from "$types/platforms/kick/kick.api.types.ts";
 
@@ -9,7 +9,7 @@ export default class KickFollowSyncer extends FollowSyncer {
 	private syncInProgress = false;
 
 	constructor(
-		private readonly commonDataService: CommonDataService,
+		private readonly sharedStorageDataService: SharedStorageDataService,
 		private readonly commonUtils: CommonUtils,
 	) {
 		super("kick");
@@ -23,7 +23,7 @@ export default class KickFollowSyncer extends FollowSyncer {
 		this.syncInProgress = true;
 		try {
 			const followed = await this.fetchAllFollowed();
-			await this.commonDataService.updateCommonNestedKey("sharedFollows", "kick", followed);
+			await this.sharedStorageDataService.updateStorageNestedKey("sharedFollows", "kick", followed);
 			this.logger.info(`Synced ${followed.length} followed channels`);
 		} catch (err) {
 			this.logger.error("Failed to sync follows", err);
@@ -33,7 +33,7 @@ export default class KickFollowSyncer extends FollowSyncer {
 	}
 
 	async clearFollows() {
-		await this.commonDataService.updateCommonNestedKey("sharedFollows", "kick", []);
+		await this.sharedStorageDataService.updateStorageNestedKey("sharedFollows", "kick", []);
 	}
 
 	private async fetchAllFollowed(): Promise<string[]> {

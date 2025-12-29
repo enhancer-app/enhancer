@@ -1,4 +1,4 @@
-export type CommonDatabaseData = {
+export type SharedStorageData = {
 	sharedFollows: {
 		twitch: string[];
 		kick: string[];
