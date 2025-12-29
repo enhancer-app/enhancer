@@ -35,9 +35,10 @@ const buildProc = spawn(["bun", "run", "build"], {
 	stderr: "inherit",
 });
 
-if ((await buildProc.exited) !== 0) {
+const exitCode = await buildProc.exited;
+if (exitCode !== 0) {
 	console.error("Build failed");
-	process.exit(1);
+	process.exit(exitCode);
 }
 
 const manifest = await file("dist/manifest.json").json();
