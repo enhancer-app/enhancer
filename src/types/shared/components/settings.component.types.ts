@@ -40,6 +40,8 @@ export type RadioSettingDefinition<T = any> = {
 export type ArraySettingDefinition<T = any> = {
 	type: "array";
 	arrayItemFields: { name: string; placeholder: string }[];
+	confirmOnRemove?: boolean;
+	confirmationMessage?: string;
 } & CommonSettingDefinition<T>;
 
 export type TextSettingDefinition<T = any> = {

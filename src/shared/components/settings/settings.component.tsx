@@ -473,6 +473,13 @@ const Settings = <T,>({
 		confirmationMessage?: string;
 	} | null>(null);
 
+	const [pendingArrayRemove, setPendingArrayRemove] = useState<{
+		key: keyof T;
+		index: number;
+		itemTitle?: string;
+		confirmationMessage?: string;
+	} | null>(null);
+
 	const [justTurnedOff, setJustTurnedOff] = useState<keyof T | null>(null);
 	const [fileUploadError, setFileUploadError] = useState<string | null>(null);
 
@@ -589,6 +596,36 @@ const Settings = <T,>({
 		setPendingToggle(null);
 	};
 
+	const handleArrayRemove = (setting: SettingDefinition<T>, index: number, item: unknown) => {
+		// Check if this array setting requires confirmation on remove
+		if (setting.type === "array" && setting.confirmOnRemove) {
+			const itemTitle =
+				typeof item === "object" && item !== null && "title" in item && typeof item.title === "string"
+					? item.title
+					: "";
+			setPendingArrayRemove({
+				key: setting.id as keyof T,
+				index,
+				itemTitle,
+				confirmationMessage: setting.confirmationMessage,
+			});
+		} else {
+			// For array types without confirmation, remove directly
+			updateArraySetting(setting.id as keyof T, index, null, "remove");
+		}
+	};
+
+	const confirmArrayRemove = () => {
+		if (pendingArrayRemove) {
+			updateArraySetting(pendingArrayRemove.key, pendingArrayRemove.index, null, "remove");
+			setPendingArrayRemove(null);
+		}
+	};
+
+	const cancelArrayRemove = () => {
+		setPendingArrayRemove(null);
+	};
+
 	const renderSettingControl = (setting: SettingDefinition<T>) => {
 		const value = settings[setting.id as keyof T];
 
@@ -693,10 +730,7 @@ const Settings = <T,>({
 										}}
 									/>
 								))}
-								<ArrayButton
-									variant="remove"
-									onClick={() => updateArraySetting(setting.id as keyof T, index, null, "remove")}
-								>
+								<ArrayButton variant="remove" onClick={() => handleArrayRemove(setting, index, item)}>
 									Remove
 								</ArrayButton>
 							</ArrayItem>
@@ -895,6 +929,25 @@ const Settings = <T,>({
 								Confirm
 							</ModalButton>
 							<ModalButton onClick={cancelToggle}>Cancel</ModalButton>
+						</ModalButtonContainer>
+					</ModalContent>
+				</ModalOverlay>
+			)}
+			{pendingArrayRemove && (
+				<ModalOverlay onClick={cancelArrayRemove}>
+					<ModalContent onClick={(e) => e.stopPropagation()}>
+						<ModalHeader>Confirm Removal</ModalHeader>
+						<ModalMessage>
+							{pendingArrayRemove.confirmationMessage ||
+								(pendingArrayRemove.itemTitle
+									? `Are you sure you want to remove "${pendingArrayRemove.itemTitle}"?`
+									: "Are you sure you want to remove this item?")}
+						</ModalMessage>
+						<ModalButtonContainer>
+							<ModalButton primary onClick={confirmArrayRemove}>
+								Remove
+							</ModalButton>
+							<ModalButton onClick={cancelArrayRemove}>Cancel</ModalButton>
 						</ModalButtonContainer>
 					</ModalContent>
 				</ModalOverlay>

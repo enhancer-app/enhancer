@@ -162,6 +162,8 @@ export default class SettingsModule extends KickModule {
 					{ name: "title", placeholder: "Enter link name..." },
 					{ name: "url", placeholder: "Enter URL..." },
 				],
+				confirmOnRemove: true,
+				confirmationMessage: "Are you sure you want to remove this Quick Access Link?",
 			},
 			{
 				id: "watchtime-list",
