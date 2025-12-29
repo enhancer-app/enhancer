@@ -21,6 +21,7 @@
 		"typescript": "^5.3.3"
 	},
 	"dependencies": {
+		"@biomejs/cli-linux-x64": "^2.3.10",
 		"@preact/compat": "^18.3.1",
 		"@preact/signals": "^2.2.0",
 		"graphql-tag": "^2.12.6",
