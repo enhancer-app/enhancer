@@ -42,20 +42,20 @@ return now - lastRefresh >= StreamerStatusManager.MIN_REFRESH_INTERVAL_MS;
  */
 markRefreshed(platform: string): void {
 this.lastRefreshTime[platform] = Date.now();
-	}
+}
 
-	/**
-	 * Periodic refresh trigger (actual refresh happens in content scripts)
-	 * This method serves as a scheduled trigger but doesn't perform actual status fetching
-	 * because the background script cannot access platform-specific APIs directly.
-	 */
-	private async refreshAll() {
-		try {
-			this.logger.debug("Running periodic status refresh (scheduled)");
-			// Actual refresh happens in the content scripts via events
-			// This just ensures rate limiting is respected
-		} catch (error) {
-			this.logger.error("Failed to refresh statuses", error);
-		}
-	}
+/**
+ * Periodic refresh trigger (actual refresh happens in content scripts)
+ * This method serves as a scheduled trigger but doesn't perform actual status fetching
+ * because the background script cannot access platform-specific APIs directly.
+ */
+private async refreshAll() {
+try {
+this.logger.debug("Running periodic status refresh (scheduled)");
+// Actual refresh happens in the content scripts via events
+// This just ensures rate limiting is respected
+} catch (error) {
+this.logger.error("Failed to refresh statuses", error);
+}
+}
 }
