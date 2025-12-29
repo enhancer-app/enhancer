@@ -35,6 +35,7 @@ export default class StreamLatencyModule extends KickModule {
 		this.updateInterval = setInterval(() => this.updateLatency(), 1000);
 
 		for (const chatRoom of elements) {
+			if (chatRoom.className.includes("--chat-clip")) continue;
 			const span = chatRoom.firstElementChild?.querySelector<HTMLSpanElement>("span");
 			if (!span) continue;
 			span.textContent = "";
