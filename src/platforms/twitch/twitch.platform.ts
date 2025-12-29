@@ -24,6 +24,7 @@ import ChatHighlightUserModule from "./modules/chat-highlight-user/chat-highligh
 import ChatMessagePopupModule from "./modules/chat-message-popup/chat-message-popup.module.tsx";
 import ChatModule from "./modules/chat/chat.module.tsx";
 import ClipDownloadModule from "./modules/clip-download/clip-download.module.tsx";
+import KickStreamersModule from "./modules/kick-streamers/kick-streamers.module.tsx";
 import StreamLatencyModule from "./modules/stream-latency/stream-latency.module.tsx";
 import type TwitchModule from "./twitch.module.ts";
 import TwitchUtils from "./twitch.utils.ts";
@@ -72,8 +73,7 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			new ChatMessageMenuModule(...dependencies),
 			new ChatMentionSoundModule(...dependencies),
 			new AdditionalFontsModule(...dependencies),
-			// new KickStreamersModule(...dependencies),
-			// new ExposeFollowsModule(...dependencies),
+			new KickStreamersModule(...dependencies),
 			new SharedFollowsModule(...dependencies),
 		];
 	}

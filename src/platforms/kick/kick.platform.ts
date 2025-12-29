@@ -16,6 +16,7 @@ import SettingsButtonModule from "$kick/modules/settings-button/settings-button.
 import SettingsModule from "$kick/modules/settings/settings.module.tsx";
 import SharedFollowsModule from "$kick/modules/shared-follows/shared-follows.module.tsx";
 import StreamLatencyModule from "$kick/modules/stream-latency/stream-latency.module.tsx";
+import TwitchStreamsModule from "$kick/modules/twitch-streams/twitch-streams.module.tsx";
 import Platform from "$shared/platform/platform.ts";
 import type { KickEvents } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickSettings } from "$types/platforms/kick/kick.settings.types.ts";
@@ -58,6 +59,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			// new ChatMessageMenuModule(...dependencies),
 			new AdditionalFontsModule(...dependencies),
 			new ChatFixAutoScrollModule(...dependencies),
+			new TwitchStreamsModule(...dependencies),
 			new SharedFollowsModule(...dependencies),
 		];
 	}
