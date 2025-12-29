@@ -477,6 +477,7 @@ const Settings = <T,>({
 		key: keyof T;
 		index: number;
 		itemTitle?: string;
+		confirmationMessage?: string;
 	} | null>(null);
 
 	const [justTurnedOff, setJustTurnedOff] = useState<keyof T | null>(null);
@@ -595,21 +596,22 @@ const Settings = <T,>({
 		setPendingToggle(null);
 	};
 
-	const handleArrayRemove = (key: keyof T, index: number, item: unknown) => {
-		// For quickAccessLinks, show confirmation popup
-		if (key === "quickAccessLinks") {
+	const handleArrayRemove = (setting: SettingDefinition<T>, index: number, item: unknown) => {
+		// Check if this array setting requires confirmation on remove
+		if (setting.type === "array" && setting.confirmOnRemove) {
 			const itemTitle =
 				typeof item === "object" && item !== null && "title" in item && typeof item.title === "string"
 					? item.title
 					: "";
 			setPendingArrayRemove({
-				key,
+				key: setting.id as keyof T,
 				index,
 				itemTitle,
+				confirmationMessage: setting.confirmationMessage,
 			});
 		} else {
-			// For other array types, remove directly
-			updateArraySetting(key, index, null, "remove");
+			// For array types without confirmation, remove directly
+			updateArraySetting(setting.id as keyof T, index, null, "remove");
 		}
 	};
 
@@ -728,7 +730,7 @@ const Settings = <T,>({
 										}}
 									/>
 								))}
-								<ArrayButton variant="remove" onClick={() => handleArrayRemove(setting.id as keyof T, index, item)}>
+								<ArrayButton variant="remove" onClick={() => handleArrayRemove(setting, index, item)}>
 									Remove
 								</ArrayButton>
 							</ArrayItem>
@@ -936,9 +938,10 @@ const Settings = <T,>({
 					<ModalContent onClick={(e) => e.stopPropagation()}>
 						<ModalHeader>Confirm Removal</ModalHeader>
 						<ModalMessage>
-							{pendingArrayRemove.itemTitle
-								? `Are you sure you want to remove "${pendingArrayRemove.itemTitle}" from Quick Access Links?`
-								: "Are you sure you want to remove this Quick Access Link?"}
+							{pendingArrayRemove.confirmationMessage ||
+								(pendingArrayRemove.itemTitle
+									? `Are you sure you want to remove "${pendingArrayRemove.itemTitle}"?`
+									: "Are you sure you want to remove this item?")}
 						</ModalMessage>
 						<ModalButtonContainer>
 							<ModalButton primary onClick={confirmArrayRemove}>
