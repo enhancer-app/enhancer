@@ -9,7 +9,9 @@ import { GetSettingsHandler } from "$shared/worker/settings/get-settings.handler
 import type { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
 import { UpdateSettingsHandler } from "$shared/worker/settings/update-settings.handler.ts";
 import { AddWatchtimeHandler } from "$shared/worker/watchtime/add-watchtime.handler.ts";
+import { GetPaginatedWatchtimeHandler } from "$shared/worker/watchtime/get-paginated-watchtime.handler.ts";
 import { GetWatchtimeHandler } from "$shared/worker/watchtime/get-watchtime.handler.ts";
+import { ImportWatchtimeHandler } from "$shared/worker/watchtime/import-watchtime.handler.ts";
 import type { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
 import type { WorkerAction } from "$types/shared/worker/worker.types.ts";
 
@@ -30,6 +32,8 @@ export class HandlerRegistry {
 		this.handlers.set("getAssetsFile", new AssetsFileHandler(this.logger));
 		this.handlers.set("addWatchtime", new AddWatchtimeHandler(this.logger, this.watchtimeService));
 		this.handlers.set("getWatchtime", new GetWatchtimeHandler(this.logger, this.watchtimeService));
+		this.handlers.set("getPaginatedWatchtime", new GetPaginatedWatchtimeHandler(this.logger, this.watchtimeService));
+		this.handlers.set("importWatchtime", new ImportWatchtimeHandler(this.logger, this.watchtimeService));
 		this.handlers.set("getSettings", new GetSettingsHandler(this.logger, this.settingsService));
 		this.handlers.set("updateSettings", new UpdateSettingsHandler(this.logger, this.settingsService));
 		this.handlers.set("getCommonData", new GetCommonDataHandler(this.logger, this.commonService));

@@ -1,4 +1,5 @@
 import { Logger } from "$shared/logger/logger.ts";
+import { WatchtimeDatabaseMigrator } from "$shared/worker/watchtime/watchtime.database-migrator.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
 
@@ -6,8 +7,10 @@ export class WatchtimeDatabase {
 	private readonly logger = new Logger({ context: "watchtime-db" });
 	private database: IDBDatabase | null = null;
 	private readonly dbName = "enhancer_watchtime";
-	private readonly dbVersion = 2;
+	private readonly dbVersion = 4;
 	private readonly storeName = "watchtime";
+
+	private readonly migrator = new WatchtimeDatabaseMigrator(this.storeName, this.logger);
 
 	async initialize(): Promise<void> {
 		return new Promise((resolve, reject) => {
@@ -25,20 +28,9 @@ export class WatchtimeDatabase {
 			};
 
 			request.onupgradeneeded = (event) => {
-				this.handleUpgrade(event);
+				this.migrator.migrate(event, request.result, this.dbVersion);
 			};
 		});
-	}
-
-	private handleUpgrade(event: IDBVersionChangeEvent): void {
-		if (event.oldVersion === 1 && event.newVersion === 2) return;
-		const db = (event.target as IDBOpenDBRequest).result;
-		this.logger.info(`Creating watchtime database (version ${this.dbVersion})...`);
-		const store = db.createObjectStore(this.storeName, { keyPath: "id" });
-		store.createIndex("by_platform", "platform");
-		store.createIndex("by_username", "username");
-		store.createIndex("by_platform_username", ["platform", "username"], { unique: true });
-		store.createIndex("by_time", "time");
 	}
 
 	private createId(platform: PlatformType, username: string): string {
@@ -99,20 +91,67 @@ export class WatchtimeDatabase {
 		});
 	}
 
-	async getAllWatchtimeByPlatform(platform: PlatformType): Promise<WatchtimeRecord[]> {
+	async getAllWatchtimePaginated(platform: PlatformType, page: number, pageSize: number): Promise<WatchtimeRecord[]> {
 		if (!this.database) {
 			throw new Error("Database not initialized");
 		}
+		if (pageSize <= 0) {
+			throw new Error("Page size must be a positive number");
+		}
+
 		return new Promise((resolve, reject) => {
 			// biome-ignore lint/style/noNonNullAssertion: checking it above
 			const tx = this.database!.transaction(this.storeName, "readonly");
 			const store = tx.objectStore(this.storeName);
-			const index = store.index("by_platform");
-			const request = index.getAll(platform);
+			const index = store.index("by_platform_time");
 
-			request.onsuccess = () => resolve(request.result);
+			const range = IDBKeyRange.bound([platform, 0], [platform, Number.POSITIVE_INFINITY]);
+			const request = index.openCursor(range, "prev"); // biggest watchtime first
+
+			const results: WatchtimeRecord[] = [];
+			let skipped = 0;
+			const start = (page - 1) * pageSize;
+
+			request.onsuccess = (event) => {
+				const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+				if (!cursor) {
+					resolve(results);
+					return;
+				}
+
+				if (skipped >= start && results.length < pageSize) {
+					results.push(cursor.value as WatchtimeRecord);
+				}
+
+				skipped++;
+				if (results.length < pageSize) {
+					cursor.continue();
+				} else {
+					resolve(results);
+				}
+			};
+
 			request.onerror = () => {
-				this.logger.error("Failed to get watchtime by platform:", request.error);
+				this.logger.error("Failed to get paginated watchtime by platform:", request.error);
+				reject(request.error);
+			};
+		});
+	}
+
+	async setWatchtime(watchtime: WatchtimeRecord): Promise<void> {
+		if (!this.database) {
+			throw new Error("Database not initialized");
+		}
+
+		return new Promise((resolve, reject) => {
+			// biome-ignore lint/style/noNonNullAssertion: checking it above
+			const tx = this.database!.transaction(this.storeName, "readwrite");
+			const store = tx.objectStore(this.storeName);
+			const request = store.put(watchtime);
+
+			request.onsuccess = () => resolve();
+			request.onerror = () => {
+				this.logger.error("Failed to set watchtime:", request.error);
 				reject(request.error);
 			};
 		});

@@ -1,11 +1,16 @@
-import { KICK_LIVE_VIDEO_DURATION } from "$kick/kick.constants.ts";
+import type CommonUtils from "$shared/utils/common.utils.ts";
 import type ReactUtils from "$shared/utils/react.utils.ts";
 import type { KickChatMessageData } from "$types/platforms/kick/kick.events.types.ts";
 import type { IsoDateProps, StreamStatusProps, VideoProgressProps } from "$types/platforms/kick/kick.utils.types.ts";
 import type { ChannelChatRoom, ChannelChatRoomInfo, ChannelInfo } from "$types/platforms/kick/kick.utils.types.ts";
 
 export default class KickUtils {
-	constructor(protected readonly reactUtils: ReactUtils) {}
+	constructor(
+		protected readonly reactUtils: ReactUtils,
+		protected readonly commonUtils: CommonUtils,
+	) {}
+
+	private static readonly FIREFOX_LIVE_VIDEO_THRESHOLD = 5_000_000_000_000;
 
 	getMessageData(messageElement: Element): KickChatMessageData | null {
 		const props = this.reactUtils.findReactChildren<KickChatMessageData>(
@@ -110,6 +115,16 @@ export default class KickUtils {
 	}
 
 	isLiveVideo(video: HTMLVideoElement): boolean {
-		return video.duration === KICK_LIVE_VIDEO_DURATION;
+		return video.duration === Number.POSITIVE_INFINITY || video.duration > KickUtils.FIREFOX_LIVE_VIDEO_THRESHOLD;
+	}
+
+	async scrollToBottomOnChat() {
+		const chatRoom = this.getChannelChatRoom();
+		if (!chatRoom) return;
+		if (!chatRoom.isPaused) {
+			chatRoom.setIsPaused(true);
+			await this.commonUtils.delay(10);
+			chatRoom.setIsPaused(false);
+		}
 	}
 }

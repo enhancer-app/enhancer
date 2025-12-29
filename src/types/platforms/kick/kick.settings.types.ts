@@ -6,6 +6,7 @@ export type KickSettings = {
 	chatImagesSize: number;
 	chatBadgesEnabled: boolean;
 	chatNicknameCustomizationEnabled: boolean;
+	loadAdditionalFonts: boolean;
 	chatMessageMenuEnabled: boolean;
 	quickAccessLinks: QuickAccessLink[];
 	streamLatencyEnabled: boolean;
@@ -13,6 +14,7 @@ export type KickSettings = {
 	realVideoTimeFormat12h: boolean;
 	shareFollowsToOtherPlatforms: boolean;
 	showFollowsFromOtherPlatforms: boolean;
+	channelSection: boolean;
 };
 
 export type KickSettingsEvents = {

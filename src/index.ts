@@ -10,7 +10,7 @@ import TwitchPlatform from "./platforms/twitch/twitch.platform.ts";
 		environment: __environment__,
 		platform: platform.getPlatformType(),
 	};
-	await platform.start();
+	if (platform.shouldStart(window.location)) await platform.start();
 })();
 
 function getPlatform() {

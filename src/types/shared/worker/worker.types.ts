@@ -2,6 +2,8 @@ import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { CommonDatabaseData } from "$types/shared/storage/common-database.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 
+export type { PlatformType };
+
 export interface ExtensionMessageDetail {
 	messageId: string;
 	action: string;
@@ -42,12 +44,34 @@ export interface AddWatchtimePayload {
 	channel: string;
 }
 
+export interface ImportWatchtimePayload {
+	platform: PlatformType;
+	username: string;
+	time: number;
+	firstUpdate?: number;
+	lastUpdate?: number;
+}
+
 export interface GetWatchtimePayload {
 	platform: PlatformType;
 	channel: string;
 }
 
 export interface WatchtimeResponse extends WatchtimeRecord {}
+
+export interface GetPaginatedWatchtimePayload {
+	platform: PlatformType;
+	page: number;
+	pageSize: number;
+	sortOrder?: "asc" | "desc";
+}
+
+export interface PaginatedWatchtimeResponse {
+	data: WatchtimeRecord[];
+	page: number;
+	pageSize: number;
+	total: number;
+}
 
 export interface GetSettingsPayload {
 	platform: PlatformType;
@@ -88,9 +112,17 @@ export interface WorkerApiActions {
 		payload: AddWatchtimePayload;
 		response: WatchtimeResponse | null;
 	};
+	importWatchtime: {
+		payload: ImportWatchtimePayload;
+		response: WatchtimeResponse | null;
+	};
 	getWatchtime: {
 		payload: GetWatchtimePayload;
 		response: WatchtimeResponse | null;
+	};
+	getPaginatedWatchtime: {
+		payload: GetPaginatedWatchtimePayload;
+		response: PaginatedWatchtimeResponse;
 	};
 	getSettings: {
 		payload: GetSettingsPayload;

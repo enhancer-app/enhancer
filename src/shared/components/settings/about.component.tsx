@@ -210,14 +210,14 @@ export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
 						<IconImage src={icons.website} alt="Website" />
 						Website
 					</SocialLink>
-					<SocialLink href="https://sh.enhancer.at/s/github" target="_blank" rel="noopener noreferrer">
+					<SocialLink href="https://sh.enhancer.at/github" target="_blank" rel="noopener noreferrer">
 						<IconImage src={icons.github} alt="GitHub" />
 						GitHub
 					</SocialLink>
-					<SocialLink href="https://sh.enhancer.at/s/twitter" target="_blank" rel="noopener noreferrer">
+					<SocialLink href="https://sh.enhancer.at/twitter" target="_blank" rel="noopener noreferrer">
 						<IconImage src={icons.twitter} alt="X (Twitter)" />X (Twitter)
 					</SocialLink>
-					<SocialLink href="https://sh.enhancer.at/s/dc" target="_blank" rel="noopener noreferrer">
+					<SocialLink href="https://sh.enhancer.at/dc" target="_blank" rel="noopener noreferrer">
 						<IconImage src={icons.discord} alt="Discord" />
 						Discord
 					</SocialLink>

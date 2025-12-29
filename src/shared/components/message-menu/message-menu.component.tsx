@@ -25,7 +25,6 @@ export function MessageMenuComponent({ options, x, y, onClose }: MessageMenuProp
 	const menuRef = useRef<HTMLDivElement>(null);
 	const [pos, setPos] = useState({ left: x, top: y });
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies:
 	useEffect(() => {
 		if (!menuRef.current) return;
 		const menu = menuRef.current.getBoundingClientRect();

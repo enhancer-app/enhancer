@@ -15,6 +15,7 @@ export default class ChannelSectionModule extends TwitchModule {
 
 	readonly config: TwitchModuleConfig = {
 		name: "channel-info",
+		isModuleEnabledCallback: async () => this.settingsService().getSettingsKey("channelSection"),
 		appliers: [
 			{
 				type: "selector",

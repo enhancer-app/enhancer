@@ -45,6 +45,7 @@ export default class RealVideoTimeModule extends TwitchModule {
 	};
 
 	private timeCounter = {} as Signal<number>;
+	private lastFailedVideoId: string | null = null;
 	private currentVideoId: string | undefined;
 	private timeInterval: NodeJS.Timeout | undefined;
 	private videoCreatedAt = new Date(0);
@@ -78,8 +79,16 @@ export default class RealVideoTimeModule extends TwitchModule {
 	}
 
 	private async getVideoCreatedAt(videoId: string) {
-		const { data } = await this.getVideoTime(videoId);
-		return new Date(data.video.createdAt);
+		try {
+			const { data } = await this.getVideoTime(videoId);
+			const createdAt = data?.video?.createdAt;
+			if (!createdAt) return;
+			const date = new Date(createdAt);
+			if (Number.isNaN(date.getTime())) return;
+			return date;
+		} catch (error) {
+			this.logger.warn("Failed to fetch video createdAt", error);
+		}
 	}
 
 	private createTimeCounter() {
@@ -90,12 +99,25 @@ export default class RealVideoTimeModule extends TwitchModule {
 	private async updateCurrentVideo() {
 		const videoId = this.twitchUtils().getVideoIdFromLink(window.location.href);
 		if (!videoId) {
+			this.lastFailedVideoId = null;
 			return this.logger.warn("Failed to find video id");
 		}
-		if (this.currentVideoId === videoId) return;
-		this.currentVideoId = videoId;
-		this.videoCreatedAt = await this.getVideoCreatedAt(videoId);
+		if (this.currentVideoId === videoId) {
+			return;
+		}
+		if (this.lastFailedVideoId === videoId) {
+			return;
+		}
+		const createdAt = await this.getVideoCreatedAt(videoId);
+		if (!createdAt) {
+			this.logger.error(`Failed to get creation date for video ${videoId}. Aborting update.`);
+			this.lastFailedVideoId = videoId;
+			return;
+		}
 		this.logger.debug(`Creating real video time counter for ${videoId}`, this.videoCreatedAt);
+		this.currentVideoId = videoId;
+		this.videoCreatedAt = createdAt;
+		this.lastFailedVideoId = null;
 	}
 
 	private updateTime() {

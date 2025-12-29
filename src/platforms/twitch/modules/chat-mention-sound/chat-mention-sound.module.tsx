@@ -23,11 +23,19 @@ export default class ChatMentionSoundModule extends TwitchModule {
 				event: "twitch:chatInitialized",
 				callback: this.setCurrentUsername.bind(this),
 			},
+			// Deprecated: URL-based sound source. Kept for backward compatibility.
+			// New users should use chatMentionSoundFile (file upload) instead.
 			{
 				type: "event",
 				key: "chat-mention-sound",
 				event: "twitch:settings:chatMentionSoundSource",
 				callback: this.updateAudioSource.bind(this),
+			},
+			{
+				type: "event",
+				key: "chat-mention-sound",
+				event: "twitch:settings:chatMentionSoundFile",
+				callback: this.updateAudioFile.bind(this),
 			},
 			{
 				type: "event",
@@ -41,18 +49,63 @@ export default class ChatMentionSoundModule extends TwitchModule {
 
 	async initialize() {
 		this.defaultSound = await this.commonUtils().getAssetFile(this.workerService(), "modules/mention-sound.ogg", "");
-		this.updateAudioSource(await this.settingsService().getSettingsKey("chatMentionSoundSource"));
+		await this.loadAudioSource();
 		this.updateAudioVolume((await this.settingsService().getSettingsKey("chatMentionSoundVolume")) ?? 50);
+	}
+
+	private async loadAudioSource() {
+		const fileData = await this.settingsService().getSettingsKey("chatMentionSoundFile");
+		const urlSource = await this.settingsService().getSettingsKey("chatMentionSoundSource");
+
+		// Prioritize file upload over URL (new feature takes precedence)
+		if (this.isValidFileData(fileData)) {
+			this.audio.src = fileData;
+		} else if (urlSource && urlSource.length > 3 && this.commonUtils().isValidUrl(urlSource)) {
+			this.audio.src = urlSource;
+		} else {
+			this.audio.src = this.defaultSound;
+		}
+		this.audio.load();
 	}
 
 	private updateAudioVolume(volume: number) {
 		this.audio.volume = volume / 100;
 	}
 
-	private updateAudioSource(sourceUrl: string) {
-		const isCustomSound = sourceUrl.length > 3 && this.commonUtils().isValidUrl(sourceUrl);
-		this.audio.src = isCustomSound ? sourceUrl : this.defaultSound;
-		this.audio.load();
+	/**
+	 * Helper method to validate if fileData is a valid data URL
+	 * @param fileData - The file data to validate
+	 * @returns true if fileData is a valid data URL
+	 */
+	private isValidFileData(fileData: string | undefined): boolean {
+		return !!fileData && fileData.length > 0 && fileData.startsWith("data:");
+	}
+
+	private async updateAudioFile(fileData: string) {
+		// Prioritize file upload over URL
+		if (this.isValidFileData(fileData)) {
+			this.audio.src = fileData;
+			this.audio.load();
+
+			// Clear the deprecated URL field when uploading a file (one-time migration)
+			const currentUrlSource = await this.settingsService().getSettingsKey("chatMentionSoundSource");
+			if (currentUrlSource && currentUrlSource.length > 0) {
+				this.logger.debug("Removing deprecated url", currentUrlSource);
+				await this.settingsService().updateSettingsKey("chatMentionSoundSource", "");
+			}
+		} else {
+			await this.loadAudioSource();
+		}
+	}
+
+	private async updateAudioSource(sourceUrl: string) {
+		// Only use URL if no file is uploaded (backward compatibility)
+		const fileData = await this.settingsService().getSettingsKey("chatMentionSoundFile");
+		if (!this.isValidFileData(fileData)) {
+			const isCustomSound = sourceUrl.length > 3 && this.commonUtils().isValidUrl(sourceUrl);
+			this.audio.src = isCustomSound ? sourceUrl : this.defaultSound;
+			this.audio.load();
+		}
 	}
 
 	private setCurrentUsername() {

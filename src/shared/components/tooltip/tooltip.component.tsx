@@ -19,7 +19,6 @@ export function useTooltipPosition(
 	isVisible: boolean,
 	position: string,
 ) {
-	// biome-ignore lint/correctness/useExhaustiveDependencies:
 	useEffect(() => {
 		if (!isVisible || !containerRef.current || !tooltipRef.current) return;
 		const container = containerRef.current.getBoundingClientRect();

@@ -39,7 +39,7 @@ export default class ChatModule extends TwitchModule {
 
 	private async initializeChannel(channelId: string) {
 		try {
-			// await this.enhancerApi().joinChannel(channelId);
+			await this.enhancerApi().joinChannel(channelId);
 			this.logger.info(`Joined channel ${channelId}`);
 		} catch (error) {
 			this.logger.error("Failed to join channel", error);

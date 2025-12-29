@@ -23,12 +23,24 @@ Provide clear steps to reproduce the issue:
 2. Click on '...'
 3. See the issue
 
+### Platform
+
+Which platform were you using when the issue occurred?
+
+- [ ] Twitch
+- [ ] Kick
+
 ### Enabled Extensions
 
-Which other Twitch-related extensions were active when the issue occurred?
+If the issue happened on **Twitch**, which other Twitch-related extensions were active?
 
 - [ ] BetterTTV (BTTV)
 - [ ] FrankerFaceZ (FFZ)
 - [ ] 7TV
+
+If the issue happened on **Kick**, which Kick-related extensions were active?
+
+- [ ] 7TV
+- [ ] Nipahtv (NTV)
 
 List any other browser extensions that were enabled and might have influenced this behavior:

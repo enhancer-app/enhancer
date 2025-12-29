@@ -11,11 +11,11 @@ import type {
 	CurrentLiveStatusComponent,
 	FollowedSectionComponenet,
 	FollowedSectionStreamData,
-	GuestStarChannelGuestListProps,
 	MediaPlayerComponent,
 	PersistentPlayerComponent,
 	RootComponent,
 	ScrollableChatComponent,
+	StreamInfoTwitchStreamData,
 	TwitchChatCommand,
 	TwitchChatMessageComponent,
 } from "$types/platforms/twitch/twitch.utils.types";
@@ -29,7 +29,9 @@ export default class TwitchUtils {
 		const elements = url.split("/");
 		let name = elements[1];
 		if (name === "popout" || elements[0].includes("dashboard")) name = elements[2];
+		if (name === "moderator" || elements[0].includes("dashboard")) name = elements[2];
 		if (name.includes("?")) name = name.substring(0, name.indexOf("?"));
+		if (name.endsWith("#")) name = name.substring(0, name.indexOf("#"));
 		return name.toLowerCase();
 	}
 
@@ -41,6 +43,10 @@ export default class TwitchUtils {
 
 	isDirectTwitchPlayer() {
 		return window.location.href.includes("player.twitch.tv");
+	}
+
+	isModeratorView() {
+		return window.location.href.includes("/moderator/");
 	}
 
 	getUserIdBySideElement(element: Element): string | undefined {
@@ -57,6 +63,14 @@ export default class TwitchUtils {
 			(n) => !!n.stateNode?.props?.mediaPlayerInstance,
 			200,
 		)?.stateNode.props.mediaPlayerInstance;
+	}
+
+	getMediaPlayerComponent() {
+		return this.reactUtils.findReactChildren<MediaPlayerComponent>(
+			this.reactUtils.getReactInstance(document.querySelector(".persistent-player")),
+			(n) => !!n.stateNode?.props?.mediaPlayerInstance,
+			200,
+		)?.stateNode.props;
 	}
 
 	getPersonalSections() {
@@ -105,11 +119,8 @@ export default class TwitchUtils {
 
 	addCommandToChat(command: TwitchChatCommand) {
 		const commandStore = this.getChatCommandStore();
-		console.info("[plyta-debug] command store", commandStore);
 		if (!commandStore) return;
-		console.info("[plyta-debug] adding command", command);
 		commandStore.addCommand({ ...command, group: "Enhancer" });
-		console.info("[plyta-debug] current commands", commandStore.getCommands());
 	}
 
 	getChatInputContent(): string | null {
@@ -177,7 +188,7 @@ export default class TwitchUtils {
 		if (!element) return;
 		const props = this.reactUtils.findReactChildren<ScrollableChatComponent>(
 			this.reactUtils.getReactInstance(element),
-			(n) => n?.stateNode?.props?.scrollToBottom && n?.stateNode?.props?.messagesHash,
+			(n) => n?.stateNode?.props?.setPaused && n?.stateNode?.props?.messagesHash,
 			100,
 		)?.stateNode.props;
 		if (!props) return;
@@ -196,7 +207,8 @@ export default class TwitchUtils {
 		if (sevenTvChat) {
 			sevenTvChat.scrollTop = sevenTvChat.scrollHeight;
 		} else if (nativeChat) {
-			nativeChat.props.scrollToBottom();
+			nativeChat.props.setPaused(true);
+			nativeChat.props.setPaused(false);
 		}
 	}
 
@@ -258,18 +270,14 @@ export default class TwitchUtils {
 		)?.pendingProps.value.client;
 	}
 
-	getGuestList(): GuestStarChannelGuestListProps | undefined {
-		const props = this.reactUtils.findReactChildren<GuestStarChannelGuestListProps>(
+	getStreamInfo() {
+		const props = this.reactUtils.findReactChildren<never, never, StreamInfoTwitchStreamData>(
 			this.reactUtils.getReactInstance(document.querySelector("#live-channel-stream-information")),
-			(n) => {
-				const nodeProps = n?.stateNode?.props;
-				if (nodeProps?.name === "GuestStarChannelGuestList") {
-					return nodeProps;
-				}
-				return false;
-			},
+			(n) =>
+				(n?.pendingProps?.costreamDetails !== undefined && n?.pendingProps?.costreamViewCount !== undefined) ||
+				n?.pendingProps?.guestStarGuests !== undefined,
 			100,
-		)?.pendingProps.children.props.children.props.children.props;
+		)?.pendingProps;
 		if (!props) return;
 		return props;
 	}

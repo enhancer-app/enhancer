@@ -2,7 +2,6 @@ import { LatencyComponent } from "$shared/components/latency/latency.component.t
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import { render } from "preact";
-import styled from "styled-components";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class StreamLatencyModule extends TwitchModule {
@@ -19,7 +18,7 @@ export default class StreamLatencyModule extends TwitchModule {
 				selectors: [".stream-chat-header"],
 				callback: this.run.bind(this),
 				validateUrl: (url) => {
-					return !url.includes("/popout/");
+					return !url.includes("/popout/") && !url.includes("/embed/");
 				},
 				once: true,
 			},

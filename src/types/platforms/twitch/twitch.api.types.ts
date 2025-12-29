@@ -12,8 +12,8 @@ export type ChattersResponse = {
 
 export type VideoCreatedAtResponse = {
 	video: {
-		createdAt: string;
-	};
+		createdAt: string | null;
+	} | null;
 };
 
 export type TwitchChannelNode = {

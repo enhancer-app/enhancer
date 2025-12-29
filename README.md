@@ -3,9 +3,9 @@
 
 Download **Enhancer** for your preferred browser:
 
-*   **Google Chrome**: [Click here to download](https://sh.enhancer.at/s/chrome)
-*   **Mozilla Firefox**: [Click here to download](https://sh.enhancer.at/s/firefox)
-*   **Any Chromium-based browser (Brave, Edge, Opera, etc.)**: [Click here to download](https://sh.enhancer.at/s/chrome)
+*   **Google Chrome**: [Click here to download](https://sh.enhancer.at/chrome)
+*   **Mozilla Firefox**: [Click here to download](https://sh.enhancer.at/firefox)
+*   **Any Chromium-based browser (Brave, Edge, Opera, etc.)**: [Click here to download](https://sh.enhancer.at/chrome)
 
 For more information, please visit our page: [enhancer.at](https://enhancer.at)
 
@@ -15,3 +15,11 @@ For more information, please visit our page: [enhancer.at](https://enhancer.at)
 2.  `bun run build` / `bun run dev`
 3.  Add `dist` directory as an unpacked extension in your browser.
 4.  Refresh the extension in your browser.
+
+<details>
+<summary>
+If you are using the developer version (`bun run dev`) in Chrome, you may need to allow Local Network Access.
+</summary>
+  
+<img src="https://github.com/enhancer-app/enhancer/blob/master/docs/images/chrome-local-network-access.png?raw=true" />
+</details>

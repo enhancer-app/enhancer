@@ -40,11 +40,22 @@ export type RadioSettingDefinition<T = any> = {
 export type ArraySettingDefinition<T = any> = {
 	type: "array";
 	arrayItemFields: { name: string; placeholder: string }[];
+	confirmOnRemove?: boolean;
+	confirmationMessage?: string;
 } & CommonSettingDefinition<T>;
 
 export type TextSettingDefinition<T = any> = {
 	type: "text";
 	content: () => h.JSX.Element;
+} & CommonSettingDefinition<T>;
+
+export type FileSettingDefinition<T = any> = {
+	type: "file";
+	accept?: string;
+	/** Array of valid MIME types for file validation */
+	validTypes?: string[];
+	/** Maximum file size in bytes (optional) */
+	maxSizeBytes?: number;
 } & CommonSettingDefinition<T>;
 
 export type SettingDefinition<T = any> =
@@ -54,7 +65,8 @@ export type SettingDefinition<T = any> =
 	| SelectSettingDefinition<T>
 	| RadioSettingDefinition<T>
 	| ArraySettingDefinition<T>
-	| TextSettingDefinition<T>;
+	| TextSettingDefinition<T>
+	| FileSettingDefinition<T>;
 
 export type TabDefinition = {
 	title: string;

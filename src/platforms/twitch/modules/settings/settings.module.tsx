@@ -1,5 +1,7 @@
+import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import Settings, { SettingsOverlay } from "$shared/components/settings/settings.component.tsx";
+import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
 import { TWITCH_DEFAULT_SETTINGS } from "$twitch/twitch.constants.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchSettings } from "$types/platforms/twitch/twitch.settings.types.ts";
@@ -24,6 +26,12 @@ export default class SettingsModule extends TwitchModule {
 				callback: this.openSettings.bind(this),
 				key: "settings-open",
 			},
+			{
+				type: "event",
+				event: "extension:settings-refresh",
+				callback: this.loadSettings.bind(this),
+				key: "settings-refresh",
+			},
 		],
 	};
 
@@ -35,6 +43,7 @@ export default class SettingsModule extends TwitchModule {
 	private settingsContainer: HTMLDivElement | null = null;
 
 	async initialize() {
+		const workerService = this.workerService();
 		this.SETTINGS_TABS = [
 			{
 				title: "General",
@@ -49,16 +58,21 @@ export default class SettingsModule extends TwitchModule {
 				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/channel.svg"),
 			},
 			{
+				title: "Experimental",
+				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/experimental.svg"),
+			},
+			{
 				title: "About",
 				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/about.svg"),
 			},
-		];
+		] as const;
+		const tabIndexes = Object.fromEntries(this.SETTINGS_TABS.map((tab, index) => [tab.title, index]));
 		const brandIcons = {
 			website: await this.commonUtils().getAssetFile(this.workerService(), "brands/website.svg"),
 			github: await this.commonUtils().getAssetFile(this.workerService(), "brands/github.svg"),
 			twitter: await this.commonUtils().getAssetFile(this.workerService(), "brands/twitter.svg"),
 			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
-		};
+		} as const;
 		this.SETTING_DEFINITIONS = [
 			{
 				id: "showFollowsFromOtherPlatforms",
@@ -81,7 +95,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Stream Latency",
 				description: "Shows the current stream delay on top of the chat.",
 				type: "toggle",
-				tabIndex: 0,
+				tabIndex: tabIndexes.General,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -89,7 +103,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Real Video Time",
 				description: "Displays the real-world time of the VOD.",
 				type: "toggle",
-				tabIndex: 0,
+				tabIndex: tabIndexes.General,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -97,7 +111,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Pinning Streamers",
 				description: "Allows you to pin your favorite streamers for easy access.",
 				type: "toggle",
-				tabIndex: 0,
+				tabIndex: tabIndexes.General,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -106,7 +120,7 @@ export default class SettingsModule extends TwitchModule {
 				description:
 					"Displays watchtime in usercards and via the /watchtime command for Polish channels by xayo.pl service.",
 				type: "toggle",
-				tabIndex: 0,
+				tabIndex: tabIndexes.General,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -114,7 +128,23 @@ export default class SettingsModule extends TwitchModule {
 				title: "12-Hour Time Format",
 				description: "Display real video time in 12-hour format (AM/PM) instead of 24-hour format.",
 				type: "toggle",
-				tabIndex: 0,
+				tabIndex: tabIndexes.General,
+			},
+			{
+				id: "channelSection",
+				title: "Channel Section",
+				description: "Shows a section with watch time and quick access links.",
+				type: "toggle",
+				tabIndex: tabIndexes.General,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "loadAdditionalFonts",
+				title: "Enable Loading Additional Fonts",
+				description: "Loads additional font assets used by Enhancer for enhanced visual variety.",
+				type: "toggle",
+				tabIndex: tabIndexes.General,
+				requiresRefreshToDisable: true,
 			},
 			{
 				id: "chatImagesEnabled",
@@ -124,21 +154,21 @@ export default class SettingsModule extends TwitchModule {
 				confirmOnEnable: true,
 				confirmationMessage:
 					"Enhancer is not responsible for the content of images sent in the chat by users. By enabling this option, you can see images in the chat that may not look good. We do not moderate them in any way, we simply display them. Are you sure you want to enable this option?",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 			},
 			{
 				id: "chatImagesOnHover",
 				title: "Show Images on Hover",
 				description: "Images are hidden until you hover your mouse to reveal them.",
 				type: "toggle",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 			},
 			{
 				id: "chatImagesSize",
 				title: "Chat Image Size",
 				description: "Maximum size of images allowed in chat messages (in megabytes).",
 				type: "number",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 				min: 1,
 				step: 1,
 			},
@@ -147,21 +177,21 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Chat Badges",
 				description: "Show custom chat badges from Enhancer extension.",
 				type: "toggle",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 			},
 			{
 				id: "chatNicknameCustomizationEnabled",
 				title: "Enable Nickname Customization",
 				description: "Show custom chat nickname customizations from Enhancer extension in chat.",
 				type: "toggle",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 			},
 			{
 				id: "chatMessageMenuEnabled",
 				title: "Enable Chat Message Menu",
 				description: "Show a menu with message options when you right-click a chat message.",
 				type: "toggle",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 			},
 			{
 				id: "chatMessageMenuUseAddInsteadOfSet",
@@ -169,32 +199,33 @@ export default class SettingsModule extends TwitchModule {
 				description:
 					"When using the chat message menu, new content will be added to the message in chat input instead of replacing it.",
 				type: "toggle",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 			},
 			{
 				id: "chatMentionSoundEnabled",
 				title: "Enable Chat Mention Sound",
 				description: "Turn on to receive a sound notification when someone mentions you in chat.",
 				type: "toggle",
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 			},
 			{
-				id: "chatMentionSoundSource",
-				title: "Custom Mention Sound URL",
+				id: "chatMentionSoundFile",
+				title: "Custom Mention Sound File",
 				description:
-					"Set a custom audio file to play when you are mentioned in chat. Leave it empty for default sound.",
-				type: "input",
-				tabIndex: 1,
+					"Upload a custom audio file to play when you are mentioned in chat. Leave empty to use the default sound.",
+				type: "file",
+				tabIndex: tabIndexes.Chat,
+				validTypes: ["audio/mpeg", "audio/mp3", "audio/ogg", "audio/wav", "audio/webm", "audio/aac", "audio/flac"],
 			},
 			{
 				id: "chatMentionSoundVolume",
-				title: "Custom Mention Sound",
+				title: "Custom Mention Sound Volume",
 				description: "Adjust the volume level for your mention notification sound.",
 				type: "number",
 				min: 0,
 				max: 100,
 				step: 1,
-				tabIndex: 1,
+				tabIndex: tabIndexes.Chat,
 			},
 			{
 				id: "quickAccessLinks",
@@ -202,18 +233,42 @@ export default class SettingsModule extends TwitchModule {
 				description:
 					"Manage your quick access links. Use %username% in the URL to dynamically include the streamer's name.",
 				type: "array",
-				tabIndex: 2,
+				tabIndex: tabIndexes.Channel,
 				arrayItemFields: [
 					{ name: "title", placeholder: "Enter link name..." },
 					{ name: "url", placeholder: "Enter URL..." },
 				],
+				confirmOnRemove: true,
+				confirmationMessage: "Are you sure you want to remove this Quick Access Link?",
+			},
+			{
+				id: "watchtime-list",
+				title: "Watchtime List",
+				description: "Watchtime List",
+				type: "text",
+				tabIndex: tabIndexes.Channel,
+				content: () => {
+					return <WatchtimeListComponent platform="twitch" workerService={workerService} emitter={this.emitter} />;
+				},
+				hideInfo: true,
+			},
+			{
+				id: "export-import",
+				title: "Export/Import Data",
+				description: "Export and import your settings and watchtime data",
+				type: "text",
+				tabIndex: tabIndexes.General,
+				content: () => {
+					return <ExportImportComponent platform="twitch" workerService={workerService} emitter={this.emitter} />;
+				},
+				hideInfo: true,
 			},
 			{
 				id: "about",
 				title: "About This Extension",
 				description: "Information about the extension",
 				type: "text",
-				tabIndex: 3,
+				tabIndex: tabIndexes.About,
 				content: () => {
 					return <EnhancerAboutComponent icons={brandIcons} />;
 				},

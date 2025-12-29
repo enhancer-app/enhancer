@@ -20,7 +20,7 @@ export default class EnhancerApi {
 	private isInitialized = false;
 
 	private static readonly GLOBAL_CHANNEL_ID = "0";
-	private static readonly API_URL = "https://api2.enhancer.at";
+	private static readonly API_URL = "https://api.enhancer.at";
 	//private static readonly API_URL = "http://localhost:8080";
 
 	private static readonly CACHE_KEYS = {
@@ -87,11 +87,12 @@ export default class EnhancerApi {
 
 	async getWatchTime(username: string): Promise<EnhancerStreamerWatchTimeData[]> {
 		const { data } = await this.httpClient.request<EnhancerStreamerWatchTimeData[]>(
-			`${EnhancerApi.API_URL}/xayo/${username}`,
+			`https://xayo.pl/api/chatters/${encodeURIComponent(username)}/watchtime`,
 			{
 				method: "GET",
 				validateStatus: (status) => status === 200,
 				responseType: "json",
+				headers: { Accept: "application/json" },
 			},
 		);
 		return data;
@@ -101,8 +102,8 @@ export default class EnhancerApi {
 		const globalChannel = this.getGlobalChannel();
 		const currentChannel = this.getCurrentChannel();
 
-		const globalUser = globalChannel?.users.find((user) => user.externalId === externalUserId);
-		const channelUser = currentChannel?.users.find((user) => user.externalId === externalUserId);
+		const globalUser = globalChannel?.users?.find((user) => user.externalId === externalUserId);
+		const channelUser = currentChannel?.users?.find((user) => user.externalId === externalUserId);
 
 		const userBadgeIds = new Set([...(globalUser?.badgesIds ?? []), ...(channelUser?.badgesIds ?? [])]);
 		const allBadges = [...(globalChannel?.badges ?? []), ...(currentChannel?.badges ?? [])];
@@ -113,11 +114,11 @@ export default class EnhancerApi {
 	}
 
 	findUserForCurrentChannel(externalUserId: string): EnhancerUser | null {
-		const channelUser = this.getCurrentChannel()?.users.find((user) => user.externalId === externalUserId);
+		const channelUser = this.getCurrentChannel()?.users?.find((user) => user.externalId === externalUserId);
 		if (channelUser) {
 			return channelUser;
 		}
-		const globalUser = this.getGlobalChannel()?.users.find((user) => user.externalId === externalUserId);
+		const globalUser = this.getGlobalChannel()?.users?.find((user) => user.externalId === externalUserId);
 		return globalUser ?? null;
 	}
 

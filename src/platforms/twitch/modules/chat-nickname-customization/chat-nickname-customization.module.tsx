@@ -1,10 +1,11 @@
+import { ChatNicknameCustomizationHelper } from "$shared/module/helpers/chat-nickname-customization.helper.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchChatMessageEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { render } from "preact";
-import styled, { css } from "styled-components";
 
 export default class ChatNicknameCustomizationModule extends TwitchModule {
+	private readonly chatNicknameCustomizationHelper = new ChatNicknameCustomizationHelper();
+
 	config: TwitchModuleConfig = {
 		name: "chat-nickname-customization",
 		appliers: [
@@ -17,6 +18,8 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 		],
 		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chatNicknameCustomizationEnabled"),
 	};
+
+	private static DEFAULT_FONT = "var(--font-base)";
 
 	private async handleMessage({ message, element }: TwitchChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
@@ -35,20 +38,27 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 		if (userCustomization.hasGlow) {
 			this.applyGlow(usernameElement, message.user.color);
 		}
+		if (userCustomization.customFont) {
+			this.chatNicknameCustomizationHelper.applyCustomFont(
+				usernameElement,
+				userCustomization.customFont,
+				ChatNicknameCustomizationModule.DEFAULT_FONT,
+			);
+		}
 	}
 
-	private applyGlow(element: HTMLElement, userMessageColor: string | undefined) {
+	private applyGlow(usernameElement: HTMLElement, userMessageColor: string | undefined) {
 		let color: string;
 		try {
 			color =
-				element.style.color ||
-				(element.firstChild?.firstChild && (element.firstChild.firstChild as HTMLElement).style.color) ||
+				usernameElement.style.color ||
+				(usernameElement.firstChild?.firstChild &&
+					(usernameElement.firstChild.firstChild as HTMLElement).style.color) ||
 				userMessageColor ||
 				"white";
 		} catch (error) {
 			color = userMessageColor || "white";
 		}
-		element.style.textShadow = `${color} 0 0 10px`;
-		element.style.fontWeight = "bold";
+		this.chatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
 	}
 }

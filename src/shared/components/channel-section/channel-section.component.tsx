@@ -31,11 +31,7 @@ export function ChannelSectionComponent({
 					<LogoContainer>
 						<img src={logoUrl} alt={"Enhancer Logo"} />
 					</LogoContainer>
-					<ChannelDetails
-						onClick={() => {
-							console.info("Enhancer", watchTime.value);
-						}}
-					>
+					<ChannelDetails>
 						<ChannelNameRow>
 							<ChannelName>{displayName.value}</ChannelName>
 							<RowText>—</RowText>

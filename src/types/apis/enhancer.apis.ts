@@ -14,6 +14,7 @@ export type EnhancerUser = {
 	badgesIds: string[];
 	customNickname: string | null;
 	hasGlow: boolean;
+	customFont: string | null;
 };
 
 export type EnhancerBadgeSize = "1x" | "2x" | "4x";
@@ -32,6 +33,8 @@ export type EnhancerResponseMap = {
 };
 
 export type EnhancerStreamerWatchTimeData = {
-	streamer: string;
-	count: number;
+	streamerName: string;
+	minutes: number;
+	lastSeen: string;
+	avatarUrl?: string;
 };

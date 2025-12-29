@@ -18,7 +18,8 @@
 				"noExplicitAny": "off"
 			},
 			"correctness": {
-				"noUndeclaredVariables": "off"
+				"noUndeclaredVariables": "off",
+				"useExhaustiveDependencies": "off"
 			}
 		}
 	},

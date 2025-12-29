@@ -6,10 +6,15 @@ export type TwitchSettings = {
 	chatImagesSize: number;
 	chatBadgesEnabled: boolean;
 	chatNicknameCustomizationEnabled: boolean;
+	loadAdditionalFonts: boolean;
 	chatMessageMenuEnabled: boolean;
 	chatMessageMenuUseAddInsteadOfSet: boolean;
 	chatMentionSoundEnabled: boolean;
+	/**
+	 * @deprecated Use chatMentionSoundFile instead. This field is kept for backward compatibility only.
+	 */
 	chatMentionSoundSource: string;
+	chatMentionSoundFile: string;
 	chatMentionSoundVolume: number;
 	quickAccessLinks: QuickAccessLink[];
 	pinnedStreamers: string[];
@@ -20,6 +25,7 @@ export type TwitchSettings = {
 	xayoWatchtimeEnabled: boolean;
 	shareFollowsToOtherPlatforms: boolean;
 	showFollowsFromOtherPlatforms: boolean;
+	channelSection: boolean;
 };
 
 export type TwitchSettingsEvents = {
