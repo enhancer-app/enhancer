@@ -43,7 +43,7 @@ export default class WorkerBackground {
 	}
 
 	private setupMessageListener() {
-		chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+		chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 			if (!this.isInitialized) {
 				this.messageQueue.push({ message, sendResponse });
 				return true;

@@ -1,7 +1,5 @@
-import { defaultAllowedOrigins } from "vite";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { EnhancerBadgeSize } from "$types/apis/enhancer.apis.ts";
-import type { RequestConfig, RequestResponse } from "$types/shared/http-client.types.ts";
 import type { WaitForConfig } from "$types/shared/utils/common.utils.types.ts";
 
 export default class CommonUtils {

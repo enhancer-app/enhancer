@@ -1,6 +1,6 @@
 import TwitchFollowSyncer from "$twitch/modules/shared-follows/twitch.follow-syncer.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
-import type { KickModuleConfig, TwitchModuleConfig } from "$types/shared/module/module.types.ts";
+import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class SharedFollowsModule extends TwitchModule {
 	private static readonly SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes - centralized sync interval

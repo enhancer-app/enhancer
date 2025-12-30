@@ -1,6 +1,3 @@
-import KickModule from "$kick/kick.module.ts";
-import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
-
 export type ChannelInfo = {
 	slug: string;
 	channelId: number;

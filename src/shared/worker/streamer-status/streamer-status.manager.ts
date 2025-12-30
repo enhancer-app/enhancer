@@ -8,8 +8,6 @@ export class StreamerStatusManager {
 	private lastRefreshTime: Record<string, number> = {};
 	private refreshInterval: ReturnType<typeof setInterval> | null = null;
 
-	constructor() {}
-
 	start() {
 		if (this.refreshInterval) {
 			this.logger.warn("Streamer status refresh already running");

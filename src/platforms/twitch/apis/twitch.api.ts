@@ -1,6 +1,5 @@
 import type TwitchUtils from "$twitch/twitch.utils.ts";
 import type { GQLResponse } from "$types/platforms/twitch/twitch.api.types.ts";
-import type { ApolloClientFetchPolicy } from "$types/platforms/twitch/twitch.utils.types.ts";
 
 export default class TwitchApi {
 	constructor(private readonly twitchUtils: TwitchUtils) {}

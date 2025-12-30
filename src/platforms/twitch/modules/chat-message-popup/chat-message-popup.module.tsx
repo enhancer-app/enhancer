@@ -1,4 +1,4 @@
-import { h, render } from "preact";
+import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
 import TwitchModule from "$twitch/twitch.module.ts";

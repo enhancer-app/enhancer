@@ -113,7 +113,11 @@ export default class ChatAttachmentsModule extends KickModule {
 		const attachmentData = await this.getAttachmentData(baseData.url);
 		if (!attachmentData?.type || !attachmentData?.size || attachmentData === undefined)
 			throw new Error("Couldn't get attachment data");
-		return { ...baseData, attachmentType: attachmentData.type, attachmentSize: Number.parseInt(attachmentData.size) };
+		return {
+			...baseData,
+			attachmentType: attachmentData.type,
+			attachmentSize: Number.parseInt(attachmentData.size, 10),
+		};
 	}
 
 	private async getAttachmentData(url: URL) {

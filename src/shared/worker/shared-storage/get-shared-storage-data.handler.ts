@@ -11,7 +11,7 @@ export class GetSharedStorageDataHandler extends MessageHandler {
 		super(logger);
 	}
 
-	async handle(payload: GetSharedStorageDataPayload): Promise<GetSharedStorageDataResponse> {
+	async handle(_payload: GetSharedStorageDataPayload): Promise<GetSharedStorageDataResponse> {
 		const data = await this.sharedStorageService.getData();
 		return { data };
 	}

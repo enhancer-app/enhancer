@@ -25,7 +25,9 @@ export default class ClipDownloadModule extends TwitchModule {
 				callback: () => {
 					if (!ClipDownloadModule.URL_CONFIG(window.location.href)) {
 						const elements = document.querySelectorAll("#enhancer-clip-download");
-						elements.forEach((element) => element.remove());
+						for (const element of elements) {
+							element.remove();
+						}
 					}
 				},
 				key: "clip-download-url-validator",

@@ -1,10 +1,5 @@
 import { Logger } from "$shared/logger/logger.ts";
-import type {
-	ExtensionMessageDetail,
-	ExtensionResponseDetail,
-	WorkerAction,
-	WorkerApiActions,
-} from "$types/shared/worker/worker.types.ts";
+import type { ExtensionResponseDetail, WorkerAction, WorkerApiActions } from "$types/shared/worker/worker.types.ts";
 
 export default class WorkerService {
 	private readonly logger = new Logger({ context: "worker" });

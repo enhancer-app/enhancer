@@ -1,5 +1,5 @@
 import type { ComponentChildren } from "preact";
-import { type MessageMenuEvent, MessageMenuOption } from "$shared/components/message-menu/message-menu.component.tsx";
+import type { MessageMenuEvent } from "$shared/components/message-menu/message-menu.component.tsx";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { TwitchSettingsEvents } from "$types/platforms/twitch/twitch.settings.types.ts";
 

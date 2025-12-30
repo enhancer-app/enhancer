@@ -1,12 +1,10 @@
-import type { Signal } from "@preact/signals";
 import type { Logger } from "$shared/logger/logger.ts";
 import ChatAttachmentHandler from "$shared/module/chat-attachments/chat-attachment-handler.ts";
 import type { ImageChatAttachmentConfig } from "$shared/module/chat-attachments/image-chat-attachment.config.ts";
-import {
-	type AttachmentUrlParser,
-	type BaseChatAttachmentData,
-	type ChatAttachmentData,
-	ChatAttachmentMessageType,
+import type {
+	AttachmentUrlParser,
+	BaseChatAttachmentData,
+	ChatAttachmentData,
 } from "$types/shared/module/chat-attachment/chat-attachment.types.ts";
 
 export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {

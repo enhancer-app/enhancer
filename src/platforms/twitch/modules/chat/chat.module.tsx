@@ -103,7 +103,9 @@ export default class ChatModule extends TwitchModule {
 				}
 			}
 		});
-		elements.forEach((element) => this.observer?.observe(element, { attributes: true, childList: true }));
+		for (const element of elements) {
+			this.observer?.observe(element, { attributes: true, childList: true });
+		}
 	}
 
 	private isWrappedMessage(message: TwitchChatMessage) {

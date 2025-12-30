@@ -74,7 +74,9 @@ export default abstract class Platform<
 				this.logger.error(`Failed to load ${module.config.name} module: ${error}`);
 			}
 		}
-		this.appliers.forEach((applier) => applier.start());
+		for (const applier of this.appliers) {
+			applier.start();
+		}
 	}
 
 	private async tryInitializeEnhancerApi(retries = 5, delayMs = 5000): Promise<void> {
