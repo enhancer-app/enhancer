@@ -1,3 +1,4 @@
+import type { Signal } from "@preact/signals";
 import type { Logger } from "$shared/logger/logger.ts";
 import ChatAttachmentHandler from "$shared/module/chat-attachments/chat-attachment-handler.ts";
 import type { ImageChatAttachmentConfig } from "$shared/module/chat-attachments/image-chat-attachment.config.ts";
@@ -7,7 +8,6 @@ import {
 	type ChatAttachmentData,
 	ChatAttachmentMessageType,
 } from "$types/shared/module/chat-attachment/chat-attachment.types.ts";
-import type { Signal } from "@preact/signals";
 
 export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 	constructor(

@@ -1,10 +1,10 @@
+import { h, render } from "preact";
 import {
 	MessageMenuComponent,
 	type MessageMenuEvent,
 } from "$shared/components/message-menu/message-menu.component.tsx";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { h, render } from "preact";
 
 export default class MessageMenuModule extends TwitchModule {
 	config: TwitchModuleConfig = {

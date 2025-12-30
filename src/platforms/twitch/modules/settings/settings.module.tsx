@@ -1,3 +1,5 @@
+import { type Signal, signal } from "@preact/signals";
+import { render } from "preact";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import Settings, { SettingsOverlay } from "$shared/components/settings/settings.component.tsx";
@@ -7,8 +9,6 @@ import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchSettings } from "$types/platforms/twitch/twitch.settings.types.ts";
 import type { SettingDefinition, TabDefinition } from "$types/shared/components/settings.component.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
-import { render } from "preact";
 
 export default class SettingsModule extends TwitchModule {
 	config: TwitchModuleConfig = {

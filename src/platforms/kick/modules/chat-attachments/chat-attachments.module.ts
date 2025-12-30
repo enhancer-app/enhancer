@@ -2,8 +2,8 @@ import KickModule from "$kick/kick.module.ts";
 import { ImagePreview } from "$shared/components/image-preview/image-preview.component";
 import { HttpClient } from "$shared/http/http-client.ts";
 import type ChatAttachmentHandler from "$shared/module/chat-attachments/chat-attachment-handler.ts";
-import ImageChatAttachmentHandler from "$shared/module/chat-attachments/image-chat-attachment-handler.ts";
 import { ImageChatAttachmentConfig } from "$shared/module/chat-attachments/image-chat-attachment.config.ts";
+import ImageChatAttachmentHandler from "$shared/module/chat-attachments/image-chat-attachment-handler.ts";
 import type { KickChatMessageEvent } from "$types/platforms/kick/kick.events.types.ts";
 import {
 	type BaseChatAttachmentData,

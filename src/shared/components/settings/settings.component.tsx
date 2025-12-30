@@ -1,7 +1,7 @@
-import type { SettingDefinition, SettingsProps } from "$types/shared/components/settings.component.types.ts";
 import { h } from "preact";
 import { useState } from "preact/hooks";
 import styled from "styled-components";
+import type { SettingDefinition, SettingsProps } from "$types/shared/components/settings.component.types.ts";
 
 const SettingsContainer = styled.div`
 	display: flex;

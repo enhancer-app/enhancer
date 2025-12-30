@@ -1,14 +1,14 @@
+import type { Emitter } from "nanoevents";
 import type EnhancerApi from "$shared/apis/enhancer.api.ts";
 import { Logger } from "$shared/logger/logger.ts";
-import type SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
 import type SettingsService from "$shared/settings/settings.service.ts";
+import type SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
 import type StorageRepository from "$shared/storage/storage-repository.ts";
 import type UtilsRepository from "$shared/utils/utils.repository.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { ModuleConfig } from "$types/shared/module/module.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
-import type { Emitter } from "nanoevents";
 
 export default abstract class Module<
 	Events extends CommonEvents,

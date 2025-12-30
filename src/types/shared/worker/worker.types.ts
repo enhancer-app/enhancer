@@ -85,7 +85,7 @@ export interface UpdateSettingsPayload {
 export type GetSettingsResponse = PlatformSettings;
 export type UpdateSettingsResponse = { success: true };
 
-// @ts-ignore its okay here
+// @ts-expect-error its okay here
 // biome-ignore lint/complexity/noBannedTypes: it's okay here
 export type GetSharedStorageDataPayload = {};
 

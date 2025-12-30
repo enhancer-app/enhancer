@@ -1,7 +1,7 @@
-import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
-import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { render } from "preact";
 import styled from "styled-components";
+import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
+import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class SettingsButtonModule extends TwitchModule {

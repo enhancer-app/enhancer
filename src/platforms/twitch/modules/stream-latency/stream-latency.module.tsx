@@ -1,7 +1,7 @@
-import { LatencyComponent } from "$shared/components/latency/latency.component.tsx";
-import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import { render } from "preact";
+import { LatencyComponent } from "$shared/components/latency/latency.component.tsx";
+import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class StreamLatencyModule extends TwitchModule {

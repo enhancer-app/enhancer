@@ -1,6 +1,6 @@
-import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import type { Signal } from "@preact/signals";
 import styled from "styled-components";
+import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 
 interface LatencyComponentProps {
 	latencyCounter: Signal<number>;

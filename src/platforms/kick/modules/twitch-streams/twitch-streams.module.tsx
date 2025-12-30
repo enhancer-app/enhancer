@@ -1,12 +1,12 @@
+import { type Signal, signal } from "@preact/signals";
+import { render } from "preact";
+import { useEffect, useRef, useState } from "preact/hooks";
+import styled from "styled-components";
 import KickModule from "$kick/kick.module.ts";
 import TwitchApi from "$twitch/apis/twitch.api.ts";
 import type { TwitchMultiChannelResponse } from "$types/platforms/twitch/twitch.api.types.ts";
 import type { StreamerInfo } from "$types/platforms/twitch/twitch.utils.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
-import { render } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
-import styled from "styled-components";
 
 export default class TwitchStreamsModule extends KickModule {
 	readonly config: KickModuleConfig = {

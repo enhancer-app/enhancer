@@ -1,6 +1,6 @@
-import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 import type { Signal } from "@preact/signals";
 import styled from "styled-components";
+import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 
 interface ChannelSectionComponentProps {
 	displayName: Signal<string>;

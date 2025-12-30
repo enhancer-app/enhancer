@@ -1,3 +1,5 @@
+import { type Signal, signal } from "@preact/signals";
+import { render } from "preact";
 import { KICK_DEFAULT_SETTINGS } from "$kick/kick.constants.ts";
 import KickModule from "$kick/kick.module.ts";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
@@ -7,8 +9,6 @@ import { WatchtimeListComponent } from "$shared/components/watchtime-list/watcht
 import type { KickSettings } from "$types/platforms/kick/kick.settings.types.ts";
 import type { SettingDefinition, TabDefinition } from "$types/shared/components/settings.component.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
-import { render } from "preact";
 
 export default class SettingsModule extends KickModule {
 	config: KickModuleConfig = {
