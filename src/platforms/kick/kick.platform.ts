@@ -10,6 +10,7 @@ import ChatHighlightUserModule from "$kick/modules/chat-highlight-user/chat-high
 import ChatMessageMenuModule from "$kick/modules/chat-message-menu/chat-message-menu.module.tsx";
 import MessageMenuModule from "$kick/modules/chat-message-menu/message-menu.module.tsx";
 import ChatMessagePopupModule from "$kick/modules/chat-message-popup/chat-message-popup.module.tsx";
+import ChatMonitorButtonModule from "$kick/modules/chat-monitor-button/chat-monitor-button.module.tsx";
 import ChatNicknameCustomizationModule from "$kick/modules/chat-nickname-customization/chat-nickname-customization.module.ts";
 import ChatModule from "$kick/modules/chat/chat.module.ts";
 import LocalWatchtimeCounterModule from "$kick/modules/local-watchtime-counter/local-watchtime-counter.module.tsx";
@@ -46,6 +47,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			new ChatAttachmentsModule(...dependencies),
 			new ChatBadgesModule(...dependencies),
 			new SettingsButtonModule(...dependencies),
+			new ChatMonitorButtonModule(...dependencies),
 			new SettingsModule(...dependencies),
 			new ChatNicknameCustomizationModule(...dependencies),
 			new StreamLatencyModule(...dependencies),

@@ -142,11 +142,11 @@ export interface WorkerApiActions {
 		response: GetChatMonitorMatchesResponse;
 	};
 	clearChatMonitorMatches: {
-		payload?: never;
+		payload: never;
 		response: ClearChatMonitorMatchesResponse;
 	};
 	getChatMonitorStatus: {
-		payload?: never;
+		payload: never;
 		response: GetChatMonitorStatusResponse;
 	};
 }
