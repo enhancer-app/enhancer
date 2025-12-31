@@ -54,6 +54,10 @@ export default class SettingsModule extends KickModule {
 				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/chat.svg"),
 			},
 			{
+				title: "Chat Monitor",
+				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/chat.svg"),
+			},
+			{
 				title: "Channel",
 				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/channel.svg"),
 			},
@@ -175,6 +179,37 @@ export default class SettingsModule extends KickModule {
 					return <WatchtimeListComponent platform="kick" workerService={workerService} emitter={this.emitter} />;
 				},
 				hideInfo: true,
+			},
+			{
+				id: "chatMonitorEnabled",
+				title: "Enable Chat Monitor",
+				description:
+					"Monitors chat messages from specified channels for keywords and displays notifications. This feature is opt-in and turned off by default.",
+				type: "toggle",
+				tabIndex: tabIndexes["Chat Monitor"],
+			},
+			{
+				id: "chatMonitorChannels",
+				title: "Monitored Channels",
+				description:
+					"Add channels to monitor. You can monitor up to 50 channels across Twitch and Kick. Enter the channel name and select the platform.",
+				type: "array",
+				tabIndex: tabIndexes["Chat Monitor"],
+				arrayItemFields: [
+					{ name: "channel", placeholder: "Enter channel name..." },
+					{ name: "platform", placeholder: "Platform (twitch/kick)..." },
+				],
+				confirmOnRemove: false,
+			},
+			{
+				id: "chatMonitorKeywords",
+				title: "Keywords",
+				description:
+					"Add keywords to monitor in chat. When a monitored channel sends a message containing any of these keywords, you'll receive a notification.",
+				type: "array",
+				tabIndex: tabIndexes["Chat Monitor"],
+				arrayItemFields: [{ name: "keyword", placeholder: "Enter keyword..." }],
+				confirmOnRemove: false,
 			},
 			{
 				id: "export-import",
