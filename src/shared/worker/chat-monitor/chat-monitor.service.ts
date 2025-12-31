@@ -38,7 +38,7 @@ export class ChatMonitorService {
 			this.twitchConnector = new TwitchIRCConnector(this.handleKeywordMatch.bind(this));
 			this.twitchConnector.setKeywords(keywords);
 			await this.twitchConnector.connect();
-			
+
 			for (const channel of twitchChannels) {
 				this.twitchConnector.joinChannel(channel);
 			}
@@ -49,7 +49,7 @@ export class ChatMonitorService {
 			this.kickConnector = new KickIRCConnector(this.handleKeywordMatch.bind(this));
 			this.kickConnector.setKeywords(keywords);
 			await this.kickConnector.connect();
-			
+
 			for (const channel of kickChannels) {
 				this.kickConnector.joinChannel(channel);
 			}
@@ -164,7 +164,7 @@ export class ChatMonitorService {
 
 	private handleKeywordMatch(match: ChatMonitorKeywordMatch): void {
 		this.keywordMatches.unshift(match);
-		
+
 		// Keep only the last maxMatches
 		if (this.keywordMatches.length > this.maxMatches) {
 			this.keywordMatches = this.keywordMatches.slice(0, this.maxMatches);

@@ -15,13 +15,15 @@ export class KickIRCConnector {
 
 	async connect(): Promise<void> {
 		try {
-			this.socket = new WebSocket("wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.6.0&flash=false");
+			this.socket = new WebSocket(
+				"wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.6.0&flash=false",
+			);
 
 			this.socket.onopen = () => {
 				this.logger.info("Connected to Kick WebSocket");
 				this.reconnectAttempts = 0;
 				this.startPingInterval();
-				
+
 				// Re-join channels after reconnection
 				for (const channel of this.channels) {
 					this.subscribeToChannel(channel);
@@ -80,7 +82,7 @@ export class KickIRCConnector {
 	joinChannel(channel: string): void {
 		const normalizedChannel = channel.toLowerCase();
 		this.channels.add(normalizedChannel);
-		
+
 		if (this.socket?.readyState === WebSocket.OPEN) {
 			this.subscribeToChannel(normalizedChannel);
 		}
@@ -91,13 +93,15 @@ export class KickIRCConnector {
 
 		// Subscribe to the chatrooms channel for this Kick channel
 		const channelName = `chatrooms.${channel}.v2`;
-		this.socket.send(JSON.stringify({
-			event: "pusher:subscribe",
-			data: {
-				auth: "",
-				channel: channelName,
-			},
-		}));
+		this.socket.send(
+			JSON.stringify({
+				event: "pusher:subscribe",
+				data: {
+					auth: "",
+					channel: channelName,
+				},
+			}),
+		);
 		this.logger.debug(`Subscribed to Kick channel: ${channel}`);
 	}
 
@@ -107,12 +111,14 @@ export class KickIRCConnector {
 
 		if (this.socket?.readyState === WebSocket.OPEN) {
 			const channelName = `chatrooms.${normalizedChannel}.v2`;
-			this.socket.send(JSON.stringify({
-				event: "pusher:unsubscribe",
-				data: {
-					channel: channelName,
-				},
-			}));
+			this.socket.send(
+				JSON.stringify({
+					event: "pusher:unsubscribe",
+					data: {
+						channel: channelName,
+					},
+				}),
+			);
 			this.logger.debug(`Unsubscribed from Kick channel: ${normalizedChannel}`);
 		}
 	}
@@ -148,7 +154,7 @@ export class KickIRCConnector {
 			if (!message.data) return;
 
 			const data = typeof message.data === "string" ? JSON.parse(message.data) : message.data;
-			
+
 			const username = data.sender?.username || "Unknown";
 			const content = data.content || "";
 			const channelSlug = data.chatroom?.slug || "";

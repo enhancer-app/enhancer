@@ -36,10 +36,10 @@ export default class WorkerBackground {
 			this.settingsService.initialize(),
 			this.chatMonitorService.initialize(),
 		]);
-		
+
 		// Set up settings listener to start/stop chat monitor
 		this.setupChatMonitorSettingsListener();
-		
+
 		this.isInitialized = true;
 		this.logger.info("Background worker started");
 
@@ -68,15 +68,9 @@ export default class WorkerBackground {
 			const twitchSettings = await this.settingsService.getSettings("twitch");
 			const kickSettings = await this.settingsService.getSettings("kick");
 
-			const allChannels = [
-				...(twitchSettings.chatMonitorChannels || []),
-				...(kickSettings.chatMonitorChannels || []),
-			];
+			const allChannels = [...(twitchSettings.chatMonitorChannels || []), ...(kickSettings.chatMonitorChannels || [])];
 
-			const allKeywords = [
-				...(twitchSettings.chatMonitorKeywords || []),
-				...(kickSettings.chatMonitorKeywords || []),
-			];
+			const allKeywords = [...(twitchSettings.chatMonitorKeywords || []), ...(kickSettings.chatMonitorKeywords || [])];
 
 			const isEnabled = twitchSettings.chatMonitorEnabled || kickSettings.chatMonitorEnabled;
 

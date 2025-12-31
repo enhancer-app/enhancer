@@ -38,7 +38,10 @@ export class HandlerRegistry {
 		this.handlers.set("getSettings", new GetSettingsHandler(this.logger, this.settingsService));
 		this.handlers.set("updateSettings", new UpdateSettingsHandler(this.logger, this.settingsService));
 		this.handlers.set("getChatMonitorMatches", new GetChatMonitorMatchesHandler(this.logger, this.chatMonitorService));
-		this.handlers.set("clearChatMonitorMatches", new ClearChatMonitorMatchesHandler(this.logger, this.chatMonitorService));
+		this.handlers.set(
+			"clearChatMonitorMatches",
+			new ClearChatMonitorMatchesHandler(this.logger, this.chatMonitorService),
+		);
 		this.handlers.set("getChatMonitorStatus", new GetChatMonitorStatusHandler(this.logger, this.chatMonitorService));
 	}
 

@@ -153,7 +153,10 @@ export class TwitchIRCConnector {
 			const messageIndex = messageParts.findIndex((part) => part === `:${messageParts[channelIndex]}`);
 			if (messageIndex === -1) return;
 
-			const message = messageParts.slice(messageIndex + 1).join(" ").substring(1);
+			const message = messageParts
+				.slice(messageIndex + 1)
+				.join(" ")
+				.substring(1);
 			const username = tags["display-name"] || "Unknown";
 
 			// Check for keywords

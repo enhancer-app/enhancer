@@ -1,9 +1,6 @@
-import { MessageHandler } from "$shared/worker/message.handler.ts";
 import type { ChatMonitorService } from "$shared/worker/chat-monitor/chat-monitor.service.ts";
-import type {
-	GetChatMonitorMatchesPayload,
-	GetChatMonitorMatchesResponse,
-} from "$types/shared/worker/worker.types.ts";
+import { MessageHandler } from "$shared/worker/message.handler.ts";
+import type { GetChatMonitorMatchesPayload, GetChatMonitorMatchesResponse } from "$types/shared/worker/worker.types.ts";
 
 export class GetChatMonitorMatchesHandler extends MessageHandler {
 	constructor(
