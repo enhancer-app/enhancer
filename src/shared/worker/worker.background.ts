@@ -1,4 +1,5 @@
 import { Logger } from "$shared/logger/logger.ts";
+import { ChatMonitorService } from "$shared/worker/chat-monitor/chat-monitor.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
 import { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
@@ -7,7 +8,19 @@ export default class WorkerBackground {
 	private readonly logger = new Logger({ context: "background" });
 	private readonly watchtimeService = new WatchtimeService();
 	private readonly settingsService = new SettingsService();
-	private readonly handlerRegistry = new HandlerRegistry(this.logger, this.watchtimeService, this.settingsService);
+	private readonly chatMonitorService = new ChatMonitorService((match) => {
+		// Send keyword match notification to content scripts
+		chrome.runtime.sendMessage({
+			action: "chatMonitorPing",
+			payload: match,
+		});
+	});
+	private readonly handlerRegistry = new HandlerRegistry(
+		this.logger,
+		this.watchtimeService,
+		this.settingsService,
+		this.chatMonitorService,
+	);
 
 	private isInitialized = false;
 	private messageQueue: Array<{
@@ -18,11 +31,63 @@ export default class WorkerBackground {
 	async start() {
 		this.setupMessageListener();
 
-		await Promise.all([this.watchtimeService.initialize(), this.settingsService.initialize()]);
+		await Promise.all([
+			this.watchtimeService.initialize(),
+			this.settingsService.initialize(),
+			this.chatMonitorService.initialize(),
+		]);
+		
+		// Set up settings listener to start/stop chat monitor
+		this.setupChatMonitorSettingsListener();
+		
 		this.isInitialized = true;
 		this.logger.info("Background worker started");
 
 		await this.processQueuedMessages();
+	}
+
+	private setupChatMonitorSettingsListener() {
+		// Listen for settings changes to manage chat monitor
+		chrome.storage.onChanged.addListener(async (changes, areaName) => {
+			if (areaName !== "local") return;
+
+			const twitchSettingsChanged = changes["enhancer-twitch-settings"];
+			const kickSettingsChanged = changes["enhancer-kick-settings"];
+
+			if (twitchSettingsChanged || kickSettingsChanged) {
+				await this.updateChatMonitorFromSettings();
+			}
+		});
+
+		// Initial setup
+		this.updateChatMonitorFromSettings();
+	}
+
+	private async updateChatMonitorFromSettings() {
+		try {
+			const twitchSettings = await this.settingsService.getSettings("twitch");
+			const kickSettings = await this.settingsService.getSettings("kick");
+
+			const allChannels = [
+				...(twitchSettings.chatMonitorChannels || []),
+				...(kickSettings.chatMonitorChannels || []),
+			];
+
+			const allKeywords = [
+				...(twitchSettings.chatMonitorKeywords || []),
+				...(kickSettings.chatMonitorKeywords || []),
+			];
+
+			const isEnabled = twitchSettings.chatMonitorEnabled || kickSettings.chatMonitorEnabled;
+
+			if (isEnabled && allChannels.length > 0 && allKeywords.length > 0) {
+				await this.chatMonitorService.start(allChannels, allKeywords);
+			} else {
+				this.chatMonitorService.stop();
+			}
+		} catch (error) {
+			this.logger.error("Failed to update chat monitor from settings:", error);
+		}
 	}
 
 	private setupMessageListener() {

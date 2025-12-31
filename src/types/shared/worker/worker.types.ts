@@ -84,6 +84,26 @@ export interface UpdateSettingsPayload {
 export type GetSettingsResponse = PlatformSettings;
 export type UpdateSettingsResponse = { success: true };
 
+export interface GetChatMonitorMatchesPayload {
+	limit?: number;
+}
+
+export interface GetChatMonitorMatchesResponse {
+	matches: any[]; // ChatMonitorKeywordMatch[]
+}
+
+export interface ClearChatMonitorMatchesResponse {
+	success: true;
+}
+
+export interface GetChatMonitorStatusResponse {
+	enabled: boolean;
+	twitchConnected: boolean;
+	kickConnected: boolean;
+	channelCount: number;
+	keywordCount: number;
+}
+
 export interface WorkerApiActions {
 	ping: {
 		payload?: never;
@@ -116,6 +136,18 @@ export interface WorkerApiActions {
 	updateSettings: {
 		payload: UpdateSettingsPayload;
 		response: UpdateSettingsResponse;
+	};
+	getChatMonitorMatches: {
+		payload: GetChatMonitorMatchesPayload;
+		response: GetChatMonitorMatchesResponse;
+	};
+	clearChatMonitorMatches: {
+		payload?: never;
+		response: ClearChatMonitorMatchesResponse;
+	};
+	getChatMonitorStatus: {
+		payload?: never;
+		response: GetChatMonitorStatusResponse;
 	};
 }
 

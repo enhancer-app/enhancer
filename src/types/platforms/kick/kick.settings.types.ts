@@ -1,3 +1,4 @@
+import type { ChatMonitorChannel } from "$types/shared/chat-monitor/chat-monitor.types.ts";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 
 export type KickSettings = {
@@ -13,6 +14,9 @@ export type KickSettings = {
 	realVideoTimeEnabled: boolean;
 	realVideoTimeFormat12h: boolean;
 	channelSection: boolean;
+	chatMonitorEnabled: boolean;
+	chatMonitorChannels: ChatMonitorChannel[];
+	chatMonitorKeywords: string[];
 };
 
 export type KickSettingsEvents = {

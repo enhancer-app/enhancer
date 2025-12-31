@@ -1,4 +1,8 @@
 import type { Logger } from "$shared/logger/logger.ts";
+import type { ChatMonitorService } from "$shared/worker/chat-monitor/chat-monitor.service.ts";
+import { ClearChatMonitorMatchesHandler } from "$shared/worker/chat-monitor/clear-chat-monitor-matches.handler.ts";
+import { GetChatMonitorMatchesHandler } from "$shared/worker/chat-monitor/get-chat-monitor-matches.handler.ts";
+import { GetChatMonitorStatusHandler } from "$shared/worker/chat-monitor/get-chat-monitor-status.handler.ts";
 import { AssetsFileHandler } from "$shared/worker/file/assets-file.handler.ts";
 import type { MessageHandler } from "$shared/worker/message.handler.ts";
 import { PingHandler } from "$shared/worker/ping/ping.handler.ts";
@@ -19,6 +23,7 @@ export class HandlerRegistry {
 		private readonly logger: Logger,
 		private readonly watchtimeService: WatchtimeService,
 		private readonly settingsService: SettingsService,
+		private readonly chatMonitorService: ChatMonitorService,
 	) {
 		this.registerHandlers();
 	}
@@ -32,6 +37,9 @@ export class HandlerRegistry {
 		this.handlers.set("importWatchtime", new ImportWatchtimeHandler(this.logger, this.watchtimeService));
 		this.handlers.set("getSettings", new GetSettingsHandler(this.logger, this.settingsService));
 		this.handlers.set("updateSettings", new UpdateSettingsHandler(this.logger, this.settingsService));
+		this.handlers.set("getChatMonitorMatches", new GetChatMonitorMatchesHandler(this.logger, this.chatMonitorService));
+		this.handlers.set("clearChatMonitorMatches", new ClearChatMonitorMatchesHandler(this.logger, this.chatMonitorService));
+		this.handlers.set("getChatMonitorStatus", new GetChatMonitorStatusHandler(this.logger, this.chatMonitorService));
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {

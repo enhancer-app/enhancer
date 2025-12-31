@@ -1,3 +1,4 @@
+import type { ChatMonitorChannel } from "$types/shared/chat-monitor/chat-monitor.types.ts";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 
 export type TwitchSettings = {
@@ -24,6 +25,9 @@ export type TwitchSettings = {
 	pinnedStreamersEnabled: boolean;
 	xayoWatchtimeEnabled: boolean;
 	channelSection: boolean;
+	chatMonitorEnabled: boolean;
+	chatMonitorChannels: ChatMonitorChannel[];
+	chatMonitorKeywords: string[];
 };
 
 export type TwitchSettingsEvents = {

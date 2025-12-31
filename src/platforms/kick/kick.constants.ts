@@ -13,4 +13,7 @@ export const KICK_DEFAULT_SETTINGS: KickSettings = {
 	realVideoTimeEnabled: true,
 	realVideoTimeFormat12h: false,
 	channelSection: true,
+	chatMonitorEnabled: false,
+	chatMonitorChannels: [],
+	chatMonitorKeywords: [],
 };
