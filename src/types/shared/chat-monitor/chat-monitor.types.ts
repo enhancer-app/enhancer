@@ -12,6 +12,7 @@ export interface ChatMonitorKeywordMatch {
 	message: string;
 	keyword: string;
 	timestamp: number;
+	silent?: boolean;
 }
 
 export interface ChatMonitorSettings {

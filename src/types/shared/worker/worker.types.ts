@@ -104,6 +104,14 @@ export interface GetChatMonitorStatusResponse {
 	keywordCount: number;
 }
 
+export interface SetChatMonitorStorageDataPayload {
+	data: any; // ChatMonitorStorageData
+}
+
+export interface SetChatMonitorStorageDataResponse {
+	success: true;
+}
+
 export interface WorkerApiActions {
 	ping: {
 		payload?: never;
@@ -148,6 +156,14 @@ export interface WorkerApiActions {
 	getChatMonitorStatus: {
 		payload: never;
 		response: GetChatMonitorStatusResponse;
+	};
+	getChatMonitorStorageData: {
+		payload: never;
+		response: any; // ChatMonitorStorageData
+	};
+	setChatMonitorStorageData: {
+		payload: SetChatMonitorStorageDataPayload;
+		response: SetChatMonitorStorageDataResponse;
 	};
 }
 

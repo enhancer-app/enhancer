@@ -1,4 +1,5 @@
 import { Logger } from "$shared/logger/logger.ts";
+import { ChatMonitorStorageService } from "$shared/worker/chat-monitor-storage/chat-monitor-storage.service.ts";
 import { ChatMonitorService } from "$shared/worker/chat-monitor/chat-monitor.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
@@ -8,11 +9,22 @@ export default class WorkerBackground {
 	private readonly logger = new Logger({ context: "background" });
 	private readonly watchtimeService = new WatchtimeService();
 	private readonly settingsService = new SettingsService();
+	private readonly chatMonitorStorageService = new ChatMonitorStorageService();
+	private currentTabs = new Map<number, { platform: string; channel: string }>();
 	private readonly chatMonitorService = new ChatMonitorService((match) => {
 		// Send keyword match notification to content scripts
+		// Check if user is currently on the page where the keyword was detected (silent ping)
+		let isSilentPing = false;
+		for (const [tabId, tab] of this.currentTabs.entries()) {
+			if (tab.platform === match.platform && tab.channel.toLowerCase() === match.channel.toLowerCase()) {
+				isSilentPing = true;
+				break;
+			}
+		}
+
 		chrome.runtime.sendMessage({
 			action: "chatMonitorPing",
-			payload: match,
+			payload: { ...match, silent: isSilentPing },
 		});
 	});
 	private readonly handlerRegistry = new HandlerRegistry(
@@ -20,6 +32,7 @@ export default class WorkerBackground {
 		this.watchtimeService,
 		this.settingsService,
 		this.chatMonitorService,
+		this.chatMonitorStorageService,
 	);
 
 	private isInitialized = false;
@@ -30,15 +43,17 @@ export default class WorkerBackground {
 
 	async start() {
 		this.setupMessageListener();
+		this.setupTabTracking();
 
 		await Promise.all([
 			this.watchtimeService.initialize(),
 			this.settingsService.initialize(),
 			this.chatMonitorService.initialize(),
+			this.chatMonitorStorageService.initialize(),
 		]);
 
-		// Set up settings listener to start/stop chat monitor
-		this.setupChatMonitorSettingsListener();
+		// Initial setup from storage
+		await this.updateChatMonitorFromStorage();
 
 		this.isInitialized = true;
 		this.logger.info("Background worker started");
@@ -46,41 +61,58 @@ export default class WorkerBackground {
 		await this.processQueuedMessages();
 	}
 
-	private setupChatMonitorSettingsListener() {
-		// Listen for settings changes to manage chat monitor
-		chrome.storage.onChanged.addListener(async (changes, areaName) => {
-			if (areaName !== "local") return;
-
-			const twitchSettingsChanged = changes["enhancer-twitch-settings"];
-			const kickSettingsChanged = changes["enhancer-kick-settings"];
-
-			if (twitchSettingsChanged || kickSettingsChanged) {
-				await this.updateChatMonitorFromSettings();
+	private setupTabTracking() {
+		// Track active tabs to determine if user is watching a monitored channel
+		chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+			if (changeInfo.status === "complete" && tab.url) {
+				this.updateTabInfo(tabId, tab.url);
 			}
 		});
 
-		// Initial setup
-		this.updateChatMonitorFromSettings();
+		chrome.tabs.onRemoved.addListener((tabId) => {
+			this.currentTabs.delete(tabId);
+		});
 	}
 
-	private async updateChatMonitorFromSettings() {
+	private updateTabInfo(tabId: number, url: string) {
+		// Parse URL to detect platform and channel
 		try {
-			const twitchSettings = await this.settingsService.getSettings("twitch");
-			const kickSettings = await this.settingsService.getSettings("kick");
+			const parsedUrl = new URL(url);
+			if (parsedUrl.hostname.includes("twitch.tv")) {
+				const pathParts = parsedUrl.pathname.split("/").filter(Boolean);
+				if (pathParts.length > 0 && pathParts[0] !== "directory" && pathParts[0] !== "videos") {
+					this.currentTabs.set(tabId, {
+						platform: "twitch",
+						channel: pathParts[0],
+					});
+					return;
+				}
+			} else if (parsedUrl.hostname.includes("kick.com")) {
+				const pathParts = parsedUrl.pathname.split("/").filter(Boolean);
+				if (pathParts.length > 0) {
+					this.currentTabs.set(tabId, {
+						platform: "kick",
+						channel: pathParts[0],
+					});
+					return;
+				}
+			}
+		} catch (error) {
+			// Invalid URL, ignore
+		}
+	}
 
-			const allChannels = [...(twitchSettings.chatMonitorChannels || []), ...(kickSettings.chatMonitorChannels || [])];
+	async updateChatMonitorFromStorage(): Promise<void> {
+		try {
+			const storage = await this.chatMonitorStorageService.getData();
 
-			const allKeywords = [...(twitchSettings.chatMonitorKeywords || []), ...(kickSettings.chatMonitorKeywords || [])];
-
-			const isEnabled = twitchSettings.chatMonitorEnabled || kickSettings.chatMonitorEnabled;
-
-			if (isEnabled && allChannels.length > 0 && allKeywords.length > 0) {
-				await this.chatMonitorService.start(allChannels, allKeywords);
+			if (storage.enabled && storage.channels.length > 0 && storage.keywords.length > 0) {
+				await this.chatMonitorService.start(storage.channels, storage.keywords);
 			} else {
 				this.chatMonitorService.stop();
 			}
 		} catch (error) {
-			this.logger.error("Failed to update chat monitor from settings:", error);
+			this.logger.error("Failed to update chat monitor from storage:", error);
 		}
 	}
 
@@ -127,7 +159,14 @@ export default class WorkerBackground {
 			throw new Error(`Unknown action: ${action}`);
 		}
 		const handler = this.handlerRegistry.getHandler(action);
-		return await handler.handle(payload);
+		const result = await handler.handle(payload);
+
+		// After setting chat monitor storage data, update the chat monitor service
+		if (action === "setChatMonitorStorageData") {
+			await this.updateChatMonitorFromStorage();
+		}
+
+		return result;
 	}
 }
 

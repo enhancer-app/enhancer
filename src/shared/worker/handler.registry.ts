@@ -1,4 +1,7 @@
 import type { Logger } from "$shared/logger/logger.ts";
+import type { ChatMonitorStorageService } from "$shared/worker/chat-monitor-storage/chat-monitor-storage.service.ts";
+import { GetChatMonitorStorageDataHandler } from "$shared/worker/chat-monitor-storage/get-chat-monitor-storage-data.handler.ts";
+import { SetChatMonitorStorageDataHandler } from "$shared/worker/chat-monitor-storage/set-chat-monitor-storage-data.handler.ts";
 import type { ChatMonitorService } from "$shared/worker/chat-monitor/chat-monitor.service.ts";
 import { ClearChatMonitorMatchesHandler } from "$shared/worker/chat-monitor/clear-chat-monitor-matches.handler.ts";
 import { GetChatMonitorMatchesHandler } from "$shared/worker/chat-monitor/get-chat-monitor-matches.handler.ts";
@@ -24,6 +27,7 @@ export class HandlerRegistry {
 		private readonly watchtimeService: WatchtimeService,
 		private readonly settingsService: SettingsService,
 		private readonly chatMonitorService: ChatMonitorService,
+		private readonly chatMonitorStorageService: ChatMonitorStorageService,
 	) {
 		this.registerHandlers();
 	}
@@ -43,6 +47,14 @@ export class HandlerRegistry {
 			new ClearChatMonitorMatchesHandler(this.logger, this.chatMonitorService),
 		);
 		this.handlers.set("getChatMonitorStatus", new GetChatMonitorStatusHandler(this.logger, this.chatMonitorService));
+		this.handlers.set(
+			"getChatMonitorStorageData",
+			new GetChatMonitorStorageDataHandler(this.logger, this.chatMonitorStorageService),
+		);
+		this.handlers.set(
+			"setChatMonitorStorageData",
+			new SetChatMonitorStorageDataHandler(this.logger, this.chatMonitorStorageService),
+		);
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {
