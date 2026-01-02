@@ -1,7 +1,4 @@
 import type { Logger } from "$shared/logger/logger.ts";
-import type { ChatMonitorStorageService } from "$shared/worker/chat-monitor-storage/chat-monitor-storage.service.ts";
-import { GetChatMonitorStorageDataHandler } from "$shared/worker/chat-monitor-storage/get-chat-monitor-storage-data.handler.ts";
-import { SetChatMonitorStorageDataHandler } from "$shared/worker/chat-monitor-storage/set-chat-monitor-storage-data.handler.ts";
 import type { ChatMonitorService } from "$shared/worker/chat-monitor/chat-monitor.service.ts";
 import { ClearChatMonitorMatchesHandler } from "$shared/worker/chat-monitor/clear-chat-monitor-matches.handler.ts";
 import { GetChatMonitorMatchesHandler } from "$shared/worker/chat-monitor/get-chat-monitor-matches.handler.ts";
@@ -12,6 +9,9 @@ import { PingHandler } from "$shared/worker/ping/ping.handler.ts";
 import { GetSettingsHandler } from "$shared/worker/settings/get-settings.handler.ts";
 import type { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
 import { UpdateSettingsHandler } from "$shared/worker/settings/update-settings.handler.ts";
+import { GetSharedStorageDataHandler } from "$shared/worker/shared-storage/get-shared-storage-data.handler.ts";
+import { SetSharedStorageDataHandler } from "$shared/worker/shared-storage/set-shared-storage-data.handler.ts";
+import type { SharedStorageService } from "$shared/worker/shared-storage/shared-storage.service.ts";
 import { AddWatchtimeHandler } from "$shared/worker/watchtime/add-watchtime.handler.ts";
 import { GetPaginatedWatchtimeHandler } from "$shared/worker/watchtime/get-paginated-watchtime.handler.ts";
 import { GetWatchtimeHandler } from "$shared/worker/watchtime/get-watchtime.handler.ts";
@@ -27,7 +27,7 @@ export class HandlerRegistry {
 		private readonly watchtimeService: WatchtimeService,
 		private readonly settingsService: SettingsService,
 		private readonly chatMonitorService: ChatMonitorService,
-		private readonly chatMonitorStorageService: ChatMonitorStorageService,
+		private readonly sharedStorageService: SharedStorageService,
 	) {
 		this.registerHandlers();
 	}
@@ -47,14 +47,8 @@ export class HandlerRegistry {
 			new ClearChatMonitorMatchesHandler(this.logger, this.chatMonitorService),
 		);
 		this.handlers.set("getChatMonitorStatus", new GetChatMonitorStatusHandler(this.logger, this.chatMonitorService));
-		this.handlers.set(
-			"getChatMonitorStorageData",
-			new GetChatMonitorStorageDataHandler(this.logger, this.chatMonitorStorageService),
-		);
-		this.handlers.set(
-			"setChatMonitorStorageData",
-			new SetChatMonitorStorageDataHandler(this.logger, this.chatMonitorStorageService),
-		);
+		this.handlers.set("getSharedStorageData", new GetSharedStorageDataHandler(this.logger, this.sharedStorageService));
+		this.handlers.set("setSharedStorageData", new SetSharedStorageDataHandler(this.logger, this.sharedStorageService));
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {

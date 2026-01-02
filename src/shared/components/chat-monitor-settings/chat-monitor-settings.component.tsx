@@ -1,5 +1,6 @@
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { ChatMonitorStorageData } from "$types/shared/storage/chat-monitor-storage.types.ts";
+import type { SharedStorageData } from "$types/shared/storage/shared-storage.types.ts";
 import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
 
@@ -181,9 +182,9 @@ export function ChatMonitorSettingsComponent({ workerService }: ChatMonitorSetti
 	const loadData = async () => {
 		setLoading(true);
 		try {
-			const result = await workerService.send("getChatMonitorStorageData");
-			if (result) {
-				setData(result);
+			const result = await workerService.send("getSharedStorageData", {});
+			if (result?.data?.chatMonitor) {
+				setData(result.data.chatMonitor);
 			}
 		} catch (error) {
 			console.error("Failed to load chat monitor data:", error);
@@ -195,8 +196,17 @@ export function ChatMonitorSettingsComponent({ workerService }: ChatMonitorSetti
 	const saveData = async (newData: ChatMonitorStorageData) => {
 		setSaving(true);
 		try {
-			await workerService.send("setChatMonitorStorageData", { data: newData });
-			setData(newData);
+			// First get the full shared storage
+			const fullStorage = await workerService.send("getSharedStorageData", {});
+			if (fullStorage?.data) {
+				// Update only the chatMonitor portion
+				const updatedStorage: SharedStorageData = {
+					...fullStorage.data,
+					chatMonitor: newData,
+				};
+				await workerService.send("setSharedStorageData", { data: updatedStorage });
+				setData(newData);
+			}
 		} catch (error) {
 			console.error("Failed to save chat monitor data:", error);
 		} finally {

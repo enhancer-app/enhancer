@@ -1,10 +1,11 @@
+import type { Logger } from "$shared/logger/logger.ts";
 import type { ChatMonitorService } from "$shared/worker/chat-monitor/chat-monitor.service.ts";
 import { MessageHandler } from "$shared/worker/message.handler.ts";
 import type { GetChatMonitorMatchesPayload, GetChatMonitorMatchesResponse } from "$types/shared/worker/worker.types.ts";
 
 export class GetChatMonitorMatchesHandler extends MessageHandler {
 	constructor(
-		logger: any,
+		logger: Logger,
 		private readonly chatMonitorService: ChatMonitorService,
 	) {
 		super(logger);

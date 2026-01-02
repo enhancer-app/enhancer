@@ -1,4 +1,6 @@
+import type { ChatMonitorKeywordMatch } from "$types/shared/chat-monitor/chat-monitor.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
+import type { SharedStorageData } from "$types/shared/storage/shared-storage.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 
 export type { PlatformType };
@@ -89,7 +91,7 @@ export interface GetChatMonitorMatchesPayload {
 }
 
 export interface GetChatMonitorMatchesResponse {
-	matches: any[]; // ChatMonitorKeywordMatch[]
+	matches: ChatMonitorKeywordMatch[];
 }
 
 export interface ClearChatMonitorMatchesResponse {
@@ -104,11 +106,16 @@ export interface GetChatMonitorStatusResponse {
 	keywordCount: number;
 }
 
-export interface SetChatMonitorStorageDataPayload {
-	data: any; // ChatMonitorStorageData
+// biome-ignore lint/complexity/noBannedTypes: it's okay here
+export type GetSharedStorageDataPayload = {};
+
+export interface GetSharedStorageDataResponse {
+	data: SharedStorageData;
 }
 
-export interface SetChatMonitorStorageDataResponse {
+export type SetSharedStorageDataPayload = { data: SharedStorageData };
+
+export interface SetSharedStorageDataResponse {
 	success: true;
 }
 
@@ -157,13 +164,13 @@ export interface WorkerApiActions {
 		payload: never;
 		response: GetChatMonitorStatusResponse;
 	};
-	getChatMonitorStorageData: {
-		payload: never;
-		response: any; // ChatMonitorStorageData
+	getSharedStorageData: {
+		payload: GetSharedStorageDataPayload;
+		response: GetSharedStorageDataResponse;
 	};
-	setChatMonitorStorageData: {
-		payload: SetChatMonitorStorageDataPayload;
-		response: SetChatMonitorStorageDataResponse;
+	setSharedStorageData: {
+		payload: SetSharedStorageDataPayload;
+		response: SetSharedStorageDataResponse;
 	};
 }
 
