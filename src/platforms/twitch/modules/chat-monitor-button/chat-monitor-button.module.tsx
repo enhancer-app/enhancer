@@ -72,8 +72,8 @@ export default class ChatMonitorButtonModule extends TwitchModule {
 			.top-nav__menu .enhancer-chat-monitor-button { order: -6 !important; }
 		`);
 
-		// Listen for keyword match events from background
-		chrome.runtime.onMessage.addListener((message) => {
+		// Listen for keyword match events from background via worker service
+		this.workerService().onBackgroundMessage((message) => {
 			if (message.action === "chatMonitorPing") {
 				// Show notification or update badge
 				this.showNotificationBadge();

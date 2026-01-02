@@ -71,8 +71,8 @@ export default class ChatMonitorButtonModule extends KickModule {
 			}
 		`);
 
-		// Listen for keyword match events from background
-		chrome.runtime.onMessage.addListener((message) => {
+		// Listen for keyword match events from background via worker service
+		this.workerService().onBackgroundMessage((message) => {
 			if (message.action === "chatMonitorPing") {
 				// Show notification or update badge
 				this.showNotificationBadge();

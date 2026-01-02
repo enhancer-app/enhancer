@@ -59,6 +59,17 @@ export default class WorkerBridge {
 				this.bridgeElement!.dispatchEvent(errorEvent);
 			}
 		}) as unknown as EventListener);
+
+		// Listen for messages FROM background worker TO content script
+		chrome.runtime.onMessage.addListener((message) => {
+			// Relay background messages to page context via custom event on bridge element
+			if (this.bridgeElement && message.action) {
+				const bgEvent = new CustomEvent<string>("enhancer-background-message", {
+					detail: JSON.stringify(message),
+				});
+				this.bridgeElement.dispatchEvent(bgEvent);
+			}
+		});
 	}
 
 	private log(...data: any[]) {

@@ -55,6 +55,27 @@ export default class WorkerService {
 		}) as unknown as EventListener);
 	}
 
+	/**
+	 * Listen for messages from background worker
+	 */
+	onBackgroundMessage(callback: (message: { action: string; payload?: any }) => void): () => void {
+		const listener = ((event: CustomEvent<string>) => {
+			try {
+				const message = JSON.parse(event.detail);
+				callback(message);
+			} catch (error) {
+				this.logger.error("Failed to parse background message:", error);
+			}
+		}) as unknown as EventListener;
+
+		this.element.addEventListener("enhancer-background-message", listener);
+
+		// Return unsubscribe function
+		return () => {
+			this.element.removeEventListener("enhancer-background-message", listener);
+		};
+	}
+
 	async send<T extends WorkerAction>(
 		action: T,
 		...args: WorkerApiActions[T]["payload"] extends never ? [] : [WorkerApiActions[T]["payload"]]
