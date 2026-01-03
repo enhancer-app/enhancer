@@ -150,13 +150,13 @@ export class TwitchIRCConnector {
 			const channel = messageParts[channelIndex].substring(1);
 
 			// Find message content
-			const messageIndex = messageParts.findIndex((part) => part === `:${messageParts[channelIndex]}`);
-			if (messageIndex === -1) return;
+			// The message is everything after the channel name.
+			// It typically starts with ':' which we need to remove.
+			const rawMessage = messageParts.slice(channelIndex + 1).join(" ");
 
-			const message = messageParts
-				.slice(messageIndex + 1)
-				.join(" ")
-				.substring(1);
+			// If the message exists and starts with ':', remove it.
+			const message = rawMessage.startsWith(":") ? rawMessage.substring(1) : rawMessage;
+
 			const username = tags["display-name"] || "Unknown";
 
 			// Check for keywords
