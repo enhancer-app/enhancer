@@ -1,5 +1,6 @@
 import Platform from "$shared/platform/platform.ts";
 import TwitchApi from "$twitch/apis/twitch.api.ts";
+import AdditionalFontsModule from "$twitch/modules/additional-fonts/additional-fonts.module.tsx";
 import ChatAttachmentsModule from "$twitch/modules/chat-attachments/chat-attachments.module.ts";
 import ChatBadgesModule from "$twitch/modules/chat-badges/chat-badges.module.tsx";
 import ChatMentionSoundModule from "$twitch/modules/chat-mention-sound/chat-mention-sound.module.tsx";
@@ -70,6 +71,7 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			new MessageMenuModule(...dependencies),
 			new ChatMessageMenuModule(...dependencies),
 			new ChatMentionSoundModule(...dependencies),
+			new AdditionalFontsModule(...dependencies),
 		];
 	}
 

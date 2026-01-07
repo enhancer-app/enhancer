@@ -1,9 +1,11 @@
 import KickApi from "$kick/apis/kick.api.ts";
 import type KickModule from "$kick/kick.module.ts";
 import KickUtils from "$kick/kick.utils.ts";
+import AdditionalFontsModule from "$kick/modules/additional-fonts/additional-fonts.module.tsx";
 import ChannelSectionModule from "$kick/modules/channel-section/channel-section.module.tsx";
 import ChatAttachmentsModule from "$kick/modules/chat-attachments/chat-attachments.module.ts";
 import ChatBadgesModule from "$kick/modules/chat-badges/chat-badges.module.tsx";
+import ChatFixAutoScrollModule from "$kick/modules/chat-fix-auto-scroll/chat-fix-auto-scroll.module.tsx";
 import ChatHighlightUserModule from "$kick/modules/chat-highlight-user/chat-highlight-user.module.tsx";
 import ChatMessageMenuModule from "$kick/modules/chat-message-menu/chat-message-menu.module.tsx";
 import MessageMenuModule from "$kick/modules/chat-message-menu/message-menu.module.tsx";
@@ -26,7 +28,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 		super({ type: "kick" });
 	}
 
-	private readonly kickUtils = new KickUtils(this.utilsRepository.reactUtils);
+	private readonly kickUtils = new KickUtils(this.utilsRepository.reactUtils, this.utilsRepository.commonUtils);
 	private readonly kickApi = new KickApi();
 
 	protected getModules(): KickModule[] {
@@ -56,6 +58,8 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			new ChatMessagePopupModule(...dependencies),
 			// new MessageMenuModule(...dependencies),
 			// new ChatMessageMenuModule(...dependencies),
+			new AdditionalFontsModule(...dependencies),
+			new ChatFixAutoScrollModule(...dependencies),
 		];
 	}
 

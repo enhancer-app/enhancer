@@ -31,17 +31,22 @@ export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 		"i.nuuls.com",
 		"kappa.lol",
 		"files.igor.ovh",
+		"prnt.sc",
+		"files.catbox.moe",
 	];
+	static readonly CORSGO_PROXY_URL_PARSER = (url: URL) => {
+		const corsgoUrl = new URL("https://corsgo.enhancer.at/proxy");
+		corsgoUrl.searchParams.append("url", url.href);
+		return corsgoUrl;
+	};
 	static readonly URL_PARSERS: AttachmentUrlParser = {
 		"cdn.discordapp.com": (url) => {
 			url.host = "media.discordapp.net";
 			return url;
 		},
-		"imgur.com": (url) => {
-			url.host = "i.imgur.com";
-			url.pathname = `${url.pathname}.gif`;
-			return url;
-		},
+		"prnt.sc": ImageChatAttachmentHandler.CORSGO_PROXY_URL_PARSER,
+		"files.catbox.moe": ImageChatAttachmentHandler.CORSGO_PROXY_URL_PARSER,
+		"imgur.com": ImageChatAttachmentHandler.CORSGO_PROXY_URL_PARSER,
 	};
 
 	static readonly DISCORD_CACHE_PREVIEW_PARSER = (url: URL) => {
@@ -53,6 +58,16 @@ export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 	static readonly PREVIEW_URL_PARSERS: AttachmentUrlParser = {
 		"images-ext-1.discordapp.net": ImageChatAttachmentHandler.DISCORD_CACHE_PREVIEW_PARSER,
 		"images-ext-2.discordapp.net": ImageChatAttachmentHandler.DISCORD_CACHE_PREVIEW_PARSER,
+		// We need only proxy to show message in the chat, after this we can navigate user to original link
+		"corsgo.enhancer.at": (url) => {
+			const paramUrl = url.searchParams.get("url");
+			if (paramUrl) {
+				try {
+					return new URL(paramUrl);
+				} catch (_) {}
+			}
+			return url;
+		},
 	};
 
 	validate(baseData: BaseChatAttachmentData) {

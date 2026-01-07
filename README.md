@@ -15,3 +15,11 @@ For more information, please visit our page: [enhancer.at](https://enhancer.at)
 2.  `bun run build` / `bun run dev`
 3.  Add `dist` directory as an unpacked extension in your browser.
 4.  Refresh the extension in your browser.
+
+<details>
+<summary>
+If you are using the developer version (`bun run dev`) in Chrome, you may need to allow Local Network Access.
+</summary>
+  
+<img src="https://github.com/enhancer-app/enhancer/blob/master/docs/images/chrome-local-network-access.png?raw=true" />
+</details>

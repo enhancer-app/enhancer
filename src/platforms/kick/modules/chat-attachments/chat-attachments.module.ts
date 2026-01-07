@@ -17,15 +17,7 @@ export default class ChatAttachmentsModule extends KickModule {
 	private readonly imageAttachmentConfig = new ImageChatAttachmentConfig(
 		this.settingsService(),
 		this.workerService(),
-		async () => {
-			const chatRoom = this.kickUtils().getChannelChatRoom();
-			if (!chatRoom) return;
-			if (!chatRoom.isPaused) {
-				chatRoom.setIsPaused(true);
-				await this.commonUtils().delay(10);
-				chatRoom.setIsPaused(false);
-			}
-		},
+		async () => await this.kickUtils().scrollToBottomOnChat(),
 	);
 	private previousInputContent = "";
 	private inputMonitoringInterval: NodeJS.Timeout | undefined;

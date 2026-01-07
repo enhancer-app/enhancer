@@ -1,3 +1,4 @@
+import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import Settings, { SettingsOverlay } from "$shared/components/settings/settings.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
@@ -24,6 +25,12 @@ export default class SettingsModule extends TwitchModule {
 				event: "extension:settings-open",
 				callback: this.openSettings.bind(this),
 				key: "settings-open",
+			},
+			{
+				type: "event",
+				event: "extension:settings-refresh",
+				callback: this.loadSettings.bind(this),
+				key: "settings-refresh",
 			},
 		],
 	};
@@ -112,6 +119,14 @@ export default class SettingsModule extends TwitchModule {
 				requiresRefreshToDisable: true,
 			},
 			{
+				id: "loadAdditionalFonts",
+				title: "Enable Loading Additional Fonts",
+				description: "Loads additional font assets used by Enhancer for enhanced visual variety.",
+				type: "toggle",
+				tabIndex: tabIndexes.General,
+				requiresRefreshToDisable: true,
+			},
+			{
 				id: "chatImagesEnabled",
 				title: "Enable Chat Images",
 				description: "Display images sent in chat messages.",
@@ -174,16 +189,17 @@ export default class SettingsModule extends TwitchModule {
 				tabIndex: tabIndexes.Chat,
 			},
 			{
-				id: "chatMentionSoundSource",
-				title: "Custom Mention Sound URL",
+				id: "chatMentionSoundFile",
+				title: "Custom Mention Sound File",
 				description:
-					"Set a custom audio file to play when you are mentioned in chat. Leave it empty for default sound.",
-				type: "input",
+					"Upload a custom audio file to play when you are mentioned in chat. Leave empty to use the default sound.",
+				type: "file",
 				tabIndex: tabIndexes.Chat,
+				validTypes: ["audio/mpeg", "audio/mp3", "audio/ogg", "audio/wav", "audio/webm", "audio/aac", "audio/flac"],
 			},
 			{
 				id: "chatMentionSoundVolume",
-				title: "Custom Mention Sound",
+				title: "Custom Mention Sound Volume",
 				description: "Adjust the volume level for your mention notification sound.",
 				type: "number",
 				min: 0,
@@ -202,6 +218,8 @@ export default class SettingsModule extends TwitchModule {
 					{ name: "title", placeholder: "Enter link name..." },
 					{ name: "url", placeholder: "Enter URL..." },
 				],
+				confirmOnRemove: true,
+				confirmationMessage: "Are you sure you want to remove this Quick Access Link?",
 			},
 			{
 				id: "watchtime-list",
@@ -210,7 +228,18 @@ export default class SettingsModule extends TwitchModule {
 				type: "text",
 				tabIndex: tabIndexes.Channel,
 				content: () => {
-					return <WatchtimeListComponent platform="twitch" workerService={workerService} />;
+					return <WatchtimeListComponent platform="twitch" workerService={workerService} emitter={this.emitter} />;
+				},
+				hideInfo: true,
+			},
+			{
+				id: "export-import",
+				title: "Export/Import Data",
+				description: "Export and import your settings and watchtime data",
+				type: "text",
+				tabIndex: tabIndexes.General,
+				content: () => {
+					return <ExportImportComponent platform="twitch" workerService={workerService} emitter={this.emitter} />;
 				},
 				hideInfo: true,
 			},

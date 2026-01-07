@@ -1,5 +1,6 @@
 import { KICK_DEFAULT_SETTINGS } from "$kick/kick.constants.ts";
 import KickModule from "$kick/kick.module.ts";
+import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import Settings, { SettingsOverlay } from "$shared/components/settings/settings.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
@@ -24,6 +25,12 @@ export default class SettingsModule extends KickModule {
 				event: "extension:settings-open",
 				callback: this.openSettings.bind(this),
 				key: "settings-open",
+			},
+			{
+				type: "event",
+				event: "extension:settings-refresh",
+				callback: this.loadSettings.bind(this),
+				key: "settings-refresh",
 			},
 		],
 	};
@@ -151,6 +158,8 @@ export default class SettingsModule extends KickModule {
 					{ name: "title", placeholder: "Enter link name..." },
 					{ name: "url", placeholder: "Enter URL..." },
 				],
+				confirmOnRemove: true,
+				confirmationMessage: "Are you sure you want to remove this Quick Access Link?",
 			},
 			{
 				id: "watchtime-list",
@@ -159,7 +168,18 @@ export default class SettingsModule extends KickModule {
 				type: "text",
 				tabIndex: tabIndexes.Channel,
 				content: () => {
-					return <WatchtimeListComponent platform="kick" workerService={workerService} />;
+					return <WatchtimeListComponent platform="kick" workerService={workerService} emitter={this.emitter} />;
+				},
+				hideInfo: true,
+			},
+			{
+				id: "export-import",
+				title: "Export/Import Data",
+				description: "Export and import your settings and watchtime data",
+				type: "text",
+				tabIndex: tabIndexes.General,
+				content: () => {
+					return <ExportImportComponent platform="kick" workerService={workerService} emitter={this.emitter} />;
 				},
 				hideInfo: true,
 			},

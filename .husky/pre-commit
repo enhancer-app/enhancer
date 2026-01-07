@@ -1,1 +1,2 @@
-bun run lint
+bun run typecheck
+bun run biome:check
