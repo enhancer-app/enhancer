@@ -54,7 +54,9 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 					set: playbackRateSetHook,
 					get: Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "playbackRate")?.get,
 				});
-			} catch {}
+			} catch(error) {
+				this.logger.error("Failed to apply playbackRate patch:", error);
+			}
 		}
 	}
 
