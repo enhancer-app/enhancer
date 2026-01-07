@@ -196,7 +196,7 @@ export default class SettingsModule extends KickModule {
 				title: "Enable Stream Latency Reducer",
 				description: "Reduces stream latency by adjusting playback rate.",
 				type: "toggle",
-				tabIndex: tabIndexes.Latency,
+				tabIndex: tabIndexes.Experimental,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -204,7 +204,7 @@ export default class SettingsModule extends KickModule {
 				title: "Minimum Playback Rate",
 				description: "The minimum playback rate the stream will be speeded up to.",
 				type: "number",
-				tabIndex: tabIndexes.Latency,
+				tabIndex: tabIndexes.Experimental,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -212,7 +212,7 @@ export default class SettingsModule extends KickModule {
 				title: "Maximum Playback Rate",
 				description: "The maximum playback rate the stream will be speeded up to.",
 				type: "number",
-				tabIndex: tabIndexes.Latency,
+				tabIndex: tabIndexes.Experimental,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -221,7 +221,7 @@ export default class SettingsModule extends KickModule {
 				description:
 					"The latency threshold (in seconds) at which the playback rate will be speeded up to the minimum rate.",
 				type: "number",
-				tabIndex: tabIndexes.Latency,
+				tabIndex: tabIndexes.Experimental,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -230,7 +230,7 @@ export default class SettingsModule extends KickModule {
 				description:
 					"The latency threshold (in seconds) at which the playback rate will be speeded up to the maximum rate.",
 				type: "number",
-				tabIndex: tabIndexes.Latency,
+				tabIndex: tabIndexes.Experimental,
 				requiresRefreshToDisable: true,
 			},
 			{
