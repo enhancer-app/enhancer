@@ -22,118 +22,99 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(async () => {
 			const status = await this.getPlaybackRateStatus();
-			const { minThreshold, maxThreshold } = await this.getSettings();
-			let latency = this.getLatency();
-			if (!latency) return;
-			// add offset of 0.5 seconds to the latency when caught up.
-			// prevents rapid rate changes when caught up
-			if (status === "caughtUp") {
-				latency -= 0.5;
-			}
-			if (latency >= maxThreshold) {
-				if (status === "catchingUpMax") return;
+
+			if (status === "catchingUpMax") {
 				this.setPlaybackRateMode("catchUpMax");
-			} else if (latency >= minThreshold) {
-				if (status === "catchingUpMin") return;
+			} else if (status === "catchingUpMin") {
 				this.setPlaybackRateMode("catchUpMin");
 			} else {
-				if (status === "caughtUp") return;
 				this.setPlaybackRateMode("reset");
 			}
 		}, 1000);
 
-		//! DEV ONLY, delete before release
-		setTimeout(() => {
-			this.logger.debug("Added dev window");
-			const devRoot = document.createElement("div");
-			document.querySelector(".video-player__overlay")?.appendChild(devRoot);
-			devRoot.style.position = "absolute";
-			devRoot.style.right = "0";
-			devRoot.style.top = "0";
-			devRoot.style.width = "fit-content";
-			devRoot.style.height = "fit-content";
-			devRoot.style.backgroundColor = "red";
-			devRoot.style.padding = "10px";
-			devRoot.textContent = "test";
+		async function playbackRateSetHook(this: HTMLVideoElement, rate: number) {
+			// Workaround for twitch native delay reducer interfering, block any other attempts of changing playbackRate other that ours
+			try {
+				if (true && !(this as any)._enhancerAllowRateChange) return rate;
+			} catch {}
 
-			setInterval(async () => {
-				devRoot.innerHTML = `Latency: ${this.getLatency()?.toFixed(2)} <br>
-					Playback Rate: ${this.twitchUtils().getMediaPlayerPlaybackRate()?.toFixed(2)} <br>
-					Status: ${await this.getPlaybackRateStatus()} <br>
-					Min Rate: ${await this.getSettings().then((s) => s.minRate)} <br>
-					Max Rate: ${await this.getSettings().then((s) => s.maxRate)} <br>
-					Min Threshold: ${await this.getSettings().then((s) => s.minThreshold)} <br>
-					Max Threshold: ${await this.getSettings().then((s) => s.maxThreshold)}
-					`;
-			}, 100);
-		}, 3000);
+			return orig_playbackRate_set.call(this, rate);
+		}
 
-		this.updatePlaybackRate();
+		let orig_playbackRate_set: any;
+		try {
+			orig_playbackRate_set = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "playbackRate")?.set;
+		} catch (error) {
+			this.logger.error(error);
+		}
+		if (orig_playbackRate_set !== undefined && orig_playbackRate_set !== playbackRateSetHook) {
+			try {
+				this.logger.info("Applying patch for playbackRate.");
+				Object.defineProperty(HTMLVideoElement.prototype, "playbackRate", {
+					set: playbackRateSetHook,
+					get: Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "playbackRate")?.get,
+				});
+			} catch {}
+		}
 	}
 
-	private updatePlaybackRate() {
-		const video = this.getPlayer();
-		if (!video) return;
+	private changePlaybackSpeed(video: HTMLVideoElement, rate: number) {
+		if (
+			this.getFFZAllowCatchup() === false &&
+			video &&
+			Object.getOwnPropertyDescriptor(video, "playbackRate")?.set !== undefined
+		) {
+			try {
+				// Needed to remove setter, which is then inherited
+				// @ts-ignore - playbackRate's existence is implied by the check above
+				// biome-ignore lint/performance/noDelete: setting to undefined does not reset it completely
+				delete video.playbackRate;
+			} catch (error) {
+				this.logger.error(error);
+			}
+		}
 
-		if (!video.setEnhancedPlaybackRate) this.installPlaybackRate(video);
-
-		video.setEnhancedPlaybackRate(video.playbackRate);
-	}
-
-	private installPlaybackRate(video: any) {
-		if (video.setFFZPlaybackRate) return;
-
-		let playbackRate = video.playbackRate;
-
-		const installProperty = () => {
-			Object.defineProperty(video, "playbackRate", {
-				configurable: true,
-				get() {
-					return playbackRate;
-				},
-				set(val) {
-					video.setEnhancedPlaybackRate(val);
-				},
-			});
-		};
-
-		video.setEnhancedPlaybackRate = (rate: number) => {
-			video.playbackRat = undefined;
-			playbackRate = rate;
-			video.playbackRate = rate;
-			installProperty();
-		};
+		(video as any)._enhancerAllowRateChange = true;
+		video.playbackRate = rate;
+		(video as any)._enhancerAllowRateChange = false;
 	}
 
 	private async setPlaybackRateMode(mode: "catchUpMin" | "catchUpMax" | "reset") {
-		const mediaPlayer = this.getPlayer();
-		if (!mediaPlayer) return;
-		const video = mediaPlayer.core.renderSurface.video.element();
+		const video = this.twitchUtils().getMediaPlayerInstance()?.core.renderSurface.video.element();
+		if (!video) return;
+
+		let targetRate = 1;
+		const latency = this.getLatency();
+		if (!latency) return;
+
+		const minRate = (await this.getSettings()).minRate;
+		const maxRate = (await this.getSettings()).maxRate;
+		const minSpeedThreshold = (await this.getSettings()).minThreshold;
+		const maxSpeedThreshold = (await this.getSettings()).maxThreshold;
+
 		if (mode === "catchUpMax") {
-			const { maxRate } = await this.getSettings();
-			this.preventFFZOverride(video, maxRate);
-			this.logger.debug(`Max latency reached, speeding up playback rate to ${maxRate}x`);
-			video.playbackRate = maxRate;
+			targetRate = maxRate;
 		} else if (mode === "catchUpMin") {
-			const { minRate } = await this.getSettings();
-			this.preventFFZOverride(video, minRate);
-			this.logger.debug(`Min latency reached, speeding up playback rate to ${minRate}x`);
-			video.playbackRate = minRate;
-		} else {
-			this.logger.debug("Latency caught up, resetting playback rate to 1x");
-			video.playbackRate = 1;
+			targetRate =
+				minRate + ((maxRate - minRate) * (latency - minSpeedThreshold)) / (maxSpeedThreshold - minSpeedThreshold);
 		}
+
+		this.changePlaybackSpeed(video, targetRate);
 	}
 
 	private async getPlaybackRateStatus() {
 		const mediaPlayer = this.getPlayer();
 		if (!mediaPlayer) return;
-		const playbackRate = this.twitchUtils().getMediaPlayerPlaybackRate();
-		if (!playbackRate) return;
-		const { maxRate, minRate } = await this.getSettings();
-		if (playbackRate >= Math.abs(maxRate)) return "catchingUpMax";
-		if (playbackRate >= Math.abs(minRate)) return "catchingUpMin";
-		if (playbackRate <= Math.abs(1)) return "caughtUp";
+		const latency = this.getLatency();
+		if (!latency) return "invalid";
+
+		// Disable reducer without Low Latency mode
+		if (window.localStorage.getItem("lowLatencyModeEnabled") === "false") return "caughtUp";
+
+		const { maxThreshold, minThreshold } = await this.getSettings();
+		if (latency >= Math.abs(maxThreshold)) return "catchingUpMax";
+		if (latency > Math.abs(minThreshold)) return "catchingUpMin";
+		if (latency <= Math.abs(minThreshold)) return "caughtUp";
 		return "invalid";
 	}
 
@@ -143,19 +124,6 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		const minThreshold = await this.settingsService().getSettingsKey("streamLatencyReducerMinThreshold");
 		const maxThreshold = await this.settingsService().getSettingsKey("streamLatencyReducerMaxThreshold");
 		return { minRate, maxRate, minThreshold, maxThreshold };
-	}
-
-	private preventFFZOverride(video: HTMLVideoElement, rate: number) {
-		if (
-			this.getFFZAllowCatchup() === false &&
-			video &&
-			"setFFZPlaybackRate" in video &&
-			// check for modified playbackRate property by FFZ
-			Object.prototype.hasOwnProperty.call(video, "playbackRate")
-		) {
-			this.logger.debug("FFZ playback rate override prevented");
-			video.playbackRate = rate;
-		}
 	}
 
 	private getFFZAllowCatchup() {

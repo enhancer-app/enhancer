@@ -9,7 +9,6 @@ export default class StreamLatencyModule extends KickModule {
 	private isLiveState = signal(false);
 	private updateInterval: NodeJS.Timeout | undefined;
 	private playbackRate = signal(1);
-	private threshold = signal(5);
 	private latencyTimings = signal<number[]>([]);
 
 	readonly config: KickModuleConfig = {
@@ -34,10 +33,13 @@ export default class StreamLatencyModule extends KickModule {
 			this.logger.debug("Found multiple elements of chat room");
 		}
 
+		this.watchPlaybackRate();
+
 		if (this.updateInterval) clearInterval(this.updateInterval);
-		this.updateInterval = setInterval(() => this.updateLatency(), 500);
+		this.updateInterval = setInterval(() => this.updateLatency(), 1000);
 
 		for (const chatRoom of elements) {
+			if (chatRoom.className.includes("--chat-clip")) continue;
 			const span = chatRoom.firstElementChild?.querySelector<HTMLSpanElement>("span");
 			if (!span) continue;
 			span.textContent = "";
@@ -62,23 +64,6 @@ export default class StreamLatencyModule extends KickModule {
 		this.setLive(true);
 		if (video.paused) return;
 		this.latencyCounter.value = this.computeLatency(video);
-
-		this.playbackRate.value = Number.parseFloat(video.playbackRate.toFixed(2));
-
-		if (this.latencyCounter.value > this.threshold.value) {
-			const min = 1.03;
-			const max = 1.1;
-			const maxSpeedLatency = this.threshold.value * 3;
-
-			video.playbackRate =
-				this.latencyCounter.value > maxSpeedLatency
-					? max
-					: min +
-						((max - min) * (this.latencyCounter.value - this.threshold.value)) /
-							(maxSpeedLatency - this.threshold.value);
-		} else {
-			video.playbackRate = 1;
-		}
 	}
 
 	private computeLatency(video: HTMLVideoElement): number {
@@ -86,7 +71,16 @@ export default class StreamLatencyModule extends KickModule {
 		if (buffered.length === 0) return -1;
 		const bufferEnd = buffered.end(buffered.length - 1);
 
-		this.latencyTimings.value.push(bufferEnd - currentTime);
+		const computedLatency = bufferEnd - currentTime;
+		this.latencyTimings.value.push(computedLatency);
+
+		// Reset timings array if experiences sudden increase in latency
+		if (
+			this.latencyTimings.value.length > 1 &&
+			computedLatency - this.latencyTimings.value[this.latencyTimings.value.length - 2] > 2
+		) {
+			this.latencyTimings.value = [computedLatency];
+		}
 
 		if (!this.updateInterval) return 0;
 		const numberOfSamples = 10;
@@ -96,6 +90,14 @@ export default class StreamLatencyModule extends KickModule {
 			this.latencyTimings.value.reduce((accumulator, currentValue) => accumulator + currentValue, 0) /
 			this.latencyTimings.value.length
 		);
+	}
+
+	private watchPlaybackRate() {
+		const video = this.getVideoElement();
+		if (!video) return;
+		video.addEventListener("ratechange", () => {
+			this.playbackRate.value = video.playbackRate;
+		});
 	}
 
 	private resetPlayer(): void {

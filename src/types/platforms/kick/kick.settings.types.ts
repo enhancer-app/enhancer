@@ -12,7 +12,8 @@ export type KickSettings = {
 	streamLatencyReducerEnabled: boolean;
 	streamLatencyReducerMinRate: number;
 	streamLatencyReducerMaxRate: number;
-	streamLatencyReducerThreshold: number;
+	streamLatencyReducerMinThreshold: number;
+	streamLatencyReducerMaxThreshold: number;
 	realVideoTimeEnabled: boolean;
 	realVideoTimeFormat12h: boolean;
 	channelSection: boolean;
