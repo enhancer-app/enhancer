@@ -47,7 +47,7 @@ export default class StreamLatencyReducerModule extends KickModule {
 		if (!videoPlayer) return;
 
 		let targetRate = 1;
-		const latency = this.getLatency(videoPlayer);
+		const latency = this.computeLatency(videoPlayer);
 
 		// Always reset playback speed in reset mode, regardless of latency.
 		if (mode === "reset") {
@@ -85,7 +85,7 @@ export default class StreamLatencyReducerModule extends KickModule {
 	private async getPlaybackRateStatus() {
 		const videoPlayer = this.getPlayer();
 		if (!videoPlayer) return;
-		const latency = this.getLatency(videoPlayer);
+		const latency = this.computeLatency(videoPlayer);
 		if (!latency) return "invalid";
 
 		const { maxThreshold, minThreshold } = await this.getSettings();
@@ -104,12 +104,17 @@ export default class StreamLatencyReducerModule extends KickModule {
 	}
 
 	// Calculates latency based on average of past latency snapshots
-	private getLatency(video: HTMLVideoElement): number {
-		const { currentTime, buffered } = video;
-		if (buffered.length === 0) return -1;
-		const bufferEnd = buffered.end(buffered.length - 1);
+	private computeLatency(video: HTMLVideoElement): number {
+		const computedLatency = this.kickUtils().getLatency(video);
+		this.latencyTimings.value.push(computedLatency);
 
-		this.latencyTimings.value.push(bufferEnd - currentTime);
+		// Reset timings array if experiences sudden increase in latency
+		if (
+			this.latencyTimings.value.length > 1 &&
+			computedLatency - this.latencyTimings.value[this.latencyTimings.value.length - 2] > 2
+		) {
+			this.latencyTimings.value = [computedLatency];
+		}
 
 		const numberOfSamples = 10;
 		if (this.latencyTimings.value.length > numberOfSamples) this.latencyTimings.value.shift();

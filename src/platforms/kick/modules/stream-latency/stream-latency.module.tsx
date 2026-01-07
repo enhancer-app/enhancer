@@ -67,11 +67,7 @@ export default class StreamLatencyModule extends KickModule {
 	}
 
 	private computeLatency(video: HTMLVideoElement): number {
-		const { currentTime, buffered } = video;
-		if (buffered.length === 0) return -1;
-		const bufferEnd = buffered.end(buffered.length - 1);
-
-		const computedLatency = bufferEnd - currentTime;
+		const computedLatency = this.kickUtils().getLatency(video);
 		this.latencyTimings.value.push(computedLatency);
 
 		// Reset timings array if experiences sudden increase in latency
@@ -82,7 +78,6 @@ export default class StreamLatencyModule extends KickModule {
 			this.latencyTimings.value = [computedLatency];
 		}
 
-		if (!this.updateInterval) return 0;
 		const numberOfSamples = 10;
 		if (this.latencyTimings.value.length > numberOfSamples) this.latencyTimings.value.shift();
 
