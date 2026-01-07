@@ -87,10 +87,12 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		const latency = this.getLatency();
 		if (!latency) return;
 
-		const minRate = (await this.getSettings()).minRate;
-		const maxRate = (await this.getSettings()).maxRate;
-		const minSpeedThreshold = (await this.getSettings()).minThreshold;
-		const maxSpeedThreshold = (await this.getSettings()).maxThreshold;
+		const {
+			minRate,
+			maxRate,
+			minThreshold: minSpeedThreshold,
+			maxThreshold: maxSpeedThreshold,
+		} = await this.getSettings();
 
 		if (mode === "catchUpMax") {
 			targetRate = maxRate;
