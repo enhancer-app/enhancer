@@ -51,6 +51,10 @@ export default class SettingsModule extends KickModule {
 				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/channel.svg"),
 			},
 			{
+				title: "Latency",
+				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/latency.svg"),
+			},
+			{
 				title: "Experimental",
 				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/experimental.svg"),
 			},
@@ -67,46 +71,6 @@ export default class SettingsModule extends KickModule {
 			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
 		} as const;
 		this.SETTING_DEFINITIONS = [
-			{
-				id: "streamLatencyEnabled",
-				title: "Enable Stream Latency",
-				description: "Shows the current stream delay on top of the chat.",
-				type: "toggle",
-				tabIndex: tabIndexes.General,
-				requiresRefreshToDisable: true,
-			},
-			{
-				id: "streamLatencyReducerEnabled",
-				title: "Enable Stream Latency Reducer",
-				description: "Reduces stream latency by adjusting playback rate.",
-				type: "toggle",
-				tabIndex: tabIndexes.General,
-				requiresRefreshToDisable: true,
-			},
-			{
-				id: "streamLatencyReducerMinRate",
-				title: "Minimum Playback Rate",
-				description: "The minimum playback rate the stream will be speeded up to.",
-				type: "number",
-				tabIndex: tabIndexes.General,
-				requiresRefreshToDisable: true,
-			},
-			{
-				id: "streamLatencyReducerMaxRate",
-				title: "Maximum Playback Rate",
-				description: "The maximum playback rate the stream will be speeded up to.",
-				type: "number",
-				tabIndex: tabIndexes.General,
-				requiresRefreshToDisable: true,
-			},
-			{
-				id: "streamLatencyReducerThreshold",
-				title: "Latency Threshold",
-				description: "The latency threshold (in seconds) at which the playback rate will be speeded up.",
-				type: "number",
-				tabIndex: tabIndexes.General,
-				requiresRefreshToDisable: true,
-			},
 			{
 				id: "realVideoTimeEnabled",
 				title: "Enable Real Video Time",
@@ -198,6 +162,56 @@ export default class SettingsModule extends KickModule {
 					return <WatchtimeListComponent platform="kick" workerService={workerService} />;
 				},
 				hideInfo: true,
+			},
+			{
+				id: "streamLatencyEnabled",
+				title: "Enable Stream Latency",
+				description: "Shows the current stream delay on top of the chat.",
+				type: "toggle",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerEnabled",
+				title: "Enable Stream Latency Reducer",
+				description: "Reduces stream latency by adjusting playback rate. (Disabled without Low Latency Mode)",
+				type: "toggle",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerMinRate",
+				title: "Minimum Playback Rate",
+				description: "The minimum playback rate the stream will be speeded up to.",
+				type: "number",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerMaxRate",
+				title: "Maximum Playback Rate",
+				description: "The maximum playback rate the stream will be speeded up to.",
+				type: "number",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerMinThreshold",
+				title: "Minimum Latency Threshold",
+				description:
+					"The latency threshold (in seconds) at which the playback rate will be speeded up to the minimum rate.",
+				type: "number",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerMaxThreshold",
+				title: "Maximum Latency Threshold",
+				description:
+					"The latency threshold (in seconds) at which the playback rate will be speeded up to the maximum rate.",
+				type: "number",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
 			},
 			{
 				id: "about",
