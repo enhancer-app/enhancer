@@ -111,7 +111,6 @@ export default class StreamLatencyReducerModule extends KickModule {
 
 		this.latencyTimings.value.push(bufferEnd - currentTime);
 
-if (!this.updateInterval) return -1;
 		const numberOfSamples = 10;
 		if (this.latencyTimings.value.length > numberOfSamples) this.latencyTimings.value.shift();
 
