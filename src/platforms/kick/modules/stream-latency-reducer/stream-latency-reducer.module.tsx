@@ -101,7 +101,7 @@ export default class StreamLatencyReducerModule extends KickModule {
 		return { minRate, maxRate, minThreshold, maxThreshold };
 	}
 
-	// Calculates latency based on
+	// Calculates latency based on average of past latency snapshots
 	private getLatency(video: HTMLVideoElement): number {
 		const { currentTime, buffered } = video;
 		if (buffered.length === 0) return -1;
