@@ -4,7 +4,7 @@ import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 import { signal } from "@preact/signals";
 import { render } from "preact";
 
-export default class StreamLatencyModule extends KickModule {
+export default class StreamLatencyReducerModule extends KickModule {
 	private updateInterval: NodeJS.Timeout | undefined;
 	private latencyTimings = signal<number[]>([]);
 
