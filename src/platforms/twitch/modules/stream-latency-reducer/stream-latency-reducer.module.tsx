@@ -33,7 +33,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		}, 1000);
 
 		async function playbackRateSetHook(this: HTMLVideoElement, rate: number) {
-			// Workaround for twitch native delay reducer interfering, block any other attempts of changing playbackRate other that ours
+			// Workaround for twitch native delay reducer interfering, block any other attempts of changing playbackRate other than ours
 			if (!(this as any)._enhancerAllowRateChange) return rate;
 
 			return orig_playbackRate_set.call(this, rate);
