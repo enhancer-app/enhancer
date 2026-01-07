@@ -48,8 +48,18 @@ export default class StreamLatencyReducerModule extends KickModule {
 
 		let targetRate = 1;
 		const latency = this.getLatency(videoPlayer);
-		if (!latency) return;
 
+		// Always reset playback speed in reset mode, regardless of latency.
+		if (mode === "reset") {
+			this.changePlaybackSpeed(videoPlayer, 1);
+			return;
+		}
+
+		// When latency is zero, negative, or otherwise invalid, ensure playback speed is reset.
+		if (!latency || latency <= 0) {
+			this.changePlaybackSpeed(videoPlayer, 1);
+			return;
+		}
 		const minRate = (await this.getSettings()).minRate;
 		const maxRate = (await this.getSettings()).maxRate;
 		const minSpeedThreshold = (await this.getSettings()).minThreshold;
