@@ -60,8 +60,12 @@ export default class StreamLatencyReducerModule extends KickModule {
 			this.changePlaybackSpeed(videoPlayer, 1);
 			return;
 		}
-		const { minRate, maxRate, minThreshold: minSpeedThreshold, maxThreshold: maxSpeedThreshold } =
-			await this.getSettings();
+		const {
+			minRate,
+			maxRate,
+			minThreshold: minSpeedThreshold,
+			maxThreshold: maxSpeedThreshold,
+		} = await this.getSettings();
 
 		if (mode === "catchUpMax") {
 			targetRate = maxRate;
@@ -71,9 +75,7 @@ export default class StreamLatencyReducerModule extends KickModule {
 				targetRate = latency >= maxSpeedThreshold ? maxRate : minRate;
 			} else {
 				targetRate =
-					minRate +
-					((maxRate - minRate) * (latency - minSpeedThreshold)) /
-						(maxSpeedThreshold - minSpeedThreshold);
+					minRate + ((maxRate - minRate) * (latency - minSpeedThreshold)) / (maxSpeedThreshold - minSpeedThreshold);
 			}
 		}
 

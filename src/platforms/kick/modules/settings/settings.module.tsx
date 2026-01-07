@@ -194,7 +194,7 @@ export default class SettingsModule extends KickModule {
 			{
 				id: "streamLatencyReducerEnabled",
 				title: "Enable Stream Latency Reducer",
-description: "Reduces stream latency by adjusting playback rate.",
+				description: "Reduces stream latency by adjusting playback rate.",
 				type: "toggle",
 				tabIndex: tabIndexes.Latency,
 				requiresRefreshToDisable: true,
