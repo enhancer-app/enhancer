@@ -118,9 +118,9 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		if (window.localStorage.getItem("lowLatencyModeEnabled") === "false") return "caughtUp";
 
 		const { maxThreshold, minThreshold } = await this.getSettings();
-		if (latency >= Math.abs(maxThreshold)) return "catchingUpMax";
-		if (latency > Math.abs(minThreshold)) return "catchingUpMin";
-		if (latency <= Math.abs(minThreshold)) return "caughtUp";
+		if (latency >= maxThreshold) return "catchingUpMax";
+		if (latency > minThreshold) return "catchingUpMin";
+		if (latency <= minThreshold) return "caughtUp";
 		return "invalid";
 	}
 
