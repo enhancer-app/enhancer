@@ -85,7 +85,11 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 
 		let targetRate = 1;
 		const latency = this.getLatency();
-		if (!latency) return;
+		if (!latency) {
+			// When latency is invalid or zero, ensure playback is reset to normal speed.
+			this.changePlaybackSpeed(video, 1);
+			return;
+		}
 
 		const {
 			minRate,
