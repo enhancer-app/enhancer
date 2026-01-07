@@ -41,7 +41,7 @@ const StatusDot = styled.span<{ isLive: boolean }>`
 const PlaybackRate = styled.span`
 	font-size: 11px;
 	font-weight: 600;
-	color:rgba(222, 222, 227, 0.5);
+	color: rgba(222, 222, 227, 0.5);
 `;
 
 export function LatencyComponent({ click, latencyCounter, isLive, playbackRate }: LatencyComponentProps) {
