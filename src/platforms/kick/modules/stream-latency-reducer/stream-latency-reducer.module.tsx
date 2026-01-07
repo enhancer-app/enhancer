@@ -87,9 +87,9 @@ export default class StreamLatencyReducerModule extends KickModule {
 		if (!latency) return "invalid";
 
 		const { maxThreshold, minThreshold } = await this.getSettings();
-		if (latency >= Math.abs(maxThreshold)) return "catchingUpMax";
-		if (latency > Math.abs(minThreshold)) return "catchingUpMin";
-		if (latency <= Math.abs(minThreshold)) return "caughtUp";
+		if (latency >= maxThreshold) return "catchingUpMax";
+		if (latency > minThreshold) return "catchingUpMin";
+		if (latency <= minThreshold) return "caughtUp";
 		return "invalid";
 	}
 
