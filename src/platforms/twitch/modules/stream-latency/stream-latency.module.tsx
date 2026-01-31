@@ -87,7 +87,8 @@ export default class StreamLatencyModule extends TwitchModule {
 			this.logger.warn("Failed to find media player");
 			return;
 		}
-		return mediaPlayer.core.state.liveLatency;
+		const core = mediaPlayer.core ?? mediaPlayer.playerInstance?.core;
+		return core?.state?.liveLatency;
 	}
 
 	private getBuffer() {
@@ -96,7 +97,8 @@ export default class StreamLatencyModule extends TwitchModule {
 			this.logger.warn("Failed to find media player");
 			return;
 		}
-		return mediaPlayer.core.state.ingestLatency;
+		const core = mediaPlayer.core ?? mediaPlayer.playerInstance?.core;
+		return core?.state?.ingestLatency;
 	}
 
 	private createLatencyCounter() {
