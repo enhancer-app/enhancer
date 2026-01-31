@@ -73,9 +73,7 @@ export type MediaPlayerInstanceBase = {
 };
 
 export type MediaPlayerInstanceWrapper = {
-	playerInstance: Omit<MediaPlayerInstanceBase, "seekTo" | "getPosition">;
-	seekTo: (time: number) => void;
-	getPosition(): number;
+	playerInstance: MediaPlayerInstanceBase;
 };
 
 export type FollowedSectionComponenet = {

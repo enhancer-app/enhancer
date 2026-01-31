@@ -70,11 +70,7 @@ export default class TwitchUtils {
 		}
 
 		if ("playerInstance" in mediaPlayer) {
-			return {
-				core: mediaPlayer.playerInstance.core,
-				seekTo: mediaPlayer.seekTo,
-				getPosition: mediaPlayer.getPosition,
-			};
+			return mediaPlayer.playerInstance;
 		}
 
 		return mediaPlayer;
@@ -92,11 +88,7 @@ export default class TwitchUtils {
 		if ("playerInstance" in props.mediaPlayerInstance) {
 			return {
 				...props,
-				mediaPlayerInstance: {
-					core: props.mediaPlayerInstance.playerInstance.core,
-					seekTo: props.mediaPlayerInstance.seekTo,
-					getPosition: props.mediaPlayerInstance.getPosition,
-				},
+				mediaPlayerInstance: props.mediaPlayerInstance.playerInstance,
 			};
 		}
 
