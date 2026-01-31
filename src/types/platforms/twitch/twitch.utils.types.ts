@@ -52,6 +52,11 @@ export type MediaPlayerComponent = {
 	};
 };
 
+export type MediaPlayerComponentNormalized = {
+	mediaPlayerInstance: MediaPlayerInstanceBase;
+	content: MediaPlayerContentType;
+};
+
 export type MediaPlayerContentType =
 	| {
 			channelLogin: string;
@@ -59,9 +64,16 @@ export type MediaPlayerContentType =
 	  }
 	| { vodID: string; type: "vod" };
 
-export type MediaPlayerInstance = {
-	core?: { state: { liveLatency: number; ingestLatency: number }; paused: boolean };
-	playerInstance?: MediaPlayerInstance;
+export type MediaPlayerInstance = MediaPlayerInstanceWrapper | MediaPlayerInstanceBase;
+
+export type MediaPlayerInstanceBase = {
+	core: { state: { liveLatency: number; ingestLatency: number }; paused: boolean };
+	seekTo: (time: number) => void;
+	getPosition(): number;
+};
+
+export type MediaPlayerInstanceWrapper = {
+	playerInstance: Omit<MediaPlayerInstanceBase, "seekTo" | "getPosition">;
 	seekTo: (time: number) => void;
 	getPosition(): number;
 };

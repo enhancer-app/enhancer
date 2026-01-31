@@ -11,6 +11,8 @@ import type {
 	CurrentLiveStatusComponent,
 	FollowedSectionComponenet,
 	MediaPlayerComponent,
+	MediaPlayerComponentNormalized,
+	MediaPlayerInstanceBase,
 	PersistentPlayerComponent,
 	RootComponent,
 	ScrollableChatComponent,
@@ -56,20 +58,49 @@ export default class TwitchUtils {
 		)?.pendingProps?.userID;
 	}
 
-	getMediaPlayerInstance() {
-		return this.reactUtils.findReactChildren<MediaPlayerComponent>(
+	getMediaPlayerInstance(): MediaPlayerInstanceBase | undefined {
+		const mediaPlayer = this.reactUtils.findReactChildren<MediaPlayerComponent>(
 			this.reactUtils.getReactInstance(document.querySelector(".persistent-player")),
 			(n) => !!n.stateNode?.props?.mediaPlayerInstance,
 			200,
 		)?.stateNode.props.mediaPlayerInstance;
+
+		if (!mediaPlayer) {
+			return undefined;
+		}
+
+		if ("playerInstance" in mediaPlayer) {
+			return {
+				core: mediaPlayer.playerInstance.core,
+				seekTo: mediaPlayer.seekTo,
+				getPosition: mediaPlayer.getPosition,
+			};
+		}
+
+		return mediaPlayer;
 	}
 
-	getMediaPlayerComponent() {
-		return this.reactUtils.findReactChildren<MediaPlayerComponent>(
+	getMediaPlayerComponent(): MediaPlayerComponentNormalized | undefined {
+		const props = this.reactUtils.findReactChildren<MediaPlayerComponent>(
 			this.reactUtils.getReactInstance(document.querySelector(".persistent-player")),
 			(n) => !!n.stateNode?.props?.mediaPlayerInstance,
 			200,
 		)?.stateNode.props;
+
+		if (!props) return undefined;
+
+		if ("playerInstance" in props.mediaPlayerInstance) {
+			return {
+				...props,
+				mediaPlayerInstance: {
+					core: props.mediaPlayerInstance.playerInstance.core,
+					seekTo: props.mediaPlayerInstance.seekTo,
+					getPosition: props.mediaPlayerInstance.getPosition,
+				},
+			};
+		}
+
+		return props as MediaPlayerComponentNormalized;
 	}
 
 	getPersonalSections() {

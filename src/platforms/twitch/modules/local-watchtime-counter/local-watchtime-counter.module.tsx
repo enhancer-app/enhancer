@@ -35,8 +35,7 @@ export default class LocalWatchtimeCounterModule extends TwitchModule {
 			if (mediaPlayerComponent?.content.type !== "live") return;
 			const channelName = mediaPlayerComponent.content.channelLogin;
 			if (!this.isLive()) return;
-			const core = mediaPlayerInstance?.core ?? mediaPlayerInstance?.playerInstance?.core;
-			if (core?.paused === false) {
+			if (mediaPlayerInstance && !mediaPlayerInstance.core.paused) {
 				this.logger.debug(`Adding watchtime for ${channelName}`);
 				await this.workerService().send("addWatchtime", {
 					platform: "twitch",
