@@ -61,10 +61,10 @@ export default class SettingsModule extends TwitchModule {
 				title: "Latency",
 				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/latency.svg"),
 			},
-			{
-				title: "Experimental",
-				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/experimental.svg"),
-			},
+			// {
+			// 	title: "Experimental",
+			// 	iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/experimental.svg"),
+			// },
 			{
 				title: "About",
 				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/about.svg"),
