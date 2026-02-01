@@ -67,13 +67,13 @@ export type MediaPlayerContentType =
 export type MediaPlayerInstance = MediaPlayerInstanceWrapper | MediaPlayerInstanceBase;
 
 export type MediaPlayerInstanceBase = {
-    core: {
-        state: { liveLatency: number; ingestLatency: number };
-        paused: boolean,
-        renderSurface: { video: { element: () => HTMLVideoElement } };
-    };
-    seekTo: (time: number) => void;
-    getPosition(): number;
+	core: {
+		state: { liveLatency: number; ingestLatency: number };
+		paused: boolean;
+		renderSurface: { video: { element: () => HTMLVideoElement } };
+	};
+	seekTo: (time: number) => void;
+	getPosition(): number;
 };
 
 export type MediaPlayerInstanceWrapper = {
