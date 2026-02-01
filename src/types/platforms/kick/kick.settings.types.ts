@@ -10,6 +10,11 @@ export type KickSettings = {
 	chatMessageMenuEnabled: boolean;
 	quickAccessLinks: QuickAccessLink[];
 	streamLatencyEnabled: boolean;
+	streamLatencyReducerEnabled: boolean;
+	streamLatencyReducerMinRate: number;
+	streamLatencyReducerMaxRate: number;
+	streamLatencyReducerMinThreshold: number;
+	streamLatencyReducerMaxThreshold: number;
 	realVideoTimeEnabled: boolean;
 	realVideoTimeFormat12h: boolean;
 	channelSection: boolean;
