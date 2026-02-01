@@ -1,4 +1,8 @@
+import type EnhancerApi from "$shared/apis/enhancer.api.ts";
+
 export class AdditionalFontsHelper {
+	constructor(private readonly enhancerApi: EnhancerApi) {}
+
 	loadFonts(elements: Element[], fontList: string[]): void {
 		if (elements.length === 0 || fontList.length === 0) return;
 
@@ -21,5 +25,28 @@ export class AdditionalFontsHelper {
 				head.appendChild(newFontLink.cloneNode(true));
 			}
 		}
+	}
+
+	getUsedFonts(): string[] {
+		const globalFonts = this.enhancerApi.getGlobalChannel()?.users.map((user) => user.customFont) ?? [];
+		const currentFonts = this.enhancerApi.getCurrentChannel()?.users.map((user) => user.customFont) ?? [];
+
+		const allRawFonts = [...globalFonts, ...currentFonts];
+
+		const uniqueFonts: string[] = [];
+		const seen = new Set<string>();
+
+		for (const font of allRawFonts) {
+			if (!font) continue;
+
+			const normalized = font.toLowerCase().trim();
+
+			if (!seen.has(normalized)) {
+				seen.add(normalized);
+				uniqueFonts.push(font);
+			}
+		}
+
+		return uniqueFonts;
 	}
 }
