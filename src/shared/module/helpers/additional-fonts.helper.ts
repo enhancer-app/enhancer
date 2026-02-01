@@ -28,25 +28,24 @@ export class AdditionalFontsHelper {
 	}
 
 	getUsedFonts(): string[] {
-		const globalFonts = this.enhancerApi.getGlobalChannel()?.users.map((user) => user.customFont) ?? [];
-		const currentFonts = this.enhancerApi.getCurrentChannel()?.users.map((user) => user.customFont) ?? [];
+		const allUsers = [
+			...(this.enhancerApi.getGlobalChannel()?.users ?? []),
+			...(this.enhancerApi.getCurrentChannel()?.users ?? []),
+		].filter((user) => user.customFont !== null);
 
-		const allRawFonts = [...globalFonts, ...currentFonts];
-
-		const uniqueFonts: string[] = [];
-		const seen = new Set<string>();
-
-		for (const font of allRawFonts) {
-			if (!font) continue;
+		const uniqueFonts = new Map<string, string>();
+		for (const user of allUsers) {
+			const font = user.customFont;
+			if (!font) {
+				continue;
+			}
 
 			const normalized = font.toLowerCase().trim();
-
-			if (!seen.has(normalized)) {
-				seen.add(normalized);
-				uniqueFonts.push(font);
+			if (!uniqueFonts.has(normalized)) {
+				uniqueFonts.set(normalized, font);
 			}
 		}
 
-		return uniqueFonts;
+		return Array.from(uniqueFonts.values());
 	}
 }
