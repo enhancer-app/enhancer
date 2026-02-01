@@ -256,7 +256,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Stream Latency Reducer (Experimental)",
 				description: "Reduces stream latency by adjusting playback rate. (Disabled without Low Latency Mode)",
 				type: "toggle",
-				tabIndex: tabIndexes.Experimental,
+				tabIndex: tabIndexes.Latency,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -264,7 +264,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Minimum Playback Rate",
 				description: "The minimum playback rate the stream will be speeded up to.",
 				type: "number",
-				tabIndex: tabIndexes.Experimental,
+				tabIndex: tabIndexes.Latency,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -272,7 +272,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Maximum Playback Rate",
 				description: "The maximum playback rate the stream will be speeded up to.",
 				type: "number",
-				tabIndex: tabIndexes.Experimental,
+				tabIndex: tabIndexes.Latency,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -281,7 +281,7 @@ export default class SettingsModule extends TwitchModule {
 				description:
 					"The latency threshold (in seconds) at which the playback rate will be speeded up to the minimum rate.",
 				type: "number",
-				tabIndex: tabIndexes.Experimental,
+				tabIndex: tabIndexes.Latency,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -290,7 +290,7 @@ export default class SettingsModule extends TwitchModule {
 				description:
 					"The latency threshold (in seconds) at which the playback rate will be speeded up to the maximum rate.",
 				type: "number",
-				tabIndex: tabIndexes.Experimental,
+				tabIndex: tabIndexes.Latency,
 				requiresRefreshToDisable: true,
 			},
 			{
