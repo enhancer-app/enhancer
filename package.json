@@ -33,8 +33,9 @@
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
+		"typecheck:watch": "tsc --noEmit --watch",
 		"dev": "ENVIRONMENT=development concurrently \"bun run typecheck:watch\" \"vite build --watch\" \"vite\"",
-		"build": "ENVIRONMENT=production vite build",
+		"build": "ENVIRONMENT=production bun run biome:ci && bun run typecheck && vite build",
 		"pack": "bun run scripts/pack.ts",
 		"prepare": "husky"
 	},
