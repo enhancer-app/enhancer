@@ -1,1 +1,3 @@
+bun test
+bun run typecheck
 bun run build
