@@ -10,6 +10,7 @@
 		"url": "https://x.com/enhancerapp"
 	},
 	"bugs": {
+		"url": "https://github.com/enhancer-app/enhancer/issues",
 		"email": "contact@enhancer.at"
 	},
 	"devDependencies": {
