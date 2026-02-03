@@ -1,4 +1,4 @@
-name: Release on Merge or Manual
+name: Release
 
 on:
   push:
