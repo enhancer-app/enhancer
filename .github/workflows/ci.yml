@@ -9,7 +9,7 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - name: Type Check
@@ -34,7 +34,6 @@ jobs:
           restore-keys: bun-deps-
 
       - name: Install dependencies
-        # Uses your bun.lock (text) file
         run: bun install --frozen-lockfile --lockfile bun.lock
 
       - name: Run ${{ matrix.name }}
