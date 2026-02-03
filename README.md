@@ -1,25 +1,36 @@
-<img width="1280" height="172" alt="Enhancer" src="https://github.com/user-attachments/assets/1bdc3e13-eaf6-41ad-8a45-71e78fe28056" />
+<p align="center">
+  <img width="1280" alt="Enhancer" src="https://github.com/user-attachments/assets/1bdc3e13-eaf6-41ad-8a45-71e78fe28056" />
+</p>
 
+<p align="center">
+  <strong>Enhancer is an open-source browser extension that adds missing features to streaming platforms.</strong>
+</p>
 
-Download **Enhancer** for your preferred browser:
+<p align="center">
+  <a href="https://sh.enhancer.at/chrome">
+    <img src="https://img.shields.io/badge/Chrome-Download-brightgreen?style=flat&logo=googlechrome" alt="Chrome Download">
+  </a>
+  <a href="https://sh.enhancer.at/firefox">
+    <img src="https://img.shields.io/badge/Firefox-Download-orange?style=flat&logo=firefox" alt="Firefox Download">
+  </a>
+  <a href="https://enhancer.at">
+    <img src="https://img.shields.io/badge/Website-enhancer.at-blue?style=flat" alt="Website">
+  </a>
+  <img src="https://img.shields.io/badge/License-GPL--3.0-red?style=flat" alt="License">
+</p>
 
-*   **Google Chrome**: [Click here to download](https://sh.enhancer.at/chrome)
-*   **Mozilla Firefox**: [Click here to download](https://sh.enhancer.at/firefox)
-*   **Any Chromium-based browser (Brave, Edge, Opera, etc.)**: [Click here to download](https://sh.enhancer.at/chrome)
+---
 
-For more information, please visit our page: [enhancer.at](https://enhancer.at)
+## Quick Links
 
-## Development
+- **[Documentation](docs/)** - Setup, architecture, and feature guides
+- **[Development](docs/development.md)** - Build and contribute to Enhancer
+- **[Architecture](docs/architecture.md)** - Understanding the codebase
 
-1.  `bun install`
-2.  `bun run build` / `bun run dev`
-3.  Add `dist` directory as an unpacked extension in your browser.
-4.  Refresh the extension in your browser.
+## Download
 
-<details>
-<summary>
-If you are using the developer version (`bun run dev`) in Chrome, you may need to allow Local Network Access.
-</summary>
-  
-<img src="https://github.com/enhancer-app/enhancer/blob/master/docs/images/chrome-local-network-access.png?raw=true" />
-</details>
+| Browser | Link |
+|---------|------|
+| Google Chrome | [Download](https://sh.enhancer.at/chrome) |
+| Mozilla Firefox | [Download](https://sh.enhancer.at/firefox) |
+| Brave, Edge, Opera, etc. | [Download](https://sh.enhancer.at/chrome) |
