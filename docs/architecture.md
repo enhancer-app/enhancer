@@ -156,13 +156,13 @@ element** (`<enhancer-bridge>`) as a communication bridge:
 
 ```
 Content Script                    Service Worker
-     │                                │
-     │ CustomEvent("enhancer-message")│
-     ├───────────────────────────────▶│
-     │                                │
-     │ CustomEvent("enhancer-response")│
-     │◀───────────────────────────────┤
-     │                                │
+     │                                  │
+     │ CustomEvent("enhancer-message")  │
+     ├───────────────────────────────>  │
+     │                                  │
+     │ CustomEvent("enhancer-response") │
+     │<─────────────────────────────────┤
+     │                                  │
 ```
 
 **Worker Handlers:**
@@ -263,13 +263,9 @@ Services are injected into modules through the constructor, not created inside:
 
 ```typescript
 constructor(
-    protected
-readonly
-emitter: Emitter<Events>,
-    private
-readonly
-storageRepository: StorageRepository<Storage>,
-// ... other services
+    protected readonly emitter: Emitter<Events>, 
+    private readonly storageRepository: StorageRepository<Storage>,
+    // ... other services
 )
 ```
 
@@ -296,13 +292,8 @@ abstract class Module<Events, Storage, Settings> {
 }
 
 // Platform-specific
-abstract class TwitchModule extends Module<TwitchEvents,
-
-...>
-{
-protected
-    twitchUtils()
-    {
+abstract class TwitchModule extends Module<TwitchEvents, ...> {
+    protected twitchUtils() {
         return /* Twitch-specific utils */
     }
 }
@@ -327,8 +318,7 @@ this.emitter.on("chat:message", (msg) => {
 Modules activate when DOM elements appear:
 
 ```typescript
-readonly
-config: TwitchModuleConfig = {
+readonly config: TwitchModuleConfig = {
     name: "example-module",
     appliers: [
         {
