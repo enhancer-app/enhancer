@@ -42,7 +42,7 @@ jobs:
         run: ${{ matrix.command }}
 
   build:
-    name: Build
+    name: Build Project
     needs: checks
     runs-on: ubuntu-latest
     steps:

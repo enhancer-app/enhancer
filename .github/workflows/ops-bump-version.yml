@@ -1,4 +1,4 @@
-name: Bump version
+name: Ops
 
 on:
   issue_comment:
@@ -10,8 +10,8 @@ permissions:
   issues: write
 
 jobs:
-  bump-version:
-    name: Execute Bump
+  bump:
+    name: Bump version
     runs-on: ubuntu-latest
     if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/bump')
 
@@ -41,35 +41,23 @@ jobs:
         id: bump
         run: |
           COMMENT="${{ github.event.comment.body }}"
-          TYPE=$(echo $COMMENT | awk '{print $2}') # gets 'patch', 'minor', or 'major'
+          TYPE=$(echo $COMMENT | awk '{print $2}')
           
           if [[ "$TYPE" != "patch" && "$TYPE" != "minor" && "$TYPE" != "major" ]]; then
              echo "Invalid bump type. Use patch, minor, or major."
              exit 1
           fi
 
-          echo "Bumping $TYPE version..."
-          
-          CURRENT=$(jq -r .version manifest.json)
-          
-          IFS='.' read -r major minor patch <<< "$CURRENT"
-          
-          if [ "$TYPE" == "patch" ]; then patch=$((patch + 1)); fi
-          if [ "$TYPE" == "minor" ]; then minor=$((minor + 1)); patch=0; fi
-          if [ "$TYPE" == "major" ]; then major=$((major + 1)); minor=0; patch=0; fi
-          
-          NEW_VER="$major.$minor.$patch"
-          
-          jq --arg v "$NEW_VER" '.version = $v' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+          git config --global user.name "Enhancer Bot"
+          git config --global user.email "${{ secrets.ENHANCER_BOT_EMAIL }}"
+
+          NEW_VER=$(npm version $TYPE --no-git-tag-version)
           
           echo "BUMPED_VER=$NEW_VER" >> $GITHUB_OUTPUT
 
       - name: Commit and Push
         run: |
-          git config --global user.name "Enhancer Bot"
-          git config --global user.email "${{ secrets.ENHANCER_BOT_EMAIL }}"
-          
-          git add manifest.json
+          git add package.json
           git commit -m "chore: bump version to ${{ steps.bump.outputs.BUMPED_VER }}"
           git push origin HEAD
 

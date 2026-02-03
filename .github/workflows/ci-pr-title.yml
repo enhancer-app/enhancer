@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions:
+  pull-requests: write
+  statuses: write
+  contents: read
+
+jobs:
+  validate-title:
+    name: Validate Pull Request Title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        id: lint_pr_title
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            bugfix
+            chore
+            docs
+            style
+            refactor
+            perf
+            test
+            ci
+          requireScope: false
+          ignoreLabels: |
+            ignore-semantic-pull-request
+
+      - name: Send Invalid Title Comment
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          script: |
+            const body = `### ❌ Invalid PR Title
+            
+            Your current title does not follow the required semantic format. Since this title is used for the **squash commit**, it must be corrected.
+            
+            **Example format:** \`feat: add login functionality\`
+            **Allowed types:** feat, fix, bugfix, chore, docs, style, refactor, perf, test, ci`;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            })
