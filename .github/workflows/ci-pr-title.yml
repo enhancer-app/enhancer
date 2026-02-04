@@ -42,7 +42,7 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: pr-title-lint-error
-          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           message: |
             ### ❌ Invalid PR Title
             
@@ -57,4 +57,4 @@ jobs:
         with:
           header: pr-title-lint-error
           delete: true
-          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
