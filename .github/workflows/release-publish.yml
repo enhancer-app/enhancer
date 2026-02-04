@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch:
+    inputs:
+      custom_tag:
+        description: 'Custom version tag (e.g., v1.1.0). Leave empty to use package.json.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine Version
+        id: get_version
+        env:
+          MANUAL_TAG: ${{ inputs.custom_tag }}
+        run: |
+          if [ -n "$MANUAL_TAG" ]; then
+            echo "Manual tag detected."
+            echo "VERSION=$MANUAL_TAG" >> $GITHUB_OUTPUT
+            echo "Selected version: $MANUAL_TAG"
+          else
+            echo "No manual tag. Reading package.json..."
+            JSON_VER=$(jq -r .version package.json)
+            # Prepend 'v' automatically for package.json versions
+            echo "VERSION=v$JSON_VER" >> $GITHUB_OUTPUT
+            echo "Selected version: v$JSON_VER"
+          fi
+
+      - name: Check if tag exists
+        id: check_tag
+        env:
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+        run: |
+          git fetch --tags
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag $VERSION already exists. Skipping release."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
