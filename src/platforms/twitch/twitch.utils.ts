@@ -59,19 +59,20 @@ export default class TwitchUtils {
 	}
 
 	getMediaPlayerNode() {
-		if (this.isDirectTwitchPlayer()) {
-			return this.reactUtils.findReactParents<MediaPlayerComponent>(
-				this.reactUtils.getReactInstance(document.querySelector('[data-a-target="player-overlay-click-handler"]')),
-				(n) => !!n.stateNode?.props?.mediaPlayerInstance,
-				200,
-			)?.stateNode;
+		const isDirect = this.isDirectTwitchPlayer();
+		const selector = isDirect ? '[data-a-target="player-overlay-click-handler"]' : ".persistent-player";
+
+		const element = document.querySelector(selector);
+		if (!element) return undefined;
+
+		const reactInstance = this.reactUtils.getReactInstance(element);
+		const predicate = (n: any) => !!n.stateNode?.props?.mediaPlayerInstance;
+
+		if (isDirect) {
+			return this.reactUtils.findReactParents<MediaPlayerComponent>(reactInstance, predicate, 200)?.stateNode;
 		}
 
-		return this.reactUtils.findReactChildren<MediaPlayerComponent>(
-			this.reactUtils.getReactInstance(document.querySelector(".persistent-player")),
-			(n) => !!n.stateNode?.props?.mediaPlayerInstance,
-			200,
-		)?.stateNode;
+		return this.reactUtils.findReactChildren<MediaPlayerComponent>(reactInstance, predicate, 200)?.stateNode;
 	}
 
 	getMediaPlayerInstance(): MediaPlayerInstanceBase | undefined {
