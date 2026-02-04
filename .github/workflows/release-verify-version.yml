@@ -38,25 +38,24 @@ jobs:
              echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Send version change comment
+      - name: Send or Update version comment
         if: steps.check.outputs.changed == 'false'
-        uses: actions/github-script@v6
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
-          github-token: ${{ secrets.ENHANCER_BOT_TOKEN }}
-          script: |
-            const ver = '${{ steps.check.outputs.curr_ver }}';
-            const body = `### ⚠️ Version Bump Required
-            
-            The \`package.json\` version is still **${ver}**. You cannot merge to Release without a new version number.
+          header: version-check-warning
+          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          message: |
+            The `package.json` version is still **${{ steps.check.outputs.curr_ver }}**. You can still merge this PR, but a formal release will not be triggered unless the version is updated.
             
             **I can fix it for you!** Reply to this comment with one of these commands:
-            * \`/bump patch\` (Fixes: 1.0.0 -> 1.0.1)
-            * \`/bump minor\` (Features: 1.0.0 -> 1.1.0)
-            * \`/bump major\` (Breaking: 1.0.0 -> 2.0.0)`;
+            * `/bump patch` (Fixes: 1.0.0 -> 1.0.1)
+            * `/bump minor` (Features: 1.0.0 -> 1.1.0)
+            * `/bump major` (Breaking: 1.0.0 -> 2.0.0)
 
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: body
-            })
+      - name: Delete warning if fixed
+        if: steps.check.outputs.changed == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: version-check-warning
+          delete: true
+          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
