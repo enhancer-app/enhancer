@@ -1,17 +1,19 @@
 ---
+
 name: Bug report
 about: Create a report to help us improve
 title: 'bug: '
 labels: bug
+
 ---
 
 ### Current Behavior
 
-Describe what is happening. Include any error messages or screenshots if possible.
+*Describe what is happening. Include any error messages or screenshots if possible.*
 
 ### Expected Behavior
 
-What did you expect to happen instead?
+*What did you expect to happen instead?*
 
 ### Steps to Reproduce
 
@@ -21,13 +23,9 @@ What did you expect to happen instead?
 
 ### Environment
 
-Select the platform and active extensions (replace ⬜ with ✅):
+* **Platform:** [e.g. Twitch or Kick]
+* **Active Extensions:** [e.g. 7TV, BetterTTV, FrankerFaceZ, NipahTV]
 
-| Twitch               | Kick                |
-|:---------------------|:--------------------|
-| ⬜ **Platform Used**  | ⬜ **Platform Used** |
-| ⬜ BetterTTV (BTTV)   | ⬜ 7TV               |
-| ⬜ FrankerFaceZ (FFZ) | ⬜ Nipahtv (NTV)     |
-| ⬜ 7TV                |                     |
+### Related Issues
 
-_List any other browser extensions that were enabled and might have influenced this behavior:_
+*Link related issues (e.g., `Closes #123`).*
