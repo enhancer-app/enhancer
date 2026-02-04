@@ -59,7 +59,8 @@ jobs:
         run: |
           git add package.json
           git commit -m "chore: bump version to ${{ steps.bump.outputs.BUMPED_VER }}"
-          git push origin HEAD
+          
+          git push "https://x-access-token:${{ secrets.ENHANCER_BOT_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:${{ steps.get-branch.outputs.result }}
 
       - name: React to Comment
         uses: actions/github-script@v6
