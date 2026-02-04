@@ -50,8 +50,6 @@ jobs:
             
             **Example format:** `feat: add login functionality`
             **Allowed types:** feat, fix, bugfix, chore, docs, style, refactor, perf, test, ci
-            
-            *Error details: ${{ steps.lint_pr_title.outputs.error_message }}*
 
       - name: Delete Invalid Title Comment
         if: success()
