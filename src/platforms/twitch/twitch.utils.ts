@@ -22,7 +22,7 @@ import type {
 } from "$types/platforms/twitch/twitch.utils.types";
 
 export default class TwitchUtils {
-	constructor(protected readonly reactUtils: ReactUtils) { }
+	constructor(protected readonly reactUtils: ReactUtils) {}
 
 	getCurrentChannelByUrl() {
 		let url = window.location.href;
