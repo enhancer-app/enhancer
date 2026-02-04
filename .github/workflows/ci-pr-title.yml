@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions:
+  pull-requests: write
+  statuses: write
+  contents: read
+
+jobs:
+  validate-title:
+    name: Validate Pull Request Title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        id: lint_pr_title
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            bugfix
+            chore
+            docs
+            style
+            refactor
+            perf
+            test
+            ci
+          requireScope: false
+          ignoreLabels: |
+            ignore-semantic-pull-request
+
+      - name: Send or Update Invalid Title Comment
+        if: failure()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-title-lint-error
+          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          message: |
+            ### ❌ Invalid PR Title
+            
+            Your current title does not follow the required semantic format.
+            
+            **Example format:** `feat: add login functionality`
+            **Allowed types:** feat, fix, bugfix, chore, docs, style, refactor, perf, test, ci
+
+      - name: Delete Invalid Title Comment
+        if: success()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-title-lint-error
+          delete: true
+          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}

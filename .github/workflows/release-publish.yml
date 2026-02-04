@@ -15,8 +15,8 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Create Release
+  create-release:
+    name: Create GitHub Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

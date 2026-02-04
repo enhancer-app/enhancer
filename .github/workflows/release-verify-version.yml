@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  pull_request:
+    branches:
+      - release
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  check-version:
+    name: Check version change
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Check for version change
+        id: check
+        run: |
+          NEW_VER=$(jq -r .version package.json)
+          
+          git fetch origin release:release
+          OLD_VER=$(git show release:package.json | jq -r .version)
+          
+          echo "PR Version: $NEW_VER"
+          echo "Release Version: $OLD_VER"
+
+          if [ "$NEW_VER" == "$OLD_VER" ]; then
+             echo "changed=false" >> $GITHUB_OUTPUT
+             echo "curr_ver=$OLD_VER" >> $GITHUB_OUTPUT
+          else
+             echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send or Update version comment
+        if: steps.check.outputs.changed == 'false'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: version-check-warning
+          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          message: |
+            The `package.json` version is still **${{ steps.check.outputs.curr_ver }}**. You can still merge this PR, but a formal release will not be triggered unless the version is updated.
+            
+            **I can fix it for you!** Reply to this comment with one of these commands:
+            * `/bump patch` (Fixes: 1.0.0 -> 1.0.1)
+            * `/bump minor` (Features: 1.0.0 -> 1.1.0)
+            * `/bump major` (Breaking: 1.0.0 -> 2.0.0)
+
+      - name: Delete warning if fixed
+        if: steps.check.outputs.changed == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: version-check-warning
+          delete: true
+          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
