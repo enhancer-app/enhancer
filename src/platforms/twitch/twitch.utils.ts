@@ -22,7 +22,7 @@ import type {
 } from "$types/platforms/twitch/twitch.utils.types";
 
 export default class TwitchUtils {
-	constructor(protected readonly reactUtils: ReactUtils) {}
+	constructor(protected readonly reactUtils: ReactUtils) { }
 
 	getCurrentChannelByUrl() {
 		let url = window.location.href;
@@ -58,12 +58,24 @@ export default class TwitchUtils {
 		)?.pendingProps?.userID;
 	}
 
-	getMediaPlayerInstance(): MediaPlayerInstanceBase | undefined {
-		const mediaPlayer = this.reactUtils.findReactChildren<MediaPlayerComponent>(
+	getMediaPlayerNode() {
+		if (this.isDirectTwitchPlayer()) {
+			return this.reactUtils.findReactParents<MediaPlayerComponent>(
+				this.reactUtils.getReactInstance(document.querySelector('[data-a-target="player-overlay-click-handler"]')),
+				(n) => !!n.stateNode?.props?.mediaPlayerInstance,
+				200,
+			)?.stateNode;
+		}
+
+		return this.reactUtils.findReactChildren<MediaPlayerComponent>(
 			this.reactUtils.getReactInstance(document.querySelector(".persistent-player")),
 			(n) => !!n.stateNode?.props?.mediaPlayerInstance,
 			200,
-		)?.stateNode.props.mediaPlayerInstance;
+		)?.stateNode;
+	}
+
+	getMediaPlayerInstance(): MediaPlayerInstanceBase | undefined {
+		const mediaPlayer = this.getMediaPlayerNode()?.props.mediaPlayerInstance;
 
 		if (!mediaPlayer) {
 			return undefined;
@@ -77,11 +89,7 @@ export default class TwitchUtils {
 	}
 
 	getMediaPlayerComponent(): MediaPlayerComponentNormalized | undefined {
-		const props = this.reactUtils.findReactChildren<MediaPlayerComponent>(
-			this.reactUtils.getReactInstance(document.querySelector(".persistent-player")),
-			(n) => !!n.stateNode?.props?.mediaPlayerInstance,
-			200,
-		)?.stateNode.props;
+		const props = this.getMediaPlayerNode()?.props;
 
 		if (!props) return undefined;
 
