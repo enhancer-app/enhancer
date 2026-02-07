@@ -105,7 +105,6 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 				minRate + ((maxRate - minRate) * (latency - minSpeedThreshold)) / (maxSpeedThreshold - minSpeedThreshold);
 		}
 
-		this.logger.debug("setting the target rate", targetRate);
 		this.changePlaybackSpeed(video, targetRate);
 	}
 
