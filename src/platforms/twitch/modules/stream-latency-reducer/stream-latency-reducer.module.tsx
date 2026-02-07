@@ -60,7 +60,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 
 	private changePlaybackSpeed(video: HTMLVideoElement, rate: number) {
 		if (
-			!this.getFFZAllowCatchup() &&
+			this.getFFZAllowCatchup() === false &&
 			video &&
 			Object.getOwnPropertyDescriptor(video, "playbackRate")?.set !== undefined
 		) {
