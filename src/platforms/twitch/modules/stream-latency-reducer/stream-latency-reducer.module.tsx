@@ -24,11 +24,11 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 			const status = await this.getPlaybackRateStatus();
 
 			if (status === "catchingUpMax") {
-				this.setPlaybackRateMode("catchUpMax");
+				await this.setPlaybackRateMode("catchUpMax");
 			} else if (status === "catchingUpMin") {
-				this.setPlaybackRateMode("catchUpMin");
+				await this.setPlaybackRateMode("catchUpMin");
 			} else {
-				this.setPlaybackRateMode("reset");
+				await this.setPlaybackRateMode("reset");
 			}
 		}, 1000);
 
@@ -60,7 +60,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 
 	private changePlaybackSpeed(video: HTMLVideoElement, rate: number) {
 		if (
-			this.getFFZAllowCatchup() === false &&
+			!this.getFFZAllowCatchup() &&
 			video &&
 			Object.getOwnPropertyDescriptor(video, "playbackRate")?.set !== undefined
 		) {
@@ -105,6 +105,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 				minRate + ((maxRate - minRate) * (latency - minSpeedThreshold)) / (maxSpeedThreshold - minSpeedThreshold);
 		}
 
+		this.logger.debug("setting the target rate", targetRate);
 		this.changePlaybackSpeed(video, targetRate);
 	}
 
@@ -113,6 +114,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		if (!mediaPlayer) return;
 		const latency = this.getLatency();
 		if (!latency) return "invalid";
+		if (!this.isLive()) return "invalid";
 
 		// Disable reducer without Low Latency mode
 		if (window.localStorage.getItem("lowLatencyModeEnabled") === "false") return "caughtUp";
@@ -143,6 +145,10 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		const mediaPlayer = this.getPlayer();
 		if (!mediaPlayer) return;
 		return mediaPlayer.core.state.liveLatency;
+	}
+
+	private isLive() {
+		return this.twitchUtils().getVideoInfo()?.content.type === "live";
 	}
 
 	private getPlayer() {
