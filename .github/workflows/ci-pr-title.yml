@@ -33,6 +33,7 @@ jobs:
             perf
             test
             ci
+            release
           requireScope: false
           ignoreLabels: |
             ignore-semantic-pull-request
@@ -49,7 +50,7 @@ jobs:
             Your current title does not follow the required semantic format.
             
             **Example format:** `feat: add login functionality`
-            **Allowed types:** feat, fix, bugfix, chore, docs, style, refactor, perf, test, ci
+            **Allowed types:** feat, fix, bugfix, chore, docs, style, refactor, perf, test, ci, release
 
       - name: Delete Invalid Title Comment
         if: success()
