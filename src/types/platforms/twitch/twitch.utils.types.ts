@@ -230,6 +230,31 @@ export type CurrentLiveStatusComponent = {
 	};
 };
 
+export type VideoInfoComponent = {
+	props: {
+		content: LiveStreamData | VodStreamData;
+	};
+};
+
+export type StreamType = "live" | "vod";
+
+export interface BaseStreamData {
+	type: StreamType;
+	channelLogin: string;
+	dvrVideoID: string;
+}
+
+export interface LiveStreamData extends BaseStreamData {
+	type: "live";
+}
+
+export interface VodStreamData extends BaseStreamData {
+	type: "vod";
+	isDVR: boolean;
+	videoOffset: number;
+	vodID: string;
+}
+
 export type ChannelInfoComponent = {
 	props: {
 		channelLogin: string;
