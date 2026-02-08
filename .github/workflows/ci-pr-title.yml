@@ -33,6 +33,7 @@ jobs:
             perf
             test
             ci
+            release
           requireScope: false
           ignoreLabels: |
             ignore-semantic-pull-request
@@ -42,14 +43,14 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: pr-title-lint-error
-          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           message: |
             ### ❌ Invalid PR Title
             
             Your current title does not follow the required semantic format.
             
             **Example format:** `feat: add login functionality`
-            **Allowed types:** feat, fix, bugfix, chore, docs, style, refactor, perf, test, ci
+            **Allowed types:** feat, fix, bugfix, chore, docs, style, refactor, perf, test, ci, release
 
       - name: Delete Invalid Title Comment
         if: success()
@@ -57,4 +58,4 @@ jobs:
         with:
           header: pr-title-lint-error
           delete: true
-          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

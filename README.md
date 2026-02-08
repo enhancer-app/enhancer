@@ -14,9 +14,9 @@
     <img src="https://img.shields.io/badge/Firefox-Download-orange?style=flat&logo=firefox" alt="Firefox Download">
   </a>
   <a href="https://enhancer.at">
-    <img src="https://img.shields.io/badge/Website-enhancer.at-blue?style=flat" alt="Website">
+    <img src="https://img.shields.io/badge/Website-enhancer.at-9146FF?style=flat" alt="Website">
   </a>
-  <img src="https://img.shields.io/badge/License-GPL--3.0-red?style=flat" alt="License">
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=flat" alt="License">
 </p>
 
 ---

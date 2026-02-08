@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       custom_tag:
-        description: 'Custom version tag (e.g., v1.1.0). Leave empty to use package.json.'
+        description: 'Custom version tag (e.g., v5.1.26). Leave empty to use package.json.'
         required: false
         type: string
 
@@ -15,8 +15,8 @@ permissions:
   contents: write
 
 jobs:
-  create-release:
-    name: Create GitHub Release
+  release-and-publish:
+    name: Release & Publish
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -28,16 +28,21 @@ jobs:
           MANUAL_TAG: ${{ inputs.custom_tag }}
         run: |
           if [ -n "$MANUAL_TAG" ]; then
-            echo "Manual tag detected."
-            echo "VERSION=$MANUAL_TAG" >> $GITHUB_OUTPUT
-            echo "Selected version: $MANUAL_TAG"
+            RAW_VER=$MANUAL_TAG
           else
             echo "No manual tag. Reading package.json..."
-            JSON_VER=$(jq -r .version package.json)
-            # Prepend 'v' automatically for package.json versions
-            echo "VERSION=v$JSON_VER" >> $GITHUB_OUTPUT
-            echo "Selected version: v$JSON_VER"
+            RAW_VER="v$(jq -r .version package.json)"
           fi
+          
+          if [[ $RAW_VER != v* ]]; then RAW_VER="v$RAW_VER"; fi
+          
+          CLEAN_VER=${RAW_VER#v}
+          
+          echo "VERSION=$RAW_VER" >> $GITHUB_OUTPUT
+          echo "CLEAN_VER=$CLEAN_VER" >> $GITHUB_OUTPUT
+          
+          echo "Tag Version: $RAW_VER"
+          echo "File Version: $CLEAN_VER"
 
       - name: Check if tag exists
         id: check_tag
@@ -52,6 +57,21 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Setup Bun
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install & Pack
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          bun install
+          bun run pack
+          
+          ls -l dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip
+          ls -l dist/source-${{ steps.get_version.outputs.CLEAN_VER }}.zip
+
       - name: Create GitHub Release
         if: steps.check_tag.outputs.exists == 'false'
         uses: softprops/action-gh-release@v1
@@ -59,5 +79,30 @@ jobs:
           tag_name: ${{ steps.get_version.outputs.VERSION }}
           name: Release ${{ steps.get_version.outputs.VERSION }}
           generate_release_notes: true
+          files: |
+            dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip
+            dist/source-${{ steps.get_version.outputs.CLEAN_VER }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Chrome Web Store
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: mobilefirstllc/cws-publish@latest
+        with:
+          action: 'publish'
+          client_id: ${{ secrets.CHROME_CLIENT_ID }}
+          client_secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          extension_id: ${{ secrets.CHROME_EXTENSION_ID }}
+          zip_file: 'dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
+
+      - name: Publish to Firefox
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: wdzeng/firefox-addon@v1
+        with:
+          addon-guid: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          xpi-path: 'dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
+          source-file-path: 'dist/source-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
+          jwt-issuer: ${{ secrets.AMO_JWT_ISSUER }}
+          jwt-secret: ${{ secrets.AMO_JWT_SECRET }}
+          self-hosted: false

@@ -19,6 +19,7 @@ import type {
 	StreamInfoTwitchStreamData,
 	TwitchChatCommand,
 	TwitchChatMessageComponent,
+	VideoInfoComponent,
 } from "$types/platforms/twitch/twitch.utils.types";
 
 export default class TwitchUtils {
@@ -58,12 +59,25 @@ export default class TwitchUtils {
 		)?.pendingProps?.userID;
 	}
 
+	getMediaPlayerNode() {
+		const isDirect = this.isDirectTwitchPlayer();
+		const selector = isDirect ? '[data-a-target="player-overlay-click-handler"]' : ".persistent-player";
+
+		const element = document.querySelector(selector);
+		if (!element) return undefined;
+
+		const reactInstance = this.reactUtils.getReactInstance(element);
+		const predicate = (n: any) => !!n.stateNode?.props?.mediaPlayerInstance;
+
+		if (isDirect) {
+			return this.reactUtils.findReactParents<MediaPlayerComponent>(reactInstance, predicate, 200)?.stateNode;
+		}
+
+		return this.reactUtils.findReactChildren<MediaPlayerComponent>(reactInstance, predicate, 200)?.stateNode;
+	}
+
 	getMediaPlayerInstance(): MediaPlayerInstanceBase | undefined {
-		const mediaPlayer = this.reactUtils.findReactChildren<MediaPlayerComponent>(
-			this.reactUtils.getReactInstance(document.querySelector(".persistent-player")),
-			(n) => !!n.stateNode?.props?.mediaPlayerInstance,
-			200,
-		)?.stateNode.props.mediaPlayerInstance;
+		const mediaPlayer = this.getMediaPlayerNode()?.props.mediaPlayerInstance;
 
 		if (!mediaPlayer) {
 			return undefined;
@@ -77,11 +91,7 @@ export default class TwitchUtils {
 	}
 
 	getMediaPlayerComponent(): MediaPlayerComponentNormalized | undefined {
-		const props = this.reactUtils.findReactChildren<MediaPlayerComponent>(
-			this.reactUtils.getReactInstance(document.querySelector(".persistent-player")),
-			(n) => !!n.stateNode?.props?.mediaPlayerInstance,
-			200,
-		)?.stateNode.props;
+		const props = this.getMediaPlayerNode()?.props;
 
 		if (!props) return undefined;
 
@@ -259,6 +269,17 @@ export default class TwitchUtils {
 				n?.stateNode?.props.isOffline !== undefined &&
 				n?.stateNode?.props.isPlaying !== undefined &&
 				n?.stateNode?.props.liveContentChannelLogin,
+			100,
+		)?.stateNode.props;
+	}
+
+	getVideoInfo() {
+		return this.reactUtils.findReactChildren<VideoInfoComponent>(
+			this.reactUtils.getReactInstance(document.querySelector(".video-player__default-player")),
+			(n) =>
+				n?.stateNode?.props.content !== undefined &&
+				n?.stateNode?.props.content.channelLogin !== undefined &&
+				n?.stateNode?.props.content.type !== undefined,
 			100,
 		)?.stateNode.props;
 	}
