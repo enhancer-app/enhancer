@@ -1,111 +1,61 @@
 name: Release
 
 on:
-  push:
+  pull_request:
     branches:
       - release
-  workflow_dispatch:
-    inputs:
-      custom_tag:
-        description: 'Custom version tag (e.g., v5.1.26). Leave empty to use package.json.'
-        required: false
-        type: string
+    types: [opened, synchronize, reopened]
 
 permissions:
-  contents: write
+  pull-requests: write
+  contents: read
 
 jobs:
-  release-and-publish:
-    name: Release & Publish
+  check-version:
+    name: Check version change
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout PR Code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
 
-      - name: Determine Version
-        id: get_version
-        env:
-          MANUAL_TAG: ${{ inputs.custom_tag }}
+      - name: Check for version change
+        id: check
         run: |
-          if [ -n "$MANUAL_TAG" ]; then
-            # Use manual tag
-            RAW_VER=$MANUAL_TAG
-          else
-            # Read from package.json
-            echo "No manual tag. Reading package.json..."
-            RAW_VER="v$(jq -r .version package.json)"
-          fi
+          NEW_VER=$(jq -r .version package.json)
           
-          # Ensure VERSION has 'v' (e.g., v5.1.26)
-          if [[ $RAW_VER != v* ]]; then RAW_VER="v$RAW_VER"; fi
+          git fetch origin release:release
+          OLD_VER=$(git show release:package.json | jq -r .version)
           
-          # Create CLEAN_VER without 'v' for filenames (e.g., 5.1.26)
-          CLEAN_VER=${RAW_VER#v}
-          
-          echo "VERSION=$RAW_VER" >> $GITHUB_OUTPUT
-          echo "CLEAN_VER=$CLEAN_VER" >> $GITHUB_OUTPUT
-          
-          echo "Tag Version: $RAW_VER"
-          echo "File Version: $CLEAN_VER"
+          echo "PR Version: $NEW_VER"
+          echo "Release Version: $OLD_VER"
 
-      - name: Check if tag exists
-        id: check_tag
-        env:
-          VERSION: ${{ steps.get_version.outputs.VERSION }}
-        run: |
-          git fetch --tags
-          if git rev-parse "$VERSION" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Tag $VERSION already exists. Skipping release."
+          if [ "$NEW_VER" == "$OLD_VER" ]; then
+             echo "changed=false" >> $GITHUB_OUTPUT
+             echo "curr_ver=$OLD_VER" >> $GITHUB_OUTPUT
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Setup Bun
-        if: steps.check_tag.outputs.exists == 'false'
-        uses: oven-sh/setup-bun@v1
+      - name: Send or Update version comment
+        if: steps.check.outputs.changed == 'false'
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
-          bun-version: latest
+          header: version-check-warning
+          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          message: |
+            The `package.json` version is still **${{ steps.check.outputs.curr_ver }}**. You can still merge this PR, but a formal release will not be triggered unless the version is updated.
+            
+            **I can fix it for you!** Reply to this comment with one of these commands:
+            * `/bump patch` (Fixes: 1.0.0 -> 1.0.1)
+            * `/bump minor` (Features: 1.0.0 -> 1.1.0)
+            * `/bump major` (Breaking: 1.0.0 -> 2.0.0)
 
-      - name: Install & Pack
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          bun install
-          bun run pack
-          
-          # Verify files exist before proceeding
-          ls -l dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip
-          ls -l dist/source-${{ steps.get_version.outputs.CLEAN_VER }}.zip
-
-      - name: Create GitHub Release
-        if: steps.check_tag.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v1
+      - name: Delete warning if fixed
+        if: steps.check.outputs.changed == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
-          tag_name: ${{ steps.get_version.outputs.VERSION }}
-          name: Release ${{ steps.get_version.outputs.VERSION }}
-          generate_release_notes: true
-          files: |
-            dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip
-            dist/source-${{ steps.get_version.outputs.CLEAN_VER }}.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish to Chrome Web Store
-        if: steps.check_tag.outputs.exists == 'false'
-        uses: passifer/submit-chrome-webstore@v1
-        with:
-          file-name: 'dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
-          client-id: ${{ secrets.CHROME_CLIENT_ID }}
-          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
-          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
-          publish: true
-
-      - name: Publish to Firefox
-        if: steps.check_tag.outputs.exists == 'false'
-        uses: abhinav/web-ext-submit@v1.0.0
-        with:
-          path: 'dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
-          source: 'dist/source-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
-          jwt-issuer: ${{ secrets.AMO_JWT_ISSUER }}
-          jwt-secret: ${{ secrets.AMO_JWT_SECRET }}
+          header: version-check-warning
+          delete: true
+          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
