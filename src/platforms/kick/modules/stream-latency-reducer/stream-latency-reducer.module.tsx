@@ -29,11 +29,11 @@ export default class StreamLatencyReducerModule extends KickModule {
 			const status = await this.getPlaybackRateStatus();
 
 			if (status === "catchingUpMax") {
-				this.setPlaybackRateMode("catchUpMax");
+				await this.setPlaybackRateMode("catchUpMax");
 			} else if (status === "catchingUpMin") {
-				this.setPlaybackRateMode("catchUpMin");
+				await this.setPlaybackRateMode("catchUpMin");
 			} else {
-				this.setPlaybackRateMode("reset");
+				await this.setPlaybackRateMode("reset");
 			}
 		}, 1000);
 	}
