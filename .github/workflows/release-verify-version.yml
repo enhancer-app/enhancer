@@ -43,7 +43,7 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: version-check-warning
-          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           message: |
             The `package.json` version is still **${{ steps.check.outputs.curr_ver }}**. You can still merge this PR, but a formal release will not be triggered unless the version is updated.
             
@@ -58,4 +58,4 @@ jobs:
         with:
           header: version-check-warning
           delete: true
-          GITHUB_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
