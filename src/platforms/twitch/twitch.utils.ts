@@ -19,6 +19,7 @@ import type {
 	StreamInfoTwitchStreamData,
 	TwitchChatCommand,
 	TwitchChatMessageComponent,
+	VideoInfoComponent,
 } from "$types/platforms/twitch/twitch.utils.types";
 
 export default class TwitchUtils {
@@ -268,6 +269,17 @@ export default class TwitchUtils {
 				n?.stateNode?.props.isOffline !== undefined &&
 				n?.stateNode?.props.isPlaying !== undefined &&
 				n?.stateNode?.props.liveContentChannelLogin,
+			100,
+		)?.stateNode.props;
+	}
+
+	getVideoInfo() {
+		return this.reactUtils.findReactChildren<VideoInfoComponent>(
+			this.reactUtils.getReactInstance(document.querySelector(".video-player__default-player")),
+			(n) =>
+				n?.stateNode?.props.content !== undefined &&
+				n?.stateNode?.props.content.channelLogin !== undefined &&
+				n?.stateNode?.props.content.type !== undefined,
 			100,
 		)?.stateNode.props;
 	}

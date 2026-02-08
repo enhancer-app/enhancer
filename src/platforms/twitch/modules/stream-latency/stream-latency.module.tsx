@@ -60,26 +60,31 @@ export default class StreamLatencyModule extends TwitchModule {
 	}
 
 	private updateLatency() {
-		const currentLiveStatus = this.twitchUtils().getCurrentLiveStatus();
-		if (!currentLiveStatus) {
-			return;
+		const videoInfo = this.twitchUtils().getVideoInfo();
+		const liveStatus = this.twitchUtils().getCurrentLiveStatus();
+
+		const isVod = videoInfo?.content.type === "vod";
+		const isBroadcasterLive = !!(liveStatus?.isLive && !liveStatus.isOffline);
+
+		const isLive = !isVod && isBroadcasterLive;
+
+		if (this.isLiveState.value !== isLive) {
+			this.isLiveState.value = isLive;
 		}
-		const isLive = !currentLiveStatus.isOffline && currentLiveStatus.isLive;
-		this.isLiveState.value = isLive;
-		if (!isLive) {
-			return;
+
+		if (isLive) {
+			const latency = this.getLatency();
+			if (typeof latency === "number" && latency >= 0) {
+				this.latencyCounter.value = latency;
+			}
 		}
-		const latency = this.getLatency();
-		if (latency === undefined || latency < 0) return;
-		this.latencyCounter.value = latency;
 	}
 
 	private watchPlaybackRate() {
 		const video = this.twitchUtils().getMediaPlayerInstance()?.core.renderSurface.video.element();
 		if (!video) return;
 		video.addEventListener("ratechange", () => {
-			const newRate = video.playbackRate;
-			this.playbackRate.value = newRate;
+			this.playbackRate.value = video.playbackRate;
 		});
 	}
 
