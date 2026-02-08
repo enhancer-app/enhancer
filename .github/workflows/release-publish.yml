@@ -76,7 +76,6 @@ jobs:
         with:
           name: extension-builds
           path: dist/
-          retention-days: 1
 
       - name: Create GitHub Release
         if: steps.check_tag.outputs.exists == 'false'
