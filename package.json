@@ -2,7 +2,7 @@
 	"name": "enhancer",
 	"module": "src/content/index.ts",
 	"type": "module",
-	"version": "5.1.28",
+	"version": "5.1.29",
 	"homepage": "https://enhancer.at",
 	"author": {
 		"name": "Enhancer",
@@ -47,7 +47,7 @@
 		"biome:ci": "biome ci ./src",
 		"dev": "ENVIRONMENT=development concurrently \"bun run typecheck:watch\" \"vite build --watch\" \"vite\"",
 		"build": "ENVIRONMENT=production bun run biome:ci && bun run typecheck && vite build",
-		"pack": "bun run scripts/pack.ts",
+		"pack": "ENVIRONMENT=production bun run scripts/pack.ts",
 		"prepare": "husky"
 	},
 	"lint-staged": {
