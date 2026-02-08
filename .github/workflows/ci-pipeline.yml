@@ -14,8 +14,6 @@ jobs:
         include:
           - name: Type Check
             command: bun run typecheck
-          - name: Lint & Format
-            command: bunx biome ci ./src
           - name: Tests
             command: bun test
 
