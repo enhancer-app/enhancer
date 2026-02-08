@@ -15,9 +15,13 @@ permissions:
   contents: write
 
 jobs:
-  release-and-publish:
-    name: Release & Publish
+  build-release:
+    name: Build & GitHub Release
     runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.get_version.outputs.VERSION }}
+      CLEAN_VER: ${{ steps.get_version.outputs.CLEAN_VER }}
+      EXISTS: ${{ steps.check_tag.outputs.exists }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,14 +39,10 @@ jobs:
           fi
           
           if [[ $RAW_VER != v* ]]; then RAW_VER="v$RAW_VER"; fi
-          
           CLEAN_VER=${RAW_VER#v}
           
           echo "VERSION=$RAW_VER" >> $GITHUB_OUTPUT
           echo "CLEAN_VER=$CLEAN_VER" >> $GITHUB_OUTPUT
-          
-          echo "Tag Version: $RAW_VER"
-          echo "File Version: $CLEAN_VER"
 
       - name: Check if tag exists
         id: check_tag
@@ -52,7 +52,6 @@ jobs:
           git fetch --tags
           if git rev-parse "$VERSION" >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Tag $VERSION already exists. Skipping release."
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
@@ -65,12 +64,18 @@ jobs:
 
       - name: Install & Pack
         if: steps.check_tag.outputs.exists == 'false'
+        env:
+          ENVIRONMENT: production
         run: |
           bun install
           bun run pack
-          
-          ls -l dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip
-          ls -l dist/source-${{ steps.get_version.outputs.CLEAN_VER }}.zip
+
+      - name: Upload Artifacts
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-builds
+          path: dist/
 
       - name: Create GitHub Release
         if: steps.check_tag.outputs.exists == 'false'
@@ -85,8 +90,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  approve-release:
+    name: Approve Publishing
+    needs: build-release
+    if: needs.build-release.outputs.EXISTS == 'false'
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - run: echo "Manual approval received."
+
+  publish-chrome:
+    name: Publish Chrome
+    needs: [build-release, approve-release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-builds
+          path: dist
+
       - name: Publish to Chrome Web Store
-        if: steps.check_tag.outputs.exists == 'false'
         uses: mobilefirstllc/cws-publish@latest
         with:
           action: 'publish'
@@ -94,15 +118,25 @@ jobs:
           client_secret: ${{ secrets.CHROME_CLIENT_SECRET }}
           refresh_token: ${{ secrets.CHROME_REFRESH_TOKEN }}
           extension_id: ${{ secrets.CHROME_EXTENSION_ID }}
-          zip_file: 'dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
+          zip_file: 'dist/build-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
+
+  publish-firefox:
+    name: Publish Firefox
+    needs: [build-release, approve-release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-builds
+          path: dist
 
       - name: Publish to Firefox
-        if: steps.check_tag.outputs.exists == 'false'
         uses: wdzeng/firefox-addon@v1
         with:
           addon-guid: ${{ secrets.FIREFOX_EXTENSION_ID }}
-          xpi-path: 'dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
-          source-file-path: 'dist/source-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
+          xpi-path: 'dist/build-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
+          source-file-path: 'dist/source-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
           jwt-issuer: ${{ secrets.AMO_JWT_ISSUER }}
           jwt-secret: ${{ secrets.AMO_JWT_SECRET }}
           self-hosted: false
