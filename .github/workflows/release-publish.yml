@@ -28,18 +28,14 @@ jobs:
           MANUAL_TAG: ${{ inputs.custom_tag }}
         run: |
           if [ -n "$MANUAL_TAG" ]; then
-            # Use manual tag
             RAW_VER=$MANUAL_TAG
           else
-            # Read from package.json
             echo "No manual tag. Reading package.json..."
             RAW_VER="v$(jq -r .version package.json)"
           fi
           
-          # Ensure VERSION has 'v' (e.g., v5.1.26)
           if [[ $RAW_VER != v* ]]; then RAW_VER="v$RAW_VER"; fi
           
-          # Create CLEAN_VER without 'v' for filenames (e.g., 5.1.26)
           CLEAN_VER=${RAW_VER#v}
           
           echo "VERSION=$RAW_VER" >> $GITHUB_OUTPUT
@@ -73,7 +69,6 @@ jobs:
           bun install
           bun run pack
           
-          # Verify files exist before proceeding
           ls -l dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip
           ls -l dist/source-${{ steps.get_version.outputs.CLEAN_VER }}.zip
 
@@ -92,20 +87,22 @@ jobs:
 
       - name: Publish to Chrome Web Store
         if: steps.check_tag.outputs.exists == 'false'
-        uses: passifer/submit-chrome-webstore@v1
+        uses: mobilefirstllc/cws-publish@latest
         with:
-          file-name: 'dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
-          client-id: ${{ secrets.CHROME_CLIENT_ID }}
-          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
-          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
-          publish: true
+          action: 'publish'
+          client_id: ${{ secrets.CHROME_CLIENT_ID }}
+          client_secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          extension_id: ${{ secrets.CHROME_EXTENSION_ID }}
+          zip_file: 'dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
 
       - name: Publish to Firefox
         if: steps.check_tag.outputs.exists == 'false'
-        uses: abhinav/web-ext-submit@v1.0.0
+        uses: wdzeng/firefox-addon@v1
         with:
-          path: 'dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
-          source: 'dist/source-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
+          addon-guid: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          xpi-path: 'dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
+          source-file-path: 'dist/source-${{ steps.get_version.outputs.CLEAN_VER }}.zip'
           jwt-issuer: ${{ secrets.AMO_JWT_ISSUER }}
           jwt-secret: ${{ secrets.AMO_JWT_SECRET }}
+          self-hosted: false
