@@ -1,0 +1,21 @@
+name: autofix.ci
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: ".bun-version"
+      - run: bun install
+      - run: bunx biome check --write ./src
+      - uses: autofix-ci/action@v1

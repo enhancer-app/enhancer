@@ -4,9 +4,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-permissions:
-  contents: read
-
 jobs:
   checks:
     name: ${{ matrix.name }}
@@ -17,8 +14,6 @@ jobs:
         include:
           - name: Type Check
             command: bun run typecheck
-          - name: Lint & Format
-            command: bunx biome check --write ./src
           - name: Tests
             command: bun test
 
@@ -43,10 +38,6 @@ jobs:
 
       - name: Run ${{ matrix.name }}
         run: ${{ matrix.command }}
-
-      - name: Apply Autofix
-        if: matrix.name == 'Lint & Format'
-        uses: autofix-ci/action@v1
 
   build:
     name: Build Project
