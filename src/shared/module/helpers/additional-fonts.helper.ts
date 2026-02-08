@@ -4,26 +4,38 @@ export class AdditionalFontsHelper {
 	constructor(private readonly enhancerApi: EnhancerApi) {}
 
 	loadFonts(elements: Element[], fontList: string[]): void {
-		if (elements.length === 0 || fontList.length === 0) return;
+		if (elements.length === 0) return;
+
+		if (fontList.length === 0) {
+			for (const head of elements) {
+				const existingLinks = head.querySelectorAll("link.enhancer-additional-font");
+				existingLinks.forEach((link) => {
+					if (link.parentNode) {
+						link.parentNode.removeChild(link);
+					}
+				});
+			}
+			return;
+		}
 
 		const familyQuery = fontList.map((font) => `family=${font.replace(/\s+/g, "+")}`).join("&");
 		const url = `https://fonts.googleapis.com/css2?${familyQuery}&display=swap`;
 
-		const newFontLink = document.createElement("link");
-		newFontLink.rel = "stylesheet";
-		newFontLink.href = url;
-		// doing this magic so it won't impact the main page load
-		newFontLink.setAttribute("media", "print");
-		newFontLink.setAttribute("onload", "this.media='all'");
-		newFontLink.classList.add("enhancer-additional-font");
+		const fontLinkElement = document.createElement("link");
+		fontLinkElement.rel = "stylesheet";
+		fontLinkElement.href = url;
+		fontLinkElement.setAttribute("media", "print");
+		fontLinkElement.setAttribute("onload", "this.media='all'");
+		fontLinkElement.classList.add("enhancer-additional-font");
 
 		for (const head of elements) {
-			const existingLink = head.querySelector("link.enhancer-additional-font") as HTMLLinkElement;
-			if (existingLink) {
-				existingLink.href = url;
-			} else {
-				head.appendChild(newFontLink.cloneNode(true));
-			}
+			const existingLinks = head.querySelectorAll("link.enhancer-additional-font");
+			existingLinks.forEach((link) => {
+				if (link.parentNode) {
+					link.parentNode.removeChild(link);
+				}
+			});
+			head.appendChild(fontLinkElement.cloneNode(true));
 		}
 	}
 
@@ -31,7 +43,7 @@ export class AdditionalFontsHelper {
 		const allUsers = [
 			...(this.enhancerApi.getGlobalChannel()?.users ?? []),
 			...(this.enhancerApi.getCurrentChannel()?.users ?? []),
-		].filter((user) => user.customFont !== null);
+		];
 
 		const uniqueFonts = new Map<string, string>();
 		for (const user of allUsers) {
