@@ -208,6 +208,14 @@ export default class SettingsModule extends TwitchModule {
 				tabIndex: tabIndexes.Chat,
 			},
 			{
+				id: "emoteBarEnabled",
+				title: "Enable Emote Bar",
+				description: "Displays a bar with emotes in chat.",
+				type: "toggle",
+				tabIndex: tabIndexes.Experimental,
+				requiresRefreshToDisable: true,
+			},
+			{
 				id: "quickAccessLinks",
 				title: "Quick Access Links",
 				description:

@@ -378,3 +378,5 @@ export interface StreamInfoTwitchStreamData {
 	costreamViewCount: number | null;
 	costreamDetails: StreamInfoCostreamDetails | null;
 }
+
+export type EmoteItem = { src: string; alt: string; isWide?: boolean };

@@ -38,3 +38,8 @@ export type EnhancerStreamerWatchTimeData = {
 	lastSeen: string;
 	avatarUrl?: string;
 };
+
+export type EnhancerEmote = {
+	provider: number;
+	code: string;
+};

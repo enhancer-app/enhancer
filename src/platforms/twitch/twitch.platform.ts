@@ -8,6 +8,7 @@ import ChatMessageMenuModule from "$twitch/modules/chat-message-menu/chat-messag
 import MessageMenuModule from "$twitch/modules/chat-message-menu/message-menu.module.tsx";
 import ChatNicknameCustomizationModule from "$twitch/modules/chat-nickname-customization/chat-nickname-customization.module.tsx";
 import ChattersModule from "$twitch/modules/chatters/chatters.module.tsx";
+import EmoteBarModule from "$twitch/modules/emote-bar/emote-bar.module.tsx";
 import LocalWatchtimeCounterModule from "$twitch/modules/local-watchtime-counter/local-watchtime-counter.module.tsx";
 import PinStreamerModule from "$twitch/modules/pin-streamer/pin-streamer.module.tsx";
 import RealVideoTimeModule from "$twitch/modules/real-video-time/real-video-time.module.tsx";
@@ -71,6 +72,7 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			new MessageMenuModule(...dependencies),
 			new ChatMessageMenuModule(...dependencies),
 			new ChatMentionSoundModule(...dependencies),
+			new EmoteBarModule(...dependencies),
 			new AdditionalFontsModule(...dependencies),
 		];
 	}
