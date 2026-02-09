@@ -1,0 +1,75 @@
+name: Ops
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  bump:
+    name: Bump version
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/bump')
+
+    steps:
+      - name: Get PR Details
+        uses: actions/github-script@v6
+        id: get-branch
+        with:
+          github-token: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          result-encoding: string
+          script: |
+            const request = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            }
+            const pr = await github.rest.pulls.get(request);
+            return pr.data.head.ref;
+
+      - name: Checkout PR Branch
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          ref: ${{ steps.get-branch.outputs.result }}
+
+      - name: Process Bump Command
+        id: bump
+        run: |
+          COMMENT="${{ github.event.comment.body }}"
+          TYPE=$(echo $COMMENT | awk '{print $2}')
+          
+          if [[ "$TYPE" != "patch" && "$TYPE" != "minor" && "$TYPE" != "major" ]]; then
+             echo "Invalid bump type. Use patch, minor, or major."
+             exit 1
+          fi
+
+          git config --global user.name "Enhancer Bot"
+          git config --global user.email "${{ secrets.ENHANCER_BOT_EMAIL }}"
+
+          NEW_VER=$(npm version $TYPE --no-git-tag-version)
+          
+          echo "BUMPED_VER=$NEW_VER" >> $GITHUB_OUTPUT
+
+      - name: Commit and Push
+        run: |
+          git add package.json
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.BUMPED_VER }}"
+          
+          git push "https://x-access-token:${{ secrets.ENHANCER_BOT_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:${{ steps.get-branch.outputs.result }}
+
+      - name: React to Comment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          script: |
+            github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });

@@ -4,18 +4,14 @@ _Briefly explain what this PR does. Is it a bug fix, new feature, or a refactor?
 
 ### Testing
 
-Select all the environments you tested this PR with:
+Select the environments you tested this PR with (replace ⬜ with ✅):
 
-**Twitch**
-- [ ] BetterTTV (BTTV)
-- [ ] FrankerFaceZ (FFZ)
-- [ ] 7TV
-- [ ] Native Twitch
-
-**Kick**
-- [ ] 7TV
-- [ ] Nipahtv (NTV)
-- [ ] Native Kick
+| Twitch               | Kick            |
+|:---------------------|:----------------|
+| ⬜ BetterTTV (BTTV)   | ⬜ 7TV           |
+| ⬜ FrankerFaceZ (FFZ) | ⬜ Nipahtv (NTV) |
+| ⬜ 7TV                | ⬜ Native Kick   |
+| ⬜ Native Twitch      |                 |
 
 _Please describe how you tested this change in the selected environments._
 

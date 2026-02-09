@@ -1,2 +1,2 @@
-export PATH="$HOME/.bun/bin:$PATH"
-bun run build
+bun test
+bun run typecheck

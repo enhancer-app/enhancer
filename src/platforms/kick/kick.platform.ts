@@ -17,6 +17,7 @@ import LocalWatchtimeCounterModule from "$kick/modules/local-watchtime-counter/l
 import RealVideoTimeModule from "$kick/modules/real-video-time/real-video-time.module.tsx";
 import SettingsButtonModule from "$kick/modules/settings-button/settings-button.module.tsx";
 import SettingsModule from "$kick/modules/settings/settings.module.tsx";
+import StreamLatencyReducerModule from "$kick/modules/stream-latency-reducer/stream-latency-reducer.module.tsx";
 import StreamLatencyModule from "$kick/modules/stream-latency/stream-latency.module.tsx";
 import Platform from "$shared/platform/platform.ts";
 import type { KickEvents } from "$types/platforms/kick/kick.events.types.ts";
@@ -51,6 +52,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			new SettingsModule(...dependencies),
 			new ChatNicknameCustomizationModule(...dependencies),
 			new StreamLatencyModule(...dependencies),
+			new StreamLatencyReducerModule(...dependencies),
 			new RealVideoTimeModule(...dependencies),
 			new ChannelSectionModule(...dependencies),
 			new LocalWatchtimeCounterModule(...dependencies),

@@ -52,6 +52,11 @@ export type MediaPlayerComponent = {
 	};
 };
 
+export type MediaPlayerComponentNormalized = {
+	mediaPlayerInstance: MediaPlayerInstanceBase;
+	content: MediaPlayerContentType;
+};
+
 export type MediaPlayerContentType =
 	| {
 			channelLogin: string;
@@ -59,10 +64,20 @@ export type MediaPlayerContentType =
 	  }
 	| { vodID: string; type: "vod" };
 
-export type MediaPlayerInstance = {
-	core: { state: { liveLatency: number; ingestLatency: number }; paused: boolean };
+export type MediaPlayerInstance = MediaPlayerInstanceWrapper | MediaPlayerInstanceBase;
+
+export type MediaPlayerInstanceBase = {
+	core: {
+		state: { liveLatency: number; ingestLatency: number };
+		paused: boolean;
+		renderSurface: { video: { element: () => HTMLVideoElement } };
+	};
 	seekTo: (time: number) => void;
 	getPosition(): number;
+};
+
+export type MediaPlayerInstanceWrapper = {
+	playerInstance: MediaPlayerInstanceBase;
 };
 
 export type FollowedSectionComponenet = {
@@ -214,6 +229,31 @@ export type CurrentLiveStatusComponent = {
 		isVideoAdShowing: boolean;
 	};
 };
+
+export type VideoInfoComponent = {
+	props: {
+		content: LiveStreamData | VodStreamData;
+	};
+};
+
+export type StreamType = "live" | "vod";
+
+export interface BaseStreamData {
+	type: StreamType;
+	channelLogin: string;
+	dvrVideoID: string;
+}
+
+export interface LiveStreamData extends BaseStreamData {
+	type: "live";
+}
+
+export interface VodStreamData extends BaseStreamData {
+	type: "vod";
+	isDVR: boolean;
+	videoOffset: number;
+	vodID: string;
+}
 
 export type ChannelInfoComponent = {
 	props: {
