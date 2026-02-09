@@ -1,6 +1,8 @@
 import type EnhancerApi from "$shared/apis/enhancer.api.ts";
 
 export class AdditionalFontsHelper {
+	private static readonly MAX_FONTS = 50;
+
 	constructor(private readonly enhancerApi: EnhancerApi) {}
 
 	loadFonts(elements: Element[], fontList: string[]): void {
@@ -59,5 +61,14 @@ export class AdditionalFontsHelper {
 		}
 
 		return Array.from(uniqueFonts.values());
+	}
+
+	loadFontsWithTruncation(elements: Element[], logger: Console): void {
+		let fonts = this.getUsedFonts();
+		if (fonts.length > AdditionalFontsHelper.MAX_FONTS) {
+			logger.warn(`Too many fonts to load (${fonts.length}), truncating to ${AdditionalFontsHelper.MAX_FONTS}`);
+			fonts = fonts.slice(0, AdditionalFontsHelper.MAX_FONTS);
+		}
+		this.loadFonts(elements, fonts);
 	}
 }

@@ -4,7 +4,6 @@ import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class AdditionalFontsModule extends KickModule {
 	private readonly additionalFontsHelper = new AdditionalFontsHelper(this.enhancerApi());
-	private static readonly MAX_FONTS = 50;
 
 	readonly config: KickModuleConfig = {
 		name: "additional-fonts",
@@ -26,22 +25,13 @@ export default class AdditionalFontsModule extends KickModule {
 		],
 	};
 
-	private loadFontsWithTruncation(elements: Element[]) {
-		let fonts = this.additionalFontsHelper.getUsedFonts();
-		if (fonts.length > AdditionalFontsModule.MAX_FONTS) {
-			this.logger.warn(`Too many fonts to load (${fonts.length}), truncating to ${AdditionalFontsModule.MAX_FONTS}`);
-			fonts = fonts.slice(0, AdditionalFontsModule.MAX_FONTS);
-		}
-		this.additionalFontsHelper.loadFonts(elements, fonts);
-	}
-
 	private async run(elements: Element[]) {
-		this.loadFontsWithTruncation(elements);
+		this.additionalFontsHelper.loadFontsWithTruncation(elements, this.logger);
 	}
 
 	public async updateFonts() {
 		const head = document.querySelector("head");
 		if (!head) return;
-		this.loadFontsWithTruncation([head]);
+		this.additionalFontsHelper.loadFontsWithTruncation([head], this.logger);
 	}
 }
