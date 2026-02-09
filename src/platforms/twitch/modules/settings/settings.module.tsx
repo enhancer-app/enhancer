@@ -58,9 +58,13 @@ export default class SettingsModule extends TwitchModule {
 				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/channel.svg"),
 			},
 			{
-				title: "Experimental",
-				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/experimental.svg"),
+				title: "Latency",
+				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/latency.svg"),
 			},
+			// {
+			// 	title: "Experimental",
+			// 	iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/experimental.svg"),
+			// },
 			{
 				title: "About",
 				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/about.svg"),
@@ -74,30 +78,6 @@ export default class SettingsModule extends TwitchModule {
 			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
 		} as const;
 		this.SETTING_DEFINITIONS = [
-			{
-				id: "showFollowsFromOtherPlatforms",
-				title: "Enable follow list from other platforms",
-				description: "Shows your followed channels from other platforms in the follow list.",
-				type: "toggle",
-				tabIndex: 0,
-				requiresRefreshToDisable: true,
-			},
-			{
-				id: "shareFollowsToOtherPlatforms",
-				title: "Share followed channels",
-				description: "Expose your followed list to Enhancer so it can be used across platforms.",
-				type: "toggle",
-				tabIndex: 0,
-				requiresRefreshToDisable: false,
-			},
-			{
-				id: "streamLatencyEnabled",
-				title: "Enable Stream Latency",
-				description: "Shows the current stream delay on top of the chat.",
-				type: "toggle",
-				tabIndex: tabIndexes.General,
-				requiresRefreshToDisable: true,
-			},
 			{
 				id: "realVideoTimeEnabled",
 				title: "Enable Real Video Time",
@@ -264,6 +244,56 @@ export default class SettingsModule extends TwitchModule {
 				hideInfo: true,
 			},
 			{
+				id: "streamLatencyEnabled",
+				title: "Enable Stream Latency",
+				description: "Shows the current stream delay on top of the chat.",
+				type: "toggle",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerEnabled",
+				title: "Enable Stream Latency Reducer (Experimental)",
+				description: "Reduces stream latency by adjusting playback rate. (Disabled without Low Latency Mode)",
+				type: "toggle",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerMinRate",
+				title: "Minimum Playback Rate",
+				description: "The minimum playback rate the stream will be speeded up to.",
+				type: "number",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerMaxRate",
+				title: "Maximum Playback Rate",
+				description: "The maximum playback rate the stream will be speeded up to.",
+				type: "number",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerMinThreshold",
+				title: "Minimum Latency Threshold",
+				description:
+					"The latency threshold (in seconds) at which the playback rate will be speeded up to the minimum rate.",
+				type: "number",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "streamLatencyReducerMaxThreshold",
+				title: "Maximum Latency Threshold",
+				description:
+					"The latency threshold (in seconds) at which the playback rate will be speeded up to the maximum rate.",
+				type: "number",
+				tabIndex: tabIndexes.Latency,
+				requiresRefreshToDisable: true,
+			},
+			{
 				id: "about",
 				title: "About This Extension",
 				description: "Information about the extension",
@@ -281,7 +311,6 @@ export default class SettingsModule extends TwitchModule {
 		await this.loadSettings();
 		await this.createSettingsContainer();
 		this.setupKeyboardShortcut();
-		// syncing handled by ExposeFollowsModule
 	}
 
 	private async loadSettings() {

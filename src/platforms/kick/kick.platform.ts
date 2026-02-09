@@ -7,6 +7,8 @@ import ChatAttachmentsModule from "$kick/modules/chat-attachments/chat-attachmen
 import ChatBadgesModule from "$kick/modules/chat-badges/chat-badges.module.tsx";
 import ChatFixAutoScrollModule from "$kick/modules/chat-fix-auto-scroll/chat-fix-auto-scroll.module.tsx";
 import ChatHighlightUserModule from "$kick/modules/chat-highlight-user/chat-highlight-user.module.tsx";
+import ChatMessageMenuModule from "$kick/modules/chat-message-menu/chat-message-menu.module.tsx";
+import MessageMenuModule from "$kick/modules/chat-message-menu/message-menu.module.tsx";
 import ChatMessagePopupModule from "$kick/modules/chat-message-popup/chat-message-popup.module.tsx";
 import ChatNicknameCustomizationModule from "$kick/modules/chat-nickname-customization/chat-nickname-customization.module.ts";
 import ChatModule from "$kick/modules/chat/chat.module.ts";
@@ -14,7 +16,7 @@ import LocalWatchtimeCounterModule from "$kick/modules/local-watchtime-counter/l
 import RealVideoTimeModule from "$kick/modules/real-video-time/real-video-time.module.tsx";
 import SettingsButtonModule from "$kick/modules/settings-button/settings-button.module.tsx";
 import SettingsModule from "$kick/modules/settings/settings.module.tsx";
-import SharedFollowsModule from "$kick/modules/shared-follows/shared-follows.module.tsx";
+import StreamLatencyReducerModule from "$kick/modules/stream-latency-reducer/stream-latency-reducer.module.tsx";
 import StreamLatencyModule from "$kick/modules/stream-latency/stream-latency.module.tsx";
 import Platform from "$shared/platform/platform.ts";
 import type { KickEvents } from "$types/platforms/kick/kick.events.types.ts";
@@ -34,7 +36,6 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			this.emitter,
 			this.storageRepository,
 			this.settingsService,
-			this.commonDataService,
 			this.utilsRepository,
 			this.enhancerApi,
 			this.workerApi,
@@ -49,6 +50,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			new SettingsModule(...dependencies),
 			new ChatNicknameCustomizationModule(...dependencies),
 			new StreamLatencyModule(...dependencies),
+			new StreamLatencyReducerModule(...dependencies),
 			new RealVideoTimeModule(...dependencies),
 			new ChannelSectionModule(...dependencies),
 			new LocalWatchtimeCounterModule(...dependencies),
@@ -58,7 +60,6 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			// new ChatMessageMenuModule(...dependencies),
 			new AdditionalFontsModule(...dependencies),
 			new ChatFixAutoScrollModule(...dependencies),
-			new SharedFollowsModule(...dependencies),
 		];
 	}
 
