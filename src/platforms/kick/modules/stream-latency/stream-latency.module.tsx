@@ -8,6 +8,8 @@ export default class StreamLatencyModule extends KickModule {
 	private latencyCounter = signal(-1);
 	private isLiveState = signal(false);
 	private updateInterval: NodeJS.Timeout | undefined;
+	private playbackRate = signal(1);
+	private latencyTimings = signal<number[]>([]);
 
 	readonly config: KickModuleConfig = {
 		name: "stream-latency",
@@ -31,6 +33,8 @@ export default class StreamLatencyModule extends KickModule {
 			this.logger.debug("Found multiple elements of chat room");
 		}
 
+		this.watchPlaybackRate();
+
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(() => this.updateLatency(), 1000);
 
@@ -43,6 +47,7 @@ export default class StreamLatencyModule extends KickModule {
 				<LatencyComponent
 					isLive={this.isLiveState}
 					latencyCounter={this.latencyCounter}
+					playbackRate={this.playbackRate}
 					click={this.resetPlayer.bind(this)}
 				/>,
 				span,
@@ -62,10 +67,32 @@ export default class StreamLatencyModule extends KickModule {
 	}
 
 	private computeLatency(video: HTMLVideoElement): number {
-		const { currentTime, buffered } = video;
-		if (buffered.length === 0) return -1;
-		const bufferEnd = buffered.end(buffered.length - 1);
-		return bufferEnd - currentTime;
+		const computedLatency = this.kickUtils().getLatency(video);
+		this.latencyTimings.value.push(computedLatency);
+
+		// Reset timings array if experiences sudden increase in latency
+		if (
+			this.latencyTimings.value.length > 1 &&
+			computedLatency - this.latencyTimings.value[this.latencyTimings.value.length - 2] > 2
+		) {
+			this.latencyTimings.value = [computedLatency];
+		}
+
+		const numberOfSamples = 10;
+		if (this.latencyTimings.value.length > numberOfSamples) this.latencyTimings.value.shift();
+
+		return (
+			this.latencyTimings.value.reduce((accumulator, currentValue) => accumulator + currentValue, 0) /
+			this.latencyTimings.value.length
+		);
+	}
+
+	private watchPlaybackRate() {
+		const video = this.getVideoElement();
+		if (!video) return;
+		video.addEventListener("ratechange", () => {
+			this.playbackRate.value = video.playbackRate;
+		});
 	}
 
 	private resetPlayer(): void {

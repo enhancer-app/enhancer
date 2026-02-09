@@ -53,7 +53,5 @@ export function getManifest(isDevelopment: boolean) {
 				id: "{09b8dba2-ae33-4bea-8bf1-d85e50691408}",
 			},
 		},
-		// Firefox Normal {09b8dba2-ae33-4bea-8bf1-d85e50691408}
-		// Firefox Dev {7ddb770a-37fb-48ce-b1fb-0afaf281fa0b}
 	};
 }

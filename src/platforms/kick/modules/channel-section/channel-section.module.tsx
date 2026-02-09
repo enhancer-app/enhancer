@@ -1,9 +1,9 @@
-import { type Signal, signal } from "@preact/signals";
-import { render } from "preact";
 import KickModule from "$kick/kick.module.ts";
 import { ChannelSectionComponent } from "$shared/components/channel-section/channel-section.component.tsx";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
+import { type Signal, signal } from "@preact/signals";
+import { render } from "preact";
 
 export default class ChannelSectionModule extends KickModule {
 	private quickAccessLinks = {} as Signal<QuickAccessLink[]>;
@@ -18,7 +18,7 @@ export default class ChannelSectionModule extends KickModule {
 			{
 				type: "selector",
 				key: "channel-info",
-				selectors: ["#channel-content section.rounded"],
+				selectors: ["#channel-content section.rounded-lg"],
 				callback: this.run.bind(this),
 				useParent: true,
 				once: true,
