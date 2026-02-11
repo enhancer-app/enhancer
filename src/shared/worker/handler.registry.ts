@@ -5,6 +5,10 @@ import { PingHandler } from "$shared/worker/ping/ping.handler.ts";
 import { GetSettingsHandler } from "$shared/worker/settings/get-settings.handler.ts";
 import type { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
 import { UpdateSettingsHandler } from "$shared/worker/settings/update-settings.handler.ts";
+import { GetLiveStreamersCacheHandler } from "$shared/worker/shared-storage/get-live-streamers-cache.handler.ts";
+import { GetSharedStorageHandler } from "$shared/worker/shared-storage/get-shared-storage.handler.ts";
+import { SetSharedStorageHandler } from "$shared/worker/shared-storage/set-shared-storage.handler.ts";
+import type { SharedStorageService } from "$shared/worker/shared-storage/shared-storage.service.ts";
 import { AddWatchtimeHandler } from "$shared/worker/watchtime/add-watchtime.handler.ts";
 import { GetPaginatedWatchtimeHandler } from "$shared/worker/watchtime/get-paginated-watchtime.handler.ts";
 import { GetWatchtimeHandler } from "$shared/worker/watchtime/get-watchtime.handler.ts";
@@ -19,6 +23,7 @@ export class HandlerRegistry {
 		private readonly logger: Logger,
 		private readonly watchtimeService: WatchtimeService,
 		private readonly settingsService: SettingsService,
+		private readonly sharedStorageService: SharedStorageService,
 	) {
 		this.registerHandlers();
 	}
@@ -32,6 +37,12 @@ export class HandlerRegistry {
 		this.handlers.set("importWatchtime", new ImportWatchtimeHandler(this.logger, this.watchtimeService));
 		this.handlers.set("getSettings", new GetSettingsHandler(this.logger, this.settingsService));
 		this.handlers.set("updateSettings", new UpdateSettingsHandler(this.logger, this.settingsService));
+		this.handlers.set("getSharedStorage", new GetSharedStorageHandler(this.logger, this.sharedStorageService));
+		this.handlers.set("setSharedStorage", new SetSharedStorageHandler(this.logger, this.sharedStorageService));
+		this.handlers.set(
+			"getLiveStreamersCache",
+			new GetLiveStreamersCacheHandler(this.logger, this.sharedStorageService),
+		);
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {

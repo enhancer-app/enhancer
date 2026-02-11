@@ -127,6 +127,20 @@ export default class SettingsModule extends TwitchModule {
 				requiresRefreshToDisable: true,
 			},
 			{
+				id: "shareFollowersEnabled",
+				title: "Share Followers to Other Platforms",
+				description: "Enable this to allow other platform modules to see who you follow here.",
+				type: "toggle",
+				tabIndex: tabIndexes.General,
+			},
+			{
+				id: "displaySharedFollowersEnabled",
+				title: "Display Cross-Platform Followers",
+				description: "Show live streamers from other platforms that you follow.",
+				type: "toggle",
+				tabIndex: tabIndexes.General,
+			},
+			{
 				id: "chatImagesEnabled",
 				title: "Enable Chat Images",
 				description: "Display images sent in chat messages.",

@@ -8,11 +8,13 @@ import ChatMessageMenuModule from "$twitch/modules/chat-message-menu/chat-messag
 import MessageMenuModule from "$twitch/modules/chat-message-menu/message-menu.module.tsx";
 import ChatNicknameCustomizationModule from "$twitch/modules/chat-nickname-customization/chat-nickname-customization.module.tsx";
 import ChattersModule from "$twitch/modules/chatters/chatters.module.tsx";
+import DisplaySharedFollowersModule from "$twitch/modules/display-shared-followers/display-shared-followers.module.ts";
 import LocalWatchtimeCounterModule from "$twitch/modules/local-watchtime-counter/local-watchtime-counter.module.tsx";
 import PinStreamerModule from "$twitch/modules/pin-streamer/pin-streamer.module.tsx";
 import RealVideoTimeModule from "$twitch/modules/real-video-time/real-video-time.module.tsx";
 import SettingsButtonModule from "$twitch/modules/settings-button/settings-button.module.tsx";
 import SettingsModule from "$twitch/modules/settings/settings.module.tsx";
+import ShareFollowersModule from "$twitch/modules/share-followers/share-followers.module.ts";
 import WatchTimeModule from "$twitch/modules/watchtime/watchtime.module.tsx";
 import type { TwitchEvents } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchSettings } from "$types/platforms/twitch/twitch.settings.types.ts";
@@ -72,6 +74,8 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			new ChatMessageMenuModule(...dependencies),
 			new ChatMentionSoundModule(...dependencies),
 			new AdditionalFontsModule(...dependencies),
+			new ShareFollowersModule(...dependencies),
+			new DisplaySharedFollowersModule(...dependencies),
 		];
 	}
 

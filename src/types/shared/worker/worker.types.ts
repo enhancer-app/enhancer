@@ -1,5 +1,13 @@
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
+import type {
+	GetLiveStreamersCachePayload,
+	GetLiveStreamersCacheResponse,
+	GetSharedStoragePayload,
+	GetSharedStorageResponse,
+	SetSharedStoragePayload,
+	SetSharedStorageResponse,
+} from "$types/shared/worker/shared-storage.types.ts";
 
 export type { PlatformType };
 
@@ -116,6 +124,18 @@ export interface WorkerApiActions {
 	updateSettings: {
 		payload: UpdateSettingsPayload;
 		response: UpdateSettingsResponse;
+	};
+	getSharedStorage: {
+		payload: GetSharedStoragePayload;
+		response: GetSharedStorageResponse;
+	};
+	setSharedStorage: {
+		payload: SetSharedStoragePayload;
+		response: SetSharedStorageResponse;
+	};
+	getLiveStreamersCache: {
+		payload: GetLiveStreamersCachePayload;
+		response: GetLiveStreamersCacheResponse;
 	};
 }
 

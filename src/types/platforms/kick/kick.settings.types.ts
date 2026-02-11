@@ -18,6 +18,8 @@ export type KickSettings = {
 	realVideoTimeEnabled: boolean;
 	realVideoTimeFormat12h: boolean;
 	channelSection: boolean;
+	shareFollowersEnabled: boolean;
+	displaySharedFollowersEnabled: boolean;
 };
 
 export type KickSettingsEvents = {

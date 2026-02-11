@@ -57,3 +57,14 @@ export interface Chatroom {
 	message_interval: number;
 	following_min_duration: number;
 }
+
+export interface FollowedChannel {
+	channel_slug?: string | null;
+	user_username?: string | null;
+	profile_picture?: string | null;
+}
+
+export interface FollowedChannelsResponse {
+	nextCursor?: number | null;
+	channels?: FollowedChannel[];
+}

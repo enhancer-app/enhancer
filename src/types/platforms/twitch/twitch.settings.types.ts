@@ -29,6 +29,8 @@ export type TwitchSettings = {
 	pinnedStreamersEnabled: boolean;
 	xayoWatchtimeEnabled: boolean;
 	channelSection: boolean;
+	shareFollowersEnabled: boolean;
+	displaySharedFollowersEnabled: boolean;
 };
 
 export type TwitchSettingsEvents = {

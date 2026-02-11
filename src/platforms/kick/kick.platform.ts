@@ -12,10 +12,12 @@ import MessageMenuModule from "$kick/modules/chat-message-menu/message-menu.modu
 import ChatMessagePopupModule from "$kick/modules/chat-message-popup/chat-message-popup.module.tsx";
 import ChatNicknameCustomizationModule from "$kick/modules/chat-nickname-customization/chat-nickname-customization.module.ts";
 import ChatModule from "$kick/modules/chat/chat.module.ts";
+import DisplaySharedFollowersModule from "$kick/modules/display-shared-followers/display-shared-followers.module.ts";
 import LocalWatchtimeCounterModule from "$kick/modules/local-watchtime-counter/local-watchtime-counter.module.tsx";
 import RealVideoTimeModule from "$kick/modules/real-video-time/real-video-time.module.tsx";
 import SettingsButtonModule from "$kick/modules/settings-button/settings-button.module.tsx";
 import SettingsModule from "$kick/modules/settings/settings.module.tsx";
+import ShareFollowersModule from "$kick/modules/share-followers/share-followers.module.ts";
 import StreamLatencyReducerModule from "$kick/modules/stream-latency-reducer/stream-latency-reducer.module.tsx";
 import StreamLatencyModule from "$kick/modules/stream-latency/stream-latency.module.tsx";
 import Platform from "$shared/platform/platform.ts";
@@ -60,6 +62,8 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			// new ChatMessageMenuModule(...dependencies),
 			new AdditionalFontsModule(...dependencies),
 			new ChatFixAutoScrollModule(...dependencies),
+			new ShareFollowersModule(...dependencies),
+			new DisplaySharedFollowersModule(...dependencies),
 		];
 	}
 

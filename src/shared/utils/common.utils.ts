@@ -106,4 +106,16 @@ export default class CommonUtils {
 		}
 		return null;
 	}
+
+	getCookie(name: string): string | null {
+		const cookies = document.cookie.split(";").map((cookie) => cookie.trim().split("="));
+
+		for (const [key, value] of cookies) {
+			if (key === name) {
+				return value ? decodeURIComponent(value) : "";
+			}
+		}
+
+		return null;
+	}
 }
