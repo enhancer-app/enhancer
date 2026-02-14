@@ -45,26 +45,35 @@ export class KickStatusScraper implements PlatformStatusScraper {
 
 			if (!livestream || !livestream.is_live) {
 				return {
+					displayName: data.user.username,
 					isLive: false,
 					gameName: null,
+					title: null,
 					viewerCount: 0,
 					startedAt: null,
+					profilePictureUrl: data.user.profile_pic,
 				};
 			}
 
 			return {
+				displayName: data.user.username,
 				isLive: true,
 				gameName: livestream.categories?.[0]?.name ?? null,
+				title: livestream.session_title,
 				viewerCount: livestream.viewer_count ?? 0,
 				startedAt: livestream.start_time ?? null,
+				profilePictureUrl: data.user.profile_pic,
 			};
 		} catch (error) {
 			this.logger.warn(`Failed to check status for Kick channel "${channelId}":`, error);
 			return {
+				displayName: null,
 				isLive: false,
 				gameName: null,
+				title: null,
 				viewerCount: 0,
 				startedAt: null,
+				profilePictureUrl: null,
 			};
 		}
 	}

@@ -8,9 +8,12 @@ export interface SharedFollower {
 }
 
 export interface StreamStatusResult {
+	displayName: string | null;
 	isLive: boolean;
 	gameName: string | null;
 	viewerCount: number;
+	title: string | null;
+	profilePictureUrl: string | null;
 	startedAt: string | null;
 }
 
@@ -18,10 +21,11 @@ export interface LiveStreamerEntry {
 	channelId: string;
 	platform: PlatformType;
 	username: string;
+	displayName: string | null;
 	isLive: boolean;
 	gameName: string | null;
 	viewerCount: number;
-	thumbnailUrl: string | null;
+	profilePictureUrl: string | null;
 	startedAt: string | null;
 	lastChecked: number;
 	lastLiveAt: number | null;

@@ -6,58 +6,81 @@ import type { SharedStorageService } from "$shared/worker/shared-storage/shared-
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { LiveStreamerEntry, SharedFollower } from "$types/shared/worker/shared-storage.types.ts";
 
+export interface PlatformScheduleConfig {
+	tickInterval: number;
+	priorityBudget: number;
+	rotationBudget: number;
+	minIntervalMs: {
+		live: number;
+		recent: number;
+		default: number;
+	};
+}
+
+export const PLATFORM_CONFIGS: Record<PlatformType, PlatformScheduleConfig> = {
+	twitch: {
+		tickInterval: 5_000,
+		priorityBudget: 30,
+		rotationBudget: 3,
+		minIntervalMs: {
+			live: 30_000,
+			recent: 20_000,
+			default: 10_000,
+		},
+	},
+	kick: {
+		tickInterval: 2_000,
+		priorityBudget: 1,
+		rotationBudget: 1,
+		minIntervalMs: {
+			live: 30_000,
+			recent: 20_000,
+			default: 10_000,
+		},
+	},
+};
+
+interface PlatformState {
+	tickInterval: ReturnType<typeof setInterval> | null;
+	rotationIndex: number;
+	isProcessing: boolean;
+}
+
 export class SharedFollowersService {
 	private readonly logger = new Logger({ context: "shared-followers-service" });
 
 	private liveStreamersCache: LiveStreamerEntry[] = [];
-	private tickInterval: ReturnType<typeof setInterval> | null = null;
-	private rotationIndex = 0;
-	private isProcessing = false;
+	private globalSyncInterval: ReturnType<typeof setInterval> | null = null;
+	private readonly platformStates: Map<PlatformType, PlatformState> = new Map();
 
-	/** Per-platform status scrapers, keyed by platform type. */
 	private readonly scrapers: Map<PlatformType, PlatformStatusScraper>;
 
-	// ── Scheduling constants ──
-
-	/** How often the scheduler runs (1 minute). */
-	static readonly TICK_INTERVAL_MS = 60_000;
-
-	/** Slots filled by weighted priority score. */
-	static readonly PRIORITY_BUDGET = 7;
-
-	/** Slots reserved for round-robin rotation (guarantees no streamer is starved). */
-	static readonly ROTATION_BUDGET = 3;
-
-	// ── Priority weights ──
-
-	/** Weight multiplier for currently live streamers. */
-	static readonly LIVE_WEIGHT = 3;
-
-	/** Weight multiplier for streamers who were live in the last 2 weeks. */
-	static readonly RECENT_WEIGHT = 2;
-
-	/** Weight multiplier for offline / inactive streamers. */
-	static readonly DEFAULT_WEIGHT = 1;
-
-	/** Minimum interval before re-checking a Tier 1 (recently live) streamer. */
-	static readonly TIER_1_MIN_INTERVAL_MS = 2 * 60 * 1000;
-
-	/** Minimum interval before re-checking a Tier 2 (currently live) streamer. */
-	static readonly TIER_2_MIN_INTERVAL_MS = 3 * 60 * 1000;
-
-	/** Two weeks in milliseconds. */
 	static readonly TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 
 	constructor(private readonly sharedStorageService: SharedStorageService) {
 		this.scrapers = new Map<PlatformType, PlatformStatusScraper>([
 			["kick", new KickStatusScraper()],
 			["twitch", new TwitchStatusScraper()],
-		]);
+		]) as Map<PlatformType, PlatformStatusScraper>;
+
+		for (const platform of Object.keys(PLATFORM_CONFIGS) as PlatformType[]) {
+			this.platformStates.set(platform, {
+				tickInterval: null,
+				rotationIndex: 0,
+				isProcessing: false,
+			});
+		}
 	}
 
 	async initialize(): Promise<void> {
 		await this.loadPersistedCache();
-		await this.startTickInterval();
+		await this.syncFollowers();
+		this.startGlobalSyncInterval();
+
+		for (const platform of Object.keys(PLATFORM_CONFIGS) as PlatformType[]) {
+			this.startPlatformTick(platform);
+		}
+
 		this.logger.info("Shared followers service initialized");
 	}
 
@@ -66,14 +89,20 @@ export class SharedFollowersService {
 	}
 
 	stop(): void {
-		if (this.tickInterval) {
-			clearInterval(this.tickInterval);
-			this.tickInterval = null;
+		if (this.globalSyncInterval) {
+			clearInterval(this.globalSyncInterval);
+			this.globalSyncInterval = null;
 		}
+
+		for (const [platform, state] of this.platformStates) {
+			if (state.tickInterval) {
+				clearInterval(state.tickInterval);
+				state.tickInterval = null;
+			}
+		}
+
 		this.logger.info("Shared followers service stopped");
 	}
-
-	// ── Initialization helpers ──
 
 	private async loadPersistedCache(): Promise<void> {
 		try {
@@ -87,70 +116,88 @@ export class SharedFollowersService {
 		}
 	}
 
-	private async startTickInterval() {
-		await this.tick();
-		this.tickInterval = setInterval(async () => {
-			await this.tick();
-		}, SharedFollowersService.TICK_INTERVAL_MS);
+	private startGlobalSyncInterval(): void {
+		this.globalSyncInterval = setInterval(async () => {
+			await this.syncFollowers();
+		}, 60_000);
 	}
 
-	// ── Core scheduling logic ──
+	private async syncFollowers(): Promise<void> {
+		const allFollowers = await this.getAllFollowers();
+		if (allFollowers.length === 0) return;
+		this.syncCacheWithFollowers(allFollowers);
+	}
 
-	private async tick(): Promise<void> {
-		if (this.isProcessing) {
-			this.logger.debug("Skipping tick: previous tick still in progress");
+	private startPlatformTick(platform: PlatformType): void {
+		const config = PLATFORM_CONFIGS[platform];
+		const state = this.platformStates.get(platform);
+		if (!state) return;
+
+		this.tickPlatform(platform);
+
+		state.tickInterval = setInterval(() => {
+			this.tickPlatform(platform);
+		}, config.tickInterval);
+	}
+
+	private async tickPlatform(platform: PlatformType): Promise<void> {
+		const state = this.platformStates.get(platform);
+		const config = PLATFORM_CONFIGS[platform];
+
+		if (!state || !config) {
+			this.logger.warn(`No state or config found for platform: ${platform}`);
 			return;
 		}
 
-		this.isProcessing = true;
+		if (state.isProcessing) {
+			this.logger.debug(`Skipping ${platform} tick: previous still in progress`);
+			return;
+		}
+
+		state.isProcessing = true;
 
 		try {
-			const allFollowers = await this.getAllFollowers();
-			if (allFollowers.length === 0) return;
+			const platformCache = this.liveStreamersCache.filter((e) => e.platform === platform);
 
-			this.syncCacheWithFollowers(allFollowers);
-
-			const toCheck = this.selectStreamersToCheck();
-
-			if (toCheck.length === 0) {
-				this.logger.debug("No streamers due for checking this tick");
+			if (platformCache.length === 0) {
 				return;
 			}
 
-			this.logger.debug(`Checking ${toCheck.length} streamers this tick`);
+			const toCheck = this.selectStreamersToCheck(platformCache, config, state);
+
+			if (toCheck.length === 0) {
+				this.logger.debug(`No ${platform} streamers due for checking this tick`);
+				return;
+			}
+
+			this.logger.debug(`[${platform}] Checking ${toCheck.length} streamers`);
 
 			await this.checkStreamersInBatches(toCheck);
 
 			await this.persistCache();
 
-			const liveCount = this.liveStreamersCache.filter((s) => s.isLive).length;
+			const liveCount = platformCache.filter((s) => s.isLive).length;
 			this.logger.debug(
-				`Tick complete: checked ${toCheck.length}, ${liveCount}/${this.liveStreamersCache.length} live`,
+				`[${platform}] Tick complete: checked ${toCheck.length}, ${liveCount}/${platformCache.length} live`,
 			);
 		} catch (error) {
-			this.logger.error("Failed during tick:", error);
+			this.logger.error(`Failed during ${platform} tick:`, error);
 		} finally {
-			this.isProcessing = false;
+			state.isProcessing = false;
 		}
 	}
 
-	/**
-	 * Selects which streamers to check this tick using the budget-based
-	 * priority + rotation strategy.
-	 *
-	 * - Priority slots: filled by streamers with the highest weighted staleness score,
-	 *   respecting minimum re-check intervals per priority class.
-	 * - Rotation slots: round-robin through all streamers regardless of score,
-	 *   guaranteeing that no streamer is ever starved of checks.
-	 */
-	private selectStreamersToCheck(): LiveStreamerEntry[] {
+	private selectStreamersToCheck(
+		platformCache: LiveStreamerEntry[],
+		config: PlatformScheduleConfig,
+		state: PlatformState,
+	): LiveStreamerEntry[] {
 		const now = Date.now();
 		const selected = new Set<string>();
 		const result: LiveStreamerEntry[] = [];
 
-		// ── Priority slots ──
-		const priorityCandidates = this.liveStreamersCache
-			.filter((entry) => this.isEligibleForPriorityCheck(entry, now))
+		const priorityCandidates = platformCache
+			.filter((entry) => this.isEligibleForPriorityCheck(entry, now, config))
 			.map((entry) => ({
 				entry,
 				score: this.calculatePriorityScore(entry, now),
@@ -158,7 +205,7 @@ export class SharedFollowersService {
 			.sort((a, b) => b.score - a.score);
 
 		for (const { entry } of priorityCandidates) {
-			if (result.length >= SharedFollowersService.PRIORITY_BUDGET) break;
+			if (result.length >= config.priorityBudget) break;
 
 			const key = this.entryKey(entry);
 			if (!selected.has(key)) {
@@ -167,18 +214,16 @@ export class SharedFollowersService {
 			}
 		}
 
-		// ── Rotation slots ──
-		const cacheLength = this.liveStreamersCache.length;
-		if (cacheLength > 0) {
+		if (platformCache.length > 0) {
 			let rotationAdded = 0;
 			let attempts = 0;
 
-			while (rotationAdded < SharedFollowersService.ROTATION_BUDGET && attempts < cacheLength) {
-				const index = this.rotationIndex % cacheLength;
-				this.rotationIndex = (this.rotationIndex + 1) % cacheLength;
+			while (rotationAdded < config.rotationBudget && attempts < platformCache.length) {
+				const index = state.rotationIndex % platformCache.length;
+				state.rotationIndex = (state.rotationIndex + 1) % platformCache.length;
 				attempts++;
 
-				const entry = this.liveStreamersCache[index];
+				const entry = platformCache[index];
 				const key = this.entryKey(entry);
 
 				if (!selected.has(key)) {
@@ -192,74 +237,42 @@ export class SharedFollowersService {
 		return result;
 	}
 
-	/**
-	 * Calculates the weighted staleness score for a cache entry.
-	 *
-	 * Higher score = more urgently needs checking.
-	 * Score = (time since last check) * weight multiplier
-	 */
 	private calculatePriorityScore(entry: LiveStreamerEntry, now: number): number {
 		const staleness = now - entry.lastChecked;
 		const weight = this.getWeight(entry, now);
 		return staleness * weight;
 	}
 
-	/**
-	 * Determines the weight multiplier for an entry based on its status.
-	 *
-	 * - Currently live → LIVE_WEIGHT (3x)
-	 * - Was live within the last 2 weeks → RECENT_WEIGHT (2x)
-	 * - Otherwise → DEFAULT_WEIGHT (1x)
-	 */
 	private getWeight(entry: LiveStreamerEntry, now: number): number {
 		if (entry.isLive) {
-			return SharedFollowersService.LIVE_WEIGHT;
+			return 3;
 		}
 
 		if (entry.lastLiveAt && now - entry.lastLiveAt < SharedFollowersService.TWO_WEEKS_MS) {
-			return SharedFollowersService.RECENT_WEIGHT;
+			return 2;
 		}
 
-		return SharedFollowersService.DEFAULT_WEIGHT;
+		return 1;
 	}
 
-	/**
-	 * Checks whether an entry is eligible for a priority check based on
-	 * minimum re-check intervals. This prevents wasting budget on entries
-	 * that were just checked.
-	 */
-	private isEligibleForPriorityCheck(entry: LiveStreamerEntry, now: number): boolean {
+	private isEligibleForPriorityCheck(entry: LiveStreamerEntry, now: number, config: PlatformScheduleConfig): boolean {
 		if (entry.lastChecked === 0) return true;
 
 		const elapsed = now - entry.lastChecked;
 		const weight = this.getWeight(entry, now);
 
-		if (weight === SharedFollowersService.LIVE_WEIGHT) {
-			return elapsed >= SharedFollowersService.TIER_2_MIN_INTERVAL_MS;
+		if (weight === 3) {
+			return elapsed >= config.minIntervalMs.live;
 		}
 
-		if (weight === SharedFollowersService.RECENT_WEIGHT) {
-			return elapsed >= SharedFollowersService.TIER_1_MIN_INTERVAL_MS;
+		if (weight === 2) {
+			return elapsed >= config.minIntervalMs.recent;
 		}
 
-		// Default weight entries are always eligible for priority picks
-		// (their low weight naturally keeps them from dominating the priority queue)
-		return true;
+		return elapsed >= config.minIntervalMs.default;
 	}
 
-	// ── Batch processing ──
-
-	/**
-	 * Groups the selected streamers by platform, then calls each platform's
-	 * scraper in chunks of its maxBatchSize.
-	 *
-	 * - For Kick (maxBatchSize=1), this means sequential per-channel calls
-	 *   with a delay handled internally by the scraper.
-	 * - For Twitch (maxBatchSize=30), up to 30 channels are checked in a
-	 *   single API call.
-	 */
 	private async checkStreamersInBatches(entries: LiveStreamerEntry[]): Promise<void> {
-		// Group entries by platform
 		const grouped = new Map<PlatformType, LiveStreamerEntry[]>();
 		for (const entry of entries) {
 			const group = grouped.get(entry.platform) ?? [];
@@ -267,7 +280,6 @@ export class SharedFollowersService {
 			grouped.set(entry.platform, group);
 		}
 
-		// Process each platform's group
 		for (const [platform, platformEntries] of grouped) {
 			const scraper = this.scrapers.get(platform);
 			if (!scraper) {
@@ -275,7 +287,6 @@ export class SharedFollowersService {
 				continue;
 			}
 
-			// Split into chunks of maxBatchSize
 			const chunks = this.chunk(
 				platformEntries.map((e) => e.channelId),
 				scraper.maxBatchSize,
@@ -284,14 +295,15 @@ export class SharedFollowersService {
 			for (const channelIds of chunks) {
 				const results = await scraper.checkStatusBatch(channelIds);
 
-				// Apply results back to the cache entries
 				for (const entry of platformEntries) {
 					const result = results.get(entry.channelId);
 					if (!result) continue;
 
+					entry.displayName = result.displayName;
 					entry.isLive = result.isLive;
 					entry.gameName = result.gameName;
 					entry.viewerCount = result.viewerCount;
+					entry.profilePictureUrl = result.profilePictureUrl;
 					entry.startedAt = result.startedAt;
 					entry.lastChecked = Date.now();
 
@@ -303,11 +315,6 @@ export class SharedFollowersService {
 		}
 	}
 
-	// ── Data management ──
-
-	/**
-	 * Reads all followers from both platform storage keys and merges them.
-	 */
 	private async getAllFollowers(): Promise<SharedFollower[]> {
 		const [twitchFollowers, kickFollowers] = await Promise.all([
 			this.sharedStorageService.get("sharedFollowers.twitch"),
@@ -317,29 +324,22 @@ export class SharedFollowersService {
 		return [...(twitchFollowers ?? []), ...(kickFollowers ?? [])];
 	}
 
-	/**
-	 * Synchronizes the in-memory cache with the current follower list.
-	 *
-	 * - Adds new followers with default (unchecked) status.
-	 * - Removes entries for channels that are no longer in the follower list.
-	 * - Preserves existing cache data for channels that are still followed.
-	 */
 	private syncCacheWithFollowers(followers: SharedFollower[]): void {
 		const followerKeys = new Set(followers.map((f) => `${f.platform}:${f.channelId}`));
 		const cacheMap = new Map(this.liveStreamersCache.map((entry) => [this.entryKey(entry), entry]));
 
-		// Add new followers that aren't in the cache yet
 		for (const follower of followers) {
 			const key = `${follower.platform}:${follower.channelId}`;
 			if (!cacheMap.has(key)) {
 				cacheMap.set(key, {
+					displayName: null,
 					channelId: follower.channelId,
 					platform: follower.platform,
 					username: follower.username,
 					isLive: false,
 					gameName: null,
 					viewerCount: 0,
-					thumbnailUrl: null,
+					profilePictureUrl: null,
 					startedAt: null,
 					lastChecked: 0,
 					lastLiveAt: null,
@@ -347,7 +347,6 @@ export class SharedFollowersService {
 			}
 		}
 
-		// Remove entries that are no longer in the follower list
 		for (const key of cacheMap.keys()) {
 			if (!followerKeys.has(key)) {
 				cacheMap.delete(key);
@@ -357,9 +356,6 @@ export class SharedFollowersService {
 		this.liveStreamersCache = Array.from(cacheMap.values());
 	}
 
-	/**
-	 * Persists the current live streamers cache to shared storage.
-	 */
 	private async persistCache(): Promise<void> {
 		try {
 			await this.sharedStorageService.set("sharedFollowers.liveCache", this.liveStreamersCache);
@@ -367,8 +363,6 @@ export class SharedFollowersService {
 			this.logger.warn("Failed to persist live streamers cache:", error);
 		}
 	}
-
-	// ── Utilities ──
 
 	private entryKey(entry: LiveStreamerEntry): string {
 		return `${entry.platform}:${entry.channelId}`;

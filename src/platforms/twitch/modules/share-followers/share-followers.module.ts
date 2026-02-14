@@ -132,8 +132,8 @@ export default class ShareFollowersModule extends TwitchModule {
 				if (edge.node) {
 					collected.set(edge.node.id, {
 						platform: "twitch",
-						username: edge.node.login,
-						channelId: edge.node.id,
+						username: edge.node.displayName,
+						channelId: edge.node.login,
 						profilePictureUrl: edge.node.profileImageURL ?? undefined,
 					});
 				}

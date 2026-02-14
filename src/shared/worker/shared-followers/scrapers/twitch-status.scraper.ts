@@ -35,10 +35,13 @@ export class TwitchStatusScraper implements PlatformStatusScraper {
 		for (const login of channelLogins) {
 			if (!results.has(login)) {
 				results.set(login, {
+					displayName: null,
 					isLive: false,
 					gameName: null,
+					title: null,
 					viewerCount: 0,
 					startedAt: null,
+					profilePictureUrl: null,
 				});
 			}
 		}
@@ -72,14 +75,17 @@ export class TwitchStatusScraper implements PlatformStatusScraper {
 				}),
 			});
 
-			const entries = Object.entries(data) as unknown as Array<[string, TwitchUserData | null]>;
+			const entries = Object.entries(data.data) as unknown as Array<[string, TwitchUserData | null]>;
 			for (const [alias, userData] of entries) {
 				if (!userData) {
 					results.set(alias, {
+						displayName: null,
 						isLive: false,
 						gameName: null,
+						title: null,
 						viewerCount: 0,
 						startedAt: null,
+						profilePictureUrl: null,
 					});
 					continue;
 				}
@@ -87,17 +93,23 @@ export class TwitchStatusScraper implements PlatformStatusScraper {
 				const stream = userData.stream;
 				if (!stream || stream.type !== "live") {
 					results.set(userData.login, {
+						displayName: userData.displayName,
 						isLive: false,
 						gameName: null,
+						title: null,
 						viewerCount: 0,
 						startedAt: null,
+						profilePictureUrl: userData.profileImageURL,
 					});
 				} else {
 					results.set(userData.login, {
+						displayName: userData.displayName,
 						isLive: true,
 						gameName: stream.game?.displayName ?? null,
+						title: stream?.title ?? null,
 						viewerCount: stream.viewersCount ?? 0,
 						startedAt: null,
+						profilePictureUrl: userData.profileImageURL,
 					});
 				}
 			}
@@ -105,10 +117,13 @@ export class TwitchStatusScraper implements PlatformStatusScraper {
 			this.logger.warn("Failed to fetch Twitch status for chunk:", error);
 			for (const login of channelLogins) {
 				results.set(login, {
+					displayName: null,
 					isLive: false,
 					gameName: null,
 					viewerCount: 0,
+					title: null,
 					startedAt: null,
+					profilePictureUrl: null,
 				});
 			}
 		}
@@ -120,7 +135,7 @@ export class TwitchStatusScraper implements PlatformStatusScraper {
 		const fragments = channelLogins
 			.map(
 				(login, index) =>
-					`${login}: user(login: $login${index + 1}) { login displayName stream { type viewersCount game { displayName } } }`,
+					`${login}: user(login: $login${index + 1}) { login displayName profileImageURL(width: 70) stream { type viewersCount title game { displayName } } }`,
 			)
 			.join("\n");
 

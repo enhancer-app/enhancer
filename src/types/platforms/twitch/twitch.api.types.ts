@@ -45,12 +45,14 @@ export type ChannelFollowsResponse = {
 export type TwitchUserData = {
 	login: string;
 	displayName: string;
+	profileImageURL: string;
 	stream: TwitchStreamData | null;
 };
 
 export type TwitchStreamData = {
 	type: string;
 	viewersCount: number;
+	title: string;
 	game: {
 		displayName: string;
 	};
