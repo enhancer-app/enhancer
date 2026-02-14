@@ -1,6 +1,7 @@
 import { Logger } from "$shared/logger/logger.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
+import { SharedFollowersService } from "$shared/worker/shared-followers/shared-followers.service.ts";
 import { SharedStorageService } from "$shared/worker/shared-storage/shared-storage.service.ts";
 import { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
 
@@ -9,11 +10,13 @@ export default class WorkerBackground {
 	private readonly watchtimeService = new WatchtimeService();
 	private readonly settingsService = new SettingsService();
 	private readonly sharedStorageService = new SharedStorageService();
+	private readonly sharedFollowersService = new SharedFollowersService(this.sharedStorageService);
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.watchtimeService,
 		this.settingsService,
 		this.sharedStorageService,
+		this.sharedFollowersService,
 	);
 
 	private isInitialized = false;
@@ -30,6 +33,10 @@ export default class WorkerBackground {
 			this.settingsService.initialize(),
 			this.sharedStorageService.initialize(),
 		]);
+
+		// SharedFollowersService depends on SharedStorageService being initialized first
+		await this.sharedFollowersService.initialize();
+
 		this.isInitialized = true;
 		this.logger.info("Background worker started");
 
