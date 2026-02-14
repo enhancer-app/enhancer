@@ -302,6 +302,7 @@ export class SharedFollowersService {
 					entry.displayName = result.displayName;
 					entry.isLive = result.isLive;
 					entry.gameName = result.gameName;
+					entry.gameName = result.title;
 					entry.viewerCount = result.viewerCount;
 					entry.profilePictureUrl = result.profilePictureUrl;
 					entry.startedAt = result.startedAt;
@@ -338,6 +339,7 @@ export class SharedFollowersService {
 					username: follower.username,
 					isLive: false,
 					gameName: null,
+					title: null,
 					viewerCount: 0,
 					profilePictureUrl: null,
 					startedAt: null,

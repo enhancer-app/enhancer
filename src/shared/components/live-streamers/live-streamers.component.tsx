@@ -159,6 +159,7 @@ interface LiveStreamerData {
 	displayName: string | null;
 	username: string;
 	gameName: string | null;
+	title: string | null;
 	viewerCount: number;
 	channelId: string;
 	profilePictureUrl: string | null;
@@ -188,6 +189,7 @@ export default function LiveStreamersComponent({ currentPlatform, workerService 
 						displayName: string | null;
 						username: string;
 						gameName: string | null;
+						title: string | null;
 						viewerCount: number;
 						channelId: string;
 						profilePictureUrl: string | null;
@@ -196,6 +198,7 @@ export default function LiveStreamersComponent({ currentPlatform, workerService 
 						displayName: s.displayName,
 						username: s.username,
 						gameName: s.gameName,
+						title: s.title,
 						viewerCount: s.viewerCount,
 						channelId: s.channelId,
 						profilePictureUrl: s.profilePictureUrl,

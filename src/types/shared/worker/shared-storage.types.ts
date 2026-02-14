@@ -24,6 +24,7 @@ export interface LiveStreamerEntry {
 	displayName: string | null;
 	isLive: boolean;
 	gameName: string | null;
+	title: string | null;
 	viewerCount: number;
 	profilePictureUrl: string | null;
 	startedAt: string | null;
