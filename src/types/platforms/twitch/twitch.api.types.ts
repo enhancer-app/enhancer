@@ -41,3 +41,19 @@ export type ChannelFollowsResponse = {
 		follows: FollowConnection;
 	} | null;
 };
+
+export type TwitchUserData = {
+	login: string;
+	displayName: string;
+	stream: TwitchStreamData | null;
+};
+
+export type TwitchStreamData = {
+	type: string;
+	viewersCount: number;
+	game: {
+		displayName: string;
+	};
+};
+
+export type TwitchMultiStreamResponse = Record<string, TwitchUserData | null>;

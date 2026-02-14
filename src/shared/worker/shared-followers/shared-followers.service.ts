@@ -57,7 +57,7 @@ export class SharedFollowersService {
 
 	async initialize(): Promise<void> {
 		await this.loadPersistedCache();
-		this.startTickInterval();
+		await this.startTickInterval();
 		this.logger.info("Shared followers service initialized");
 	}
 
@@ -87,7 +87,8 @@ export class SharedFollowersService {
 		}
 	}
 
-	private startTickInterval(): void {
+	private async startTickInterval() {
+		await this.tick();
 		this.tickInterval = setInterval(async () => {
 			await this.tick();
 		}, SharedFollowersService.TICK_INTERVAL_MS);
