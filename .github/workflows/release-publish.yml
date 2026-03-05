@@ -95,7 +95,7 @@ jobs:
     needs: build-release
     if: needs.build-release.outputs.EXISTS == 'false'
     runs-on: ubuntu-latest
-    environment: production
+    environment: release
     steps:
       - run: echo "Manual approval received."
 

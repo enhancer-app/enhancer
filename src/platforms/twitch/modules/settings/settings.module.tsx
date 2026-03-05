@@ -79,6 +79,14 @@ export default class SettingsModule extends TwitchModule {
 		} as const;
 		this.SETTING_DEFINITIONS = [
 			{
+				id: "chattersEnabled",
+				title: "Enable Chatters Counter",
+				description: "Shows the number of chatters (users connected to chat) next to the viewer count.",
+				type: "toggle",
+				tabIndex: tabIndexes.General,
+				requiresRefreshToDisable: true,
+			},
+			{
 				id: "realVideoTimeEnabled",
 				title: "Enable Real Video Time",
 				description: "Displays the real-world time of the VOD.",
