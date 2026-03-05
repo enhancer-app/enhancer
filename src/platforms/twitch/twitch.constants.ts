@@ -30,4 +30,5 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	pinnedStreamersEnabled: true,
 	xayoWatchtimeEnabled: true,
 	channelSection: true,
+	chattersEnabled: true,
 };
