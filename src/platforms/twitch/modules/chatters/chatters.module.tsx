@@ -14,6 +14,7 @@ export default class ChattersModule extends TwitchModule {
 
 	config: TwitchModuleConfig = {
 		name: "chatters",
+		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chattersEnabled"),
 		appliers: [
 			{
 				type: "selector",
@@ -33,6 +34,15 @@ export default class ChattersModule extends TwitchModule {
 				callback: this.createTotalChattersComponent.bind(this),
 				key: "chatters",
 				validateUrl: ChattersModule.URL_CONFIG,
+				once: true,
+			},
+			{
+				type: "selector",
+				selectors: [".ffz-stat-text.tw-stat__value"],
+				callback: this.createTotalChattersComponent.bind(this),
+				key: "chatters-ffz",
+				validateUrl: ChattersModule.URL_CONFIG,
+				useParent: true,
 				once: true,
 			},
 			{
@@ -85,7 +95,8 @@ export default class ChattersModule extends TwitchModule {
 		);
 	}
 
-	private createTotalChattersComponent(elements: Element[]) {
+	private async createTotalChattersComponent(elements: Element[]) {
+		if (!(await this.isModuleEnabled())) return;
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), elements, "span");
 
 		this.requestUpdate();
@@ -108,6 +119,7 @@ export default class ChattersModule extends TwitchModule {
 	}
 
 	private async createIndividualChattersComponents(elements: Element[]) {
+		if (!(await this.isModuleEnabled())) return;
 		await this.commonUtils().delay(300);
 		elements.forEach((root) => {
 			const indicators = this.getFilteredIndicators(root);
@@ -138,8 +150,6 @@ export default class ChattersModule extends TwitchModule {
 		if (loadingLogins.length > 0) {
 			await this.refreshChatters(loadingLogins);
 		}
-
-		return true;
 	}
 
 	private async refreshChatters(loginsToUpdate: string[] = []) {
@@ -233,6 +243,7 @@ export default class ChattersModule extends TwitchModule {
 	}
 
 	private async reloadCounters() {
+		if (!(await this.isModuleEnabled())) return;
 		Object.values(this.chattersCounters).forEach((counter) => {
 			counter.value = ChattersModule.LOADING_VALUE;
 		});
