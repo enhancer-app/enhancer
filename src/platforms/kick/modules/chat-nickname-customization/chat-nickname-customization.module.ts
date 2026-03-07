@@ -1,5 +1,7 @@
 import KickModule from "$kick/kick.module.ts";
+import { KICK_FUNNY_NAMES } from "$shared/april-thing/nicknames.ts";
 import { ChatNicknameCustomizationHelper } from "$shared/module/helpers/chat-nickname-customization.helper.ts";
+import type { EnhancerUser } from "$types/apis/enhancer.apis.ts";
 import type { KickChatMessageData, KickChatMessageEvent } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
@@ -29,7 +31,11 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 		];
 		if (usernameElements.length < 1) return;
 
-		const userCustomization = this.enhancerApi().findUserForCurrentChannel(message.sender.id.toString());
+		let userCustomization = null; //this.enhancerApi().findUserForCurrentChannel(message.sender.id.toString());
+		const funnyNickname = KICK_FUNNY_NAMES[message.sender.username.toLowerCase()];
+		if (!userCustomization && funnyNickname) {
+			userCustomization = { customNickname: funnyNickname } as EnhancerUser;
+		}
 		if (!userCustomization) return;
 
 		usernameElements.forEach((usernameElement) => {
