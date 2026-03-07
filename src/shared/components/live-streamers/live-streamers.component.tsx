@@ -1,3 +1,4 @@
+import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import { useEffect, useState } from "preact/hooks";
@@ -19,6 +20,8 @@ const Container = styled.div<{ $platform: PlatformType }>`
 		return "inherit";
 	}};
 	border-radius: 8px;
+
+	a { text-decoration: none; }
 `;
 
 const Header = styled.div`
@@ -42,13 +45,18 @@ const StreamerItem = styled.a`
 	text-decoration: none;
 	color: inherit;
 	transition: background 0.2s ease;
+
+	&:hover {
+		opacity: 0.8;
+	}
 `;
 
-const Avatar = styled.img<{ $platform: PlatformType }>`
+const Avatar = styled.img<{ $platform: PlatformType; $isLive: boolean }>`
 	width: 32px;
 	height: 32px;
 	border-radius: 50%;
-	border: 2px solid ${({ $platform }) => {
+	border: 2px solid ${({ $platform, $isLive }) => {
+		if (!$isLive) return "transparent";
 		switch ($platform) {
 			case "kick":
 				return "#53FC18";
@@ -59,6 +67,8 @@ const Avatar = styled.img<{ $platform: PlatformType }>`
 		}
 	}};
 	padding: 1px;
+	filter: ${({ $isLive }) => ($isLive ? "none" : "grayscale(100%)")};
+	opacity: ${({ $isLive }) => ($isLive ? "1" : "0.7")};
 `;
 
 const StreamerInfo = styled.div`
@@ -75,11 +85,12 @@ const TopRow = styled.div`
 	width: 100%;
 `;
 
-const Username = styled.div<{ $platform: PlatformType }>`
+const Username = styled.div<{ $platform: PlatformType; $isLive: boolean }>`
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	padding-right: 8px;
+	opacity: ${({ $isLive }) => ($isLive ? "1" : "0.7")};
 	${({ $platform }) =>
 		$platform === "twitch"
 			? `
@@ -128,6 +139,13 @@ const ViewerCount = styled.div<{ $platform: PlatformType }>`
     `}
 `;
 
+const OfflineDate = styled.div`
+	white-space: nowrap;
+	flex-shrink: 0;
+	color: #adadb8;
+	font-size: 12px;
+`;
+
 const LiveDot = styled.span<{ $platform: PlatformType }>`
 	display: inline-block;
 	width: 8px;
@@ -149,11 +167,41 @@ const EmptyText = styled.div`
 `;
 
 const LoadingText = styled.div`
-    font-size: 12px;
-    color: #adadb8;
-    text-align: center;
-    padding: 20px;
+	font-size: 12px;
+	color: #adadb8;
+	text-align: center;
+	padding: 20px;
 `;
+
+const Footer = styled.div`
+	display: flex;
+	width: 100%;
+	padding-top: 12px;
+`;
+
+const ToggleButton = styled.button`
+	background: transparent;
+	border: none;
+	color: #adadb8;
+	cursor: pointer;
+	font-size: 12px;
+	text-decoration: none;
+	padding: 4px 8px;
+
+	&:hover {
+		color: #efeff1;
+	}
+`;
+
+const SeeLessButton = styled(ToggleButton)`
+    margin-left: auto;
+`;
+
+const SeeMoreButton = styled(ToggleButton)`
+    margin-right: auto;
+`;
+
+// --- Interfaces & Helpers ---
 
 interface LiveStreamerData {
 	displayName: string | null;
@@ -164,9 +212,12 @@ interface LiveStreamerData {
 	channelId: string;
 	profilePictureUrl: string | null;
 	platform: PlatformType;
+	isLive: boolean;
+	lastLiveAt: number | null;
 }
 
 const FETCH_INTERVAL_MS = 30_000;
+const PAGE_SIZE = 10;
 
 interface LiveStreamersComponentProps {
 	currentPlatform: PlatformType;
@@ -176,14 +227,16 @@ interface LiveStreamersComponentProps {
 export default function LiveStreamersComponent({ currentPlatform, workerService }: LiveStreamersComponentProps) {
 	const [streamers, setStreamers] = useState<LiveStreamerData[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
 	const fetchStreamers = async () => {
 		try {
 			const response = await workerService.send("getLiveStreamersCache", {});
 			if (!response) return;
 
-			const liveStreamers: LiveStreamerData[] = response.streamers
-				.filter((s: { platform: PlatformType; isLive: boolean }) => s.platform !== currentPlatform && s.isLive)
+			// 1. Map raw data to our interface
+			const mappedStreamers: LiveStreamerData[] = response.streamers
+				.filter((s: { platform: PlatformType }) => s.platform !== currentPlatform) // Show all not on current platform
 				.map(
 					(s: {
 						displayName: string | null;
@@ -194,6 +247,8 @@ export default function LiveStreamersComponent({ currentPlatform, workerService 
 						channelId: string;
 						profilePictureUrl: string | null;
 						platform: PlatformType;
+						isLive: boolean;
+						lastLiveAt: number | null;
 					}) => ({
 						displayName: s.displayName,
 						username: s.username,
@@ -203,11 +258,25 @@ export default function LiveStreamersComponent({ currentPlatform, workerService 
 						channelId: s.channelId,
 						profilePictureUrl: s.profilePictureUrl,
 						platform: s.platform,
+						isLive: s.isLive,
+						lastLiveAt: s.lastLiveAt,
 					}),
-				)
-				.sort((a: LiveStreamerData, b: LiveStreamerData) => b.viewerCount - a.viewerCount);
+				);
 
-			setStreamers(liveStreamers);
+			// 2. Sort: Live (by viewers) -> Offline (by date)
+			mappedStreamers.sort((a, b) => {
+				if (a.isLive && !b.isLive) return -1;
+				if (!a.isLive && b.isLive) return 1;
+
+				if (a.isLive) {
+					// Both Live: Sort by Viewers Desc
+					return b.viewerCount - a.viewerCount;
+				}
+				// Both Offline: Sort by LastLiveAt Desc
+				return (b.lastLiveAt || 0) - (a.lastLiveAt || 0);
+			});
+
+			setStreamers(mappedStreamers);
 		} catch (error) {
 			console.error("Failed to fetch live streamers:", error);
 		} finally {
@@ -232,10 +301,6 @@ export default function LiveStreamersComponent({ currentPlatform, workerService 
 		}
 	};
 
-	const getPlatformDisplayName = (platform: string): string => {
-		return platform.charAt(0).toUpperCase() + platform.slice(1).toLowerCase();
-	};
-
 	const formatViewers = (count: number): string => {
 		if (Math.abs(count) < 1000) {
 			return count.toString();
@@ -243,10 +308,21 @@ export default function LiveStreamersComponent({ currentPlatform, workerService 
 		return `${Number.parseFloat((count / 1000).toFixed(1))}K`;
 	};
 
+	const getPlatformDisplayName = (platform: string): string => {
+		return platform.charAt(0).toUpperCase() + platform.slice(1).toLowerCase();
+	};
+
+	const handleShowMore = () => setVisibleCount((prev) => prev + PAGE_SIZE);
+	const handleShowLess = () => setVisibleCount(PAGE_SIZE);
+
+	const visibleStreamers = streamers.slice(0, visibleCount);
+	const hasMore = visibleCount < streamers.length;
+	const isExpanded = visibleCount > PAGE_SIZE;
+
 	if (loading) {
 		return (
 			<Container $platform={currentPlatform}>
-				<Header>Enhancer Followers</Header>
+				<Header>Shared Followers</Header>
 				<LoadingText>Loading...</LoadingText>
 			</Container>
 		);
@@ -255,44 +331,80 @@ export default function LiveStreamersComponent({ currentPlatform, workerService 
 	if (streamers.length === 0) {
 		return (
 			<Container $platform={currentPlatform}>
-				<Header>Enhancer Followers</Header>
-				<EmptyText>No live streamers</EmptyText>
+				<Header>Shared Followers</Header>
+				<EmptyText>No shared followers found</EmptyText>
 			</Container>
 		);
 	}
 
 	return (
 		<Container $platform={currentPlatform}>
-			<Header>Enhancer Followers</Header>
+			<Header>Shared Followers</Header>
 			<StreamerList>
-				{streamers.map((streamer) => (
-					<StreamerItem
-						key={streamer.channelId}
-						href={getStreamerUrl(streamer.username, streamer.platform) || "#"}
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						<Avatar src={streamer.profilePictureUrl ?? ""} alt={streamer.username} $platform={streamer.platform} />
-						<StreamerInfo>
-							<TopRow>
-								<Username
-									$platform={currentPlatform}
-									title={`${streamer.displayName ?? streamer.username} live at ${getPlatformDisplayName(streamer.platform)}`}
-								>
-									{streamer.displayName ?? streamer.username}
-								</Username>
-								<ViewerCount $platform={currentPlatform}>
-									<LiveDot $platform={currentPlatform} />
-									{formatViewers(streamer.viewerCount)}
-								</ViewerCount>
-							</TopRow>
-							<Game $platform={currentPlatform} title={`${streamer.gameName}`}>
-								{streamer.gameName ?? "Unknown"}
-							</Game>
-						</StreamerInfo>
-					</StreamerItem>
-				))}
+				{visibleStreamers.map((streamer) => {
+					// Only show tooltip if they have a title (usually only live streams do)
+					const StreamerWrapper = streamer.title
+						? ({ children }: { children: preact.ComponentChildren }) => (
+								<TooltipComponent content={streamer.title} position="right">
+									{children}
+								</TooltipComponent>
+							)
+						: ({ children }: { children: preact.ComponentChildren }) => <>{children}</>;
+
+					return (
+						<StreamerWrapper key={streamer.channelId}>
+							<StreamerItem
+								key={streamer.channelId}
+								href={getStreamerUrl(streamer.username, streamer.platform) || "#"}
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								<Avatar
+									src={streamer.profilePictureUrl ?? ""}
+									alt={streamer.username}
+									$platform={streamer.platform}
+									$isLive={streamer.isLive}
+								/>
+								<StreamerInfo>
+									<TopRow>
+										<Username $platform={currentPlatform} $isLive={streamer.isLive}>
+											{streamer.displayName ?? streamer.username}
+										</Username>
+
+										{streamer.isLive ? (
+											<ViewerCount $platform={currentPlatform}>
+												<LiveDot $platform={currentPlatform} />
+												{formatViewers(streamer.viewerCount)}
+											</ViewerCount>
+										) : (
+											<OfflineDate>Offline</OfflineDate>
+										)}
+									</TopRow>
+									<Game
+										$platform={currentPlatform}
+										title={`${streamer.gameName ?? getPlatformDisplayName(streamer.platform)}`}
+									>
+										{streamer.gameName ?? getPlatformDisplayName(streamer.platform)}
+									</Game>
+								</StreamerInfo>
+							</StreamerItem>
+						</StreamerWrapper>
+					);
+				})}
 			</StreamerList>
+
+			<Footer>
+				{hasMore && (
+					<SeeMoreButton type="button" onClick={handleShowMore}>
+						See More
+					</SeeMoreButton>
+				)}
+				{isExpanded && (
+					<SeeLessButton type="button" onClick={handleShowLess}>
+						See Less
+					</SeeLessButton>
+				)}
+			</Footer>
 		</Container>
 	);
 }
