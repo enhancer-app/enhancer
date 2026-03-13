@@ -38,6 +38,15 @@ export default class ChattersModule extends TwitchModule {
 			},
 			{
 				type: "selector",
+				selectors: [".sunlight-live-indicator"],
+				callback: this.createTotalChattersComponent.bind(this),
+				key: "chatters-stream-manager",
+				validateUrl: (url) => url.includes("/stream-manager"),
+				useParent: true,
+				once: true,
+			},
+			{
+				type: "selector",
 				selectors: [".ffz-stat-text.tw-stat__value"],
 				callback: this.createTotalChattersComponent.bind(this),
 				key: "chatters-ffz",
@@ -95,11 +104,11 @@ export default class ChattersModule extends TwitchModule {
 		);
 	}
 
-	private async createTotalChattersComponent(elements: Element[]) {
+	private async createTotalChattersComponent(elements: Element[], key: string) {
 		if (!(await this.isModuleEnabled())) return;
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), elements, "span");
 
-		this.requestUpdate();
+		await this.requestUpdate();
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(() => this.requestUpdate(), ChattersModule.UPDATE_INTERVAL_TIME);
 
@@ -111,7 +120,11 @@ export default class ChattersModule extends TwitchModule {
 					}
 					position="right"
 				>
-					<ChattersComponent click={this.refreshChatters.bind(this)} counter={this.totalChattersCounter} />
+					<ChattersComponent
+						click={this.refreshChatters.bind(this)}
+						counter={this.totalChattersCounter}
+						isStreamManager={key === "chatters-stream-manager"}
+					/>
 				</TooltipComponent>,
 				element,
 			);
@@ -264,17 +277,36 @@ const Wrapper = styled.span`
 	}
 `;
 
+const StreamManagerWrapper = styled.span`
+	background-color: #ff8280;
+	font-weight: 600 !important;
+	font-size: 11px;
+	padding: 3px;
+	border-radius: 4px;
+	color: black;
+	white-space: nowrap;
+	margin-left: 8px;
+
+	&:hover {
+		opacity: 0.75;
+		cursor: pointer;
+	}
+`;
+
 const formatChatters = (chatters: number) =>
 	Math.abs(chatters) < 10000 ? chatters.toString() : chatters.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
 const ChattersComponent = ({
 	click,
 	counter,
+	isStreamManager,
 }: {
 	counter: Signal<number>;
 	click: () => void;
-}) => (
-	<Wrapper onClick={click}>
-		({counter.value === ChattersModule.LOADING_VALUE ? "Loading..." : formatChatters(counter.value)})
-	</Wrapper>
-);
+	isStreamManager?: boolean;
+}) => {
+	const chatters = counter.value === ChattersModule.LOADING_VALUE ? "Loading..." : formatChatters(counter.value);
+	const Container = isStreamManager ? StreamManagerWrapper : Wrapper;
+
+	return <Container onClick={click}>{isStreamManager ? `CHATTERS: ${chatters}` : `(${chatters})`}</Container>;
+};
