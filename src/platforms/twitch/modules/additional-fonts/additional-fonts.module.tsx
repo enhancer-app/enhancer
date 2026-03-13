@@ -3,15 +3,7 @@ import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class AdditionalFontsModule extends TwitchModule {
-	private static FONT_LIST: string[] = [
-		"Cherry Bomb One",
-		"Fredoka",
-		"Darumadrop One",
-		"Dela Gothic One",
-		"Potta One",
-		"Shrikhand",
-	];
-	private readonly additionalFontsHelper = new AdditionalFontsHelper();
+	private readonly additionalFontsHelper = new AdditionalFontsHelper(this.enhancerApi());
 
 	readonly config: TwitchModuleConfig = {
 		name: "additional-fonts",
@@ -24,10 +16,22 @@ export default class AdditionalFontsModule extends TwitchModule {
 				callback: this.run.bind(this),
 				once: true,
 			},
+			{
+				type: "event",
+				event: "extension:joined-channel",
+				callback: this.updateFonts.bind(this),
+				key: "update-fonts",
+			},
 		],
 	};
 
 	private async run(elements: Element[]) {
-		this.additionalFontsHelper.loadFonts(elements, AdditionalFontsModule.FONT_LIST);
+		this.additionalFontsHelper.loadFontsWithTruncation(elements, this.logger);
+	}
+
+	public async updateFonts() {
+		const head = document.querySelector("head");
+		if (!head) return;
+		this.additionalFontsHelper.loadFontsWithTruncation([head], this.logger);
 	}
 }
