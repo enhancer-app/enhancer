@@ -29,6 +29,7 @@ export type TwitchSettings = {
 	pinnedStreamersEnabled: boolean;
 	xayoWatchtimeEnabled: boolean;
 	channelSection: boolean;
+	chattersEnabled: boolean;
 };
 
 export type TwitchSettingsEvents = {
