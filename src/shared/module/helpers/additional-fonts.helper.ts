@@ -3,20 +3,24 @@ import type EnhancerApi from "$shared/apis/enhancer.api.ts";
 export class AdditionalFontsHelper {
 	private static readonly MAX_FONTS = 50;
 
+	private static cleanupAdditionalFontLinks(elements: Element[]): void {
+		for (const head of elements) {
+			const existingLinks = head.querySelectorAll("link.enhancer-additional-font");
+			existingLinks.forEach((link) => {
+				if (link.parentNode) {
+					link.parentNode.removeChild(link);
+				}
+			});
+		}
+	}
+
 	constructor(private readonly enhancerApi: EnhancerApi) {}
 
 	loadFonts(elements: Element[], fontList: string[]): void {
 		if (elements.length === 0) return;
 
 		if (fontList.length === 0) {
-			for (const head of elements) {
-				const existingLinks = head.querySelectorAll("link.enhancer-additional-font");
-				existingLinks.forEach((link) => {
-					if (link.parentNode) {
-						link.parentNode.removeChild(link);
-					}
-				});
-			}
+			AdditionalFontsHelper.cleanupAdditionalFontLinks(elements);
 			return;
 		}
 
@@ -31,12 +35,7 @@ export class AdditionalFontsHelper {
 		fontLinkElement.classList.add("enhancer-additional-font");
 
 		for (const head of elements) {
-			const existingLinks = head.querySelectorAll("link.enhancer-additional-font");
-			existingLinks.forEach((link) => {
-				if (link.parentNode) {
-					link.parentNode.removeChild(link);
-				}
-			});
+			AdditionalFontsHelper.cleanupAdditionalFontLinks([head]);
 			head.appendChild(fontLinkElement.cloneNode(true));
 		}
 	}
