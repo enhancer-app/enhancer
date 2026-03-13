@@ -8,9 +8,7 @@ export class AdditionalFontsHelper {
 		for (const head of elements) {
 			const existingLinks = head.querySelectorAll("link.enhancer-additional-font");
 			existingLinks.forEach((link) => {
-				if (link.parentNode) {
-					link.parentNode.removeChild(link);
-				}
+				link.remove();
 			});
 		}
 	}
@@ -28,16 +26,20 @@ export class AdditionalFontsHelper {
 		const familyQuery = fontList.map((font) => `family=${font.replace(/\s+/g, "+")}`).join("&");
 		const url = `https://fonts.googleapis.com/css2?${familyQuery}&display=swap`;
 
-		const fontLinkElement = document.createElement("link");
-		fontLinkElement.rel = "stylesheet";
-		fontLinkElement.href = url;
-		fontLinkElement.setAttribute("media", "print");
-		fontLinkElement.setAttribute("onload", "this.media='all'");
-		fontLinkElement.classList.add("enhancer-additional-font");
-
 		for (const head of elements) {
 			AdditionalFontsHelper.cleanupAdditionalFontLinks([head]);
-			head.appendChild(fontLinkElement.cloneNode(true));
+
+			const fontLinkElement = document.createElement("link");
+			fontLinkElement.rel = "stylesheet";
+			fontLinkElement.href = url;
+			fontLinkElement.media = "print";
+			fontLinkElement.classList.add("enhancer-additional-font");
+
+			fontLinkElement.addEventListener("load", () => {
+				fontLinkElement.media = "all";
+			});
+
+			head.appendChild(fontLinkElement);
 		}
 	}
 
