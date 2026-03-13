@@ -108,7 +108,7 @@ export default class ChattersModule extends TwitchModule {
 		if (!(await this.isModuleEnabled())) return;
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), elements, "span");
 
-		await this.requestUpdate();
+		this.requestUpdate();
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(() => this.requestUpdate(), ChattersModule.UPDATE_INTERVAL_TIME);
 
@@ -277,20 +277,13 @@ const Wrapper = styled.span`
 	}
 `;
 
-const StreamManagerWrapper = styled.span`
+const StreamManagerWrapper = styled(Wrapper)`
 	background-color: #ff8280;
-	font-weight: 600 !important;
 	font-size: 11px;
 	padding: 3px;
 	border-radius: 4px;
-	color: black;
-	white-space: nowrap;
+color: #000;
 	margin-left: 8px;
-
-	&:hover {
-		opacity: 0.75;
-		cursor: pointer;
-	}
 `;
 
 const formatChatters = (chatters: number) =>
