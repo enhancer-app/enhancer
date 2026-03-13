@@ -1,4 +1,5 @@
 import type EnhancerApi from "$shared/apis/enhancer.api.ts";
+import type { Logger } from "$shared/logger/logger.ts";
 
 export class AdditionalFontsHelper {
 	private static readonly MAX_FONTS = 50;
@@ -63,7 +64,7 @@ export class AdditionalFontsHelper {
 		return Array.from(uniqueFonts.values());
 	}
 
-	loadFontsWithTruncation(elements: Element[], logger: Console): void {
+	loadFontsWithTruncation(elements: Element[], logger: Logger): void {
 		let fonts = this.getUsedFonts();
 		if (fonts.length > AdditionalFontsHelper.MAX_FONTS) {
 			logger.warn(`Too many fonts to load (${fonts.length}), truncating to ${AdditionalFontsHelper.MAX_FONTS}`);
