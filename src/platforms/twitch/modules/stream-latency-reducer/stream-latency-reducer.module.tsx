@@ -32,9 +32,15 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 			}
 		}, 1000);
 
-		async function playbackRateSetHook(this: HTMLVideoElement, rate: number) {
+		function playbackRateSetHook(this: HTMLVideoElement, rate: number) {
 			// Workaround for twitch native delay reducer interfering, block any other attempts of changing playbackRate other than ours or if it is the VOD
-			const isAllowed = (this as any)._enhancerAllowRateChange || window.location.href.includes("/videos/");
+			const pathname = window.location.pathname;
+			const isVodOrClipRoute =
+				pathname.includes("/videos/") ||
+				pathname.includes("/video/") ||
+				pathname.includes("/clip/") ||
+				window.location.hostname === "clips.twitch.tv";
+			const isAllowed = (this as any)._enhancerAllowRateChange || isVodOrClipRoute;
 			if (isAllowed) {
 				return orig_playbackRate_set.call(this, rate);
 			}
@@ -62,7 +68,8 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 
 	private changePlaybackSpeed(video: HTMLVideoElement, rate: number) {
 		if (
-			!this.getFFZAllowCatchup() &&
+			// do not change this, it has to check if it is === false (it can be undefined)
+			this.getFFZAllowCatchup() === false &&
 			video &&
 			Object.getOwnPropertyDescriptor(video, "playbackRate")?.set !== undefined
 		) {
