@@ -32,6 +32,18 @@ export default class SettingsModule extends KickModule {
 				callback: this.loadSettings.bind(this),
 				key: "settings-refresh",
 			},
+			{
+				type: "event",
+				event: "kick:settings:_disableExtensionOnDashboard",
+				callback: (value) => {
+					if (value) {
+						document.cookie = "_enhancer_disable_dashboard=true; domain=.kick.com; path=/; max-age=315360000";
+					} else {
+						document.cookie = "_enhancer_disable_dashboard=; domain=.kick.com; path=/; max-age=0";
+					}
+				},
+				key: "_disableExtensionOnDashboard",
+			},
 		],
 	};
 
@@ -97,6 +109,14 @@ export default class SettingsModule extends KickModule {
 				id: "channelSection",
 				title: "Channel Section",
 				description: "Shows a section with watch time and quick access links.",
+				type: "toggle",
+				tabIndex: tabIndexes.General,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "_disableExtensionOnDashboard",
+				title: "Disable Enhancer on Dashboard",
+				description: "Disables loading Enhancer on dashboard page (dashboard.kick.com).",
 				type: "toggle",
 				tabIndex: tabIndexes.General,
 				requiresRefreshToDisable: true,
