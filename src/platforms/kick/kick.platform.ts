@@ -64,6 +64,10 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 	}
 
 	shouldStart(location: Location): boolean {
-		return location.hostname !== "docs.kick.com";
+		const blocklist = ["docs.kick.com", "dev.kick.com", "help.kick.com"];
+		if (document.cookie.includes("_enhancer_disable_dashboard=true")) {
+			blocklist.push("dashboard.kick.com");
+		}
+		return !blocklist.includes(location.hostname);
 	}
 }

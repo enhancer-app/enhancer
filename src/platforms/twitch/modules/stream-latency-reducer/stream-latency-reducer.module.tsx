@@ -21,8 +21,8 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 	private async run() {
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(async () => {
+			if (!this.isLive()) return;
 			const status = await this.getPlaybackRateStatus();
-
 			if (status === "catchingUpMax") {
 				await this.setPlaybackRateMode("catchUpMax");
 			} else if (status === "catchingUpMin") {
@@ -32,11 +32,19 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 			}
 		}, 1000);
 
-		async function playbackRateSetHook(this: HTMLVideoElement, rate: number) {
-			// Workaround for twitch native delay reducer interfering, block any other attempts of changing playbackRate other than ours
-			if (!(this as any)._enhancerAllowRateChange) return rate;
-
-			return orig_playbackRate_set.call(this, rate);
+		function playbackRateSetHook(this: HTMLVideoElement, rate: number) {
+			// Workaround for twitch native delay reducer interfering, block any other attempts of changing playbackRate other than ours or if it is the VOD
+			const pathname = window.location.pathname;
+			const isVodOrClipRoute =
+				pathname.includes("/videos/") ||
+				pathname.includes("/video/") ||
+				pathname.includes("/clip/") ||
+				window.location.hostname === "clips.twitch.tv";
+			const isAllowed = (this as any)._enhancerAllowRateChange || isVodOrClipRoute;
+			if (isAllowed) {
+				return orig_playbackRate_set.call(this, rate);
+			}
+			return rate;
 		}
 
 		let orig_playbackRate_set: any;
@@ -60,6 +68,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 
 	private changePlaybackSpeed(video: HTMLVideoElement, rate: number) {
 		if (
+			// do not change this, it has to check if it is === false (it can be undefined)
 			this.getFFZAllowCatchup() === false &&
 			video &&
 			Object.getOwnPropertyDescriptor(video, "playbackRate")?.set !== undefined
@@ -113,7 +122,6 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		if (!mediaPlayer) return;
 		const latency = this.getLatency();
 		if (!latency) return "invalid";
-		if (!this.isLive()) return "invalid";
 
 		// Disable reducer without Low Latency mode
 		if (window.localStorage.getItem("lowLatencyModeEnabled") === "false") return "caughtUp";
