@@ -1,5 +1,5 @@
 import KickModule from "$kick/kick.module.ts";
-import { KICK_FUNNY_IMAGES, KICK_FUNNY_NAMES } from "$shared/april-thing/nicknames.ts";
+import { FUNNY_IMAGES, FUNNY_NAMES } from "$shared/funny-thing/funny-things.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class FunnyModule extends KickModule {
@@ -35,6 +35,9 @@ export default class FunnyModule extends KickModule {
 				once: true,
 			},
 		],
+		isModuleEnabledCallback: async () => {
+			return (await this.settingsService().getSettingsKey("_funnyThings")) && this.commonUtils().isFunnyDay();
+		},
 	};
 
 	private replaceChannelName(elements: Element[]) {
@@ -42,7 +45,7 @@ export default class FunnyModule extends KickModule {
 			const element = _element as HTMLElement;
 			const originalName = element.textContent || "";
 			const currentUsername = originalName.toLowerCase().trim();
-			const funnyName = KICK_FUNNY_NAMES[currentUsername];
+			const funnyName = FUNNY_NAMES[currentUsername];
 
 			if (funnyName) {
 				element.textContent = funnyName;
@@ -63,7 +66,7 @@ export default class FunnyModule extends KickModule {
 			const originalName = element.alt || "";
 			const originalImage = element.src;
 			const currentUsername = originalName.toLowerCase().trim();
-			const funnyImage = KICK_FUNNY_IMAGES[currentUsername];
+			const funnyImage = FUNNY_IMAGES[currentUsername];
 
 			if (funnyImage) {
 				element.src = funnyImage;
