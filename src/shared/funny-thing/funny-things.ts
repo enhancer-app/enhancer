@@ -21,7 +21,7 @@ export const FUNNY_NAMES: Record<string, string> = {
 	delord: "delmniak",
 };
 
-export const FUNNY_IMAGES: Record<string, string> = {
+export const FUNNY_AVATARS: Record<string, string> = {
 	arquel: "https://cdn-badges.enhancer.at/funny-avatars/arquel.png",
 	gambit_florydy: "https://cdn-badges.enhancer.at/funny-avatars/gambit_florydy.png",
 	h2p_gucio: "https://cdn-badges.enhancer.at/funny-avatars/h2p_gucio.png",
@@ -29,4 +29,12 @@ export const FUNNY_IMAGES: Record<string, string> = {
 	meduska: "https://cdn-badges.enhancer.at/funny-avatars/meduska.jpg",
 	adamcy: "https://cdn-badges.enhancer.at/funny-avatars/obiecuje.jpg",
 	xntentacion: "https://cdn-badges.enhancer.at/funny-avatars/xntentacion.jpg",
+};
+
+export const FUNNY_TITLES: Record<string, string> = {
+	h2p_gucio: "Dzisiaj o 19:00 dziki zachód, bez wymówek, obiecuje",
+};
+
+export const FUNNY_CATEGORIES: Record<string, string> = {
+	h2p_gucio: "Red Dead Redemption 2",
 };

@@ -1,10 +1,10 @@
 import KickModule from "$kick/kick.module.ts";
-import { FUNNY_IMAGES, FUNNY_NAMES } from "$shared/funny-thing/funny-things.ts";
+import { FUNNY_AVATARS, FUNNY_NAMES } from "$shared/funny-thing/funny-things.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class FunnyModule extends KickModule {
 	readonly config: KickModuleConfig = {
-		name: "chat-highlight-user",
+		name: "funny-module",
 		appliers: [
 			{
 				type: "selector",
@@ -50,12 +50,6 @@ export default class FunnyModule extends KickModule {
 			if (funnyName) {
 				element.textContent = funnyName;
 				element.title = "Name was definitely not changed by Enhancer";
-				element.addEventListener("mouseenter", () => {
-					element.textContent = originalName;
-				});
-				element.addEventListener("mouseleave", () => {
-					element.textContent = funnyName;
-				});
 			}
 		});
 	}
@@ -64,19 +58,12 @@ export default class FunnyModule extends KickModule {
 		elements.forEach((_element) => {
 			const element = _element as HTMLImageElement;
 			const originalName = element.alt || "";
-			const originalImage = element.src;
 			const currentUsername = originalName.toLowerCase().trim();
-			const funnyImage = FUNNY_IMAGES[currentUsername];
+			const funnyImage = FUNNY_AVATARS[currentUsername];
 
 			if (funnyImage) {
 				element.src = funnyImage;
 				element.title = "Avatar was definitely not changed by Enhancer";
-				element.addEventListener("mouseenter", () => {
-					element.src = originalImage;
-				});
-				element.addEventListener("mouseleave", () => {
-					element.src = funnyImage;
-				});
 			}
 		});
 	}
