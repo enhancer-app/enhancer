@@ -1,10 +1,20 @@
+import { FUNNY_NAMES, FUNNY_TOOLTIPS } from "$shared/funny-thing/funny-things.ts";
 import { ChatNicknameCustomizationHelper } from "$shared/module/helpers/chat-nickname-customization.helper.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
+import type { EnhancerUser } from "$types/apis/enhancer.apis.ts";
 import type { TwitchChatMessageEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class ChatNicknameCustomizationModule extends TwitchModule {
 	private readonly chatNicknameCustomizationHelper = new ChatNicknameCustomizationHelper();
+
+	/*
+	TOOD:
+	- not working on igorovh
+	- the mouseenter does not work, becuase the original is getting rewritten by our custom funny things
+	 */
+
+	private isFunnyEnabled = false;
 
 	config: TwitchModuleConfig = {
 		name: "chat-nickname-customization",
@@ -14,6 +24,14 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 				key: "chat-nickname-customization",
 				event: "twitch:chatMessage",
 				callback: this.handleMessage.bind(this),
+			},
+			{
+				type: "event",
+				key: "chat-nickname-customization",
+				event: "twitch:settings:_funnyThings",
+				callback: (value) => {
+					this.isFunnyEnabled = value;
+				},
 			},
 		],
 		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chatNicknameCustomizationEnabled"),
@@ -28,10 +46,24 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 			element.querySelector<HTMLElement>(".seventv-chat-user-username");
 		if (!usernameElement) return;
 
-		const userCustomization = this.enhancerApi().findUserForCurrentChannel(message.user.userID);
+		let userCustomization = this.enhancerApi().findUserForCurrentChannel(message.user.userID);
+
+		const username = message.user.userDisplayName;
+		const funnyTooltip = FUNNY_TOOLTIPS[username] ?? "was definitely not changed by Enhancer";
+		let addTooltip = false;
+		if (this.isFunnyEnabled) {
+			const funnyNickname = FUNNY_NAMES[username];
+			if (funnyNickname) {
+				userCustomization = { customNickname: funnyNickname } as EnhancerUser;
+				addTooltip = true;
+			}
+		}
+		if (!userCustomization) return;
+
 		if (!userCustomization) return;
 
 		if (userCustomization.customNickname) {
+			if (addTooltip) usernameElement.title = `Name ${funnyTooltip}`;
 			usernameElement.textContent = userCustomization.customNickname;
 		}
 

@@ -1,4 +1,5 @@
 export const FUNNY_NAMES: Record<string, string> = {
+	igorovh: "igor nowak🟦🟨",
 	demonzz1: "gucio_waiting_room",
 	jaskol95: "oszust95",
 	nieuczesana: "Niewyczochrana",
@@ -14,11 +15,30 @@ export const FUNNY_NAMES: Record<string, string> = {
 	tubson: "Tubson_fan_Mamm0na",
 	tubson_: "Tubson_fan_Mamm0na",
 	olszakumpel: "olszaprzyjaciel",
-	youngmulti: "Needyourblood",
+	youngmulti: "MultiGameplayGuy",
 	menders_7: "Menels_7",
 	lequt: "OmeTV_PL_Konto_Oficjalne",
 	edenitoo: "zakolak",
 	delord: "delmniak",
+	mlekosz666: "Mlekoś",
+	tomekpi: "tomekpl_no_nie?",
+	maquk: "mamamamaquk",
+	rybsonlol: "kolega xayoo",
+	banduracartel: "BOKS",
+	mrdzinold: "STOP",
+	xayoo: "Legenda",
+	lewus: "Matura z Lewusem",
+	veniakk: "Łoniakk",
+	ewroon: "Erwin Knuckles",
+	ewron: "Erwin Knuckles",
+	gruby_macko: "chudy_macko",
+	pohisa: "Kaktus Jacek",
+	yerwi25: "Minusik",
+	x3te: "łajza^2",
+	pozdrawiam_wegorza: "nakurwiamwegorza",
+	timon20: "aftersun20",
+	tomekasa: "tomekasa_ssie...",
+	dlawek: "slavek🟦🟨",
 };
 
 export const FUNNY_AVATARS: Record<string, string> = {
@@ -37,4 +57,8 @@ export const FUNNY_TITLES: Record<string, string> = {
 
 export const FUNNY_CATEGORIES: Record<string, string> = {
 	h2p_gucio: "Red Dead Redemption 2",
+};
+
+export const FUNNY_TOOLTIPS: Record<string, string> = {
+	demonzz1: "was changed by the user H2P_Gucio",
 };
