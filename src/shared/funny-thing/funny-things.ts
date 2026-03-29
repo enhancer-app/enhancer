@@ -46,6 +46,7 @@ export const FUNNY_NAMES: Record<string, string> = {
 	diables: "chłopak Nieuczesanej",
 	pajalock: "Pathyk",
 	zarber_: "dziabko :3",
+	kochamdemonza: "taddi :3",
 };
 
 export const FUNNY_AVATARS: Record<string, string> = {
@@ -63,8 +64,7 @@ export const FUNNY_TITLES: Record<string, string> = {
 	h2p_gucio: "dzisiaj RDR2 z lektorem o 19, obiecuje na zozo",
 	demonzz1: "dzisiaj baldurs gate 3, aż Gucio nie odpali, jak potem skończy to odpalamy cannibal holo. Pozdrawiam <3",
 	gambit_florydy: "DZISIAJ WYPUSZCZAMY PODSUMOWANIE ROKU 🔴 WCALE NIE SPÓŻNIONE 🔴 !dzik #ad",
-	pajalock: "DZISIAJ OŚWIADCZAM SIĘ EWIE | 📅 DZIEŃ 67 | #reklama",
-	slayproxx: "test",
+	pajalock: "DZISIAJ OŚWIADCZAM SIĘ FHIE | 📅 DZIEŃ 67 | #reklama",
 };
 
 export const FUNNY_CATEGORIES: Record<string, string> = {
@@ -73,5 +73,5 @@ export const FUNNY_CATEGORIES: Record<string, string> = {
 
 export const FUNNY_TOOLTIPS: Record<string, string> = {
 	demonzz1: "was changed by the user H2P_Gucio",
-	adamcy: "was changed by the Niebo Sigma",
+	adamcy: "was changed by Niebo Sigma",
 };

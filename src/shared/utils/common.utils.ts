@@ -109,7 +109,6 @@ export default class CommonUtils {
 
 	isFunnyDay(): boolean {
 		const today = new Date();
-		// return today.getMonth() === 3 && today.getDate() === 1;
-		return true;
+		return today.getMonth() === 3 && today.getDate() === 1;
 	}
 }
