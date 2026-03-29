@@ -29,7 +29,6 @@ export type TwitchChatMessage = {
 export type TwitchChatMessageUser = {
 	userID: string;
 	userDisplayName: string;
-	login: string;
 	userLogin: string;
 	color: string;
 	isSubscriber: boolean;

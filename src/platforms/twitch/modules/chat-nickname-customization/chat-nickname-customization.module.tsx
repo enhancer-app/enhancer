@@ -42,7 +42,7 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 
 		let userCustomization = this.enhancerApi().findUserForCurrentChannel(message.user.userID);
 
-		const username = message.user.login.toLowerCase();
+		const username = message.user.userDisplayName.toLowerCase() ?? message.user.userLogin.toLowerCase();
 		const funnyTooltip = FUNNY_TOOLTIPS[username] ?? "was definitely not changed by Enhancer";
 		let addTooltip = false;
 		if (this.isFunnyEnabled) {
