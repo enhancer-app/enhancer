@@ -1,16 +1,18 @@
 export const FUNNY_NAMES: Record<string, string> = {
-	igorovh: "igor nowak🟦🟨",
+	igorovh: "igor nowak",
 	demonzz1: "gucio_waiting_room",
 	jaskol95: "oszust95",
 	nieuczesana: "Niewyczochrana",
-	slayproxx: "Slayproxx (Adam)",
+	slayproxx: "Adamproxx",
 	bonkol: "Bencoal",
 	randombrucetv: "MedikinetTV",
+	overpow: "RandomOverpowTV",
 	mokrysuchar: "MokrySocjopata",
 	meduska: "KongoTV",
 	xntentacion: "xnxxtentacion",
-	adamcy: "po_co_tu_wbijasz_jak_on_i_tak_znowu_oszuka_widzow",
-	furazek: "Bazyl",
+	adamcy: "po co tu wbijasz jak i tak rudy znowu oszuka",
+	franio: "WymoczekTV",
+	furazek: "Bazylius Kwiekus",
 	mamm0n: "Mamm0n_fan_Tubsona",
 	tubson: "Tubson_fan_Mamm0na",
 	tubson_: "Tubson_fan_Mamm0na",
@@ -18,8 +20,8 @@ export const FUNNY_NAMES: Record<string, string> = {
 	youngmulti: "MultiGameplayGuy",
 	menders_7: "Menels_7",
 	lequt: "OmeTV_PL_Konto_Oficjalne",
-	edenitoo: "zakolak",
-	delord: "delmniak",
+	edenitoo: "zakolitoo",
+	delordione: "delmito",
 	mlekosz666: "Mlekoś",
 	tomekpi: "tomekpl_no_nie?",
 	maquk: "mamamamaquk",
@@ -29,6 +31,7 @@ export const FUNNY_NAMES: Record<string, string> = {
 	xayoo: "Legenda",
 	lewus: "Matura z Lewusem",
 	veniakk: "Łoniakk",
+	stasieklive: "nieśmiały typ",
 	ewroon: "Erwin Knuckles",
 	ewron: "Erwin Knuckles",
 	gruby_macko: "chudy_macko",
@@ -39,6 +42,10 @@ export const FUNNY_NAMES: Record<string, string> = {
 	timon20: "aftersun20",
 	tomekasa: "tomekasa_ssie...",
 	dlawek: "slavek🟦🟨",
+	conkii_: "łajza",
+	diables: "chłopak Nieuczesanej",
+	pajalock: "Pathyk",
+	zarber_: "dziabko :3",
 };
 
 export const FUNNY_AVATARS: Record<string, string> = {
@@ -47,12 +54,17 @@ export const FUNNY_AVATARS: Record<string, string> = {
 	h2p_gucio: "https://cdn-badges.enhancer.at/funny-avatars/h2p_gucio.png",
 	jaskol95: "https://cdn-badges.enhancer.at/funny-avatars/jaskol95.png",
 	meduska: "https://cdn-badges.enhancer.at/funny-avatars/meduska.jpg",
-	adamcy: "https://cdn-badges.enhancer.at/funny-avatars/obiecuje.jpg",
-	xntentacion: "https://cdn-badges.enhancer.at/funny-avatars/xntentacion.jpg",
+	adamcy: "https://cdn-badges.enhancer.at/funny-avatars/obiecuje.png",
+	xntentacion: "https://cdn-badges.enhancer.at/funny-avatars/xntentacion.png",
+	rybsonlol: "https://cdn-badges.enhancer.at/funny-avatars/rybson.jpg",
 };
 
 export const FUNNY_TITLES: Record<string, string> = {
-	h2p_gucio: "Dzisiaj o 19:00 dziki zachód, bez wymówek, obiecuje",
+	h2p_gucio: "dzisiaj RDR2 z lektorem o 19, obiecuje na zozo",
+	demonzz1: "dzisiaj baldurs gate 3, aż Gucio nie odpali, jak potem skończy to odpalamy cannibal holo. Pozdrawiam <3",
+	gambit_florydy: "DZISIAJ WYPUSZCZAMY PODSUMOWANIE ROKU 🔴 WCALE NIE SPÓŻNIONE 🔴 !dzik #ad",
+	pajalock: "DZISIAJ OŚWIADCZAM SIĘ EWIE | 📅 DZIEŃ 67 | #reklama",
+	slayproxx: "test",
 };
 
 export const FUNNY_CATEGORIES: Record<string, string> = {
@@ -61,4 +73,5 @@ export const FUNNY_CATEGORIES: Record<string, string> = {
 
 export const FUNNY_TOOLTIPS: Record<string, string> = {
 	demonzz1: "was changed by the user H2P_Gucio",
+	adamcy: "was changed by the Niebo Sigma",
 };

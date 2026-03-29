@@ -1,5 +1,5 @@
 import KickModule from "$kick/kick.module.ts";
-import { FUNNY_AVATARS, FUNNY_NAMES, FUNNY_TOOLTIPS } from "$shared/funny-thing/funny-things.ts";
+import { FUNNY_AVATARS, FUNNY_NAMES, FUNNY_TITLES, FUNNY_TOOLTIPS } from "$shared/funny-thing/funny-things.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class FunnyModule extends KickModule {
@@ -10,28 +10,35 @@ export default class FunnyModule extends KickModule {
 				type: "selector",
 				selectors: ["h1#channel-username"],
 				callback: this.replaceChannelName.bind(this),
-				key: "chat",
+				key: "funny-channel-username",
 				once: true,
 			},
 			{
 				type: "selector",
 				selectors: ["#sidebar-wrapper a span.shrink"],
 				callback: this.replaceChannelName.bind(this),
-				key: "chat",
+				key: "funny-channel-name",
 				once: true,
 			},
 			{
 				type: "selector",
 				selectors: ["#sidebar-wrapper a img"],
 				callback: this.replaceAvatar.bind(this),
-				key: "chat",
+				key: "funny-channel-avatar",
 				once: true,
 			},
 			{
 				type: "selector",
 				selectors: ["#channel-avatar"],
 				callback: this.replaceAvatar.bind(this),
-				key: "chat",
+				key: "funny-avatar",
+				once: true,
+			},
+			{
+				type: "selector",
+				selectors: ['span[data-testid="livestream-title"]'],
+				callback: this.replaceTitle.bind(this),
+				key: "funny-title",
 				once: true,
 			},
 		],
@@ -88,5 +95,31 @@ export default class FunnyModule extends KickModule {
 				});
 			}
 		});
+	}
+
+	replaceTitle(elements: Element[]) {
+		const url = new URL(window.location.href);
+		const username = url.pathname.split("/")[1]?.toLowerCase();
+
+		const funnyTitle = FUNNY_TITLES[username];
+		const funnyTooltip = FUNNY_TOOLTIPS[username] ?? "was definitely not changed by Enhancer";
+
+		if (funnyTitle) {
+			elements.forEach((_element) => {
+				const element = _element as HTMLElement;
+				element.setAttribute("enhancer-original", element.textContent ?? "");
+				element.textContent = funnyTitle;
+				element.title = `Title ${funnyTooltip}`;
+
+				element.addEventListener("mouseenter", () => {
+					element.setAttribute("enhancer-hovering", "true");
+					element.textContent = element.getAttribute("enhancer-original") ?? element.textContent;
+				});
+				element.addEventListener("mouseleave", () => {
+					element.removeAttribute("enhancer-hovering");
+					element.textContent = funnyTitle;
+				});
+			});
+		}
 	}
 }

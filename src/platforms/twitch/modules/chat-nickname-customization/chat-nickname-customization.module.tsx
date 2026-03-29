@@ -8,12 +8,6 @@ import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 export default class ChatNicknameCustomizationModule extends TwitchModule {
 	private readonly chatNicknameCustomizationHelper = new ChatNicknameCustomizationHelper();
 
-	/*
-	TOOD:
-	- not working on igorovh
-	- the mouseenter does not work, becuase the original is getting rewritten by our custom funny things
-	 */
-
 	private isFunnyEnabled = false;
 
 	config: TwitchModuleConfig = {
@@ -48,7 +42,7 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 
 		let userCustomization = this.enhancerApi().findUserForCurrentChannel(message.user.userID);
 
-		const username = message.user.userDisplayName;
+		const username = message.user.login.toLowerCase();
 		const funnyTooltip = FUNNY_TOOLTIPS[username] ?? "was definitely not changed by Enhancer";
 		let addTooltip = false;
 		if (this.isFunnyEnabled) {
@@ -58,7 +52,6 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 				addTooltip = true;
 			}
 		}
-		if (!userCustomization) return;
 
 		if (!userCustomization) return;
 
@@ -92,5 +85,9 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 			color = userMessageColor || "white";
 		}
 		this.chatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
+	}
+
+	async initialize(): Promise<void> {
+		this.isFunnyEnabled = await this.settingsService().getSettingsKey("_funnyThings");
 	}
 }
