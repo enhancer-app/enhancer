@@ -55,19 +55,9 @@ export default class FunnyModule extends KickModule {
 			const funnyName = FUNNY_NAMES[currentUsername];
 			const funnyTooltip = FUNNY_TOOLTIPS[currentUsername] ?? "was definitely not changed by Enhancer";
 
-			if (funnyName && !element.hasAttribute("enhancer-hovering")) {
-				element.setAttribute("enhancer-original", element.textContent ?? "");
+			if (funnyName) {
 				element.textContent = funnyName;
-				element.title = `Name ${funnyTooltip}`;
-
-				element.addEventListener("mouseenter", () => {
-					element.setAttribute("enhancer-hovering", "true");
-					element.textContent = element.getAttribute("enhancer-original") ?? element.textContent;
-				});
-				element.addEventListener("mouseleave", () => {
-					element.removeAttribute("enhancer-hovering");
-					element.textContent = funnyName;
-				});
+				element.title = `Name ${funnyTooltip}. You definitely can't disable this in Enhancer settings.`;
 			}
 		});
 	}
@@ -80,26 +70,16 @@ export default class FunnyModule extends KickModule {
 			const funnyImage = FUNNY_AVATARS[currentUsername];
 			const funnyTooltip = FUNNY_TOOLTIPS[currentUsername] ?? "was definitely not changed by Enhancer";
 
-			if (funnyImage && !element.hasAttribute("enhancer-hovering")) {
-				element.setAttribute("enhancer-original", element.src);
+			if (funnyImage) {
 				element.src = funnyImage;
-				element.title = `Avatar ${funnyTooltip}`;
-
-				element.addEventListener("mouseenter", () => {
-					element.setAttribute("enhancer-hovering", "true");
-					element.src = element.getAttribute("enhancer-original") ?? element.src;
-				});
-				element.addEventListener("mouseleave", () => {
-					element.removeAttribute("enhancer-hovering");
-					element.src = funnyImage;
-				});
+				element.title = `Avatar ${funnyTooltip}. You definitely can't disable this in Enhancer settings.`;
 			}
 		});
 	}
 
 	replaceTitle(elements: Element[]) {
 		const url = new URL(window.location.href);
-		const username = url.pathname.split("/")[1]?.toLowerCase();
+		const username = url.pathname.split("/")[1]?.toLowerCase() ?? "";
 
 		const funnyTitle = FUNNY_TITLES[username];
 		const funnyTooltip = FUNNY_TOOLTIPS[username] ?? "was definitely not changed by Enhancer";
@@ -107,18 +87,8 @@ export default class FunnyModule extends KickModule {
 		if (funnyTitle) {
 			elements.forEach((_element) => {
 				const element = _element as HTMLElement;
-				element.setAttribute("enhancer-original", element.textContent ?? "");
 				element.textContent = funnyTitle;
-				element.title = `Title ${funnyTooltip}`;
-
-				element.addEventListener("mouseenter", () => {
-					element.setAttribute("enhancer-hovering", "true");
-					element.textContent = element.getAttribute("enhancer-original") ?? element.textContent;
-				});
-				element.addEventListener("mouseleave", () => {
-					element.removeAttribute("enhancer-hovering");
-					element.textContent = funnyTitle;
-				});
+				element.title = `Title ${funnyTooltip}. You definitely can't disable this in Enhancer settings.`;
 			});
 		}
 	}

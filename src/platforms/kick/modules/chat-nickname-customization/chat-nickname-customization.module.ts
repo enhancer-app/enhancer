@@ -46,7 +46,7 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 		const username = message.sender.username.toLowerCase();
 		const funnyTooltip = FUNNY_TOOLTIPS[username] ?? "was definitely not changed by Enhancer";
 		let addTooltip = false;
-		if (this.isFunnyEnabled) {
+		if (this.isFunnyEnabled && this.commonUtils().isFunnyDay()) {
 			const funnyNickname = FUNNY_NAMES[username];
 			if (funnyNickname) {
 				userCustomization = { customNickname: funnyNickname } as EnhancerUser;
