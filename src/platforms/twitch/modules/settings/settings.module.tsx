@@ -313,6 +313,19 @@ export default class SettingsModule extends TwitchModule {
 				hideInfo: true,
 			},
 		];
+		if (this.commonUtils().isFunnyDay()) {
+			this.SETTING_DEFINITIONS = [
+				{
+					id: "_funnyThings",
+					title: "Enable Funny Things",
+					description: "Enables Funny Things, on Funny Day, right?",
+					type: "toggle",
+					tabIndex: tabIndexes.General,
+					requiresRefreshToDisable: true,
+				},
+				...this.SETTING_DEFINITIONS,
+			];
+		}
 	}
 
 	private async run() {

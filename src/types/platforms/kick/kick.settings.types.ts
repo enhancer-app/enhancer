@@ -19,6 +19,7 @@ export type KickSettings = {
 	realVideoTimeFormat12h: boolean;
 	channelSection: boolean;
 	_disableExtensionOnDashboard: boolean;
+	_funnyThings: boolean;
 };
 
 export type KickSettingsEvents = {

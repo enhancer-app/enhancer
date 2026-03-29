@@ -70,7 +70,7 @@ export default class RealVideoTimeModule extends KickModule {
 
 	private createElement(player: Element): boolean {
 		if (player.querySelector(`#${this.getId()}`)) return false;
-		const element = player.querySelector(".z-controls");
+		const element = player.querySelector(".z-controls.absolute");
 		if (!element || !element.firstElementChild) return false;
 		const wrapper = document.createElement("div");
 		wrapper.id = this.getId();
