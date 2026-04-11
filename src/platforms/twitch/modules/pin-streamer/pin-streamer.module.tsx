@@ -1,4 +1,5 @@
 import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
+import type { PinStreamerRequestEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import { render } from "preact";
@@ -23,6 +24,12 @@ export default class PinStreamerModule extends TwitchModule {
 				key: "pin-streamer",
 			},
 			{
+				type: "event",
+				event: "twitch:pin-streamer-request",
+				callback: this.onPinStreamerRequest.bind(this),
+				key: "pin-streamer-request",
+			},
+			{
 				type: "selector",
 				selectors: [".followed-side-nav-header__dropdown-trigger p"],
 				callback: this.hideSortDescription.bind(this),
@@ -35,6 +42,8 @@ export default class PinStreamerModule extends TwitchModule {
 
 	private observer: MutationObserver | undefined;
 	private pinnedStreamers: string[] = [];
+	private pinSignals = new Map<string, Signal<boolean>>();
+	private pinButtons = new Map<string, HTMLElement>();
 
 	private run(elements: Element[]) {
 		this.hookPersonalSectionsRender();
@@ -82,7 +91,9 @@ export default class PinStreamerModule extends TwitchModule {
 		const imageWrapper = channelWrapper.querySelector("div.tw-avatar");
 		if (!imageWrapper) return;
 		const isPinned = signal(this.isPinnedStreamer(channelID));
+		this.pinSignals.set(channelID, isPinned);
 		const button = this.commonUtils().createElementByParent("pin-streamer-button", "button", imageWrapper);
+		this.pinButtons.set(channelID, button);
 		button.onclick = async (event) => {
 			event.preventDefault();
 			event.stopPropagation();
@@ -169,6 +180,56 @@ export default class PinStreamerModule extends TwitchModule {
 
 	private isPinnedStreamer(channelId: string): boolean {
 		return this.pinnedStreamers.includes(channelId);
+	}
+
+	private async onPinStreamerRequest(request: PinStreamerRequestEvent) {
+		if (!request.channelId) {
+			await request.onResult({ status: "failed" });
+			return;
+		}
+		const isModuleEnabled = await this.settingsService().getSettingsKey("pinnedStreamersEnabled");
+		if (!isModuleEnabled) {
+			await request.onResult({ status: "module_disabled" });
+			return;
+		}
+		const isPinned = this.isPinnedStreamer(request.channelId);
+		if (request.action === "status") {
+			await request.onResult({ status: isPinned ? "already_pinned" : "not_pinned" });
+			return;
+		}
+		if (request.action === "unpin") {
+			if (!isPinned) {
+				await request.onResult({ status: "not_pinned" });
+				return;
+			}
+			try {
+				await this.togglePinnedStreamer(request.channelId);
+				const pinSignal = this.pinSignals.get(request.channelId);
+				if (pinSignal) pinSignal.value = false;
+				const pinButton = this.pinButtons.get(request.channelId);
+				if (pinButton) pinButton.style.display = "none";
+				await this.resetListOrderAndUpdate();
+				await request.onResult({ status: "not_pinned" });
+			} catch (_error) {
+				await request.onResult({ status: "failed" });
+			}
+			return;
+		}
+		if (isPinned) {
+			await request.onResult({ status: "already_pinned" });
+			return;
+		}
+		try {
+			await this.togglePinnedStreamer(request.channelId);
+			const pinSignal = this.pinSignals.get(request.channelId);
+			if (pinSignal) pinSignal.value = true;
+			const pinButton = this.pinButtons.get(request.channelId);
+			if (pinButton) pinButton.style.display = "inline-block";
+			await this.resetListOrderAndUpdate();
+			await request.onResult({ status: "pinned" });
+		} catch (_error) {
+			await request.onResult({ status: "failed" });
+		}
 	}
 
 	private async togglePinnedStreamer(channelId: string): Promise<boolean> {

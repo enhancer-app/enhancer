@@ -1,6 +1,14 @@
+import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 import type { Signal } from "@preact/signals";
 import styled from "styled-components";
+
+export interface ChannelSectionAction {
+	key: string;
+	icon: Signal<string>;
+	tooltip: Signal<string> | string;
+	onClick: () => void;
+}
 
 interface ChannelSectionComponentProps {
 	displayName: Signal<string>;
@@ -8,6 +16,7 @@ interface ChannelSectionComponentProps {
 	sites: Signal<QuickAccessLink[]>;
 	watchTime: Signal<number>;
 	logoUrl: string;
+	actions?: ChannelSectionAction[];
 }
 
 export function ChannelSectionComponent({
@@ -16,6 +25,7 @@ export function ChannelSectionComponent({
 	sites,
 	watchTime,
 	logoUrl,
+	actions = [],
 }: ChannelSectionComponentProps) {
 	const formatWatchTime = (time: number) => {
 		const hours = time === 0 ? 0 : time / 3600;
@@ -39,6 +49,21 @@ export function ChannelSectionComponent({
 						</ChannelNameRow>
 					</ChannelDetails>
 				</ChannelInfo>
+				{actions.length > 0 && (
+					<HeaderActions>
+						{actions.map((action) => (
+							<TooltipComponent
+								key={action.key}
+								content={<span>{getTooltipText(action.tooltip)}</span>}
+								position="right"
+							>
+								<ActionButton type="button" onClick={action.onClick}>
+									{action.icon.value}
+								</ActionButton>
+							</TooltipComponent>
+						))}
+					</HeaderActions>
+				)}
 			</Header>
 			<Content>
 				<LinkGrid>
@@ -56,10 +81,15 @@ export function ChannelSectionComponent({
 	);
 }
 
+function getTooltipText(tooltip: Signal<string> | string) {
+	if (typeof tooltip === "string") return tooltip;
+	return tooltip.value;
+}
+
 const Container = styled.div`
 	background: rgba(25, 25, 28, 0.95);
 	border-radius: 8px;
-	overflow: hidden;
+	overflow: visible;
 	margin: 16px 0;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 	border: 1px solid rgba(255, 255, 255, 0.05);
@@ -152,4 +182,31 @@ const LinkName = styled.div`
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+`;
+
+const HeaderActions = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-left: 10px;
+`;
+
+const ActionButton = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border: none;
+	border-radius: 4px;
+	background: rgba(255, 255, 255, 0.08);
+	color: #ffffff;
+	cursor: pointer;
+	padding: 0;
+	font-size: 14px;
+	line-height: 1;
+
+	&:hover {
+		background: rgba(145, 71, 255, 0.3);
+	}
 `;

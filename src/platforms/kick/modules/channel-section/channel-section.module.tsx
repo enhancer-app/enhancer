@@ -1,5 +1,8 @@
 import KickModule from "$kick/kick.module.ts";
-import { ChannelSectionComponent } from "$shared/components/channel-section/channel-section.component.tsx";
+import {
+	type ChannelSectionAction,
+	ChannelSectionComponent,
+} from "$shared/components/channel-section/channel-section.component.tsx";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
@@ -9,6 +12,7 @@ export default class ChannelSectionModule extends KickModule {
 	private quickAccessLinks = {} as Signal<QuickAccessLink[]>;
 	private watchtimeCounter = {} as Signal<number>;
 	private currentUsername = signal("");
+	private settingsActionIcon = signal("⚙");
 	private watchtimeInterval: NodeJS.Timeout | undefined;
 
 	readonly config: KickModuleConfig = {
@@ -64,10 +68,24 @@ export default class ChannelSectionModule extends KickModule {
 					sites={this.quickAccessLinks}
 					watchTime={this.watchtimeCounter}
 					logoUrl={logo}
+					actions={this.getHeaderActions()}
 				/>,
 				wrapper,
 			);
 		}
+	}
+
+	private getHeaderActions(): ChannelSectionAction[] {
+		return [
+			{
+				key: "open-settings",
+				icon: this.settingsActionIcon,
+				tooltip: "Open Enhancer settings",
+				onClick: () => {
+					this.emitter.emit("extension:settings-open");
+				},
+			},
+		];
 	}
 
 	private async updateWatchtime() {

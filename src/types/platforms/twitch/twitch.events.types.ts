@@ -8,8 +8,21 @@ export type TwitchEvents = {
 	"twitch:chatMessage": (message: TwitchChatMessageEvent) => void | Promise<void>;
 	"twitch:chatPopupMessage": (message: ChatMessagePopupEvent) => void | Promise<void>;
 	"twitch:messageMenu": (message: MessageMenuEvent) => void | Promise<void>;
+	"twitch:pin-streamer-request": (request: PinStreamerRequestEvent) => void | Promise<void>;
 } & TwitchSettingsEvents &
 	CommonEvents;
+
+export type PinStreamerRequestAction = "status" | "pin" | "unpin";
+
+export type PinStreamerRequestResult = {
+	status: "module_disabled" | "already_pinned" | "not_pinned" | "pinned" | "failed";
+};
+
+export type PinStreamerRequestEvent = {
+	action: PinStreamerRequestAction;
+	channelId: string;
+	onResult: (result: PinStreamerRequestResult) => void | Promise<void>;
+};
 
 export type TwitchChatMessage = {
 	badges: Record<string, string>;
