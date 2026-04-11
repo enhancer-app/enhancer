@@ -78,6 +78,7 @@ export default class ChannelSectionModule extends TwitchModule {
 				key: "pin-streamer",
 				icon: this.pinActionIcon,
 				tooltip: this.pinActionTooltip,
+				isPressed: this.isCurrentChannelPinned,
 				onClick: () => {
 					void this.toggleCurrentStreamerPin();
 				},
@@ -108,7 +109,7 @@ export default class ChannelSectionModule extends TwitchModule {
 		if (currentLogin.length < 1) return;
 		const sections = this.twitchUtils().getPersonalSections()?.props?.section;
 		if (!sections) return;
-		const allItems = [...sections.streams, ...sections.offlineChannels] as unknown as Array<{
+		const allItems = [...(sections.streams ?? []), ...(sections.offlineChannels ?? [])] as unknown as Array<{
 			user?: { id?: string; login?: string | number };
 		}>;
 		const item = allItems.find((entry) => String(entry.user?.login ?? "").toLowerCase() === currentLogin);
@@ -146,9 +147,25 @@ export default class ChannelSectionModule extends TwitchModule {
 			return;
 		}
 		const result = await this.requestPinStatus(channelId);
-		this.isCurrentChannelPinned.value = result?.status === "already_pinned";
-		this.pinActionIcon.value = this.isCurrentChannelPinned.value ? "★" : "☆";
-		this.pinActionTooltip.value = this.isCurrentChannelPinned.value ? "Unpin streamer" : "Pin streamer";
+		if (!result || result.status === "failed") {
+			return;
+		}
+		if (result.status === "module_disabled") {
+			this.pinActionTooltip.value = "Pinning unavailable (module disabled)";
+			this.pinActionIcon.value = this.isCurrentChannelPinned.value ? "★" : "☆";
+			return;
+		}
+		if (result.status === "already_pinned" || result.status === "pinned") {
+			this.isCurrentChannelPinned.value = true;
+			this.pinActionIcon.value = "★";
+			this.pinActionTooltip.value = "Unpin streamer";
+			return;
+		}
+		if (result.status === "not_pinned") {
+			this.isCurrentChannelPinned.value = false;
+			this.pinActionIcon.value = "☆";
+			this.pinActionTooltip.value = "Pin streamer";
+		}
 	}
 
 	private async toggleCurrentStreamerPin() {

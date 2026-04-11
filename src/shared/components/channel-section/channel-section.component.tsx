@@ -7,6 +7,7 @@ export interface ChannelSectionAction {
 	key: string;
 	icon: Signal<string>;
 	tooltip: Signal<string> | string;
+	isPressed?: Signal<boolean> | boolean;
 	onClick: () => void;
 }
 
@@ -51,17 +52,17 @@ export function ChannelSectionComponent({
 				</ChannelInfo>
 				{actions.length > 0 && (
 					<HeaderActions>
-						{actions.map((action) => (
-							<TooltipComponent
-								key={action.key}
-								content={<span>{getTooltipText(action.tooltip)}</span>}
-								position="right"
-							>
-								<ActionButton type="button" onClick={action.onClick}>
-									{action.icon.value}
-								</ActionButton>
-							</TooltipComponent>
-						))}
+						{actions.map((action) => {
+							const tooltipText = getTooltipText(action.tooltip);
+							const pressed = getPressedState(action.isPressed);
+							return (
+								<TooltipComponent key={action.key} content={<span>{tooltipText}</span>} position="right">
+									<ActionButton type="button" onClick={action.onClick} aria-label={tooltipText} aria-pressed={pressed}>
+										{action.icon.value}
+									</ActionButton>
+								</TooltipComponent>
+							);
+						})}
 					</HeaderActions>
 				)}
 			</Header>
@@ -86,10 +87,16 @@ function getTooltipText(tooltip: Signal<string> | string) {
 	return tooltip.value;
 }
 
+function getPressedState(isPressed: Signal<boolean> | boolean | undefined) {
+	if (isPressed === undefined) return undefined;
+	if (typeof isPressed === "boolean") return isPressed;
+	return isPressed.value;
+}
+
 const Container = styled.div`
 	background: rgba(25, 25, 28, 0.95);
 	border-radius: 8px;
-	overflow: visible;
+	overflow: hidden;
 	margin: 16px 0;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 	border: 1px solid rgba(255, 255, 255, 0.05);

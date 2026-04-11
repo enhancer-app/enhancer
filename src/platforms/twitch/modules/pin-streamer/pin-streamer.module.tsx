@@ -74,9 +74,29 @@ export default class PinStreamerModule extends TwitchModule {
 						}
 					}
 				}
+				if (mutation.type === "childList" && mutation.removedNodes) {
+					for (const node of mutation.removedNodes) {
+						this.cleanupPinReferences(node);
+					}
+				}
 			}
 		});
 		this.observer?.observe(element, { childList: true });
+	}
+
+	private cleanupPinReferences(node: Node) {
+		if (!(node instanceof Element)) return;
+		const possibleElements = [
+			node,
+			node.querySelector('[data-test-selector="followed-channel"]'),
+			...node.querySelectorAll('[data-test-selector="followed-channel"]'),
+		].filter((entry): entry is Element => entry instanceof Element);
+		for (const possibleElement of possibleElements) {
+			const channelID = this.twitchUtils().getUserIdBySideElement(possibleElement);
+			if (!channelID) continue;
+			this.pinSignals.delete(channelID);
+			this.pinButtons.delete(channelID);
+		}
 	}
 
 	private createPin(channelWrapper: Element) {
