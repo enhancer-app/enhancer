@@ -2,7 +2,10 @@ import {
 	type ChannelSectionAction,
 	ChannelSectionComponent,
 } from "$shared/components/channel-section/channel-section.component.tsx";
-import type { PinStreamerRequestResult } from "$types/platforms/twitch/twitch.events.types.ts";
+import type {
+	PinStreamerRequestResult,
+	PinStreamerStateChangedEvent,
+} from "$types/platforms/twitch/twitch.events.types.ts";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
@@ -18,7 +21,8 @@ export default class ChannelSectionModule extends TwitchModule {
 	private pinActionIcon = signal("☆");
 	private pinActionTooltip = signal("Pin streamer");
 	private settingsActionIcon = signal("⚙");
-	private lastPinStatusLogin = "";
+	private currentChannelId = "";
+	private lastPinStatusKey = "";
 	private watchtimeInterval: NodeJS.Timeout | undefined;
 
 	readonly config: TwitchModuleConfig = {
@@ -39,6 +43,12 @@ export default class ChannelSectionModule extends TwitchModule {
 				callback: (quickAccessLinks) => {
 					this.quickAccessLinks.value = quickAccessLinks;
 				},
+			},
+			{
+				type: "event",
+				key: "pin-streamer-state-changed",
+				event: "twitch:pin-streamer-state-changed",
+				callback: this.onPinStreamerStateChanged.bind(this),
 			},
 		],
 	};
@@ -128,6 +138,7 @@ export default class ChannelSectionModule extends TwitchModule {
 			this.emitter.emit("twitch:pin-streamer-request", {
 				action: "status",
 				channelId,
+				trackCurrent: true,
 				onResult: (result) => {
 					if (completed) return;
 					completed = true;
@@ -138,39 +149,54 @@ export default class ChannelSectionModule extends TwitchModule {
 		});
 	}
 
-	private async refreshPinStatus() {
-		const channelId = this.resolveCurrentChannelId();
+	private setPinActionState(isPinned: boolean) {
+		this.isCurrentChannelPinned.value = isPinned;
+		this.pinActionIcon.value = isPinned ? "★" : "☆";
+		this.pinActionTooltip.value = isPinned ? "Unpin streamer" : "Pin streamer";
+	}
+
+	private async refreshPinStatus(channelId = this.resolveCurrentChannelId()) {
 		if (!channelId) {
-			this.isCurrentChannelPinned.value = false;
-			this.pinActionIcon.value = "☆";
-			this.pinActionTooltip.value = "Pin streamer";
+			this.currentChannelId = "";
+			this.setPinActionState(false);
 			return;
 		}
+		this.currentChannelId = channelId;
 		const result = await this.requestPinStatus(channelId);
 		if (!result || result.status === "failed") {
 			return;
 		}
+		const resultPinned = result.signal?.value ?? result.isPinned;
 		if (result.status === "module_disabled") {
+			this.isCurrentChannelPinned.value = resultPinned ?? this.isCurrentChannelPinned.value;
 			this.pinActionTooltip.value = "Pinning unavailable (module disabled)";
-			this.pinActionIcon.value = this.isCurrentChannelPinned.value ? "★" : "☆";
+			this.pinActionIcon.value = (resultPinned ?? this.isCurrentChannelPinned.value) ? "★" : "☆";
+			return;
+		}
+		if (resultPinned !== undefined) {
+			this.setPinActionState(resultPinned);
 			return;
 		}
 		if (result.status === "already_pinned" || result.status === "pinned") {
-			this.isCurrentChannelPinned.value = true;
-			this.pinActionIcon.value = "★";
-			this.pinActionTooltip.value = "Unpin streamer";
+			this.setPinActionState(true);
 			return;
 		}
 		if (result.status === "not_pinned") {
-			this.isCurrentChannelPinned.value = false;
-			this.pinActionIcon.value = "☆";
-			this.pinActionTooltip.value = "Pin streamer";
+			this.setPinActionState(false);
 		}
+	}
+
+	private onPinStreamerStateChanged(event: PinStreamerStateChangedEvent) {
+		const currentChannelId = this.currentChannelId || this.resolveCurrentChannelId();
+		if (!currentChannelId || event.channelId !== currentChannelId) return;
+		this.currentChannelId = currentChannelId;
+		this.setPinActionState(event.signal.value);
 	}
 
 	private async toggleCurrentStreamerPin() {
 		const channelId = this.resolveCurrentChannelId();
 		if (!channelId) return;
+		this.currentChannelId = channelId;
 		const action = this.isCurrentChannelPinned.value ? "unpin" : "pin";
 		await new Promise<void>((resolve) => {
 			let completed = false;
@@ -182,18 +208,18 @@ export default class ChannelSectionModule extends TwitchModule {
 			this.emitter.emit("twitch:pin-streamer-request", {
 				action,
 				channelId,
+				trackCurrent: true,
 				onResult: (result) => {
 					if (completed) return;
 					completed = true;
 					clearTimeout(timeout);
-					if (result.status === "already_pinned" || result.status === "pinned") {
-						this.isCurrentChannelPinned.value = true;
-						this.pinActionIcon.value = "★";
-						this.pinActionTooltip.value = "Unpin streamer";
+					const resultPinned = result.signal?.value ?? result.isPinned;
+					if (resultPinned !== undefined) {
+						this.setPinActionState(resultPinned);
+					} else if (result.status === "already_pinned" || result.status === "pinned") {
+						this.setPinActionState(true);
 					} else if (result.status === "not_pinned") {
-						this.isCurrentChannelPinned.value = false;
-						this.pinActionIcon.value = "☆";
-						this.pinActionTooltip.value = "Pin streamer";
+						this.setPinActionState(false);
 					}
 					resolve();
 				},
@@ -224,9 +250,11 @@ export default class ChannelSectionModule extends TwitchModule {
 	private async syncChannelState() {
 		if (this.updateNames()) return;
 		if (this.currentLogin.value.length < 1) return;
-		if (this.lastPinStatusLogin !== this.currentLogin.value) {
-			this.lastPinStatusLogin = this.currentLogin.value;
-			await this.refreshPinStatus();
+		const channelId = this.resolveCurrentChannelId();
+		const pinStatusKey = `${this.currentLogin.value}:${channelId ?? ""}`;
+		if (this.lastPinStatusKey !== pinStatusKey) {
+			this.lastPinStatusKey = pinStatusKey;
+			await this.refreshPinStatus(channelId);
 		}
 	}
 
