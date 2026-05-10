@@ -1,7 +1,6 @@
 import type { MessageMenuEvent } from "$shared/components/message-menu/message-menu.component.tsx";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { TwitchSettingsEvents } from "$types/platforms/twitch/twitch.settings.types.ts";
-import type { Signal } from "@preact/signals";
 import type { ComponentChildren } from "preact";
 
 export type TwitchEvents = {
@@ -9,31 +8,8 @@ export type TwitchEvents = {
 	"twitch:chatMessage": (message: TwitchChatMessageEvent) => void | Promise<void>;
 	"twitch:chatPopupMessage": (message: ChatMessagePopupEvent) => void | Promise<void>;
 	"twitch:messageMenu": (message: MessageMenuEvent) => void | Promise<void>;
-	"twitch:pin-streamer-request": (request: PinStreamerRequestEvent) => void | Promise<void>;
-	"twitch:pin-streamer-state-changed": (event: PinStreamerStateChangedEvent) => void | Promise<void>;
 } & TwitchSettingsEvents &
 	CommonEvents;
-
-export type PinStreamerRequestAction = "status" | "pin" | "unpin";
-
-export type PinStreamerRequestResult = {
-	status: "module_disabled" | "already_pinned" | "not_pinned" | "pinned" | "failed";
-	isPinned?: boolean;
-	signal?: Signal<boolean>;
-};
-
-export type PinStreamerRequestEvent = {
-	action: PinStreamerRequestAction;
-	channelId: string;
-	trackCurrent?: boolean;
-	onResult: (result: PinStreamerRequestResult) => void | Promise<void>;
-};
-
-export type PinStreamerStateChangedEvent = {
-	channelId: string;
-	isPinned: boolean;
-	signal: Signal<boolean>;
-};
 
 export type TwitchChatMessage = {
 	badges: Record<string, string>;

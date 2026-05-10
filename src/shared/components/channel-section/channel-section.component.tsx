@@ -7,7 +7,6 @@ export interface ChannelSectionAction {
 	key: string;
 	icon: Signal<string>;
 	tooltip: Signal<string> | string;
-	isPressed?: Signal<boolean> | boolean;
 	onClick: () => void;
 }
 
@@ -54,10 +53,9 @@ export function ChannelSectionComponent({
 					<HeaderActions>
 						{actions.map((action) => {
 							const tooltipText = getTooltipText(action.tooltip);
-							const pressed = getPressedState(action.isPressed);
 							return (
 								<TooltipComponent key={action.key} content={<span>{tooltipText}</span>} position="right">
-									<ActionButton type="button" onClick={action.onClick} aria-label={tooltipText} aria-pressed={pressed}>
+									<ActionButton type="button" onClick={action.onClick} aria-label={tooltipText}>
 										{action.icon.value}
 									</ActionButton>
 								</TooltipComponent>
@@ -85,12 +83,6 @@ export function ChannelSectionComponent({
 function getTooltipText(tooltip: Signal<string> | string) {
 	if (typeof tooltip === "string") return tooltip;
 	return tooltip.value;
-}
-
-function getPressedState(isPressed: Signal<boolean> | boolean | undefined) {
-	if (isPressed === undefined) return undefined;
-	if (typeof isPressed === "boolean") return isPressed;
-	return isPressed.value;
 }
 
 const Container = styled.div`
