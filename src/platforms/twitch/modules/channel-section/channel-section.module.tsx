@@ -17,9 +17,12 @@ export default class ChannelSectionModule extends TwitchModule {
 	private currentChannelId = signal("");
 	private readonly settingsActionIcon = "⚙";
 	private watchtimeInterval: NodeJS.Timeout | undefined;
-	private pinnedStreamers: string[] = [];
+	private pinnedStreamers = signal<string[]>([]);
 	private pinnedStreamersEnabled = signal(false);
-	private pinnedStreamerActionsByChannelId = new Map<string, PinnedStreamerActionState>();
+	private pinStreamerIcon = computed(() => (this.isPinnedStreamer(this.currentChannelId.value) ? "★" : "☆"));
+	private pinStreamerTooltip = computed(() =>
+		this.isPinnedStreamer(this.currentChannelId.value) ? "Unpin streamer" : "Pin streamer",
+	);
 	private headerActions = computed(() => this.getHeaderActions());
 
 	readonly config: TwitchModuleConfig = {
@@ -61,7 +64,7 @@ export default class ChannelSectionModule extends TwitchModule {
 	async initialize() {
 		const quickAccessLinks = await this.settingsService().getSettingsKey("quickAccessLinks");
 		this.quickAccessLinks = signal(quickAccessLinks);
-		this.pinnedStreamers = await this.settingsService().getSettingsKey("pinnedStreamers");
+		this.pinnedStreamers.value = await this.settingsService().getSettingsKey("pinnedStreamers");
 		this.pinnedStreamersEnabled.value = await this.settingsService().getSettingsKey("pinnedStreamersEnabled");
 	}
 
@@ -93,11 +96,10 @@ export default class ChannelSectionModule extends TwitchModule {
 		const actions: ChannelSectionAction[] = [];
 		const channelId = this.currentChannelId.value;
 		if (this.pinnedStreamersEnabled.value && channelId) {
-			const pinnedStreamerAction = this.getPinnedStreamerAction(channelId);
 			actions.push({
 				key: "pin-streamer",
-				icon: pinnedStreamerAction.icon,
-				tooltip: pinnedStreamerAction.tooltip,
+				icon: this.pinStreamerIcon,
+				tooltip: this.pinStreamerTooltip,
 				onClick: () => {
 					const currentChannelId = this.currentChannelId.value;
 					if (!currentChannelId) return;
@@ -142,45 +144,17 @@ export default class ChannelSectionModule extends TwitchModule {
 		return false;
 	}
 
-	private getPinnedStreamerAction(channelId: string): PinnedStreamerActionState {
-		const existingAction = this.pinnedStreamerActionsByChannelId.get(channelId);
-		if (existingAction) {
-			this.updatePinnedStreamerAction(channelId, this.isPinnedStreamer(channelId));
-			return existingAction;
-		}
-
-		const action = {
-			icon: signal(""),
-			tooltip: signal(""),
-		};
-		this.pinnedStreamerActionsByChannelId.set(channelId, action);
-		this.updatePinnedStreamerAction(channelId, this.isPinnedStreamer(channelId));
-		return action;
-	}
-
 	private syncPinnedStreamerAction({ channelId, isPinned }: TwitchPinnedStreamerSyncEvent) {
-		if (!this.pinnedStreamersEnabled.value) return;
-		if (this.isPinnedStreamer(channelId) === isPinned) {
-			this.updatePinnedStreamerAction(channelId, isPinned);
-			return;
-		}
+		if (this.isPinnedStreamer(channelId) === isPinned) return;
 		if (isPinned) {
-			this.pinnedStreamers.push(channelId);
+			this.pinnedStreamers.value = [...this.pinnedStreamers.value, channelId];
 		} else {
-			this.pinnedStreamers = this.pinnedStreamers.filter((id) => id !== channelId);
+			this.pinnedStreamers.value = this.pinnedStreamers.value.filter((id) => id !== channelId);
 		}
-		this.updatePinnedStreamerAction(channelId, isPinned);
-	}
-
-	private updatePinnedStreamerAction(channelId: string, isPinned: boolean) {
-		const action = this.pinnedStreamerActionsByChannelId.get(channelId);
-		if (!action) return;
-		action.icon.value = isPinned ? "★" : "☆";
-		action.tooltip.value = isPinned ? "Unpin streamer" : "Pin streamer";
 	}
 
 	private isPinnedStreamer(channelId: string): boolean {
-		return this.pinnedStreamers.includes(channelId);
+		return this.pinnedStreamers.value.includes(channelId);
 	}
 
 	private async updateWatchtime() {
@@ -214,8 +188,3 @@ export default class ChannelSectionModule extends TwitchModule {
 		return watchtime?.time ?? 0;
 	}
 }
-
-type PinnedStreamerActionState = {
-	icon: Signal<string>;
-	tooltip: Signal<string>;
-};
