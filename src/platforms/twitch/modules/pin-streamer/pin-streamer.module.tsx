@@ -1,4 +1,5 @@
 import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
+import type { TwitchPinnedStreamerSyncEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import { render } from "preact";
@@ -29,12 +30,28 @@ export default class PinStreamerModule extends TwitchModule {
 				key: "pin-streamer-hide-sort-description",
 				once: true,
 			},
+			{
+				type: "event",
+				event: "twitch:pinnedStreamer:sync",
+				callback: this.handlePinnedStreamerSync.bind(this),
+				key: "pin-streamer-sync",
+			},
+			{
+				type: "event",
+				event: "twitch:settings:pinnedStreamersEnabled",
+				callback: (enabled) => {
+					this.pinnedStreamersEnabled = enabled;
+				},
+				key: "pin-streamer-enabled-sync",
+			},
 		],
 		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("pinnedStreamersEnabled"),
 	};
 
 	private observer: MutationObserver | undefined;
 	private pinnedStreamers: string[] = [];
+	private pinnedStreamersEnabled = false;
+	private pinButtonsByChannelId = new Map<string, PinStreamerButtonState[]>();
 
 	private run(elements: Element[]) {
 		this.hookPersonalSectionsRender();
@@ -65,6 +82,9 @@ export default class PinStreamerModule extends TwitchModule {
 						}
 					}
 				}
+				if (mutation.type === "childList" && mutation.removedNodes.length > 0) {
+					this.prunePinButtons();
+				}
 			}
 		});
 		this.observer?.observe(element, { childList: true });
@@ -83,14 +103,11 @@ export default class PinStreamerModule extends TwitchModule {
 		if (!imageWrapper) return;
 		const isPinned = signal(this.isPinnedStreamer(channelID));
 		const button = this.commonUtils().createElementByParent("pin-streamer-button", "button", imageWrapper);
+		this.registerPinButton(channelID, { button, isPinned });
 		button.onclick = async (event) => {
 			event.preventDefault();
 			event.stopPropagation();
-			isPinned.value = await this.togglePinnedStreamer(channelID);
-			if (isPinned.value) {
-				button.style.display = "inline-block";
-			} else button.style.display = "none";
-			await this.resetListOrderAndUpdate();
+			await this.emitPinnedStreamerSync({ channelId: channelID, isPinned: !isPinned.value });
 		};
 		button.style.display = "none";
 		channelWrapper.addEventListener("mouseover", () => {
@@ -171,19 +188,73 @@ export default class PinStreamerModule extends TwitchModule {
 		return this.pinnedStreamers.includes(channelId);
 	}
 
-	private async togglePinnedStreamer(channelId: string): Promise<boolean> {
-		const isPinned = this.isPinnedStreamer(channelId);
+	private async emitPinnedStreamerSync(payload: TwitchPinnedStreamerSyncEvent) {
+		const changed = await this.applyPinnedStreamerSync(payload);
+		if (!changed) return;
+		this.emitter.emit("twitch:pinnedStreamer:sync", { ...payload, source: "pin-streamer" });
+	}
+
+	private async handlePinnedStreamerSync(payload: TwitchPinnedStreamerSyncEvent) {
+		if (payload.source === "pin-streamer") return;
+		await this.applyPinnedStreamerSync(payload);
+	}
+
+	private async applyPinnedStreamerSync({ channelId, isPinned }: TwitchPinnedStreamerSyncEvent): Promise<boolean> {
+		if (!this.pinnedStreamersEnabled) return false;
+		const changed = await this.setPinnedStreamer(channelId, isPinned);
+		this.updatePinButtons(channelId, isPinned);
+		if (!changed) return false;
+		this.forceUpdatePersonalSection();
+		await this.resetListOrderAndUpdate();
+		return true;
+	}
+
+	private async setPinnedStreamer(channelId: string, isPinned: boolean): Promise<boolean> {
+		const currentValue = this.isPinnedStreamer(channelId);
+		if (currentValue === isPinned) return false;
 		if (isPinned) {
-			this.pinnedStreamers = this.pinnedStreamers.filter((id) => id !== channelId);
-		} else {
 			this.pinnedStreamers.push(channelId);
+		} else {
+			this.pinnedStreamers = this.pinnedStreamers.filter((id) => id !== channelId);
 		}
 		await this.settingsService().updateSettingsKey("pinnedStreamers", this.pinnedStreamers);
-		return !isPinned;
+		return true;
+	}
+
+	private registerPinButton(channelId: string, state: PinStreamerButtonState) {
+		const states = this.pinButtonsByChannelId.get(channelId) ?? [];
+		states.push(state);
+		this.pinButtonsByChannelId.set(channelId, states);
+	}
+
+	private updatePinButtons(channelId: string, isPinned: boolean) {
+		const states = this.prunePinButtons(channelId);
+		for (const state of states) {
+			state.isPinned.value = isPinned;
+			state.button.style.display = isPinned ? "inline-block" : "none";
+		}
+	}
+
+	private prunePinButtons(channelId?: string): PinStreamerButtonState[] {
+		const entries = channelId
+			? ([[channelId, this.pinButtonsByChannelId.get(channelId) ?? []]] as [string, PinStreamerButtonState[]][])
+			: this.pinButtonsByChannelId.entries();
+		let activeStates: PinStreamerButtonState[] = [];
+		for (const [id, states] of entries) {
+			const attachedStates = states.filter((state) => document.contains(state.button));
+			if (attachedStates.length > 0) {
+				this.pinButtonsByChannelId.set(id, attachedStates);
+			} else {
+				this.pinButtonsByChannelId.delete(id);
+			}
+			if (id === channelId) activeStates = attachedStates;
+		}
+		return activeStates;
 	}
 
 	async initialize() {
 		this.pinnedStreamers.push(...(await this.settingsService().getSettingsKey("pinnedStreamers")));
+		this.pinnedStreamersEnabled = await this.settingsService().getSettingsKey("pinnedStreamersEnabled");
 		this.commonUtils().createGlobalStyle(`
 			.pin-streamer-button {
 				order: 2;
@@ -194,6 +265,11 @@ export default class PinStreamerModule extends TwitchModule {
 		`);
 	}
 }
+
+type PinStreamerButtonState = {
+	button: HTMLElement;
+	isPinned: Signal<boolean>;
+};
 
 interface PinStreamerComponentProps {
 	isPinned: Signal<boolean>;
