@@ -15,6 +15,7 @@ export type TwitchEvents = {
 export type TwitchPinnedStreamerSyncEvent = {
 	channelId: string;
 	isPinned: boolean;
+	source?: "channel-section" | "pin-streamer";
 };
 
 export type TwitchChatMessage = {

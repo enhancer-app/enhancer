@@ -5,7 +5,7 @@ import styled from "styled-components";
 
 export interface ChannelSectionAction {
 	key: string;
-	icon: Signal<string>;
+	icon: Signal<string> | string;
 	tooltip: Signal<string> | string;
 	onClick: () => void;
 }
@@ -16,7 +16,7 @@ interface ChannelSectionComponentProps {
 	sites: Signal<QuickAccessLink[]>;
 	watchTime: Signal<number>;
 	logoUrl: string;
-	actions?: ChannelSectionAction[];
+	actions?: Signal<ChannelSectionAction[]> | ChannelSectionAction[];
 }
 
 export function ChannelSectionComponent({
@@ -27,6 +27,7 @@ export function ChannelSectionComponent({
 	logoUrl,
 	actions = [],
 }: ChannelSectionComponentProps) {
+	const actionList = Array.isArray(actions) ? actions : actions.value;
 	const formatWatchTime = (time: number) => {
 		const hours = time === 0 ? 0 : time / 3600;
 		if (hours < 1) return `${Math.round(hours * 60)} minutes`;
@@ -49,14 +50,15 @@ export function ChannelSectionComponent({
 						</ChannelNameRow>
 					</ChannelDetails>
 				</ChannelInfo>
-				{actions.length > 0 && (
+				{actionList.length > 0 && (
 					<HeaderActions>
-						{actions.map((action) => {
-							const tooltipText = getTooltipText(action.tooltip);
+						{actionList.map((action) => {
+							const iconText = getActionText(action.icon);
+							const tooltipText = getActionText(action.tooltip);
 							return (
 								<TooltipComponent key={action.key} content={<span>{tooltipText}</span>} position="right">
 									<ActionButton type="button" onClick={action.onClick} aria-label={tooltipText}>
-										{action.icon.value}
+										{iconText}
 									</ActionButton>
 								</TooltipComponent>
 							);
@@ -80,9 +82,9 @@ export function ChannelSectionComponent({
 	);
 }
 
-function getTooltipText(tooltip: Signal<string> | string) {
-	if (typeof tooltip === "string") return tooltip;
-	return tooltip.value;
+function getActionText(value: Signal<string> | string) {
+	if (typeof value === "string") return value;
+	return value.value;
 }
 
 const Container = styled.div`

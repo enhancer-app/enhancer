@@ -12,7 +12,7 @@ export default class ChannelSectionModule extends KickModule {
 	private quickAccessLinks = {} as Signal<QuickAccessLink[]>;
 	private watchtimeCounter = {} as Signal<number>;
 	private currentUsername = signal("");
-	private settingsActionIcon = signal("⚙");
+	private readonly settingsActionIcon = "⚙";
 	private watchtimeInterval: NodeJS.Timeout | undefined;
 
 	readonly config: KickModuleConfig = {

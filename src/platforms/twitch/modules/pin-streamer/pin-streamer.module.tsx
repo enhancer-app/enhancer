@@ -33,7 +33,7 @@ export default class PinStreamerModule extends TwitchModule {
 			{
 				type: "event",
 				event: "twitch:pinnedStreamer:sync",
-				callback: this.syncPinnedStreamer.bind(this),
+				callback: this.handlePinnedStreamerSync.bind(this),
 				key: "pin-streamer-sync",
 			},
 			{
@@ -81,6 +81,9 @@ export default class PinStreamerModule extends TwitchModule {
 							this.logger.error(`Failed to create pin for node: ${error}`);
 						}
 					}
+				}
+				if (mutation.type === "childList" && mutation.removedNodes.length > 0) {
+					this.prunePinButtons();
 				}
 			}
 		});
@@ -186,17 +189,24 @@ export default class PinStreamerModule extends TwitchModule {
 	}
 
 	private async emitPinnedStreamerSync(payload: TwitchPinnedStreamerSyncEvent) {
-		await this.syncPinnedStreamer(payload);
-		this.emitter.emit("twitch:pinnedStreamer:sync", payload);
+		const changed = await this.applyPinnedStreamerSync(payload);
+		if (!changed) return;
+		this.emitter.emit("twitch:pinnedStreamer:sync", { ...payload, source: "pin-streamer" });
 	}
 
-	private async syncPinnedStreamer({ channelId, isPinned }: TwitchPinnedStreamerSyncEvent) {
-		if (!this.pinnedStreamersEnabled) return;
+	private async handlePinnedStreamerSync(payload: TwitchPinnedStreamerSyncEvent) {
+		if (payload.source === "pin-streamer") return;
+		await this.applyPinnedStreamerSync(payload);
+	}
+
+	private async applyPinnedStreamerSync({ channelId, isPinned }: TwitchPinnedStreamerSyncEvent): Promise<boolean> {
+		if (!this.pinnedStreamersEnabled) return false;
 		const changed = await this.setPinnedStreamer(channelId, isPinned);
 		this.updatePinButtons(channelId, isPinned);
-		if (!changed) return;
+		if (!changed) return false;
 		this.forceUpdatePersonalSection();
 		await this.resetListOrderAndUpdate();
+		return true;
 	}
 
 	private async setPinnedStreamer(channelId: string, isPinned: boolean): Promise<boolean> {
@@ -218,11 +228,28 @@ export default class PinStreamerModule extends TwitchModule {
 	}
 
 	private updatePinButtons(channelId: string, isPinned: boolean) {
-		const states = this.pinButtonsByChannelId.get(channelId) ?? [];
+		const states = this.prunePinButtons(channelId);
 		for (const state of states) {
 			state.isPinned.value = isPinned;
 			state.button.style.display = isPinned ? "inline-block" : "none";
 		}
+	}
+
+	private prunePinButtons(channelId?: string): PinStreamerButtonState[] {
+		const entries = channelId
+			? ([[channelId, this.pinButtonsByChannelId.get(channelId) ?? []]] as [string, PinStreamerButtonState[]][])
+			: this.pinButtonsByChannelId.entries();
+		let activeStates: PinStreamerButtonState[] = [];
+		for (const [id, states] of entries) {
+			const attachedStates = states.filter((state) => document.contains(state.button));
+			if (attachedStates.length > 0) {
+				this.pinButtonsByChannelId.set(id, attachedStates);
+			} else {
+				this.pinButtonsByChannelId.delete(id);
+			}
+			if (id === channelId) activeStates = attachedStates;
+		}
+		return activeStates;
 	}
 
 	async initialize() {
