@@ -124,8 +124,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		if (!latency) return "invalid";
 
 		// Disable reducer without Low Latency mode
-		const isLowLatencyDisabled =
-			!mediaPlayer.core.state.liveLowLatency || window.localStorage.getItem("lowLatencyModeEnabled") === "false";
+		const isLowLatencyDisabled = !mediaPlayer.core.state.liveLowLatency;
 		if (isLowLatencyDisabled) return "caughtUp";
 
 		const { maxThreshold, minThreshold } = await this.getSettings();
