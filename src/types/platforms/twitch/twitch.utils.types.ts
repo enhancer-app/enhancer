@@ -68,7 +68,11 @@ export type MediaPlayerInstance = MediaPlayerInstanceWrapper | MediaPlayerInstan
 
 export type MediaPlayerInstanceBase = {
 	core: {
-		state: { liveLatency: number; ingestLatency: number };
+		state: {
+			liveLatency: number;
+			ingestLatency: number;
+			liveLowLatency: boolean;
+		};
 		paused: boolean;
 		renderSurface: { video: { element: () => HTMLVideoElement } };
 	};
