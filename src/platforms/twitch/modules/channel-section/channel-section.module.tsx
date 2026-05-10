@@ -121,8 +121,16 @@ export default class ChannelSectionModule extends TwitchModule {
 		return actions;
 	}
 
+	private getCurrentChannelByUrl() {
+		const name = this.twitchUtils().getCurrentChannelByUrl();
+		return { displayName: name, channelLogin: name, channelId: undefined };
+	}
+
 	private updateNames() {
-		const channelInfo = this.twitchUtils().getChannelInfo() || this.twitchUtils().getChannelInfoFromHomeLowerContent();
+		const channelInfo =
+			this.twitchUtils().getChannelInfo() ||
+			this.twitchUtils().getChannelInfoFromHomeLowerContent() ||
+			this.getCurrentChannelByUrl();
 		if (!channelInfo) {
 			this.logger.warn("Channel name not found");
 			return true;
