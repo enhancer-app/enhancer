@@ -39,8 +39,9 @@ export default class PinStreamerModule extends TwitchModule {
 			{
 				type: "event",
 				event: "twitch:settings:pinnedStreamersEnabled",
-				callback: (enabled) => {
+				callback: async (enabled) => {
 					this.pinnedStreamersEnabled = enabled;
+					if (!enabled) await this.resetListOrderAndUpdate();
 				},
 				key: "pin-streamer-enabled-sync",
 			},
@@ -146,6 +147,7 @@ export default class PinStreamerModule extends TwitchModule {
 	}
 
 	private updateFollowList() {
+		if (!this.pinnedStreamersEnabled) return;
 		const props = this.twitchUtils().getPersonalSections()?.props;
 		if (!props) return;
 
