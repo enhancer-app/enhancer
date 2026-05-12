@@ -44,6 +44,10 @@ export default abstract class Module<
 		return this._settingsCache.get();
 	}
 
+	protected settingsCache(): SettingsCache<Settings> {
+		return this._settingsCache;
+	}
+
 	protected updateSettings(settings: Settings): Promise<void> {
 		return this._settingsCache.update(settings);
 	}

@@ -1,10 +1,18 @@
 import type { h } from "preact";
 
+export type SettingCategory = {
+	id: string;
+	title: string;
+	order: number;
+	tags?: string[];
+};
+
 export type CommonSettingDefinition<T = any> = {
 	id: keyof T | string;
 	title: string;
 	description: string;
-	tabIndex: number;
+	categoryId: string;
+	tags?: string[];
 	hideInfo?: boolean;
 	requiresRefreshToDisable?: boolean;
 };
@@ -52,9 +60,7 @@ export type TextSettingDefinition<T = any> = {
 export type FileSettingDefinition<T = any> = {
 	type: "file";
 	accept?: string;
-	/** Array of valid MIME types for file validation */
 	validTypes?: string[];
-	/** Maximum file size in bytes (optional) */
 	maxSizeBytes?: number;
 } & CommonSettingDefinition<T>;
 
@@ -68,14 +74,9 @@ export type SettingDefinition<T = any> =
 	| TextSettingDefinition<T>
 	| FileSettingDefinition<T>;
 
-export type TabDefinition = {
-	title: string;
-	iconUrl: string;
-};
-
 export type SettingsProps<T = any> = {
 	logoSrc?: string;
-	tabs: TabDefinition[];
+	categories: SettingCategory[];
 	settingDefinitions: SettingDefinition<T>[];
 	settings: T;
 	onSettingsChange: (settings: T, updatedKey: keyof T) => void;
