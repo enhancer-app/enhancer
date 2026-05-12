@@ -46,6 +46,8 @@ const Header = styled.header`
 	gap: 12px;
 	height: 52px;
 	box-sizing: border-box;
+	position: relative;
+	z-index: 1001;
 `;
 
 const LogoContainer = styled.div`
@@ -123,9 +125,9 @@ const CategoryJumpButton = styled.button`
 	align-items: center;
 	justify-content: center;
 	padding: 4px;
-	margin-left: auto;
 	border-radius: 4px;
 	flex-shrink: 0;
+	position: relative;
 
 	&:hover {
 		color: #9147ff;
@@ -135,15 +137,15 @@ const CategoryJumpButton = styled.button`
 
 const CategoryDropdown = styled.div<{ visible: boolean }>`
 	position: absolute;
-	top: calc(100% + 5px);
-	right: 0;
+	top: calc(100% + 12px);
+	left: 0;
 	background: #161616;
 	border: 1px solid #232323;
 	border-radius: 7px;
 	min-width: 150px;
 	max-height: 200px;
 	overflow-y: auto;
-	z-index: 1000;
+	z-index: 1001;
 	display: ${(props) => (props.visible ? "block" : "none")};
 
 	&::-webkit-scrollbar {
@@ -217,8 +219,6 @@ const SettingsContent = styled.div`
 `;
 
 const CategoryHeader = styled.div`
-	position: sticky;
-	top: 0;
 	padding: 12px 20px 10px 20px;
 	font-size: 12px;
 	font-weight: 600;
@@ -226,6 +226,7 @@ const CategoryHeader = styled.div`
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
 	background: #0d0d0d;
+	border-bottom: 1px solid #232323;
 	z-index: 10;
 	display: flex;
 	align-items: center;
@@ -1014,6 +1015,42 @@ const Settings = <T,>({
 					<LogoContainer>
 						<Logo src={logoSrc} alt="logo" />
 					</LogoContainer>
+					<CategoryJumpButton
+						className="category-jump-container"
+						onClick={(e) => {
+							e.stopPropagation();
+							setShowCategoryDropdown(!showCategoryDropdown);
+						}}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="14"
+							height="14"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							strokeWidth="2"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+						>
+							<path d="M3 6h18" />
+							<path d="M3 12h18" />
+							<path d="M3 18h18" />
+						</svg>
+						<CategoryDropdown visible={showCategoryDropdown}>
+							{filteredCategories.map((c) => (
+								<CategoryDropdownItem
+									key={c.id}
+									onClick={(e) => {
+										e.stopPropagation();
+										jumpToCategory(c.id);
+									}}
+								>
+									{c.title}
+								</CategoryDropdownItem>
+							))}
+						</CategoryDropdown>
+					</CategoryJumpButton>
 					<SearchContainer>
 						<SearchInput
 							type="text"
@@ -1070,41 +1107,7 @@ const Settings = <T,>({
 									if (el) categoryRefs.current.set(category.id, el);
 								}}
 							>
-								<CategoryHeader>
-									{category.title}
-									{index === 0 && (
-										<CategoryJumpButton
-											className="category-jump-container"
-											onClick={(e) => {
-												e.stopPropagation();
-												setShowCategoryDropdown(!showCategoryDropdown);
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="14"
-												height="14"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												strokeWidth="2"
-												strokeLinecap="round"
-												strokeLinejoin="round"
-											>
-												<path d="M3 6h18" />
-												<path d="M3 12h18" />
-												<path d="M3 18h18" />
-											</svg>
-											<CategoryDropdown visible={showCategoryDropdown}>
-												{filteredCategories.map((c) => (
-													<CategoryDropdownItem key={c.id} onClick={() => jumpToCategory(c.id)}>
-														{c.title}
-													</CategoryDropdownItem>
-												))}
-											</CategoryDropdown>
-										</CategoryJumpButton>
-									)}
-								</CategoryHeader>
+								<CategoryHeader>{category.title}</CategoryHeader>
 								<CategorySettings>
 									{category.settings.map((setting) => {
 										const value = settings[setting.id as keyof T];
