@@ -38,7 +38,7 @@ export default abstract class Platform<
 		this.tryInitializeEnhancerApi().catch((err) => {
 			this.logger.error("EnhancerApi init failed:", err);
 		});
-		this.workerApi.start();
+		await this.workerApi.start();
 		await this.settingsCache.initialize();
 		await this.initialize();
 		await this.loadModules();

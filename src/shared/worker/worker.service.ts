@@ -19,11 +19,22 @@ export default class WorkerService {
 		document.body.appendChild(this.element);
 	}
 
-	start() {
+	async start() {
 		this.setupMessageListener();
 		this.setupBroadcastListener();
+		await this.waitForBridge();
 		this.startPing();
 		this.logger.info("WorkerService started");
+	}
+
+	private waitForBridge(): Promise<void> {
+		return new Promise((resolve) => {
+			const handler = () => {
+				this.element.removeEventListener("enhancer-bridge-ready", handler);
+				resolve();
+			};
+			this.element.addEventListener("enhancer-bridge-ready", handler);
+		});
 	}
 
 	stop() {

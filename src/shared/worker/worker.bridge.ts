@@ -40,6 +40,7 @@ export default class WorkerBridge {
 		if (!this.bridgeElement) return;
 		this.setupMessageForwarding();
 		this.setupBroadcastReceiving();
+		this.bridgeElement.dispatchEvent(new CustomEvent("enhancer-bridge-ready"));
 		this.log("WorkerService bridge started!");
 	}
 
