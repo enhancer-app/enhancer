@@ -42,9 +42,7 @@ export default class FunnyModule extends KickModule {
 				once: true,
 			},
 		],
-		isModuleEnabledCallback: async () => {
-			return (await this.settingsService().getSettingsKey("_funnyThings")) && this.commonUtils().isFunnyDay();
-		},
+		enabled: () => this.settings()._funnyThings && this.commonUtils().isFunnyDay(),
 	};
 
 	private replaceChannelName(elements: Element[]) {

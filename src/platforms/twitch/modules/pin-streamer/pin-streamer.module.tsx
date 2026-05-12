@@ -46,7 +46,7 @@ export default class PinStreamerModule extends TwitchModule {
 				key: "pin-streamer-enabled-sync",
 			},
 		],
-		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("pinnedStreamersEnabled"),
+		enabled: () => this.settings().pinnedStreamersEnabled,
 	};
 
 	private observer: MutationObserver | undefined;
@@ -219,7 +219,7 @@ export default class PinStreamerModule extends TwitchModule {
 		} else {
 			this.pinnedStreamers = this.pinnedStreamers.filter((id) => id !== channelId);
 		}
-		await this.settingsService().updateSettingsKey("pinnedStreamers", this.pinnedStreamers);
+		await this.updateSetting("pinnedStreamers", this.pinnedStreamers);
 		return true;
 	}
 
@@ -254,9 +254,9 @@ export default class PinStreamerModule extends TwitchModule {
 		return activeStates;
 	}
 
-	async initialize() {
-		this.pinnedStreamers.push(...(await this.settingsService().getSettingsKey("pinnedStreamers")));
-		this.pinnedStreamersEnabled = await this.settingsService().getSettingsKey("pinnedStreamersEnabled");
+	initialize() {
+		this.pinnedStreamers.push(...this.settings().pinnedStreamers);
+		this.pinnedStreamersEnabled = this.settings().pinnedStreamersEnabled;
 		this.commonUtils().createGlobalStyle(`
 			.pin-streamer-button {
 				order: 2;

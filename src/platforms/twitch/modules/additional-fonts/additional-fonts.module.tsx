@@ -7,7 +7,7 @@ export default class AdditionalFontsModule extends TwitchModule {
 
 	readonly config: TwitchModuleConfig = {
 		name: "additional-fonts",
-		isModuleEnabledCallback: async () => this.settingsService().getSettingsKey("loadAdditionalFonts"),
+		enabled: () => this.settings().loadAdditionalFonts,
 		appliers: [
 			{
 				type: "selector",

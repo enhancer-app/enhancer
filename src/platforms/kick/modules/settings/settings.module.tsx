@@ -287,9 +287,9 @@ export default class SettingsModule extends KickModule {
 		this.setupKeyboardShortcut();
 	}
 
-	private async loadSettings() {
+	private loadSettings() {
 		try {
-			this.settingsSignal.value = { ...KICK_DEFAULT_SETTINGS, ...(await this.settingsService().getSettings()) };
+			this.settingsSignal.value = { ...KICK_DEFAULT_SETTINGS, ...this.settings() };
 		} catch (error) {
 			console.error("Failed to load settings:", error);
 		}
@@ -297,7 +297,7 @@ export default class SettingsModule extends KickModule {
 
 	private async saveSettings(settings: KickSettings, updatedKey: keyof KickSettings) {
 		try {
-			await this.settingsService().updateSettings(settings);
+			await this.updateSettings(settings);
 			this.settingsSignal.value = settings;
 			this.emitter.emit(`kick:settings:${updatedKey}`, settings[updatedKey]);
 			this.logger.debug(`Settings changed "${updatedKey}" to`, settings[updatedKey]);

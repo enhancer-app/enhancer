@@ -1,36 +1,21 @@
-import { Logger } from "$shared/logger/logger.ts";
+import { Database } from "$shared/worker/database/database.ts";
 import { WatchtimeDatabaseMigrator } from "$shared/worker/watchtime/watchtime.database-migrator.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
 
-export class WatchtimeDatabase {
-	private readonly logger = new Logger({ context: "watchtime-db" });
-	private database: IDBDatabase | null = null;
-	private readonly dbName = "enhancer_watchtime";
-	private readonly dbVersion = 4;
+export class WatchtimeDatabase extends Database {
+	protected readonly dbName = "enhancer_watchtime";
+	protected readonly dbVersion = 4;
 	private readonly storeName = "watchtime";
 
 	private readonly migrator = new WatchtimeDatabaseMigrator(this.storeName, this.logger);
 
-	async initialize(): Promise<void> {
-		return new Promise((resolve, reject) => {
-			const request = indexedDB.open(this.dbName, this.dbVersion);
+	constructor() {
+		super("watchtime-db");
+	}
 
-			request.onerror = () => {
-				this.logger.error("Failed to open database:", request.error);
-				reject(request.error);
-			};
-
-			request.onsuccess = () => {
-				this.database = request.result;
-				this.logger.info("Watchtime database loaded successfully");
-				resolve();
-			};
-
-			request.onupgradeneeded = (event) => {
-				this.migrator.migrate(event, request.result, this.dbVersion);
-			};
-		});
+	protected onUpgrade(event: IDBVersionChangeEvent, db: IDBDatabase): void {
+		this.migrator.migrate(event, db, this.dbVersion);
 	}
 
 	private createId(platform: PlatformType, username: string): string {
@@ -38,28 +23,14 @@ export class WatchtimeDatabase {
 	}
 
 	async getWatchtime(platform: PlatformType, username: string): Promise<WatchtimeRecord | null> {
-		if (!this.database) {
-			throw new Error("Database not initialized");
-		}
 		const id = this.createId(platform, username);
-		return new Promise((resolve, reject) => {
-			// biome-ignore lint/style/noNonNullAssertion: checking it above
-			const tx = this.database!.transaction(this.storeName, "readonly");
-			const store = tx.objectStore(this.storeName);
-			const request = store.get(id);
-
-			request.onsuccess = () => resolve(request.result || null);
-			request.onerror = () => {
-				this.logger.error("Failed to get watchtime:", request.error);
-				reject(request.error);
-			};
-		});
+		const result = await this.request<WatchtimeRecord | undefined>(this.storeName, "readonly", (store) =>
+			store.get(id),
+		);
+		return result ?? null;
 	}
 
 	async addWatchtime(platform: PlatformType, username: string, timeToAdd: number): Promise<void> {
-		if (!this.database) {
-			throw new Error("Database not initialized");
-		}
 		const now = Date.now();
 		const normalizedUsername = username.toLowerCase();
 		const id = this.createId(platform, normalizedUsername);
@@ -77,83 +48,32 @@ export class WatchtimeDatabase {
 				lastUpdate: now,
 			};
 		}
-		return new Promise((resolve, reject) => {
-			// biome-ignore lint/style/noNonNullAssertion: checking it above
-			const tx = this.database!.transaction(this.storeName, "readwrite");
-			const store = tx.objectStore(this.storeName);
-			const request = store.put(watchtime);
-
-			request.onsuccess = () => resolve();
-			request.onerror = () => {
-				this.logger.error("Failed to update watchtime:", request.error);
-				reject(request.error);
-			};
-		});
+		await this.request<void>(this.storeName, "readwrite", (store) => store.put(watchtime));
 	}
 
 	async getAllWatchtimePaginated(platform: PlatformType, page: number, pageSize: number): Promise<WatchtimeRecord[]> {
-		if (!this.database) {
-			throw new Error("Database not initialized");
-		}
 		if (pageSize <= 0) {
 			throw new Error("Page size must be a positive number");
 		}
 
-		return new Promise((resolve, reject) => {
-			// biome-ignore lint/style/noNonNullAssertion: checking it above
-			const tx = this.database!.transaction(this.storeName, "readonly");
-			const store = tx.objectStore(this.storeName);
-			const index = store.index("by_platform_time");
+		const results: WatchtimeRecord[] = [];
+		let skipped = 0;
+		const start = (page - 1) * pageSize;
 
-			const range = IDBKeyRange.bound([platform, 0], [platform, Number.POSITIVE_INFINITY]);
-			const request = index.openCursor(range, "prev"); // biggest watchtime first
+		const range = IDBKeyRange.bound([platform, 0], [platform, Number.POSITIVE_INFINITY]);
 
-			const results: WatchtimeRecord[] = [];
-			let skipped = 0;
-			const start = (page - 1) * pageSize;
-
-			request.onsuccess = (event) => {
-				const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-				if (!cursor) {
-					resolve(results);
-					return;
-				}
-
-				if (skipped >= start && results.length < pageSize) {
-					results.push(cursor.value as WatchtimeRecord);
-				}
-
-				skipped++;
-				if (results.length < pageSize) {
-					cursor.continue();
-				} else {
-					resolve(results);
-				}
-			};
-
-			request.onerror = () => {
-				this.logger.error("Failed to get paginated watchtime by platform:", request.error);
-				reject(request.error);
-			};
+		await this.forEachCursor<WatchtimeRecord>(this.storeName, "by_platform_time", range, "prev", (value) => {
+			if (skipped >= start && results.length < pageSize) {
+				results.push(value);
+			}
+			skipped++;
+			return results.length < pageSize;
 		});
+
+		return results;
 	}
 
 	async setWatchtime(watchtime: WatchtimeRecord): Promise<void> {
-		if (!this.database) {
-			throw new Error("Database not initialized");
-		}
-
-		return new Promise((resolve, reject) => {
-			// biome-ignore lint/style/noNonNullAssertion: checking it above
-			const tx = this.database!.transaction(this.storeName, "readwrite");
-			const store = tx.objectStore(this.storeName);
-			const request = store.put(watchtime);
-
-			request.onsuccess = () => resolve();
-			request.onerror = () => {
-				this.logger.error("Failed to set watchtime:", request.error);
-				reject(request.error);
-			};
-		});
+		await this.request<void>(this.storeName, "readwrite", (store) => store.put(watchtime));
 	}
 }

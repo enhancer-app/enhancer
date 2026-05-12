@@ -20,20 +20,20 @@ export default class StreamLatencyReducerModule extends KickModule {
 				once: true,
 			},
 		],
-		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("streamLatencyReducerEnabled"),
+		enabled: () => this.settings().streamLatencyReducerEnabled,
 	};
 
 	private run(): void {
 		if (this.updateInterval) clearInterval(this.updateInterval);
-		this.updateInterval = setInterval(async () => {
-			const status = await this.getPlaybackRateStatus();
+		this.updateInterval = setInterval(() => {
+			const status = this.getPlaybackRateStatus();
 
 			if (status === "catchingUpMax") {
-				await this.setPlaybackRateMode("catchUpMax");
+				this.setPlaybackRateMode("catchUpMax");
 			} else if (status === "catchingUpMin") {
-				await this.setPlaybackRateMode("catchUpMin");
+				this.setPlaybackRateMode("catchUpMin");
 			} else {
-				await this.setPlaybackRateMode("reset");
+				this.setPlaybackRateMode("reset");
 			}
 		}, 1000);
 	}
@@ -42,7 +42,7 @@ export default class StreamLatencyReducerModule extends KickModule {
 		video.playbackRate = rate;
 	}
 
-	private async setPlaybackRateMode(mode: "catchUpMin" | "catchUpMax" | "reset") {
+	private setPlaybackRateMode(mode: "catchUpMin" | "catchUpMax" | "reset") {
 		const videoPlayer = this.getPlayer();
 		if (!videoPlayer) return;
 
@@ -60,12 +60,7 @@ export default class StreamLatencyReducerModule extends KickModule {
 			this.changePlaybackSpeed(videoPlayer, 1);
 			return;
 		}
-		const {
-			minRate,
-			maxRate,
-			minThreshold: minSpeedThreshold,
-			maxThreshold: maxSpeedThreshold,
-		} = await this.getSettings();
+		const { minRate, maxRate, minThreshold: minSpeedThreshold, maxThreshold: maxSpeedThreshold } = this.getSettings();
 
 		if (mode === "catchUpMax") {
 			targetRate = maxRate;
@@ -82,25 +77,27 @@ export default class StreamLatencyReducerModule extends KickModule {
 		this.changePlaybackSpeed(videoPlayer, targetRate);
 	}
 
-	private async getPlaybackRateStatus() {
+	private getPlaybackRateStatus() {
 		const videoPlayer = this.getPlayer();
 		if (!videoPlayer) return;
 		const latency = this.computeLatency(videoPlayer);
 		if (!latency) return "invalid";
 
-		const { maxThreshold, minThreshold } = await this.getSettings();
+		const { maxThreshold, minThreshold } = this.getSettings();
 		if (latency >= maxThreshold) return "catchingUpMax";
 		if (latency > minThreshold) return "catchingUpMin";
 		if (latency <= minThreshold) return "caughtUp";
 		return "invalid";
 	}
 
-	private async getSettings() {
-		const minRate = await this.settingsService().getSettingsKey("streamLatencyReducerMinRate");
-		const maxRate = await this.settingsService().getSettingsKey("streamLatencyReducerMaxRate");
-		const minThreshold = await this.settingsService().getSettingsKey("streamLatencyReducerMinThreshold");
-		const maxThreshold = await this.settingsService().getSettingsKey("streamLatencyReducerMaxThreshold");
-		return { minRate, maxRate, minThreshold, maxThreshold };
+	private getSettings() {
+		const settings = this.settings();
+		return {
+			minRate: settings.streamLatencyReducerMinRate,
+			maxRate: settings.streamLatencyReducerMaxRate,
+			minThreshold: settings.streamLatencyReducerMinThreshold,
+			maxThreshold: settings.streamLatencyReducerMaxThreshold,
+		};
 	}
 
 	// Calculates latency based on average of past latency snapshots

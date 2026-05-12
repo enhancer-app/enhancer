@@ -1,6 +1,6 @@
 import type EnhancerApi from "$shared/apis/enhancer.api.ts";
 import { Logger } from "$shared/logger/logger.ts";
-import type SettingsService from "$shared/settings/settings.service.ts";
+import type SettingsCache from "$shared/settings/settings.service.ts";
 import type StorageRepository from "$shared/storage/storage-repository.ts";
 import type UtilsRepository from "$shared/utils/utils.repository.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
@@ -20,29 +20,36 @@ export default abstract class Module<
 	protected constructor(
 		protected readonly emitter: Emitter<Events>,
 		private readonly storageRepository: StorageRepository<Storage>,
-		private readonly _settingsService: SettingsService<Settings>,
+		private readonly _settingsCache: SettingsCache<Settings>,
 		private readonly utilsRepository: UtilsRepository,
 		private readonly _enhancerApi: EnhancerApi,
 		private readonly _workerService: WorkerService,
 	) {}
 
 	async setup() {
-		// As abstract property values are not accessible during constructor execution,
-		// the logger instance is initialized here using an alternative method.
 		this.logger = new Logger({ context: `module:${this.config.name}` });
 	}
 
-	protected async isModuleEnabled(): Promise<boolean> {
-		if (this.config.isModuleEnabledCallback) {
-			return this.config.isModuleEnabledCallback();
-		}
-		return true;
+	protected isModuleEnabled(): boolean {
+		return this.config.enabled?.() ?? true;
 	}
 
-	async initialize(): Promise<void> {}
+	initialize(): void | Promise<void> {}
 
 	protected getId() {
 		return `enhancer-${this.config.name}`;
+	}
+
+	protected settings(): Settings {
+		return this._settingsCache.get();
+	}
+
+	protected updateSettings(settings: Settings): Promise<void> {
+		return this._settingsCache.update(settings);
+	}
+
+	protected updateSetting<K extends keyof Settings>(key: K, value: Settings[K]): Promise<void> {
+		return this._settingsCache.updateKey(key, value);
 	}
 
 	protected commonUtils() {
@@ -63,9 +70,5 @@ export default abstract class Module<
 
 	protected workerService() {
 		return this._workerService;
-	}
-
-	protected settingsService() {
-		return this._settingsService;
 	}
 }

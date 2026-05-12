@@ -4,7 +4,7 @@ import { Logger } from "$shared/logger/logger.ts";
 import EventModuleApplier from "$shared/module/applier/event-module-applier.ts";
 import SelectorModuleApplier from "$shared/module/applier/selector-module-applier.ts";
 import type Module from "$shared/module/module.ts";
-import SettingsService from "$shared/settings/settings.service.ts";
+import SettingsCache from "$shared/settings/settings.service.ts";
 import StorageRepository from "$shared/storage/storage-repository.ts";
 import UtilsRepository from "$shared/utils/utils.repository.ts";
 import WorkerService from "$shared/worker/worker.service.ts";
@@ -25,11 +25,11 @@ export default abstract class Platform<
 	protected readonly utilsRepository = new UtilsRepository();
 	protected readonly enhancerApi: EnhancerApi;
 	protected readonly workerApi = new WorkerService();
-	protected readonly settingsService: SettingsService<TSettings>;
+	protected readonly settingsCache: SettingsCache<TSettings>;
 
 	protected constructor(protected readonly config: PlatformConfig) {
 		this.enhancerApi = new EnhancerApi(config.type);
-		this.settingsService = new SettingsService<TSettings>(config.type, this.workerApi, this.emitter);
+		this.settingsCache = new SettingsCache<TSettings>(config.type, this.workerApi, this.emitter);
 	}
 
 	protected async initialize(): Promise<void> {}
@@ -39,6 +39,7 @@ export default abstract class Platform<
 			this.logger.error("EnhancerApi init failed:", err);
 		});
 		this.workerApi.start();
+		await this.settingsCache.initialize();
 		await this.initialize();
 		await this.loadModules();
 		this.logger.info(`Started ${this.config.type} extension`);

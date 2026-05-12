@@ -28,7 +28,7 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 				},
 			},
 		],
-		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chatNicknameCustomizationEnabled"),
+		enabled: () => this.settings().chatNicknameCustomizationEnabled,
 	};
 
 	private static DEFAULT_FONT = "var(--font-base)";
@@ -87,7 +87,7 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 		this.chatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
 	}
 
-	async initialize(): Promise<void> {
-		this.isFunnyEnabled = await this.settingsService().getSettingsKey("_funnyThings");
+	initialize(): void {
+		this.isFunnyEnabled = this.settings()._funnyThings;
 	}
 }

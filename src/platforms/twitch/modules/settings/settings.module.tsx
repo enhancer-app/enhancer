@@ -329,17 +329,15 @@ export default class SettingsModule extends TwitchModule {
 	}
 
 	private async run() {
-		await this.loadSettings();
+		this.loadSettings();
 		await this.createSettingsContainer();
 		this.setupKeyboardShortcut();
 	}
 
-	private async loadSettings() {
+	private loadSettings() {
 		try {
-			const settings = await this.workerService().send("getSettings", {
-				platform: "twitch",
-			});
-			if (!settings) throw Error("Failed to load settings from worker");
+			const settings = this.settings();
+			if (!settings) throw Error("Failed to load settings from cache");
 			this.settingsSignal.value = { ...TWITCH_DEFAULT_SETTINGS, ...settings };
 		} catch (error) {
 			console.error("Failed to load settings:", error);
@@ -348,7 +346,7 @@ export default class SettingsModule extends TwitchModule {
 
 	private async saveSettings(settings: TwitchSettings, updatedKey: keyof TwitchSettings) {
 		try {
-			await this.workerService().send("updateSettings", { settings, platform: "twitch" });
+			await this.updateSettings(settings);
 			this.settingsSignal.value = settings;
 			this.emitter.emit(`twitch:settings:${updatedKey}`, settings[updatedKey]);
 			this.logger.debug(`Settings changed "${updatedKey}" to`, settings[updatedKey]);

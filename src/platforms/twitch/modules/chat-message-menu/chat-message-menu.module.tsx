@@ -24,11 +24,11 @@ export default class ChatMessageMenuModule extends TwitchModule {
 				},
 			},
 		],
-		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chatMessageMenuEnabled"),
+		enabled: () => this.settings().chatMessageMenuEnabled,
 	};
 
-	async initialize() {
-		this.useAddActionInsteadOfSet = await this.settingsService().getSettingsKey("chatMessageMenuUseAddInsteadOfSet");
+	initialize() {
+		this.useAddActionInsteadOfSet = this.settings().chatMessageMenuUseAddInsteadOfSet;
 	}
 
 	private static readonly BLOCKED_TAGS = ["a", "img"];

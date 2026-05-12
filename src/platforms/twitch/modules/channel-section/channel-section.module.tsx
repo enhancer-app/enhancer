@@ -27,7 +27,7 @@ export default class ChannelSectionModule extends TwitchModule {
 
 	readonly config: TwitchModuleConfig = {
 		name: "channel-info",
-		isModuleEnabledCallback: async () => this.settingsService().getSettingsKey("channelSection"),
+		enabled: () => this.settings().channelSection,
 		appliers: [
 			{
 				type: "selector",
@@ -61,11 +61,11 @@ export default class ChannelSectionModule extends TwitchModule {
 		],
 	};
 
-	async initialize() {
-		const quickAccessLinks = await this.settingsService().getSettingsKey("quickAccessLinks");
+	initialize() {
+		const quickAccessLinks = this.settings().quickAccessLinks;
 		this.quickAccessLinks = signal(quickAccessLinks);
-		this.pinnedStreamers.value = await this.settingsService().getSettingsKey("pinnedStreamers");
-		this.pinnedStreamersEnabled.value = await this.settingsService().getSettingsKey("pinnedStreamersEnabled");
+		this.pinnedStreamers.value = this.settings().pinnedStreamers;
+		this.pinnedStreamersEnabled.value = this.settings().pinnedStreamersEnabled;
 	}
 
 	private async run(elements: Element[]) {

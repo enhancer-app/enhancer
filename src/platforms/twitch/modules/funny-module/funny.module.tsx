@@ -25,8 +25,8 @@ export default class FunnyModule extends TwitchModule {
 				key: "funny-module-replace-channel-info",
 			},
 		],
-		isModuleEnabledCallback: async () => {
-			return (await this.settingsService().getSettingsKey("_funnyThings")) && this.commonUtils().isFunnyDay();
+		enabled: () => {
+			return this.settings()._funnyThings && this.commonUtils().isFunnyDay();
 		},
 	};
 

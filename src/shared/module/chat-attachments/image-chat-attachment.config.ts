@@ -1,4 +1,3 @@
-import type SettingsService from "$shared/settings/settings.service.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import { type Signal, signal } from "@preact/signals";
@@ -11,18 +10,17 @@ export class ImageChatAttachmentConfig {
 	readonly callback: () => Promise<void> | void;
 
 	constructor(
-		private settingsService: SettingsService<PlatformSettings>,
+		settings: PlatformSettings,
 		private workerService: WorkerService,
 		callback: () => Promise<void> | void,
 	) {
 		this.callback = callback;
+		this.maxFileSize.value = settings.chatImagesSize;
+		this.imagesOnHover.value = settings.chatImagesOnHover;
+		this.isEnabled.value = settings.chatImagesEnabled;
 	}
 
 	async initialize() {
-		this.maxFileSize.value = await this.settingsService.getSettingsKey("chatImagesSize");
-		this.imagesOnHover.value = await this.settingsService.getSettingsKey("chatImagesOnHover");
-		this.isEnabled.value = await this.settingsService.getSettingsKey("chatImagesEnabled");
-
 		const response = await this.workerService.send("getAssetsFile", { path: "modules/chat-image-hover.png" });
 		if (response) this.imageOnHoverSource = response.url;
 	}

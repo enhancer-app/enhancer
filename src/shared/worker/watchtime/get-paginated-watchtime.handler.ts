@@ -1,12 +1,12 @@
 import type { Logger } from "$shared/logger/logger.ts";
 import { MessageHandler } from "$shared/worker/message.handler.ts";
-import type { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
+import type { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
 import type { GetPaginatedWatchtimePayload, PaginatedWatchtimeResponse } from "$types/shared/worker/worker.types.ts";
 
 export class GetPaginatedWatchtimeHandler extends MessageHandler {
 	constructor(
 		logger: Logger,
-		private readonly watchtimeService: WatchtimeService,
+		private readonly database: WatchtimeDatabase,
 	) {
 		super(logger);
 	}
@@ -22,7 +22,7 @@ export class GetPaginatedWatchtimeHandler extends MessageHandler {
 			`Getting paginated watchtime for platform=${payload.platform}, page=${payload.page}, pageSize=${payload.pageSize}`,
 		);
 
-		const data = await this.watchtimeService.getAllWatchtimePaginated(payload.platform, payload.page, payload.pageSize);
+		const data = await this.database.getAllWatchtimePaginated(payload.platform, payload.page, payload.pageSize);
 
 		return {
 			data,

@@ -24,7 +24,7 @@ export default class StreamLatencyModule extends TwitchModule {
 				once: true,
 			},
 		],
-		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("streamLatencyEnabled"),
+		enabled: () => this.settings().streamLatencyEnabled,
 	};
 
 	private run(elements: Element[]) {

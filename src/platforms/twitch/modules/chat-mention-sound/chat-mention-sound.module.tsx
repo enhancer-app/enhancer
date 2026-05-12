@@ -44,18 +44,18 @@ export default class ChatMentionSoundModule extends TwitchModule {
 				callback: this.updateAudioVolume.bind(this),
 			},
 		],
-		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chatMentionSoundEnabled"),
+		enabled: () => this.settings().chatMentionSoundEnabled,
 	};
 
 	async initialize() {
 		this.defaultSound = await this.commonUtils().getAssetFile(this.workerService(), "modules/mention-sound.ogg", "");
-		await this.loadAudioSource();
-		this.updateAudioVolume((await this.settingsService().getSettingsKey("chatMentionSoundVolume")) ?? 50);
+		this.loadAudioSource();
+		this.updateAudioVolume(this.settings().chatMentionSoundVolume ?? 50);
 	}
 
-	private async loadAudioSource() {
-		const fileData = await this.settingsService().getSettingsKey("chatMentionSoundFile");
-		const urlSource = await this.settingsService().getSettingsKey("chatMentionSoundSource");
+	private loadAudioSource() {
+		const fileData = this.settings().chatMentionSoundFile;
+		const urlSource = this.settings().chatMentionSoundSource;
 
 		// Prioritize file upload over URL (new feature takes precedence)
 		if (this.isValidFileData(fileData)) {
@@ -82,25 +82,22 @@ export default class ChatMentionSoundModule extends TwitchModule {
 	}
 
 	private async updateAudioFile(fileData: string) {
-		// Prioritize file upload over URL
 		if (this.isValidFileData(fileData)) {
 			this.audio.src = fileData;
 			this.audio.load();
 
-			// Clear the deprecated URL field when uploading a file (one-time migration)
-			const currentUrlSource = await this.settingsService().getSettingsKey("chatMentionSoundSource");
+			const currentUrlSource = this.settings().chatMentionSoundSource;
 			if (currentUrlSource && currentUrlSource.length > 0) {
 				this.logger.debug("Removing deprecated url", currentUrlSource);
-				await this.settingsService().updateSettingsKey("chatMentionSoundSource", "");
+				await this.updateSetting("chatMentionSoundSource", "");
 			}
 		} else {
-			await this.loadAudioSource();
+			this.loadAudioSource();
 		}
 	}
 
-	private async updateAudioSource(sourceUrl: string) {
-		// Only use URL if no file is uploaded (backward compatibility)
-		const fileData = await this.settingsService().getSettingsKey("chatMentionSoundFile");
+	private updateAudioSource(sourceUrl: string) {
+		const fileData = this.settings().chatMentionSoundFile;
 		if (!this.isValidFileData(fileData)) {
 			const isCustomSound = sourceUrl.length > 3 && this.commonUtils().isValidUrl(sourceUrl);
 			this.audio.src = isCustomSound ? sourceUrl : this.defaultSound;

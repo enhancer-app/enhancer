@@ -17,7 +17,7 @@ export default class ChannelSectionModule extends KickModule {
 
 	readonly config: KickModuleConfig = {
 		name: "channel-info",
-		isModuleEnabledCallback: async () => this.settingsService().getSettingsKey("channelSection"),
+		enabled: () => this.settings().channelSection,
 		appliers: [
 			{
 				type: "selector",
@@ -39,7 +39,7 @@ export default class ChannelSectionModule extends KickModule {
 	};
 
 	async initialize() {
-		const quickAccessLinks = await this.settingsService().getSettingsKey("quickAccessLinks");
+		const quickAccessLinks = this.settings().quickAccessLinks;
 		this.quickAccessLinks = signal(quickAccessLinks);
 	}
 

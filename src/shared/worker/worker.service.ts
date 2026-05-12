@@ -4,6 +4,7 @@ import type {
 	ExtensionResponseDetail,
 	WorkerAction,
 	WorkerApiActions,
+	WorkerBroadcast,
 } from "$types/shared/worker/worker.types.ts";
 
 export default class WorkerService {
@@ -11,6 +12,7 @@ export default class WorkerService {
 	private readonly element: HTMLElement;
 	private pendingMessages = new Map<string, (response: any) => void>();
 	private pingInterval: number | null = null;
+	private broadcastHandlers = new Map<string, Set<(payload: any) => void>>();
 
 	constructor() {
 		this.element = document.createElement("enhancer-bridge");
@@ -19,6 +21,7 @@ export default class WorkerService {
 
 	start() {
 		this.setupMessageListener();
+		this.setupBroadcastListener();
 		this.startPing();
 		this.logger.info("WorkerService started");
 	}
@@ -28,6 +31,17 @@ export default class WorkerService {
 			clearInterval(this.pingInterval);
 			this.pingInterval = null;
 		}
+	}
+
+	onBroadcast(type: string, handler: (payload: any) => void): void {
+		if (!this.broadcastHandlers.has(type)) {
+			this.broadcastHandlers.set(type, new Set());
+		}
+		this.broadcastHandlers.get(type)?.add(handler);
+	}
+
+	offBroadcast(type: string, handler: (payload: any) => void): void {
+		this.broadcastHandlers.get(type)?.delete(handler);
 	}
 
 	private startPing() {
@@ -55,6 +69,18 @@ export default class WorkerService {
 		}) as unknown as EventListener);
 	}
 
+	private setupBroadcastListener() {
+		this.element.addEventListener("enhancer-broadcast", ((event: CustomEvent<string>) => {
+			const broadcast = JSON.parse(event.detail) as WorkerBroadcast;
+			const handlers = this.broadcastHandlers.get(broadcast.type);
+			if (handlers) {
+				for (const handler of handlers) {
+					handler(broadcast.payload);
+				}
+			}
+		}) as EventListener);
+	}
+
 	async send<T extends WorkerAction>(
 		action: T,
 		...args: WorkerApiActions[T]["payload"] extends never ? [] : [WorkerApiActions[T]["payload"]]
@@ -65,7 +91,6 @@ export default class WorkerService {
 
 			const payload = args.length > 0 ? args[0] : undefined;
 			const event = new CustomEvent<string>("enhancer-message", {
-				// ExtensionMessageDetail
 				detail: JSON.stringify({ messageId, action, payload }),
 			});
 
