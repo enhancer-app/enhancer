@@ -10,14 +10,16 @@ import type {
 	ChatInputComponent,
 	CurrentLiveStatusComponent,
 	FollowedSectionComponenet,
-	FollowedSectionStreamData,
 	MediaPlayerComponent,
+	MediaPlayerComponentNormalized,
+	MediaPlayerInstanceBase,
 	PersistentPlayerComponent,
 	RootComponent,
 	ScrollableChatComponent,
 	StreamInfoTwitchStreamData,
 	TwitchChatCommand,
 	TwitchChatMessageComponent,
+	VideoInfoComponent,
 } from "$types/platforms/twitch/twitch.utils.types";
 
 export default class TwitchUtils {
@@ -57,20 +59,50 @@ export default class TwitchUtils {
 		)?.pendingProps?.userID;
 	}
 
-	getMediaPlayerInstance() {
-		return this.reactUtils.findReactChildren<MediaPlayerComponent>(
-			this.reactUtils.getReactInstance(document.querySelector(".persistent-player")),
-			(n) => !!n.stateNode?.props?.mediaPlayerInstance,
-			200,
-		)?.stateNode.props.mediaPlayerInstance;
+	getMediaPlayerNode() {
+		const isDirect = this.isDirectTwitchPlayer();
+		const selector = isDirect ? '[data-a-target="player-overlay-click-handler"]' : ".persistent-player";
+
+		const element = document.querySelector(selector);
+		if (!element) return undefined;
+
+		const reactInstance = this.reactUtils.getReactInstance(element);
+		const predicate = (n: any) => !!n.stateNode?.props?.mediaPlayerInstance;
+
+		if (isDirect) {
+			return this.reactUtils.findReactParents<MediaPlayerComponent>(reactInstance, predicate, 200)?.stateNode;
+		}
+
+		return this.reactUtils.findReactChildren<MediaPlayerComponent>(reactInstance, predicate, 200)?.stateNode;
 	}
 
-	getMediaPlayerComponent() {
-		return this.reactUtils.findReactChildren<MediaPlayerComponent>(
-			this.reactUtils.getReactInstance(document.querySelector(".persistent-player")),
-			(n) => !!n.stateNode?.props?.mediaPlayerInstance,
-			200,
-		)?.stateNode.props;
+	getMediaPlayerInstance(): MediaPlayerInstanceBase | undefined {
+		const mediaPlayer = this.getMediaPlayerNode()?.props.mediaPlayerInstance;
+
+		if (!mediaPlayer) {
+			return undefined;
+		}
+
+		if ("playerInstance" in mediaPlayer) {
+			return mediaPlayer.playerInstance;
+		}
+
+		return mediaPlayer;
+	}
+
+	getMediaPlayerComponent(): MediaPlayerComponentNormalized | undefined {
+		const props = this.getMediaPlayerNode()?.props;
+
+		if (!props) return undefined;
+
+		if ("playerInstance" in props.mediaPlayerInstance) {
+			return {
+				...props,
+				mediaPlayerInstance: props.mediaPlayerInstance.playerInstance,
+			};
+		}
+
+		return props as MediaPlayerComponentNormalized;
 	}
 
 	getPersonalSections() {
@@ -241,6 +273,17 @@ export default class TwitchUtils {
 		)?.stateNode.props;
 	}
 
+	getVideoInfo() {
+		return this.reactUtils.findReactChildren<VideoInfoComponent>(
+			this.reactUtils.getReactInstance(document.querySelector(".video-player__default-player")),
+			(n) =>
+				n?.stateNode?.props.content !== undefined &&
+				n?.stateNode?.props.content.channelLogin !== undefined &&
+				n?.stateNode?.props.content.type !== undefined,
+			100,
+		)?.stateNode.props;
+	}
+
 	getChannelInfo(): ChannelInfo | undefined {
 		const props = this.reactUtils.findReactChildren<ChannelInfoComponent>(
 			this.reactUtils.getReactInstance(document.querySelector("#live-channel-stream-information")),
@@ -282,16 +325,9 @@ export default class TwitchUtils {
 		return props;
 	}
 
-	getUserFollowList() {
-		const section = this.getPersonalSections();
-		const streams = section?.props?.section?.streams ?? [];
-		const offline = section?.props?.section?.offlineChannels ?? [];
-		const extractLogin = (item: FollowedSectionStreamData): string | null => {
-			const login = item?.user?.login;
-			if (!login) return null;
-			return String(login).toLowerCase();
-		};
-		const names = [...streams, ...offline].map(extractLogin).filter((v): v is string => typeof v === "string");
-		return Array.from(new Set(names));
+	getMediaPlayerPlaybackRate() {
+		const mediaPlayer = this.getMediaPlayerInstance();
+		if (!mediaPlayer) return;
+		return mediaPlayer.core.renderSurface.video.element().playbackRate;
 	}
 }

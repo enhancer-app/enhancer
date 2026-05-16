@@ -1,18 +1,18 @@
+import type { Emitter } from "nanoevents";
 import EnhancerApi from "$shared/apis/enhancer.api.ts";
 import { EventEmitterFactory } from "$shared/event/event-emitter.factory.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import EventModuleApplier from "$shared/module/applier/event-module-applier.ts";
 import SelectorModuleApplier from "$shared/module/applier/selector-module-applier.ts";
 import type Module from "$shared/module/module.ts";
-import CommonDataService from "$shared/settings/common.service.ts";
 import SettingsService from "$shared/settings/settings.service.ts";
+import SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
 import StorageRepository from "$shared/storage/storage-repository.ts";
 import UtilsRepository from "$shared/utils/utils.repository.ts";
 import WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformConfig } from "$types/shared/platform.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
-import type { Emitter } from "nanoevents";
 
 export default abstract class Platform<
 	TModule extends Module<TEvents, TStorage, TSettings>,
@@ -27,7 +27,7 @@ export default abstract class Platform<
 	protected readonly enhancerApi: EnhancerApi;
 	protected readonly workerApi = new WorkerService();
 	protected readonly settingsService: SettingsService<TSettings>;
-	protected readonly commonDataService = new CommonDataService(this.workerApi);
+	protected readonly sharedStorageDataService = new SharedStorageDataService(this.workerApi);
 
 	protected constructor(protected readonly config: PlatformConfig) {
 		this.enhancerApi = new EnhancerApi(config.type);
@@ -44,7 +44,7 @@ export default abstract class Platform<
 		await this.initialize();
 		await this.loadModules();
 		this.logger.info(`Started ${this.config.type} extension`);
-		// @ts-ignore tbh idk, it just works, typescript magic
+		// @ts-expect-error tbh idk, it just works, typescript magic
 		this.emitter.emit("extension:start");
 	}
 
@@ -74,7 +74,9 @@ export default abstract class Platform<
 				this.logger.error(`Failed to load ${module.config.name} module: ${error}`);
 			}
 		}
-		this.appliers.forEach((applier) => applier.start());
+		for (const applier of this.appliers) {
+			applier.start();
+		}
 	}
 
 	private async tryInitializeEnhancerApi(retries = 5, delayMs = 5000): Promise<void> {

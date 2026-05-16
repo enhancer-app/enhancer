@@ -1,6 +1,6 @@
 import { Logger } from "$shared/logger/logger.ts";
 import { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
-import type { ImportWatchtimePayload, PlatformType, WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
+import type { PlatformType, WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
 
 export class WatchtimeService {
 	private readonly logger = new Logger({ context: "watchtime-service" });

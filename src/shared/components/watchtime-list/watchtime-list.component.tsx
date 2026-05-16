@@ -1,9 +1,9 @@
-import type WorkerService from "$shared/worker/worker.service.ts";
-import type { CommonEvents } from "$types/platforms/common.events.ts";
-import type { PlatformType } from "$types/shared/worker/worker.types.ts";
 import type { Emitter } from "nanoevents";
 import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
+import type WorkerService from "$shared/worker/worker.service.ts";
+import type { CommonEvents } from "$types/platforms/common.events.ts";
+import type { PlatformType } from "$types/shared/worker/worker.types.ts";
 
 const Container = styled.div`
 	padding: 0;
@@ -347,7 +347,7 @@ export function WatchtimeListComponent({
 		return `${hours}h ${minutes}m ${secs}s`;
 	};
 
-	const formatDate = (timestamp: number): string => {
+	const _formatDate = (timestamp: number): string => {
 		return new Date(timestamp).toLocaleDateString();
 	};
 

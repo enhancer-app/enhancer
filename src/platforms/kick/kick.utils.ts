@@ -1,8 +1,14 @@
 import type CommonUtils from "$shared/utils/common.utils.ts";
 import type ReactUtils from "$shared/utils/react.utils.ts";
 import type { KickChatMessageData } from "$types/platforms/kick/kick.events.types.ts";
-import type { IsoDateProps, StreamStatusProps, VideoProgressProps } from "$types/platforms/kick/kick.utils.types.ts";
-import type { ChannelChatRoom, ChannelChatRoomInfo, ChannelInfo } from "$types/platforms/kick/kick.utils.types.ts";
+import type {
+	ChannelChatRoom,
+	ChannelChatRoomInfo,
+	ChannelInfo,
+	IsoDateProps,
+	StreamStatusProps,
+	VideoProgressProps,
+} from "$types/platforms/kick/kick.utils.types.ts";
 
 export default class KickUtils {
 	constructor(
@@ -116,6 +122,14 @@ export default class KickUtils {
 
 	isLiveVideo(video: HTMLVideoElement): boolean {
 		return video.duration === Number.POSITIVE_INFINITY || video.duration > KickUtils.FIREFOX_LIVE_VIDEO_THRESHOLD;
+	}
+
+	getLatency(video: HTMLVideoElement): number {
+		const { currentTime, buffered } = video;
+		if (buffered.length === 0) return -1;
+		const bufferEnd = buffered.end(buffered.length - 1);
+
+		return bufferEnd - currentTime;
 	}
 
 	async scrollToBottomOnChat() {

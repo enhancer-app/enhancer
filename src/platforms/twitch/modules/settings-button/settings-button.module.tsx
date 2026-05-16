@@ -1,7 +1,7 @@
-import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
-import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { render } from "preact";
 import styled from "styled-components";
+import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
+import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class SettingsButtonModule extends TwitchModule {
@@ -18,7 +18,7 @@ export default class SettingsButtonModule extends TwitchModule {
 		],
 	};
 
-	private async run(elements: Element[], key: string) {
+	private async run(elements: Element[], _key: string) {
 		const properElements = elements
 			.filter((element) => element.children.length > 0)
 			.map((element) => [...element.children].at(-1))

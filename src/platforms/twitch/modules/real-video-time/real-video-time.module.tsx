@@ -1,11 +1,11 @@
-import { VideoCreatedAtQuery } from "$twitch/apis/twitch-queries.ts";
-import TwitchModule from "$twitch/twitch.module.ts";
-import type { VideoCreatedAtResponse } from "$types/platforms/twitch/twitch.api.types.ts";
-import type { MediaPlayerInstance } from "$types/platforms/twitch/twitch.utils.types.ts";
-import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import { render } from "preact";
 import styled from "styled-components";
+import { VideoCreatedAtQuery } from "$twitch/apis/twitch-queries.ts";
+import TwitchModule from "$twitch/twitch.module.ts";
+import type { VideoCreatedAtResponse } from "$types/platforms/twitch/twitch.api.types.ts";
+import type { MediaPlayerInstance, MediaPlayerInstanceBase } from "$types/platforms/twitch/twitch.utils.types.ts";
+import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class RealVideoTimeModule extends TwitchModule {
 	private static URL_CONFIG = (url: string) => {
@@ -35,7 +35,9 @@ export default class RealVideoTimeModule extends TwitchModule {
 				callback: () => {
 					if (!RealVideoTimeModule.URL_CONFIG(window.location.href)) {
 						const elements = document.querySelectorAll(".enhancer-real-video-time");
-						elements.forEach((element) => element.remove());
+						for (const element of elements) {
+							element.remove();
+						}
 					}
 				},
 				key: "real-video-time-url-validator",
@@ -49,7 +51,7 @@ export default class RealVideoTimeModule extends TwitchModule {
 	private currentVideoId: string | undefined;
 	private timeInterval: NodeJS.Timeout | undefined;
 	private videoCreatedAt = new Date(0);
-	private mediaPlayer: MediaPlayerInstance | undefined;
+	private mediaPlayer: MediaPlayerInstanceBase | undefined;
 	private use12HourFormat = signal<boolean>(false);
 
 	private async run(elements: Element[]) {

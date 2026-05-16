@@ -1,6 +1,6 @@
-import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { render } from "preact";
 import styled from "styled-components";
+import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class ClipDownloadModule extends TwitchModule {
@@ -25,7 +25,9 @@ export default class ClipDownloadModule extends TwitchModule {
 				callback: () => {
 					if (!ClipDownloadModule.URL_CONFIG(window.location.href)) {
 						const elements = document.querySelectorAll("#enhancer-clip-download");
-						elements.forEach((element) => element.remove());
+						for (const element of elements) {
+							element.remove();
+						}
 					}
 				},
 				key: "clip-download-url-validator",

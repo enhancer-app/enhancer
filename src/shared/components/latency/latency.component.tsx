@@ -1,10 +1,11 @@
-import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import type { Signal } from "@preact/signals";
 import styled from "styled-components";
+import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 
 interface LatencyComponentProps {
 	latencyCounter: Signal<number>;
 	isLive: Signal<boolean>;
+	playbackRate: Signal<number>;
 	click: () => void;
 }
 
@@ -13,6 +14,7 @@ const LatencyWrapper = styled.div`
 	justify-content: center;
 	display: flex;
 	align-items: center;
+	width: max-content;
 	padding: 6px 12px;
 	color: #dedee3;
 	font-weight: 600;
@@ -36,7 +38,13 @@ const StatusDot = styled.span<{ isLive: boolean }>`
 	background-color: ${({ isLive }) => (isLive ? "#ff4d4d" : "#888")};
 `;
 
-export function LatencyComponent({ click, latencyCounter, isLive }: LatencyComponentProps) {
+const PlaybackRate = styled.span`
+	font-size: 11px;
+	font-weight: 600;
+	color: rgba(222, 222, 227, 0.5);
+`;
+
+export function LatencyComponent({ click, latencyCounter, isLive, playbackRate }: LatencyComponentProps) {
 	const formatLatency = () => {
 		if (latencyCounter.value === undefined || latencyCounter.value < 0 || Number.isNaN(latencyCounter.value)) {
 			return "Loading...";
@@ -48,7 +56,16 @@ export function LatencyComponent({ click, latencyCounter, isLive }: LatencyCompo
 		<TooltipComponent content={"Stream delay. Click to refresh player."} position={"bottom"}>
 			<LatencyWrapper onClick={click}>
 				<StatusDot isLive={isLive.value} />
-				{isLive.value ? `Latency: ${formatLatency()}` : "OFFLINE"}
+				{isLive.value ? (
+					<span>
+						Latency: {formatLatency()}{" "}
+						{playbackRate.value && playbackRate.value !== 1 && (
+							<PlaybackRate>({playbackRate.value.toFixed(2)}x)</PlaybackRate>
+						)}
+					</span>
+				) : (
+					"OFFLINE"
+				)}
 			</LatencyWrapper>
 		</TooltipComponent>
 	);

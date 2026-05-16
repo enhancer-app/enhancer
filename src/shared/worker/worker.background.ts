@@ -1,19 +1,21 @@
 import { Logger } from "$shared/logger/logger.ts";
-import { CommonService } from "$shared/worker/common/common.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
+import { SharedStorageService } from "$shared/worker/shared-storage/shared-storage.service.ts";
+import { StreamerStatusManager } from "$shared/worker/streamer-status/streamer-status.manager.ts";
 import { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
 
 export default class WorkerBackground {
 	private readonly logger = new Logger({ context: "background" });
 	private readonly watchtimeService = new WatchtimeService();
 	private readonly settingsService = new SettingsService();
-	private readonly commonService = new CommonService();
+	private readonly sharedStorageService = new SharedStorageService();
+	private readonly streamerStatusManager = new StreamerStatusManager();
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.watchtimeService,
 		this.settingsService,
-		this.commonService,
+		this.sharedStorageService,
 	);
 
 	private isInitialized = false;
@@ -28,8 +30,12 @@ export default class WorkerBackground {
 		await Promise.all([
 			this.watchtimeService.initialize(),
 			this.settingsService.initialize(),
-			this.commonService.initialize(),
+			this.sharedStorageService.initialize(),
 		]);
+
+		// Start background manager for streamer status refresh
+		this.streamerStatusManager.start();
+
 		this.isInitialized = true;
 		this.logger.info("Background worker started");
 
@@ -37,7 +43,7 @@ export default class WorkerBackground {
 	}
 
 	private setupMessageListener() {
-		chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+		chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 			if (!this.isInitialized) {
 				this.messageQueue.push({ message, sendResponse });
 				return true;
