@@ -1,10 +1,14 @@
+import SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
 import TwitchFollowSyncer from "$twitch/modules/shared-follows/twitch.follow-syncer.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class SharedFollowsModule extends TwitchModule {
-	private static readonly SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes - centralized sync interval
-	private readonly twitchFollowsSyncer = new TwitchFollowSyncer(this.sharedStorageDataService(), this.twitchUtils());
+	private static readonly SYNC_INTERVAL_MS = 5 * 60 * 1000;
+	private readonly twitchFollowsSyncer = new TwitchFollowSyncer(
+		new SharedStorageDataService(this.workerService()),
+		this.twitchUtils(),
+	);
 
 	config: TwitchModuleConfig = {
 		name: "shared-follows",
@@ -27,7 +31,7 @@ export default class SharedFollowsModule extends TwitchModule {
 	private syncFollowsTimer: NodeJS.Timeout | undefined;
 
 	async initialize(): Promise<void> {
-		const shareFollowsToOtherPlatforms = await this.settingsService().getSettingsKey("shareFollowsToOtherPlatforms");
+		const shareFollowsToOtherPlatforms = this.settings().shareFollowsToOtherPlatforms;
 		if (shareFollowsToOtherPlatforms) await this.startSyncTimer();
 	}
 

@@ -3,6 +3,7 @@ import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
 import KickApi from "$kick/apis/kick.api.ts";
+import SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { ChannelResponse } from "$types/platforms/kick/kick.api.types.ts";
 import type { KickStreamerInfo, StreamerInfo } from "$types/platforms/twitch/twitch.utils.types.ts";
@@ -20,13 +21,14 @@ export default class KickStreamersModule extends TwitchModule {
 				once: true,
 			},
 		],
-		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("showFollowsFromOtherPlatforms"),
+		enabled: () => this.settings().showFollowsFromOtherPlatforms,
 	};
 
 	private static readonly UPDATE_INTERVAL_MS = 2 * 60 * 1000;
 	private updateInterval: NodeJS.Timeout | undefined;
 
 	private readonly kickApi = new KickApi();
+	private readonly sharedStorageDataService = new SharedStorageDataService(this.workerService());
 	private cachedKickStreamers: string[] | null = null;
 	private readonly streamers: Signal<StreamerInfo[]> = signal([]);
 	private platformIcons: Record<string, string> = {};
@@ -96,7 +98,7 @@ export default class KickStreamersModule extends TwitchModule {
 
 	private async loadStreamersFromCommon(): Promise<void> {
 		try {
-			const sharedFollows = await this.sharedStorageDataService().getStorageKey("sharedFollows");
+			const sharedFollows = await this.sharedStorageDataService.getStorageKey("sharedFollows");
 			const kickFollows = sharedFollows.kick ?? [];
 			this.cachedKickStreamers = kickFollows;
 			this.logger.debug("Loaded Kick streamer nicknames for Twitch:", this.cachedKickStreamers);

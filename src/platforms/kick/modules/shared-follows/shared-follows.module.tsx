@@ -1,10 +1,14 @@
 import KickModule from "$kick/kick.module.ts";
 import KickFollowSyncer from "$kick/modules/shared-follows/kick.follow-syncer.ts";
+import SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class SharedFollowsModule extends KickModule {
-	private static readonly SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes - centralized sync interval
-	private readonly kickFollowsSyncer = new KickFollowSyncer(this.sharedStorageDataService(), this.commonUtils());
+	private static readonly SYNC_INTERVAL_MS = 5 * 60 * 1000;
+	private readonly kickFollowsSyncer = new KickFollowSyncer(
+		new SharedStorageDataService(this.workerService()),
+		this.commonUtils(),
+	);
 
 	config: KickModuleConfig = {
 		name: "shared-follows",
@@ -27,7 +31,7 @@ export default class SharedFollowsModule extends KickModule {
 	private syncFollowsTimer: NodeJS.Timeout | undefined;
 
 	async initialize(): Promise<void> {
-		const shareFollowsToOtherPlatforms = await this.settingsService().getSettingsKey("shareFollowsToOtherPlatforms");
+		const shareFollowsToOtherPlatforms = this.settings().shareFollowsToOtherPlatforms;
 		if (shareFollowsToOtherPlatforms) await this.startSyncTimer();
 	}
 
