@@ -1,12 +1,12 @@
 import KickModule from "$kick/kick.module.ts";
 import KickFollowSyncer from "$kick/modules/shared-follows/kick.follow-syncer.ts";
-import SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
+import SharedDataCache from "$shared/settings/shared-data.cache.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class SharedFollowsModule extends KickModule {
 	private static readonly SYNC_INTERVAL_MS = 5 * 60 * 1000;
 	private readonly kickFollowsSyncer = new KickFollowSyncer(
-		new SharedStorageDataService(this.workerService()),
+		new SharedDataCache(this.workerService()),
 		this.commonUtils(),
 	);
 

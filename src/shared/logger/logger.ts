@@ -1,4 +1,4 @@
-import type { LoggerOptions, LogType } from "$types/shared/logger.types.ts";
+import type { LogType, LoggerOptions } from "$types/shared/logger.types.ts";
 
 export class Logger {
 	private static readonly BASE_PREFIX = "\x1B[1;38;2;145;71;255mEnhancer";

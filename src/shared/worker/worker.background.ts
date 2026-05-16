@@ -2,6 +2,7 @@ import { KICK_DEFAULT_SETTINGS } from "$kick/kick.constants.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
+import { SharedDataDatabase } from "$shared/worker/shared-data/shared-data.database.ts";
 import { WatchtimeAccumulator } from "$shared/worker/watchtime/watchtime.accumulator.ts";
 import { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
 import { TWITCH_DEFAULT_SETTINGS } from "$twitch/twitch.constants.ts";
@@ -17,11 +18,13 @@ export default class WorkerBackground {
 			["kick", KICK_DEFAULT_SETTINGS],
 		]),
 	);
+	private readonly sharedDataDatabase = new SharedDataDatabase();
 	private readonly watchtimeDatabase = new WatchtimeDatabase();
 	private readonly watchtimeAccumulator = new WatchtimeAccumulator(this.watchtimeDatabase);
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.settingsDatabase,
+		this.sharedDataDatabase,
 		this.watchtimeDatabase,
 		this.watchtimeAccumulator,
 	);
@@ -35,7 +38,11 @@ export default class WorkerBackground {
 	async start() {
 		this.setupMessageListener();
 
-		await Promise.all([this.settingsDatabase.initialize(), this.watchtimeDatabase.initialize()]);
+		await Promise.all([
+			this.settingsDatabase.initialize(),
+			this.sharedDataDatabase.initialize(),
+			this.watchtimeDatabase.initialize(),
+		]);
 		this.watchtimeAccumulator.initialize();
 		this.isInitialized = true;
 		this.logger.info("Background worker started");

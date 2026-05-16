@@ -1,7 +1,7 @@
-import { render } from "preact";
-import styled from "styled-components";
 import KickModule from "$kick/kick.module.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
+import { render } from "preact";
+import styled from "styled-components";
 
 export default class SettingsButtonModule extends KickModule {
 	readonly config: KickModuleConfig = {

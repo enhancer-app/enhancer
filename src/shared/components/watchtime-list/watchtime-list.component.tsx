@@ -1,9 +1,9 @@
-import type { Emitter } from "nanoevents";
-import { useEffect, useState } from "preact/hooks";
-import styled from "styled-components";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformType } from "$types/shared/worker/worker.types.ts";
+import type { Emitter } from "nanoevents";
+import { useEffect, useState } from "preact/hooks";
+import styled from "styled-components";
 
 const Container = styled.div`
 	padding: 0;

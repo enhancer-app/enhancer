@@ -1,13 +1,13 @@
-import { type Signal, signal } from "@preact/signals";
-import { render } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
-import styled from "styled-components";
 import KickApi from "$kick/apis/kick.api.ts";
-import SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
+import SharedDataCache from "$shared/settings/shared-data.cache.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { ChannelResponse } from "$types/platforms/kick/kick.api.types.ts";
 import type { KickStreamerInfo, StreamerInfo } from "$types/platforms/twitch/twitch.utils.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
+import { type Signal, signal } from "@preact/signals";
+import { render } from "preact";
+import { useEffect, useRef, useState } from "preact/hooks";
+import styled from "styled-components";
 
 export default class KickStreamersModule extends TwitchModule {
 	readonly config: TwitchModuleConfig = {
@@ -28,7 +28,7 @@ export default class KickStreamersModule extends TwitchModule {
 	private updateInterval: NodeJS.Timeout | undefined;
 
 	private readonly kickApi = new KickApi();
-	private readonly sharedStorageDataService = new SharedStorageDataService(this.workerService());
+	private readonly sharedDataCache = new SharedDataCache(this.workerService());
 	private cachedKickStreamers: string[] | null = null;
 	private readonly streamers: Signal<StreamerInfo[]> = signal([]);
 	private platformIcons: Record<string, string> = {};
@@ -98,7 +98,7 @@ export default class KickStreamersModule extends TwitchModule {
 
 	private async loadStreamersFromCommon(): Promise<void> {
 		try {
-			const sharedFollows = await this.sharedStorageDataService.getStorageKey("sharedFollows");
+			const sharedFollows = await this.sharedDataCache.get().sharedFollows;
 			const kickFollows = sharedFollows.kick ?? [];
 			this.cachedKickStreamers = kickFollows;
 			this.logger.debug("Loaded Kick streamer nicknames for Twitch:", this.cachedKickStreamers);

@@ -1,10 +1,10 @@
-import { type Signal, signal } from "@preact/signals";
-import { render } from "preact";
-import styled from "styled-components";
 import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import { ChattersQuery } from "$twitch/apis/twitch-queries.ts";
 import type { ChattersResponse } from "$types/platforms/twitch/twitch.api.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
+import { type Signal, signal } from "@preact/signals";
+import { render } from "preact";
+import styled from "styled-components";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class ChattersModule extends TwitchModule {

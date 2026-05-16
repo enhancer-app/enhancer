@@ -1,13 +1,13 @@
-import { type Signal, signal } from "@preact/signals";
-import { render } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
-import styled from "styled-components";
 import KickModule from "$kick/kick.module.ts";
-import SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
+import SharedDataCache from "$shared/settings/shared-data.cache.ts";
 import TwitchApi from "$twitch/apis/twitch.api.ts";
 import type { TwitchMultiChannelResponse } from "$types/platforms/twitch/twitch.api.types.ts";
 import type { StreamerInfo } from "$types/platforms/twitch/twitch.utils.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
+import { type Signal, signal } from "@preact/signals";
+import { render } from "preact";
+import { useEffect, useRef, useState } from "preact/hooks";
+import styled from "styled-components";
 
 export default class TwitchStreamsModule extends KickModule {
 	readonly config: KickModuleConfig = {
@@ -33,7 +33,7 @@ export default class TwitchStreamsModule extends KickModule {
 	private remountDebounce: number | undefined;
 
 	private readonly twitchApi = new TwitchApi({} as any);
-	private readonly sharedStorageDataService = new SharedStorageDataService(this.workerService());
+	private readonly sharedDataCache = new SharedDataCache(this.workerService());
 	private cachedTwitchStreamers: string[] | null = null;
 	private readonly streamers: Signal<StreamerInfo[]> = signal([]);
 	private platformIcons: Record<string, string> = {};
@@ -148,7 +148,7 @@ export default class TwitchStreamsModule extends KickModule {
 
 	private async loadStreamersFromCommon(): Promise<void> {
 		try {
-			const sharedFollows = await this.sharedStorageDataService.getStorageKey("sharedFollows");
+			const sharedFollows = this.sharedDataCache.get().sharedFollows;
 			const twitchFollows = sharedFollows.twitch ?? [];
 			this.cachedTwitchStreamers = twitchFollows;
 			this.logger.debug("Loaded Twitch streamer nicknames for Kick:", this.cachedTwitchStreamers);

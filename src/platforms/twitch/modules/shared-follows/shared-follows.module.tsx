@@ -1,4 +1,4 @@
-import SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
+import SharedDataCache from "$shared/settings/shared-data.cache.ts";
 import TwitchFollowSyncer from "$twitch/modules/shared-follows/twitch.follow-syncer.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
@@ -6,7 +6,7 @@ import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 export default class SharedFollowsModule extends TwitchModule {
 	private static readonly SYNC_INTERVAL_MS = 5 * 60 * 1000;
 	private readonly twitchFollowsSyncer = new TwitchFollowSyncer(
-		new SharedStorageDataService(this.workerService()),
+		new SharedDataCache(this.workerService()),
 		this.twitchUtils(),
 	);
 

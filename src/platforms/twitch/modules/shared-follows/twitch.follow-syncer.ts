@@ -1,12 +1,12 @@
 import FollowSyncer from "$shared/module/shared-follows/follow-syncer.ts";
-import type SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
+import type SharedDataCache from "$shared/settings/shared-data.cache.ts";
 import type TwitchUtils from "$twitch/twitch.utils.ts";
 
 export default class TwitchFollowSyncer extends FollowSyncer {
 	private syncInProgress = false;
 
 	constructor(
-		private readonly sharedStorageDataService: SharedStorageDataService,
+		private readonly sharedDataCache: SharedDataCache,
 		private readonly twitchUtils: TwitchUtils,
 	) {
 		super("twitch");
@@ -20,7 +20,7 @@ export default class TwitchFollowSyncer extends FollowSyncer {
 		this.syncInProgress = true;
 		try {
 			const followList = this.twitchUtils.getUserFollowList();
-			await this.sharedStorageDataService.updateStorageNestedKey("sharedFollows", "twitch", followList);
+			await this.sharedDataCache.updateNestedKey("sharedFollows", "twitch", followList);
 			this.logger.info(`Synced ${followList.length} followed channels`);
 		} catch (err) {
 			this.logger.error("Failed to sync follows", err);
@@ -30,6 +30,6 @@ export default class TwitchFollowSyncer extends FollowSyncer {
 	}
 
 	async clearFollows() {
-		await this.sharedStorageDataService.updateStorageNestedKey("sharedFollows", "twitch", []);
+		await this.sharedDataCache.updateNestedKey("sharedFollows", "twitch", []);
 	}
 }

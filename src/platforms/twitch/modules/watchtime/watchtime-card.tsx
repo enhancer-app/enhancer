@@ -1,7 +1,7 @@
-import type { Signal } from "@preact/signals";
-import styled from "styled-components";
 import { LoadingComponent } from "$shared/components/loading/loading.component.tsx";
 import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
+import type { Signal } from "@preact/signals";
+import styled from "styled-components";
 
 const WatchTimeItem = styled.a`
 	display: flex;

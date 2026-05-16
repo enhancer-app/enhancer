@@ -1,6 +1,6 @@
+import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { render } from "preact";
 import styled from "styled-components";
-import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class ClipDownloadModule extends TwitchModule {

@@ -1,10 +1,10 @@
-import { render } from "preact";
 import KickModule from "$kick/kick.module.ts";
 import {
 	MessageMenuComponent,
 	type MessageMenuEvent,
 } from "$shared/components/message-menu/message-menu.component.tsx";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
+import { render } from "preact";
 
 export default class MessageMenuModule extends KickModule {
 	config: KickModuleConfig = {

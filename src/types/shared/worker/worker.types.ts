@@ -1,5 +1,5 @@
 import type { PlatformType } from "$types/shared/platform.types.ts";
-import type { SharedStorageData } from "$types/shared/storage/shared-storage.types.ts";
+import type { SharedData } from "$types/shared/storage/shared-data.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 
 export type { PlatformType };
@@ -85,16 +85,15 @@ export interface UpdateSettingsPayload {
 export type GetSettingsResponse = PlatformSettings;
 export type UpdateSettingsResponse = { success: true };
 
-	// biome-ignore lint/complexity/noBannedTypes: it's okay here
-	export type GetSharedStorageDataPayload = {};
+export type GetSharedDataPayload = Record<string, never>;
 
-export interface GetSharedStorageDataResponse {
-	data: SharedStorageData;
+export interface GetSharedDataResponse {
+	data: SharedData;
 }
 
-export type SetSharedStorageDataPayload = { data: SharedStorageData };
+export type SetSharedDataPayload = { data: SharedData };
 
-export interface SetSharedStorageDataResponse {
+export interface SetSharedDataResponse {
 	success: true;
 }
 
@@ -131,13 +130,13 @@ export interface WorkerApiActions {
 		payload: UpdateSettingsPayload;
 		response: UpdateSettingsResponse;
 	};
-	getSharedStorageData: {
-		payload: GetSharedStorageDataPayload;
-		response: GetSharedStorageDataResponse;
+	getSharedData: {
+		payload: GetSharedDataPayload;
+		response: GetSharedDataResponse;
 	};
-	setSharedStorageData: {
-		payload: SetSharedStorageDataPayload;
-		response: SetSharedStorageDataResponse;
+	setSharedData: {
+		payload: SetSharedDataPayload;
+		response: SetSharedDataResponse;
 	};
 }
 
