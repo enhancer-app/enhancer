@@ -30,7 +30,6 @@ export type TwitchSettings = {
 	xayoWatchtimeEnabled: boolean;
 	channelSection: boolean;
 	chattersEnabled: boolean;
-	_funnyThings: boolean;
 };
 
 export type TwitchSettingsEvents = {

@@ -19,5 +19,4 @@ export const KICK_DEFAULT_SETTINGS: KickSettings = {
 	realVideoTimeFormat12h: false,
 	channelSection: true,
 	_disableExtensionOnDashboard: false,
-	_funnyThings: true,
 };
