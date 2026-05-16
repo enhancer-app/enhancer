@@ -58,8 +58,8 @@ export default class SelectorModuleApplier<
 			.map((_element) => {
 				let element: Element | null = _element;
 				if (element && config.useParent) element = element.parentElement;
-				if (!element) return;
-				if (this.isElementAlreadyUsed(element, config.key) && config.once) return;
+				if (!element) return undefined;
+				if (this.isElementAlreadyUsed(element, config.key) && config.once) return undefined;
 				this.markElementAsUsed(element, config.key);
 				return element;
 			})

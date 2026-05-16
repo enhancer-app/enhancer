@@ -1,8 +1,8 @@
+import { signal } from "@preact/signals";
+import { render } from "preact";
 import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
 import type { UserCardComponent } from "$types/platforms/twitch/twitch.utils.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { signal } from "@preact/signals";
-import { render } from "preact";
 import TwitchModule from "../../twitch.module.ts";
 import {
 	WatchTimePopupErrorMessage,

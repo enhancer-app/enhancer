@@ -1,7 +1,7 @@
+import { type Signal, signal } from "@preact/signals";
 import type SettingsService from "$shared/settings/settings.service.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
-import { type Signal, signal } from "@preact/signals";
 
 export class ImageChatAttachmentConfig {
 	readonly maxFileSize: Signal<number> = signal(1);

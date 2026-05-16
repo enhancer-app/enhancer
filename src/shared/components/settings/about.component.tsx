@@ -146,7 +146,7 @@ const IconImage = styled.img`
 	contrast(101%);
 `;
 
-const SmallText = styled.p`
+const _SmallText = styled.p`
 	font-size: 10px;
 	color: #999;
 	margin: 26px 20px 0 20px;

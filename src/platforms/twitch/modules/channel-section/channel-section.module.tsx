@@ -1,9 +1,8 @@
+import { type Signal, signal } from "@preact/signals";
+import { render } from "preact";
 import { ChannelSectionComponent } from "$shared/components/channel-section/channel-section.component.tsx";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
-import { render } from "preact";
-import styled from "styled-components";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class ChannelSectionModule extends TwitchModule {

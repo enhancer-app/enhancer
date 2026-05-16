@@ -1,7 +1,6 @@
-import type { SettingDefinition, SettingsProps } from "$types/shared/components/settings.component.types.ts";
-import { h } from "preact";
 import { useState } from "preact/hooks";
 import styled from "styled-components";
+import type { SettingDefinition, SettingsProps } from "$types/shared/components/settings.component.types.ts";
 
 const SettingsContainer = styled.div`
 	display: flex;
@@ -381,7 +380,7 @@ const ArrayButton = styled.button<{ variant: "add" | "remove" }>`
 	font-size: 12px;
 `;
 
-const TextContent = styled.div`
+const _TextContent = styled.div`
 	color: #ccc;
 	line-height: 1.6;
 	max-width: 500px;
@@ -888,7 +887,7 @@ const Settings = <T,>({
 					</Header>
 					<SettingsContent>
 						{currentTabSettings.map((setting) => {
-							const value = settings[setting.id as keyof T];
+							const _value = settings[setting.id as keyof T];
 							if (setting.hideInfo) {
 								return (
 									<Setting

@@ -1,5 +1,5 @@
 import type { PlatformType } from "$types/shared/platform.types.ts";
-import type { CommonDatabaseData } from "$types/shared/storage/common-database.types.ts";
+import type { SharedStorageData } from "$types/shared/storage/shared-storage.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 
 export type { PlatformType };
@@ -85,17 +85,17 @@ export interface UpdateSettingsPayload {
 export type GetSettingsResponse = PlatformSettings;
 export type UpdateSettingsResponse = { success: true };
 
-// @ts-ignore its okay here
+// @ts-expect-error its okay here
 // biome-ignore lint/complexity/noBannedTypes: it's okay here
-export type GetCommonDataPayload = {};
+export type GetSharedStorageDataPayload = {};
 
-export interface GetCommonDataResponse {
-	data: CommonDatabaseData;
+export interface GetSharedStorageDataResponse {
+	data: SharedStorageData;
 }
 
-export type SetCommonDataPayload = { data: CommonDatabaseData };
+export type SetSharedStorageDataPayload = { data: SharedStorageData };
 
-export interface SetCommonDataResponse {
+export interface SetSharedStorageDataResponse {
 	success: true;
 }
 
@@ -132,13 +132,13 @@ export interface WorkerApiActions {
 		payload: UpdateSettingsPayload;
 		response: UpdateSettingsResponse;
 	};
-	getCommonData: {
-		payload: GetCommonDataPayload;
-		response: GetCommonDataResponse;
+	getSharedStorageData: {
+		payload: GetSharedStorageDataPayload;
+		response: GetSharedStorageDataResponse;
 	};
-	setCommonData: {
-		payload: SetCommonDataPayload;
-		response: SetCommonDataResponse;
+	setSharedStorageData: {
+		payload: SetSharedStorageDataPayload;
+		response: SetSharedStorageDataResponse;
 	};
 }
 

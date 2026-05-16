@@ -1,8 +1,8 @@
-import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
-import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import { render } from "preact";
 import styled from "styled-components";
+import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
+import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class PinStreamerModule extends TwitchModule {
@@ -19,7 +19,11 @@ export default class PinStreamerModule extends TwitchModule {
 			{
 				type: "selector",
 				selectors: ['#side-nav .side-nav-section .side-nav-card__link[data-test-selector="followed-channel"]'],
-				callback: (elements) => elements.forEach((element) => this.createPin(element)),
+				callback: (elements) => {
+					for (const element of elements) {
+						this.createPin(element);
+					}
+				},
 				key: "pin-streamer",
 			},
 			{
@@ -44,7 +48,9 @@ export default class PinStreamerModule extends TwitchModule {
 			return;
 		}
 		this.createObserver(properElement);
-		[...properElement.children].forEach((child) => this.createPin(child));
+		for (const child of properElement.children) {
+			this.createPin(child);
+		}
 	}
 
 	private hideSortDescription(elements: Element[]): void {

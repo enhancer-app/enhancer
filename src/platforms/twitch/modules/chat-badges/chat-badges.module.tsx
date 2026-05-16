@@ -1,9 +1,9 @@
+import { render } from "preact";
 import { BadgeComponent } from "$shared/components/badge/badge.component.tsx";
 import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchChatMessageEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { render } from "preact";
 
 export default class ChatBadgesModule extends TwitchModule {
 	config: TwitchModuleConfig = {

@@ -1,4 +1,4 @@
-import type { ExtensionMessageDetail, ExtensionResponseDetail } from "$types/shared/worker/worker.types.ts";
+import type { ExtensionMessageDetail } from "$types/shared/worker/worker.types.ts";
 
 export default class WorkerBridge {
 	private bridgeElement: HTMLElement | null = null;

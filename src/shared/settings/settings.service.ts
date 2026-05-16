@@ -1,8 +1,8 @@
+import type { Emitter } from "nanoevents";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
-import type { Emitter } from "nanoevents";
 
 export default class SettingsService<T extends PlatformSettings> {
 	constructor(

@@ -1,10 +1,10 @@
+import type { Emitter } from "nanoevents";
+import { useEffect, useState } from "preact/hooks";
+import styled from "styled-components";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import type { PlatformType, WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
-import type { Emitter } from "nanoevents";
-import { useEffect, useState } from "preact/hooks";
-import styled from "styled-components";
 
 const Container = styled.div`
 	display: flex;
@@ -215,7 +215,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			let data: ExportImportData;
 			try {
 				data = JSON.parse(text);
-			} catch (parseError) {
+			} catch (_parseError) {
 				showStatus("Invalid JSON format in backup file", "error");
 				return;
 			}

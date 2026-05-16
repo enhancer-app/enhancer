@@ -1,12 +1,5 @@
 import KickModule from "$kick/kick.module.ts";
-import { VideoCreatedAtQuery } from "$twitch/apis/twitch-queries.ts";
-import TwitchModule from "$twitch/twitch.module.ts";
-import type { VideoCreatedAtResponse } from "$types/platforms/twitch/twitch.api.types.ts";
-import type { MediaPlayerInstance } from "$types/platforms/twitch/twitch.utils.types.ts";
-import type { KickModuleConfig, TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
-import { render } from "preact";
-import styled from "styled-components";
+import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class LocalWatchtimeCounterModule extends KickModule {
 	config: KickModuleConfig = {
