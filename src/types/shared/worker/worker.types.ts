@@ -85,8 +85,8 @@ export interface UpdateSettingsPayload {
 export type GetSettingsResponse = PlatformSettings;
 export type UpdateSettingsResponse = { success: true };
 
-// biome-ignore lint/complexity/noBannedTypes: it's okay here
-export type GetSharedStorageDataPayload = {};
+	// biome-ignore lint/complexity/noBannedTypes: it's okay here
+	export type GetSharedStorageDataPayload = {};
 
 export interface GetSharedStorageDataResponse {
 	data: SharedStorageData;
