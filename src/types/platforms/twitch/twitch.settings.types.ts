@@ -28,6 +28,8 @@ export type TwitchSettings = {
 	realVideoTimeFormat12h: boolean;
 	pinnedStreamersEnabled: boolean;
 	xayoWatchtimeEnabled: boolean;
+	shareFollowsToOtherPlatforms: boolean;
+	showFollowsFromOtherPlatforms: boolean;
 	channelSection: boolean;
 	chattersEnabled: boolean;
 	_funnyThings: boolean;

@@ -1,8 +1,7 @@
 import KickModule from "$kick/kick.module.ts";
-import TwitchModule from "$twitch/twitch.module.ts";
 import type { ChatMessagePopupEvent } from "$types/platforms/twitch/twitch.events.types.ts";
-import type { KickModuleConfig, TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { h, render } from "preact";
+import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
+import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
 

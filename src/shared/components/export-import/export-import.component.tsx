@@ -215,7 +215,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			let data: ExportImportData;
 			try {
 				data = JSON.parse(text);
-			} catch (parseError) {
+			} catch (_parseError) {
 				showStatus("Invalid JSON format in backup file", "error");
 				return;
 			}

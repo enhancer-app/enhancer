@@ -18,7 +18,7 @@ export default class SettingsButtonModule extends TwitchModule {
 		],
 	};
 
-	private async run(elements: Element[], key: string) {
+	private async run(elements: Element[], _key: string) {
 		const properElements = elements
 			.filter((element) => element.children.length > 0)
 			.map((element) => [...element.children].at(-1))

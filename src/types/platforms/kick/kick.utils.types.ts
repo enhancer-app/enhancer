@@ -26,3 +26,14 @@ export type ChannelChatRoom = {
 	isPaused: boolean;
 	setIsPaused: (paused: boolean) => void;
 };
+
+type TwitchStreamerInfo = {
+	username: string;
+	isLive: boolean;
+	game: string | null;
+	avatar: string | null;
+	url: string;
+	viewerCount: number;
+};
+
+type StreamerInfo = TwitchStreamerInfo & { platform: string };

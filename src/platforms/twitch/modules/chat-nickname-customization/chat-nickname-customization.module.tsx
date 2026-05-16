@@ -81,7 +81,7 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 					(usernameElement.firstChild.firstChild as HTMLElement).style.color) ||
 				userMessageColor ||
 				"white";
-		} catch (error) {
+		} catch (_error) {
 			color = userMessageColor || "white";
 		}
 		this.chatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);

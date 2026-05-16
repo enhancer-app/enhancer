@@ -1,8 +1,6 @@
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { EnhancerBadgeSize } from "$types/apis/enhancer.apis.ts";
-import type { RequestConfig, RequestResponse } from "$types/shared/http-client.types.ts";
 import type { WaitForConfig } from "$types/shared/utils/common.utils.types.ts";
-import { defaultAllowedOrigins } from "vite";
 
 export default class CommonUtils {
 	static readonly UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -104,6 +102,18 @@ export default class CommonUtils {
 				return sources[size];
 			}
 		}
+		return null;
+	}
+
+	getCookie(name: string): string | null {
+		const cookies = document.cookie.split(";").map((cookie) => cookie.trim().split("="));
+
+		for (const [key, value] of cookies) {
+			if (key === name) {
+				return value ? decodeURIComponent(value) : "";
+			}
+		}
+
 		return null;
 	}
 

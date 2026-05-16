@@ -382,3 +382,14 @@ export interface StreamInfoTwitchStreamData {
 	costreamViewCount: number | null;
 	costreamDetails: StreamInfoCostreamDetails | null;
 }
+
+export type KickStreamerInfo = {
+	username: string;
+	isLive: boolean;
+	game: string | null;
+	avatar: string | null;
+	url: string;
+	viewerCount: number;
+};
+
+export type StreamerInfo = KickStreamerInfo & { platform: string };

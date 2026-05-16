@@ -1,7 +1,7 @@
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { ChatMessagePopupEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { h, render } from "preact";
+import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
 

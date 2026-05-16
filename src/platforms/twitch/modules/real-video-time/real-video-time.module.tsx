@@ -35,7 +35,9 @@ export default class RealVideoTimeModule extends TwitchModule {
 				callback: () => {
 					if (!RealVideoTimeModule.URL_CONFIG(window.location.href)) {
 						const elements = document.querySelectorAll(".enhancer-real-video-time");
-						elements.forEach((element) => element.remove());
+						for (const element of elements) {
+							element.remove();
+						}
 					}
 				},
 				key: "real-video-time-url-validator",

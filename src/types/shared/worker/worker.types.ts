@@ -1,4 +1,5 @@
 import type { PlatformType } from "$types/shared/platform.types.ts";
+import type { SharedData } from "$types/shared/storage/shared-data.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 
 export type { PlatformType };
@@ -84,6 +85,18 @@ export interface UpdateSettingsPayload {
 export type GetSettingsResponse = PlatformSettings;
 export type UpdateSettingsResponse = { success: true };
 
+export type GetSharedDataPayload = Record<string, never>;
+
+export interface GetSharedDataResponse {
+	data: SharedData;
+}
+
+export type SetSharedDataPayload = { data: SharedData };
+
+export interface SetSharedDataResponse {
+	success: true;
+}
+
 export interface WorkerApiActions {
 	ping: {
 		payload?: never;
@@ -116,6 +129,14 @@ export interface WorkerApiActions {
 	updateSettings: {
 		payload: UpdateSettingsPayload;
 		response: UpdateSettingsResponse;
+	};
+	getSharedData: {
+		payload: GetSharedDataPayload;
+		response: GetSharedDataResponse;
+	};
+	setSharedData: {
+		payload: SetSharedDataPayload;
+		response: SetSharedDataResponse;
 	};
 }
 

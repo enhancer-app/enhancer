@@ -105,7 +105,11 @@ export default class ChatAttachmentsModule extends TwitchModule {
 		const attachmentData = await this.getAttachmentData(baseData.url);
 		if (!attachmentData || !attachmentData.type || !attachmentData.size)
 			throw new Error("Couldn't get attachment data");
-		return { ...baseData, attachmentType: attachmentData.type, attachmentSize: Number.parseInt(attachmentData.size) };
+		return {
+			...baseData,
+			attachmentType: attachmentData.type,
+			attachmentSize: Number.parseInt(attachmentData.size, 10),
+		};
 	}
 
 	private async getAttachmentData(url: URL) {

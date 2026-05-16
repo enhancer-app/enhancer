@@ -17,6 +17,8 @@ export const KICK_DEFAULT_SETTINGS: KickSettings = {
 	streamLatencyReducerMaxThreshold: 6,
 	realVideoTimeEnabled: true,
 	realVideoTimeFormat12h: false,
+	shareFollowsToOtherPlatforms: false,
+	showFollowsFromOtherPlatforms: true,
 	channelSection: true,
 	_disableExtensionOnDashboard: false,
 	_funnyThings: true,

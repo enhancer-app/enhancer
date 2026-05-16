@@ -330,4 +330,13 @@ export default class TwitchUtils {
 		if (!mediaPlayer) return;
 		return mediaPlayer.core.renderSurface.video.element().playbackRate;
 	}
+
+	getUserFollowList(): string[] {
+		const sections = this.getPersonalSections();
+		if (!sections) return [];
+		const streams = sections.props.section.streams ?? [];
+		const offlineChannels = sections.props.section.offlineChannels ?? [];
+		const allChannels = [...streams, ...offlineChannels];
+		return allChannels.map((channel) => String(channel.user.login).toLowerCase()).filter(Boolean);
+	}
 }

@@ -347,7 +347,7 @@ export function WatchtimeListComponent({
 		return `${hours}h ${minutes}m ${secs}s`;
 	};
 
-	const formatDate = (timestamp: number): string => {
+	const _formatDate = (timestamp: number): string => {
 		return new Date(timestamp).toLocaleDateString();
 	};
 

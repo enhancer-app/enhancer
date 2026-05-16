@@ -10,7 +10,7 @@ export default class ModuleApplier<
 > {
 	constructor(protected readonly logger: Logger) {}
 
-	async apply(module: Module<Events, Storage, Settings>) {
+	async apply(_module: Module<Events, Storage, Settings>) {
 		throw new Error("Not implemented");
 	}
 

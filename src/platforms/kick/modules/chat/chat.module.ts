@@ -19,9 +19,12 @@ export default class ChatModule extends KickModule {
 	private observer: MutationObserver | undefined;
 
 	private async run([chatRoom]: Element[]): Promise<void> {
-		[...chatRoom.querySelectorAll(".ntv__chat-message"), ...chatRoom.querySelectorAll("div[data-index]")].forEach(
-			(message) => this.handleMessage(message),
-		);
+		for (const message of [
+			...chatRoom.querySelectorAll(".ntv__chat-message"),
+			...chatRoom.querySelectorAll("div[data-index]"),
+		]) {
+			this.handleMessage(message);
+		}
 		await this.initializeChannel();
 		this.createObserver(chatRoom);
 	}

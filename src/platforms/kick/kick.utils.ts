@@ -1,8 +1,14 @@
 import type CommonUtils from "$shared/utils/common.utils.ts";
 import type ReactUtils from "$shared/utils/react.utils.ts";
 import type { KickChatMessageData } from "$types/platforms/kick/kick.events.types.ts";
-import type { IsoDateProps, StreamStatusProps, VideoProgressProps } from "$types/platforms/kick/kick.utils.types.ts";
-import type { ChannelChatRoom, ChannelChatRoomInfo, ChannelInfo } from "$types/platforms/kick/kick.utils.types.ts";
+import type {
+	ChannelChatRoom,
+	ChannelChatRoomInfo,
+	ChannelInfo,
+	IsoDateProps,
+	StreamStatusProps,
+	VideoProgressProps,
+} from "$types/platforms/kick/kick.utils.types.ts";
 
 export default class KickUtils {
 	constructor(
