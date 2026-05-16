@@ -14,13 +14,9 @@ import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class ChatAttachmentsModule extends TwitchModule {
 	private readonly httpClient = new HttpClient();
-	private readonly imageAttachmentConfig = new ImageChatAttachmentConfig(
-		this.settingsService(),
-		this.workerService(),
-		() => {
-			this.twitchUtils().unstuckScroll();
-		},
-	);
+	private readonly imageAttachmentConfig = new ImageChatAttachmentConfig(this.settings(), this.workerService(), () => {
+		this.twitchUtils().unstuckScroll();
+	});
 	private previousInputContent = "";
 	private inputMonitoringInterval: NodeJS.Timeout | undefined;
 
@@ -54,7 +50,7 @@ export default class ChatAttachmentsModule extends TwitchModule {
 				callback: (enabled) => (enabled ? this.startInputMonitoring() : this.stopInputMonitoring()),
 			},
 		],
-		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chatImagesEnabled"),
+		enabled: () => this.settings().chatImagesEnabled,
 	};
 
 	private readonly chatAttachmentHandlers: ChatAttachmentHandler[] = [

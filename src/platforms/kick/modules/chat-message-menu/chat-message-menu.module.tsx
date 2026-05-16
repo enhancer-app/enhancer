@@ -14,7 +14,7 @@ export default class ChatMessageMenuModule extends KickModule {
 				callback: this.handleMessage.bind(this),
 			},
 		],
-		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chatMessageMenuEnabled"),
+		enabled: () => this.settings().chatMessageMenuEnabled,
 	};
 
 	private async handleMessage({ message, element }: KickChatMessageEvent) {

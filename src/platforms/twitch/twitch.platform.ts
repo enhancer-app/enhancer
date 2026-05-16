@@ -41,7 +41,7 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 		const dependencies = [
 			this.emitter,
 			this.storageRepository,
-			this.settingsService,
+			this.settingsCache,
 			this.utilsRepository,
 			this.enhancerApi,
 			this.workerApi,

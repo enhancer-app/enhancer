@@ -28,7 +28,7 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 				},
 			},
 		],
-		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chatNicknameCustomizationEnabled"),
+		enabled: () => this.settings().chatNicknameCustomizationEnabled,
 	};
 
 	private static DEFAULT_FONT = "Inter, Inter Fallback";
@@ -82,7 +82,7 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 		this.chatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
 	}
 
-	async initialize(): Promise<void> {
-		this.isFunnyEnabled = await this.settingsService().getSettingsKey("_funnyThings");
+	initialize(): void {
+		this.isFunnyEnabled = this.settings()._funnyThings;
 	}
 }

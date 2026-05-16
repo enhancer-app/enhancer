@@ -7,7 +7,7 @@ export default class AdditionalFontsModule extends KickModule {
 
 	readonly config: KickModuleConfig = {
 		name: "additional-fonts",
-		isModuleEnabledCallback: async () => this.settingsService().getSettingsKey("loadAdditionalFonts"),
+		enabled: () => this.settings().loadAdditionalFonts,
 		appliers: [
 			{
 				type: "selector",

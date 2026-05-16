@@ -36,7 +36,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 		const dependencies = [
 			this.emitter,
 			this.storageRepository,
-			this.settingsService,
+			this.settingsCache,
 			this.utilsRepository,
 			this.enhancerApi,
 			this.workerApi,

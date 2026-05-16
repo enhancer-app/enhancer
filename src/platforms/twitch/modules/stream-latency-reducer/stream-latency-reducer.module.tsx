@@ -15,20 +15,20 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 				once: true,
 			},
 		],
-		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("streamLatencyReducerEnabled"),
+		enabled: () => this.settings().streamLatencyReducerEnabled,
 	};
 
-	private async run() {
+	private run() {
 		if (this.updateInterval) clearInterval(this.updateInterval);
-		this.updateInterval = setInterval(async () => {
+		this.updateInterval = setInterval(() => {
 			if (!this.isLive()) return;
-			const status = await this.getPlaybackRateStatus();
+			const status = this.getPlaybackRateStatus();
 			if (status === "catchingUpMax") {
-				await this.setPlaybackRateMode("catchUpMax");
+				this.setPlaybackRateMode("catchUpMax");
 			} else if (status === "catchingUpMin") {
-				await this.setPlaybackRateMode("catchUpMin");
+				this.setPlaybackRateMode("catchUpMin");
 			} else {
-				await this.setPlaybackRateMode("reset");
+				this.setPlaybackRateMode("reset");
 			}
 		}, 1000);
 
@@ -88,7 +88,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		(video as any)._enhancerAllowRateChange = false;
 	}
 
-	private async setPlaybackRateMode(mode: "catchUpMin" | "catchUpMax" | "reset") {
+	private setPlaybackRateMode(mode: "catchUpMin" | "catchUpMax" | "reset") {
 		const video = this.twitchUtils().getMediaPlayerInstance()?.core.renderSurface.video.element();
 		if (!video) return;
 
@@ -100,12 +100,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 			return;
 		}
 
-		const {
-			minRate,
-			maxRate,
-			minThreshold: minSpeedThreshold,
-			maxThreshold: maxSpeedThreshold,
-		} = await this.getSettings();
+		const { minRate, maxRate, minThreshold: minSpeedThreshold, maxThreshold: maxSpeedThreshold } = this.getSettings();
 
 		if (mode === "catchUpMax") {
 			targetRate = maxRate;
@@ -117,7 +112,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		this.changePlaybackSpeed(video, targetRate);
 	}
 
-	private async getPlaybackRateStatus() {
+	private getPlaybackRateStatus() {
 		const mediaPlayer = this.getPlayer();
 		if (!mediaPlayer) return;
 		const latency = this.getLatency();
@@ -127,18 +122,18 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		const isLowLatencyDisabled = !mediaPlayer.core.state.liveLowLatency;
 		if (isLowLatencyDisabled) return "caughtUp";
 
-		const { maxThreshold, minThreshold } = await this.getSettings();
+		const { maxThreshold, minThreshold } = this.getSettings();
 		if (latency >= maxThreshold) return "catchingUpMax";
 		if (latency > minThreshold) return "catchingUpMin";
 		if (latency <= minThreshold) return "caughtUp";
 		return "invalid";
 	}
 
-	private async getSettings() {
-		const minRate = await this.settingsService().getSettingsKey("streamLatencyReducerMinRate");
-		const maxRate = await this.settingsService().getSettingsKey("streamLatencyReducerMaxRate");
-		const minThreshold = await this.settingsService().getSettingsKey("streamLatencyReducerMinThreshold");
-		const maxThreshold = await this.settingsService().getSettingsKey("streamLatencyReducerMaxThreshold");
+	private getSettings() {
+		const minRate = this.settings().streamLatencyReducerMinRate;
+		const maxRate = this.settings().streamLatencyReducerMaxRate;
+		const minThreshold = this.settings().streamLatencyReducerMinThreshold;
+		const maxThreshold = this.settings().streamLatencyReducerMaxThreshold;
 		return { minRate, maxRate, minThreshold, maxThreshold };
 	}
 

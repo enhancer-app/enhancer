@@ -1,12 +1,16 @@
 import type { Logger } from "$shared/logger/logger.ts";
 import { MessageHandler } from "$shared/worker/message.handler.ts";
-import type { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
-import type { UpdateSettingsPayload, UpdateSettingsResponse } from "$types/shared/worker/worker.types.ts";
+import type { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
+import type {
+	UpdateSettingsPayload,
+	UpdateSettingsResponse,
+	WorkerBroadcast,
+} from "$types/shared/worker/worker.types.ts";
 
 export class UpdateSettingsHandler extends MessageHandler {
 	constructor(
 		logger: Logger,
-		private readonly settingsService: SettingsService,
+		private readonly database: SettingsDatabase,
 	) {
 		super(logger);
 	}
@@ -21,7 +25,19 @@ export class UpdateSettingsHandler extends MessageHandler {
 		}
 
 		this.logger.debug(`Updating settings for platform: ${payload.platform}`);
-		await this.settingsService.updateSettings(payload.platform, payload.settings);
+		await this.database.updateSettings(payload.platform, payload.settings);
+
+		const broadcast: WorkerBroadcast = {
+			type: "settings-updated",
+			payload: { platform: payload.platform, settings: payload.settings },
+		};
+		const tabs = await chrome.tabs.query({});
+		for (const tab of tabs) {
+			if (tab.id) {
+				chrome.tabs.sendMessage(tab.id, broadcast).catch(() => {});
+			}
+		}
+
 		return { success: true };
 	}
 }

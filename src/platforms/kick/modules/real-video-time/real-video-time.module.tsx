@@ -22,7 +22,7 @@ export default class RealVideoTimeModule extends KickModule {
 				callback: (enabled) => this.updateTimeFormat(enabled),
 			},
 		],
-		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("realVideoTimeEnabled"),
+		enabled: () => this.settings().realVideoTimeEnabled,
 	};
 
 	private timeCounter = signal(-1);
@@ -120,8 +120,8 @@ export default class RealVideoTimeModule extends KickModule {
 		return currentTime - timeOffset;
 	}
 
-	async initialize() {
-		this.use12HourFormat.value = await this.settingsService().getSettingsKey("realVideoTimeFormat12h");
+	initialize() {
+		this.use12HourFormat.value = this.settings().realVideoTimeFormat12h;
 		this.commonUtils().createGlobalStyle(`
 			.enhancer-video-real-time-wrapper {
 				flex-grow: 1;

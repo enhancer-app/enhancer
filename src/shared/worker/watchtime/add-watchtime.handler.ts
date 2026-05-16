@@ -1,12 +1,12 @@
 import type { Logger } from "$shared/logger/logger.ts";
 import { MessageHandler } from "$shared/worker/message.handler.ts";
-import type { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
+import type { WatchtimeAccumulator } from "$shared/worker/watchtime/watchtime.accumulator.ts";
 import type { AddWatchtimePayload, WatchtimeResponse } from "$types/shared/worker/worker.types.ts";
 
 export class AddWatchtimeHandler extends MessageHandler {
 	constructor(
 		logger: Logger,
-		private readonly watchtimeService: WatchtimeService,
+		private readonly accumulator: WatchtimeAccumulator,
 	) {
 		super(logger);
 	}
@@ -19,6 +19,6 @@ export class AddWatchtimeHandler extends MessageHandler {
 			throw new Error("Invalid platform. Must be 'kick' or 'twitch'.");
 		}
 		this.logger.debug(`Starting to watch ${payload.platform} channel: ${payload.channel}`);
-		return await this.watchtimeService.watchChannel(payload.platform, payload.channel);
+		return await this.accumulator.watchChannel(payload.platform, payload.channel);
 	}
 }

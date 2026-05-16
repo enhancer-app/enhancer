@@ -41,7 +41,7 @@ export default class RealVideoTimeModule extends TwitchModule {
 				key: "real-video-time-url-validator",
 			},
 		],
-		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("realVideoTimeEnabled"),
+		enabled: () => this.settings().realVideoTimeEnabled,
 	};
 
 	private timeCounter = {} as Signal<number>;
@@ -136,8 +136,8 @@ export default class RealVideoTimeModule extends TwitchModule {
 		});
 	}
 
-	async initialize() {
-		this.use12HourFormat.value = await this.settingsService().getSettingsKey("realVideoTimeFormat12h");
+	initialize() {
+		this.use12HourFormat.value = this.settings().realVideoTimeFormat12h;
 	}
 }
 
