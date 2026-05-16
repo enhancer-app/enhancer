@@ -166,6 +166,7 @@ interface EnhancerAboutComponentProps {
 		github: string;
 		twitter: string;
 		discord: string;
+		email: string;
 	};
 }
 
@@ -220,6 +221,10 @@ export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
 					<SocialLink href="https://sh.enhancer.at/dc" target="_blank" rel="noopener noreferrer">
 						<IconImage src={icons.discord} alt="Discord" />
 						Discord
+					</SocialLink>
+					<SocialLink href="mailto:contact@enhancer.at">
+						<IconImage src={icons.email} alt="Email" />
+						contact@enhancer.at
 					</SocialLink>
 				</SocialLinksContainer>
 			</SocialSection>

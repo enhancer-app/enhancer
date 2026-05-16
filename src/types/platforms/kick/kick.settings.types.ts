@@ -17,8 +17,8 @@ export type KickSettings = {
 	streamLatencyReducerMaxThreshold: number;
 	realVideoTimeEnabled: boolean;
 	realVideoTimeFormat12h: boolean;
-	shareFollowsToOtherPlatforms: boolean;
-	showFollowsFromOtherPlatforms: boolean;
+	_syncCrossPlatformFollows: boolean;
+	_showCrossPlatformFollows: boolean;
 	channelSection: boolean;
 	_disableExtensionOnDashboard: boolean;
 	_funnyThings: boolean;

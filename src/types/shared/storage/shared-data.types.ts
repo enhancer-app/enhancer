@@ -4,7 +4,7 @@ export type PlatformFollowData = {
 };
 
 export type SharedData = {
-	sharedFollows: {
+	crossPlatformFollows: {
 		twitch: PlatformFollowData;
 		kick: PlatformFollowData;
 	};

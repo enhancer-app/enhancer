@@ -33,14 +33,14 @@ export class SharedDataDatabase extends Database {
 
 	private deepMerge(data: SharedData): SharedData {
 		return {
-			sharedFollows: {
+			crossPlatformFollows: {
 				twitch: {
-					...DEFAULT_SHARED_DATA.sharedFollows.twitch,
-					...data?.sharedFollows?.twitch,
+					...DEFAULT_SHARED_DATA.crossPlatformFollows.twitch,
+					...data?.crossPlatformFollows?.twitch,
 				},
 				kick: {
-					...DEFAULT_SHARED_DATA.sharedFollows.kick,
-					...data?.sharedFollows?.kick,
+					...DEFAULT_SHARED_DATA.crossPlatformFollows.kick,
+					...data?.crossPlatformFollows?.kick,
 				},
 			},
 		};

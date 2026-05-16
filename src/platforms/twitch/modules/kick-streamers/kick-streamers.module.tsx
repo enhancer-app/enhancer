@@ -1,5 +1,5 @@
 import KickApi from "$kick/apis/kick.api.ts";
-import SharedDataCache from "$shared/settings/shared-data.cache.ts";
+import SharedDataCache from "$shared/shared-data/shared-data.cache.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { ChannelResponse } from "$types/platforms/kick/kick.api.types.ts";
 import type { KickStreamerInfo, StreamerInfo } from "$types/platforms/twitch/twitch.utils.types.ts";
@@ -21,7 +21,7 @@ export default class KickStreamersModule extends TwitchModule {
 				once: true,
 			},
 		],
-		enabled: () => this.settings().showFollowsFromOtherPlatforms,
+		enabled: () => this.settings()._showCrossPlatformFollows,
 	};
 
 	private static readonly UPDATE_INTERVAL_MS = 2 * 60 * 1000;
@@ -98,7 +98,7 @@ export default class KickStreamersModule extends TwitchModule {
 
 	private async loadStreamersFromCommon(): Promise<void> {
 		try {
-			const kickFollows = this.sharedDataCache.get().sharedFollows.kick.follows;
+			const kickFollows = this.sharedDataCache.get().crossPlatformFollows.kick.follows;
 			this.cachedKickStreamers = kickFollows;
 			this.logger.debug("Loaded Kick streamer nicknames for Twitch:", this.cachedKickStreamers);
 		} catch (error) {

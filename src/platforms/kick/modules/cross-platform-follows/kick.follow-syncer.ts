@@ -1,6 +1,6 @@
 import { HttpClient } from "$shared/http/http-client.ts";
-import FollowSyncer from "$shared/module/shared-follows/follow-syncer.ts";
-import type SharedDataCache from "$shared/settings/shared-data.cache.ts";
+import FollowSyncer from "$shared/module/cross-platform-follows/follow-syncer.ts";
+import type SharedDataCache from "$shared/shared-data/shared-data.cache.ts";
 import type CommonUtils from "$shared/utils/common.utils.ts";
 import type { FollowedChannelsResponse } from "$types/platforms/kick/kick.api.types.ts";
 

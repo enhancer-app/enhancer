@@ -15,6 +15,7 @@ export type CommonSettingDefinition<T = any> = {
 	tags?: string[];
 	hideInfo?: boolean;
 	requiresRefreshToDisable?: boolean;
+	experimental?: boolean;
 };
 
 export type ToggleSettingDefinition<T = any> = {

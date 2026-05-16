@@ -6,7 +6,7 @@ const EMPTY_FOLLOWS: PlatformFollowData = {
 };
 
 export const DEFAULT_SHARED_DATA = {
-	sharedFollows: {
+	crossPlatformFollows: {
 		twitch: { ...EMPTY_FOLLOWS },
 		kick: { ...EMPTY_FOLLOWS },
 	},

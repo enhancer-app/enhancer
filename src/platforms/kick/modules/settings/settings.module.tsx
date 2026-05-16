@@ -13,6 +13,7 @@ const CATEGORY = {
 	GENERAL: "general",
 	CHAT: "chat",
 	CHANNEL: "channel",
+	FOLLOWERS: "followers",
 	LATENCY: "latency",
 	ABOUT: "about",
 } as const;
@@ -74,8 +75,9 @@ export default class SettingsModule extends KickModule {
 			{ id: CATEGORY.GENERAL, title: "General", order: 0 },
 			{ id: CATEGORY.CHAT, title: "Chat", order: 1 },
 			{ id: CATEGORY.CHANNEL, title: "Channel", order: 2 },
-			{ id: CATEGORY.LATENCY, title: "Latency", order: 3 },
-			{ id: CATEGORY.ABOUT, title: "About", order: 4 },
+			{ id: CATEGORY.FOLLOWERS, title: "Followers", order: 3 },
+			{ id: CATEGORY.LATENCY, title: "Latency", order: 4 },
+			{ id: CATEGORY.ABOUT, title: "About", order: 5 },
 		];
 
 		const brandIcons = {
@@ -83,6 +85,7 @@ export default class SettingsModule extends KickModule {
 			github: await this.commonUtils().getAssetFile(this.workerService(), "brands/github.svg"),
 			twitter: await this.commonUtils().getAssetFile(this.workerService(), "brands/twitter.svg"),
 			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
+			email: await this.commonUtils().getAssetFile(this.workerService(), "brands/email.svg"),
 		} as const;
 
 		this.SETTING_DEFINITIONS = [
@@ -193,6 +196,24 @@ export default class SettingsModule extends KickModule {
 				hideInfo: true,
 			},
 			{
+				id: "_showCrossPlatformFollows",
+				title: "Cross-Platform Live Follows",
+				description: "Display live followed streamers from other platforms in your sidebar.",
+				type: "toggle",
+				categoryId: CATEGORY.FOLLOWERS,
+				requiresRefreshToDisable: true,
+				experimental: true,
+			},
+			{
+				id: "_syncCrossPlatformFollows",
+				title: "Sync Follows Across Platforms",
+				description: "Share your followed streamers so they appear on other platforms where you have this enabled.",
+				type: "toggle",
+				categoryId: CATEGORY.FOLLOWERS,
+				requiresRefreshToDisable: true,
+				experimental: true,
+			},
+			{
 				id: "streamLatencyEnabled",
 				title: "Enable Stream Latency",
 				description: "Shows the current stream delay on top of the chat.",
@@ -202,11 +223,12 @@ export default class SettingsModule extends KickModule {
 			},
 			{
 				id: "streamLatencyReducerEnabled",
-				title: "Enable Stream Latency Reducer (Experimental)",
+				title: "Enable Stream Latency Reducer",
 				description: "Reduces stream latency by adjusting playback rate.",
 				type: "toggle",
 				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
+				experimental: true,
 			},
 			{
 				id: "streamLatencyReducerMinRate",

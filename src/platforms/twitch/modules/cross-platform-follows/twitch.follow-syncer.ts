@@ -1,5 +1,5 @@
-import FollowSyncer from "$shared/module/shared-follows/follow-syncer.ts";
-import type SharedDataCache from "$shared/settings/shared-data.cache.ts";
+import FollowSyncer from "$shared/module/cross-platform-follows/follow-syncer.ts";
+import type SharedDataCache from "$shared/shared-data/shared-data.cache.ts";
 import type TwitchUtils from "$twitch/twitch.utils.ts";
 
 export default class TwitchFollowSyncer extends FollowSyncer {

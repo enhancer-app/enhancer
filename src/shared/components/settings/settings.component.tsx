@@ -259,6 +259,8 @@ const SettingTitle = styled.div`
   font-size: 14px;
   color: white;
   margin-bottom: 4px;
+  display: flex;
+  align-items: center;
 `;
 
 const SettingDescription = styled.div`
@@ -567,6 +569,53 @@ const NoResults = styled.div`
   text-align: center;
   color: #565656;
   font-size: 14px;
+`;
+
+const ExperimentalBadgeWrapper = styled.span`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  cursor: pointer;
+
+  &:hover > div {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+  }
+`;
+
+const ExperimentalBadge = styled.span`
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: white;
+  background: #9147ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1.4;
+`;
+
+const ExperimentalTooltip = styled.div`
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: #161616;
+  border: 1px solid #232323;
+  border-radius: 7px;
+  padding: 10px 12px;
+  color: #ccc;
+  font-size: 11px;
+  line-height: 1.5;
+  width: 280px;
+  z-index: 1002;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-4px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 `;
 
 function tokenize(text: string): string[] {
@@ -1137,7 +1186,19 @@ const Settings = <T,>({
 										return (
 											<Setting key={`setting-${setting.id as string}`}>
 												<SettingInfo>
-													<SettingTitle>{setting.title}</SettingTitle>
+													<SettingTitle>
+														{setting.title}
+														{setting.experimental && (
+															<ExperimentalBadgeWrapper>
+																<ExperimentalBadge>Experimental</ExperimentalBadge>
+																<ExperimentalTooltip>
+																	This is an experimental feature, it might not work properly. If you find any issues
+																	feel free to report them on our Discord or email. You can find them in the About
+																	section.
+																</ExperimentalTooltip>
+															</ExperimentalBadgeWrapper>
+														)}
+													</SettingTitle>
 													<SettingDescription>{setting.description}</SettingDescription>
 													{setting.requiresRefreshToDisable && justTurnedOff === setting.id && (
 														<RefreshWarning>

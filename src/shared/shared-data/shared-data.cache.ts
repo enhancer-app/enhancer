@@ -44,7 +44,7 @@ export default class SharedDataCache {
 
 	wasRecentlySynced(platform: "twitch" | "kick", thresholdMs: number): boolean {
 		const data = this.get();
-		return Date.now() - data.sharedFollows[platform].lastSyncedAt < thresholdMs;
+		return Date.now() - data.crossPlatformFollows[platform].lastSyncedAt < thresholdMs;
 	}
 
 	async updateFollows(platform: "twitch" | "kick", follows: string[]): Promise<void> {
@@ -52,7 +52,7 @@ export default class SharedDataCache {
 			follows,
 			lastSyncedAt: Date.now(),
 		};
-		await this.updateNestedKey("sharedFollows", platform, followData);
+		await this.updateNestedKey("crossPlatformFollows", platform, followData);
 	}
 
 	async clearFollows(platform: "twitch" | "kick"): Promise<void> {
