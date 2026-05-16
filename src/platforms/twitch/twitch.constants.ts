@@ -31,5 +31,4 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	xayoWatchtimeEnabled: true,
 	channelSection: true,
 	chattersEnabled: true,
-	_funnyThings: true,
 };
