@@ -22,7 +22,7 @@ export default class RealVideoTimeModule extends KickModule {
 				callback: (enabled) => this.updateTimeFormat(enabled),
 			},
 		],
-		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("realVideoTimeEnabled"),
+		enabled: () => this.settings().realVideoTimeEnabled,
 	};
 
 	private timeCounter = signal(-1);
@@ -70,7 +70,7 @@ export default class RealVideoTimeModule extends KickModule {
 
 	private createElement(player: Element): boolean {
 		if (player.querySelector(`#${this.getId()}`)) return false;
-		const element = player.querySelector(".z-controls");
+		const element = player.querySelector(".z-controls.absolute");
 		if (!element || !element.firstElementChild) return false;
 		const wrapper = document.createElement("div");
 		wrapper.id = this.getId();
@@ -120,8 +120,8 @@ export default class RealVideoTimeModule extends KickModule {
 		return currentTime - timeOffset;
 	}
 
-	async initialize() {
-		this.use12HourFormat.value = await this.settingsService().getSettingsKey("realVideoTimeFormat12h");
+	initialize() {
+		this.use12HourFormat.value = this.settings().realVideoTimeFormat12h;
 		this.commonUtils().createGlobalStyle(`
 			.enhancer-video-real-time-wrapper {
 				flex-grow: 1;

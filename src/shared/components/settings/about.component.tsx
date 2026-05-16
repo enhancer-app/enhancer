@@ -170,7 +170,7 @@ interface EnhancerAboutComponentProps {
 }
 
 export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
-	const contributors = ["igorovh", "czestereq", "d33zor", "kawre", "usermacieg"];
+	const contributors = ["igorovh", "czestereq", "d33zor", "kawre", "usermacieg", "kaedriz", "esteeming"];
 	const testers = [
 		"piotrgamerpl",
 		"m0rtak_",

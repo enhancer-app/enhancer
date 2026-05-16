@@ -32,4 +32,6 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	shareFollowsToOtherPlatforms: false,
 	showFollowsFromOtherPlatforms: true,
 	channelSection: true,
+	chattersEnabled: true,
+	_funnyThings: true,
 };

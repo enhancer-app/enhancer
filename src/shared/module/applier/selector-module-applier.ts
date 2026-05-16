@@ -18,7 +18,7 @@ export default class SelectorModuleApplier<
 		this.appliers.push(
 			...selectorAppliers.map((selectorApplier) => ({
 				config: selectorApplier,
-				isModuleEnabled: module.config.isModuleEnabledCallback,
+				enabled: module.config.enabled,
 				lastCheckedAt: 0,
 			})),
 		);
@@ -35,7 +35,7 @@ export default class SelectorModuleApplier<
 
 	private async run() {
 		for (const applier of this.appliers) {
-			if (applier.isModuleEnabled !== undefined && !(await applier.isModuleEnabled())) continue;
+			if (applier.enabled && !applier.enabled()) continue;
 			if (this.isApplierOnCooldown(applier)) continue;
 			applier.lastCheckedAt = Date.now();
 			const { config } = applier;
@@ -88,6 +88,6 @@ export default class SelectorModuleApplier<
 
 type SelectorModuleApplierRunner = {
 	config: SelectorModuleApplierConfig;
-	isModuleEnabled?: () => Promise<boolean>;
+	enabled?: () => boolean;
 	lastCheckedAt: number;
 };

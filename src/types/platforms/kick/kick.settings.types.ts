@@ -20,6 +20,8 @@ export type KickSettings = {
 	shareFollowsToOtherPlatforms: boolean;
 	showFollowsFromOtherPlatforms: boolean;
 	channelSection: boolean;
+	_disableExtensionOnDashboard: boolean;
+	_funnyThings: boolean;
 };
 
 export type KickSettingsEvents = {

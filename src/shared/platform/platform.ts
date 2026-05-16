@@ -1,18 +1,17 @@
-import type { Emitter } from "nanoevents";
 import EnhancerApi from "$shared/apis/enhancer.api.ts";
 import { EventEmitterFactory } from "$shared/event/event-emitter.factory.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import EventModuleApplier from "$shared/module/applier/event-module-applier.ts";
 import SelectorModuleApplier from "$shared/module/applier/selector-module-applier.ts";
 import type Module from "$shared/module/module.ts";
-import SettingsService from "$shared/settings/settings.service.ts";
-import SharedStorageDataService from "$shared/settings/shared-storage.service.ts";
+import SettingsCache from "$shared/settings/settings.service.ts";
 import StorageRepository from "$shared/storage/storage-repository.ts";
 import UtilsRepository from "$shared/utils/utils.repository.ts";
 import WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformConfig } from "$types/shared/platform.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
+import type { Emitter } from "nanoevents";
 
 export default abstract class Platform<
 	TModule extends Module<TEvents, TStorage, TSettings>,
@@ -26,12 +25,11 @@ export default abstract class Platform<
 	protected readonly utilsRepository = new UtilsRepository();
 	protected readonly enhancerApi: EnhancerApi;
 	protected readonly workerApi = new WorkerService();
-	protected readonly settingsService: SettingsService<TSettings>;
-	protected readonly sharedStorageDataService = new SharedStorageDataService(this.workerApi);
+	protected readonly settingsCache: SettingsCache<TSettings>;
 
 	protected constructor(protected readonly config: PlatformConfig) {
 		this.enhancerApi = new EnhancerApi(config.type);
-		this.settingsService = new SettingsService<TSettings>(config.type, this.workerApi, this.emitter);
+		this.settingsCache = new SettingsCache<TSettings>(config.type, this.workerApi, this.emitter);
 	}
 
 	protected async initialize(): Promise<void> {}
@@ -40,11 +38,12 @@ export default abstract class Platform<
 		this.tryInitializeEnhancerApi().catch((err) => {
 			this.logger.error("EnhancerApi init failed:", err);
 		});
-		this.workerApi.start();
+		await this.workerApi.start();
+		await this.settingsCache.initialize();
 		await this.initialize();
 		await this.loadModules();
 		this.logger.info(`Started ${this.config.type} extension`);
-		// @ts-expect-error tbh idk, it just works, typescript magic
+		// @ts-ignore tbh idk, it just works, typescript magic
 		this.emitter.emit("extension:start");
 	}
 
@@ -74,9 +73,7 @@ export default abstract class Platform<
 				this.logger.error(`Failed to load ${module.config.name} module: ${error}`);
 			}
 		}
-		for (const applier of this.appliers) {
-			applier.start();
-		}
+		this.appliers.forEach((applier) => applier.start());
 	}
 
 	private async tryInitializeEnhancerApi(retries = 5, delayMs = 5000): Promise<void> {

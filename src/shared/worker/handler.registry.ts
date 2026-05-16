@@ -3,16 +3,14 @@ import { AssetsFileHandler } from "$shared/worker/file/assets-file.handler.ts";
 import type { MessageHandler } from "$shared/worker/message.handler.ts";
 import { PingHandler } from "$shared/worker/ping/ping.handler.ts";
 import { GetSettingsHandler } from "$shared/worker/settings/get-settings.handler.ts";
-import type { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
+import type { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
 import { UpdateSettingsHandler } from "$shared/worker/settings/update-settings.handler.ts";
-import { GetSharedStorageDataHandler } from "$shared/worker/shared-storage/get-shared-storage-data.handler.ts";
-import { SetSharedStorageDataHandler } from "$shared/worker/shared-storage/set-shared-storage-data.handler.ts";
-import type { SharedStorageService } from "$shared/worker/shared-storage/shared-storage.service.ts";
 import { AddWatchtimeHandler } from "$shared/worker/watchtime/add-watchtime.handler.ts";
 import { GetPaginatedWatchtimeHandler } from "$shared/worker/watchtime/get-paginated-watchtime.handler.ts";
 import { GetWatchtimeHandler } from "$shared/worker/watchtime/get-watchtime.handler.ts";
 import { ImportWatchtimeHandler } from "$shared/worker/watchtime/import-watchtime.handler.ts";
-import type { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
+import type { WatchtimeAccumulator } from "$shared/worker/watchtime/watchtime.accumulator.ts";
+import type { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
 import type { WorkerAction } from "$types/shared/worker/worker.types.ts";
 
 export class HandlerRegistry {
@@ -20,9 +18,9 @@ export class HandlerRegistry {
 
 	constructor(
 		private readonly logger: Logger,
-		private readonly watchtimeService: WatchtimeService,
-		private readonly settingsService: SettingsService,
-		private readonly sharedStorageService: SharedStorageService,
+		private readonly settingsDatabase: SettingsDatabase,
+		private readonly watchtimeDatabase: WatchtimeDatabase,
+		private readonly watchtimeAccumulator: WatchtimeAccumulator,
 	) {
 		this.registerHandlers();
 	}
@@ -30,14 +28,12 @@ export class HandlerRegistry {
 	private registerHandlers() {
 		this.handlers.set("ping", new PingHandler(this.logger));
 		this.handlers.set("getAssetsFile", new AssetsFileHandler(this.logger));
-		this.handlers.set("addWatchtime", new AddWatchtimeHandler(this.logger, this.watchtimeService));
-		this.handlers.set("getWatchtime", new GetWatchtimeHandler(this.logger, this.watchtimeService));
-		this.handlers.set("getPaginatedWatchtime", new GetPaginatedWatchtimeHandler(this.logger, this.watchtimeService));
-		this.handlers.set("importWatchtime", new ImportWatchtimeHandler(this.logger, this.watchtimeService));
-		this.handlers.set("getSettings", new GetSettingsHandler(this.logger, this.settingsService));
-		this.handlers.set("updateSettings", new UpdateSettingsHandler(this.logger, this.settingsService));
-		this.handlers.set("getSharedStorageData", new GetSharedStorageDataHandler(this.logger, this.sharedStorageService));
-		this.handlers.set("setSharedStorageData", new SetSharedStorageDataHandler(this.logger, this.sharedStorageService));
+		this.handlers.set("addWatchtime", new AddWatchtimeHandler(this.logger, this.watchtimeAccumulator));
+		this.handlers.set("getWatchtime", new GetWatchtimeHandler(this.logger, this.watchtimeDatabase));
+		this.handlers.set("getPaginatedWatchtime", new GetPaginatedWatchtimeHandler(this.logger, this.watchtimeDatabase));
+		this.handlers.set("importWatchtime", new ImportWatchtimeHandler(this.logger, this.watchtimeDatabase));
+		this.handlers.set("getSettings", new GetSettingsHandler(this.logger, this.settingsDatabase));
+		this.handlers.set("updateSettings", new UpdateSettingsHandler(this.logger, this.settingsDatabase));
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {

@@ -51,13 +51,14 @@ export default class EnhancerApi {
 		}
 	}
 
-	async joinChannel(channelId: string): Promise<void> {
-		if (!channelId || channelId === this.currentChannelId) return;
+	async joinChannel(channelId: string): Promise<boolean> {
+		if (!channelId || channelId === this.currentChannelId) return false;
 		try {
 			const { data: channelData } = await this.fetchChannel(channelId);
 			this.handleChannelResult(channelId, channelData);
 			this.currentChannelId = channelId;
 			this.logger.info(`Successfully joined channel: ${channelId}`);
+			return true;
 		} catch (error) {
 			this.logger.error(`Failed to join channel ${channelId}:`, error);
 			throw error;

@@ -31,6 +31,8 @@ export type TwitchSettings = {
 	shareFollowsToOtherPlatforms: boolean;
 	showFollowsFromOtherPlatforms: boolean;
 	channelSection: boolean;
+	chattersEnabled: boolean;
+	_funnyThings: boolean;
 };
 
 export type TwitchSettingsEvents = {

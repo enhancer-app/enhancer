@@ -142,3 +142,13 @@ export interface WorkerApiActions {
 }
 
 export type WorkerAction = keyof WorkerApiActions;
+
+export interface SettingsBroadcastPayload {
+	platform: PlatformType;
+	settings: PlatformSettings;
+}
+
+export interface WorkerBroadcast {
+	type: "settings-updated";
+	payload: SettingsBroadcastPayload;
+}

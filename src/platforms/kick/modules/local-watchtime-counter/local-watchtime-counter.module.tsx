@@ -1,5 +1,8 @@
 import KickModule from "$kick/kick.module.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
+import { type Signal, signal } from "@preact/signals";
+import { render } from "preact";
+import styled from "styled-components";
 
 export default class LocalWatchtimeCounterModule extends KickModule {
 	config: KickModuleConfig = {

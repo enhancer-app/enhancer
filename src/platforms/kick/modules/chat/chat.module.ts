@@ -54,8 +54,11 @@ export default class ChatModule extends KickModule {
 		}
 		if (!channelId) return;
 		try {
-			await this.enhancerApi().joinChannel(channelId);
-			this.logger.debug(`Joined channel ${channelId}`);
+			const joined = await this.enhancerApi().joinChannel(channelId);
+			if (joined) {
+				this.emitter.emit("extension:joined-channel");
+				this.logger.info(`Joined channel ${channelId}`);
+			}
 		} catch (error) {
 			this.logger.error("Failed to join channel", error);
 		}

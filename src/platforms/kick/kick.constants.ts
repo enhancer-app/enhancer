@@ -20,4 +20,6 @@ export const KICK_DEFAULT_SETTINGS: KickSettings = {
 	shareFollowsToOtherPlatforms: false,
 	showFollowsFromOtherPlatforms: true,
 	channelSection: true,
+	_disableExtensionOnDashboard: false,
+	_funnyThings: true,
 };

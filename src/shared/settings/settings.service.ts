@@ -1,38 +1,45 @@
-import type { Emitter } from "nanoevents";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
+import type { SettingsBroadcastPayload } from "$types/shared/worker/worker.types.ts";
+import type { Emitter } from "nanoevents";
 
-export default class SettingsService<T extends PlatformSettings> {
+export default class SettingsCache<T extends PlatformSettings> {
+	private cache: T | null = null;
+
 	constructor(
 		private readonly platformType: PlatformType,
 		private readonly workerService: WorkerService,
 		private readonly emitter: Emitter<CommonEvents>,
-	) {}
+	) {
+		this.workerService.onBroadcast("settings-updated", this.handleBroadcast.bind(this));
+	}
 
-	async getSettings(): Promise<T> {
+	async initialize(): Promise<void> {
 		const settings = await this.workerService.send("getSettings", {
 			platform: this.platformType,
 		});
-		if (!settings) throw new Error("Could not find settings");
-		return settings as T;
+		this.cache = settings as T;
 	}
 
-	async getSettingsKey<K extends keyof T>(key: K): Promise<T[K]> {
-		const settings = await this.getSettings();
-		return settings[key];
+	get(): T {
+		if (!this.cache) throw new Error("Settings not initialized");
+		return this.cache;
 	}
 
-	async updateSettingsKey<K extends keyof T>(key: K, value: T[K]) {
-		const settings = await this.getSettings();
-		await this.updateSettings({ ...settings, [key]: value });
+	async update(settings: T): Promise<void> {
+		await this.workerService.send("updateSettings", { platform: this.platformType, settings });
+		this.cache = settings;
 	}
 
-	async updateSettings(settings: T) {
-		const result = await this.workerService.send("updateSettings", { platform: this.platformType, settings });
-		if (!result) return false;
+	async updateKey<K extends keyof T>(key: K, value: T[K]): Promise<void> {
+		await this.update({ ...this.get(), [key]: value });
+	}
+
+	private handleBroadcast(payload: SettingsBroadcastPayload): void {
+		if (payload.platform !== this.platformType) return;
+		this.cache = payload.settings as T;
 		this.emitter.emit("extension:settings-refresh");
-		result.success;
 	}
 }

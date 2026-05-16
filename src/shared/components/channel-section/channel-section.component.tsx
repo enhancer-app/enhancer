@@ -1,6 +1,14 @@
+import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
+import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 import type { Signal } from "@preact/signals";
 import styled from "styled-components";
-import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
+
+export interface ChannelSectionAction {
+	key: string;
+	icon: Signal<string> | string;
+	tooltip: Signal<string> | string;
+	onClick: () => void;
+}
 
 interface ChannelSectionComponentProps {
 	displayName: Signal<string>;
@@ -8,6 +16,7 @@ interface ChannelSectionComponentProps {
 	sites: Signal<QuickAccessLink[]>;
 	watchTime: Signal<number>;
 	logoUrl: string;
+	actions?: Signal<ChannelSectionAction[]> | ChannelSectionAction[];
 }
 
 export function ChannelSectionComponent({
@@ -16,7 +25,9 @@ export function ChannelSectionComponent({
 	sites,
 	watchTime,
 	logoUrl,
+	actions = [],
 }: ChannelSectionComponentProps) {
+	const actionList = Array.isArray(actions) ? actions : actions.value;
 	const formatWatchTime = (time: number) => {
 		const hours = time === 0 ? 0 : time / 3600;
 		if (hours < 1) return `${Math.round(hours * 60)} minutes`;
@@ -39,6 +50,21 @@ export function ChannelSectionComponent({
 						</ChannelNameRow>
 					</ChannelDetails>
 				</ChannelInfo>
+				{actionList.length > 0 && (
+					<HeaderActions>
+						{actionList.map((action) => {
+							const iconText = getActionText(action.icon);
+							const tooltipText = getActionText(action.tooltip);
+							return (
+								<TooltipComponent key={action.key} content={<span>{tooltipText}</span>} position="right">
+									<ActionButton type="button" onClick={action.onClick} aria-label={tooltipText}>
+										{iconText}
+									</ActionButton>
+								</TooltipComponent>
+							);
+						})}
+					</HeaderActions>
+				)}
 			</Header>
 			<Content>
 				<LinkGrid>
@@ -54,6 +80,11 @@ export function ChannelSectionComponent({
 			</Content>
 		</Container>
 	);
+}
+
+function getActionText(value: Signal<string> | string) {
+	if (typeof value === "string") return value;
+	return value.value;
 }
 
 const Container = styled.div`
@@ -152,4 +183,31 @@ const LinkName = styled.div`
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+`;
+
+const HeaderActions = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-left: 10px;
+`;
+
+const ActionButton = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border: none;
+	border-radius: 4px;
+	background: rgba(255, 255, 255, 0.08);
+	color: #ffffff;
+	cursor: pointer;
+	padding: 0;
+	font-size: 14px;
+	line-height: 1;
+
+	&:hover {
+		background: rgba(145, 71, 255, 0.3);
+	}
 `;

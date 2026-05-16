@@ -16,7 +16,7 @@ export default class ChatBadgesModule extends TwitchModule {
 				callback: this.handleMessage.bind(this),
 			},
 		],
-		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chatBadgesEnabled"),
+		enabled: () => this.settings().chatBadgesEnabled,
 	};
 
 	private async handleMessage({ message, element }: TwitchChatMessageEvent) {

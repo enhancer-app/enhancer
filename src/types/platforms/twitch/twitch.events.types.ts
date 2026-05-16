@@ -8,8 +8,15 @@ export type TwitchEvents = {
 	"twitch:chatMessage": (message: TwitchChatMessageEvent) => void | Promise<void>;
 	"twitch:chatPopupMessage": (message: ChatMessagePopupEvent) => void | Promise<void>;
 	"twitch:messageMenu": (message: MessageMenuEvent) => void | Promise<void>;
+	"twitch:pinnedStreamer:sync": (payload: TwitchPinnedStreamerSyncEvent) => void | Promise<void>;
 } & TwitchSettingsEvents &
 	CommonEvents;
+
+export type TwitchPinnedStreamerSyncEvent = {
+	channelId: string;
+	isPinned: boolean;
+	source?: "channel-section" | "pin-streamer";
+};
 
 export type TwitchChatMessage = {
 	badges: Record<string, string>;
