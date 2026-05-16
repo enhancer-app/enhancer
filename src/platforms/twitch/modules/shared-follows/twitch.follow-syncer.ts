@@ -3,6 +3,7 @@ import type SharedDataCache from "$shared/settings/shared-data.cache.ts";
 import type TwitchUtils from "$twitch/twitch.utils.ts";
 
 export default class TwitchFollowSyncer extends FollowSyncer {
+	private static readonly SYNC_COOLDOWN_MS = 2.5 * 60 * 1000;
 	private syncInProgress = false;
 
 	constructor(
@@ -17,10 +18,14 @@ export default class TwitchFollowSyncer extends FollowSyncer {
 			this.logger.warn("Sync already in progress, skipping new request");
 			return;
 		}
+		if (this.sharedDataCache.wasRecentlySynced("twitch", TwitchFollowSyncer.SYNC_COOLDOWN_MS)) {
+			this.logger.debug("Skipping sync, recently synced by another tab");
+			return;
+		}
 		this.syncInProgress = true;
 		try {
 			const followList = this.twitchUtils.getUserFollowList();
-			await this.sharedDataCache.updateNestedKey("sharedFollows", "twitch", followList);
+			await this.sharedDataCache.updateFollows("twitch", followList);
 			this.logger.info(`Synced ${followList.length} followed channels`);
 		} catch (err) {
 			this.logger.error("Failed to sync follows", err);
@@ -30,6 +35,6 @@ export default class TwitchFollowSyncer extends FollowSyncer {
 	}
 
 	async clearFollows() {
-		await this.sharedDataCache.updateNestedKey("sharedFollows", "twitch", []);
+		await this.sharedDataCache.clearFollows("twitch");
 	}
 }

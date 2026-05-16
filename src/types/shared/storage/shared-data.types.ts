@@ -1,6 +1,11 @@
+export type PlatformFollowData = {
+	follows: string[];
+	lastSyncedAt: number;
+};
+
 export type SharedData = {
 	sharedFollows: {
-		twitch: string[];
-		kick: string[];
+		twitch: PlatformFollowData;
+		kick: PlatformFollowData;
 	};
 };

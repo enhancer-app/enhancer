@@ -98,8 +98,7 @@ export default class KickStreamersModule extends TwitchModule {
 
 	private async loadStreamersFromCommon(): Promise<void> {
 		try {
-			const sharedFollows = await this.sharedDataCache.get().sharedFollows;
-			const kickFollows = sharedFollows.kick ?? [];
+			const kickFollows = this.sharedDataCache.get().sharedFollows.kick.follows;
 			this.cachedKickStreamers = kickFollows;
 			this.logger.debug("Loaded Kick streamer nicknames for Twitch:", this.cachedKickStreamers);
 		} catch (error) {

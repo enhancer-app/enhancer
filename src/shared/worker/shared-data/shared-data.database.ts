@@ -2,6 +2,8 @@ import { Database } from "$shared/worker/database/database.ts";
 import { DEFAULT_SHARED_DATA } from "$shared/worker/shared-data/shared-data.constants.ts";
 import type { SharedData } from "$types/shared/storage/shared-data.types.ts";
 
+type SharedDataRecord = { id: string; data: SharedData };
+
 export class SharedDataDatabase extends Database {
 	protected readonly dbName = "enhancer_shared_data";
 	protected readonly dbVersion = 1;
@@ -17,17 +19,30 @@ export class SharedDataDatabase extends Database {
 	}
 
 	async getData(): Promise<SharedData> {
-		const result = await this.request<{ id: string; data: SharedData } | undefined>(
-			this.storeName,
-			"readonly",
-			(store) => store.get("shared_data"),
+		const result = await this.request<SharedDataRecord | undefined>(this.storeName, "readonly", (store) =>
+			store.get("shared_data"),
 		);
-		if (!result) return { ...DEFAULT_SHARED_DATA };
-		return { ...DEFAULT_SHARED_DATA, ...result.data };
+		if (!result) return this.deepMerge(DEFAULT_SHARED_DATA);
+		return this.deepMerge(result.data);
 	}
 
 	async setData(data: SharedData): Promise<void> {
 		await this.request<void>(this.storeName, "readwrite", (store) => store.put({ id: "shared_data", data }));
 		this.logger.debug("Shared data updated");
+	}
+
+	private deepMerge(data: SharedData): SharedData {
+		return {
+			sharedFollows: {
+				twitch: {
+					...DEFAULT_SHARED_DATA.sharedFollows.twitch,
+					...data?.sharedFollows?.twitch,
+				},
+				kick: {
+					...DEFAULT_SHARED_DATA.sharedFollows.kick,
+					...data?.sharedFollows?.kick,
+				},
+			},
+		};
 	}
 }

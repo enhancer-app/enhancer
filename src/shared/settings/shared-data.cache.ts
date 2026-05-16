@@ -1,5 +1,5 @@
 import type WorkerService from "$shared/worker/worker.service.ts";
-import type { SharedData } from "$types/shared/storage/shared-data.types.ts";
+import type { PlatformFollowData, SharedData } from "$types/shared/storage/shared-data.types.ts";
 
 export default class SharedDataCache {
 	private cache: SharedData | null = null;
@@ -40,5 +40,22 @@ export default class SharedDataCache {
 				[key2]: value,
 			},
 		});
+	}
+
+	wasRecentlySynced(platform: "twitch" | "kick", thresholdMs: number): boolean {
+		const data = this.get();
+		return Date.now() - data.sharedFollows[platform].lastSyncedAt < thresholdMs;
+	}
+
+	async updateFollows(platform: "twitch" | "kick", follows: string[]): Promise<void> {
+		const followData: PlatformFollowData = {
+			follows,
+			lastSyncedAt: Date.now(),
+		};
+		await this.updateNestedKey("sharedFollows", platform, followData);
+	}
+
+	async clearFollows(platform: "twitch" | "kick"): Promise<void> {
+		await this.updateFollows(platform, []);
 	}
 }

@@ -6,6 +6,7 @@ import type { FollowedChannelsResponse } from "$types/platforms/kick/kick.api.ty
 
 export default class KickFollowSyncer extends FollowSyncer {
 	private readonly http: HttpClient = new HttpClient(this.logger);
+	private static readonly SYNC_COOLDOWN_MS = 2.5 * 60 * 1000;
 	private syncInProgress = false;
 
 	constructor(
@@ -20,10 +21,14 @@ export default class KickFollowSyncer extends FollowSyncer {
 			this.logger.warn("Sync already in progress, skipping new request");
 			return;
 		}
+		if (this.sharedDataCache.wasRecentlySynced("kick", KickFollowSyncer.SYNC_COOLDOWN_MS)) {
+			this.logger.debug("Skipping sync, recently synced by another tab");
+			return;
+		}
 		this.syncInProgress = true;
 		try {
 			const followed = await this.fetchAllFollowed();
-			await this.sharedDataCache.updateNestedKey("sharedFollows", "kick", followed);
+			await this.sharedDataCache.updateFollows("kick", followed);
 			this.logger.info(`Synced ${followed.length} followed channels`);
 		} catch (err) {
 			this.logger.error("Failed to sync follows", err);
@@ -33,7 +38,7 @@ export default class KickFollowSyncer extends FollowSyncer {
 	}
 
 	async clearFollows() {
-		await this.sharedDataCache.updateNestedKey("sharedFollows", "kick", []);
+		await this.sharedDataCache.clearFollows("kick");
 	}
 
 	private async fetchAllFollowed(): Promise<string[]> {

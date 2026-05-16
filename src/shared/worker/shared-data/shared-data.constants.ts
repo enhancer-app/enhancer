@@ -1,8 +1,13 @@
-import type { SharedData } from "$types/shared/storage/shared-data.types.ts";
+import type { PlatformFollowData } from "$types/shared/storage/shared-data.types.ts";
 
-export const DEFAULT_SHARED_DATA: SharedData = {
+const EMPTY_FOLLOWS: PlatformFollowData = {
+	follows: [],
+	lastSyncedAt: 0,
+};
+
+export const DEFAULT_SHARED_DATA = {
 	sharedFollows: {
-		twitch: [],
-		kick: [],
+		twitch: { ...EMPTY_FOLLOWS },
+		kick: { ...EMPTY_FOLLOWS },
 	},
 };
