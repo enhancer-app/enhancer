@@ -14,6 +14,7 @@ export abstract class Database {
 	protected abstract onUpgrade(event: IDBVersionChangeEvent, db: IDBDatabase): void;
 
 	async initialize(): Promise<void> {
+		if (this.database) return;
 		return new Promise((resolve, reject) => {
 			const request = indexedDB.open(this.dbName, this.dbVersion);
 

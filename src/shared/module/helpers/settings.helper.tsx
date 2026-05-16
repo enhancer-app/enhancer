@@ -1,6 +1,6 @@
 import Settings, { SettingsOverlay } from "$shared/components/settings/settings.component.tsx";
 import type { Logger } from "$shared/logger/logger.ts";
-import type SettingsService from "$shared/settings/settings.service.ts";
+import type SettingsCache from "$shared/settings/settings.service.ts";
 import type CommonUtils from "$shared/utils/common.utils.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { SettingCategory, SettingDefinition } from "$types/shared/components/settings.component.types.ts";
@@ -15,7 +15,7 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 	private settingsContainer: HTMLDivElement | null = null;
 
 	constructor(
-		private readonly settingsService: SettingsService<TSettings>,
+		private readonly settingsCache: SettingsCache<TSettings>,
 		private readonly workerService: WorkerService,
 		private readonly emitter: Emitter<any>,
 		private readonly logger: Logger,
@@ -24,7 +24,11 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 
 	loadSettings(defaults: TSettings): TSettings {
 		try {
-			return { ...defaults, ...this.settingsService.get() };
+			const settings = { ...defaults, ...this.settingsCache.get() };
+			if (this.settingsSignal) {
+				this.settingsSignal.value = settings;
+			}
+			return settings;
 		} catch (error) {
 			this.logger.error("Failed to load settings:", error);
 			return defaults;
@@ -33,7 +37,7 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 
 	async saveSettings(settings: TSettings, updatedKey: keyof TSettings, eventPrefix: string): Promise<void> {
 		try {
-			await this.settingsService.update(settings);
+			await this.settingsCache.update(settings);
 			if (this.settingsSignal) {
 				this.settingsSignal.value = settings;
 			}

@@ -82,12 +82,16 @@ export default class WorkerService {
 
 	private setupBroadcastListener() {
 		this.element.addEventListener("enhancer-broadcast", ((event: CustomEvent<string>) => {
-			const broadcast = JSON.parse(event.detail) as WorkerBroadcast;
-			const handlers = this.broadcastHandlers.get(broadcast.type);
-			if (handlers) {
-				for (const handler of handlers) {
-					handler(broadcast.payload);
+			try {
+				const broadcast = JSON.parse(event.detail) as WorkerBroadcast;
+				const handlers = this.broadcastHandlers.get(broadcast.type);
+				if (handlers) {
+					for (const handler of handlers) {
+						handler(broadcast.payload);
+					}
 				}
+			} catch (error) {
+				this.logger.error("Failed to parse broadcast:", error);
 			}
 		}) as EventListener);
 	}

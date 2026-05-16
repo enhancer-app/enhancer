@@ -343,7 +343,6 @@ export default class SettingsModule extends TwitchModule {
 		if (!this.settingsHelper) return;
 		this.settingsHelper.loadSettings(TWITCH_DEFAULT_SETTINGS);
 	}
-
 	private openSettings() {
 		this.openSettingsFn?.();
 	}

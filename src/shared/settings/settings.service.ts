@@ -31,7 +31,6 @@ export default class SettingsCache<T extends PlatformSettings> {
 	async update(settings: T): Promise<void> {
 		await this.workerService.send("updateSettings", { platform: this.platformType, settings });
 		this.cache = settings;
-		this.emitter.emit("extension:settings-refresh");
 	}
 
 	async updateKey<K extends keyof T>(key: K, value: T[K]): Promise<void> {

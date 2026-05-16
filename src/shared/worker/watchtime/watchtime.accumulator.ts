@@ -1,5 +1,6 @@
 import { Logger } from "$shared/logger/logger.ts";
 import type { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
+import { createWatchtimeId } from "$shared/worker/watchtime/watchtime.utils.ts";
 import type { PlatformType, WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
 
 export class WatchtimeAccumulator {
@@ -15,7 +16,7 @@ export class WatchtimeAccumulator {
 	}
 
 	watchChannel(platform: PlatformType, channel: string): Promise<WatchtimeRecord | null> {
-		const channelKey = this.createChannelKey(platform, channel);
+		const channelKey = createWatchtimeId(platform, channel);
 		if (!this.watchedChannels.has(channelKey)) {
 			this.watchedChannels.add(channelKey);
 			this.logger.debug(`Started watching channel: ${channelKey}`);
@@ -29,10 +30,6 @@ export class WatchtimeAccumulator {
 			this.updateInterval = null;
 		}
 		this.logger.info("Watchtime accumulator stopped");
-	}
-
-	private createChannelKey(platform: PlatformType, channel: string): string {
-		return `${platform}:${channel.toLowerCase()}`;
 	}
 
 	private parseChannelKey(key: string): { platform: PlatformType; channel: string } {

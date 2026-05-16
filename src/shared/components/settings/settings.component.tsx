@@ -116,7 +116,7 @@ const ClearButton = styled.button`
 	}
 `;
 
-const CategoryJumpButton = styled.button`
+const CategoryJumpButton = styled.div`
 	background: transparent;
 	border: none;
 	color: #565656;
@@ -1003,8 +1003,6 @@ const Settings = <T,>({
 			})
 			.filter((category) => category.settings.length > 0);
 	}, [categories, settingDefinitions, searchQuery]);
-
-	const visibleCategoryIds = useMemo(() => new Set(filteredCategories.map((c) => c.id)), [filteredCategories]);
 
 	return (
 		<>

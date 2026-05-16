@@ -1,5 +1,6 @@
 import { Database } from "$shared/worker/database/database.ts";
 import { WatchtimeDatabaseMigrator } from "$shared/worker/watchtime/watchtime.database-migrator.ts";
+import { createWatchtimeId } from "$shared/worker/watchtime/watchtime.utils.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
 
@@ -18,12 +19,8 @@ export class WatchtimeDatabase extends Database {
 		this.migrator.migrate(event, db, this.dbVersion);
 	}
 
-	private createId(platform: PlatformType, username: string): string {
-		return `${platform}:${username.toLowerCase()}`;
-	}
-
 	async getWatchtime(platform: PlatformType, username: string): Promise<WatchtimeRecord | null> {
-		const id = this.createId(platform, username);
+		const id = createWatchtimeId(platform, username);
 		const result = await this.request<WatchtimeRecord | undefined>(this.storeName, "readonly", (store) =>
 			store.get(id),
 		);
@@ -33,7 +30,7 @@ export class WatchtimeDatabase extends Database {
 	async addWatchtime(platform: PlatformType, username: string, timeToAdd: number): Promise<void> {
 		const now = Date.now();
 		const normalizedUsername = username.toLowerCase();
-		const id = this.createId(platform, normalizedUsername);
+		const id = createWatchtimeId(platform, normalizedUsername);
 		let watchtime = await this.getWatchtime(platform, normalizedUsername);
 		if (watchtime) {
 			watchtime.time += timeToAdd;
