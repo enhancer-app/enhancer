@@ -8,538 +8,543 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
 
 const SettingsContainer = styled.div`
-	display: flex;
-	flex-direction: column;
-	width: 800px;
-	height: 500px;
-	background-color: #0d0d0d;
-	border-radius: 15px;
-	border: 1px solid #232323;
-	position: relative;
-	font-family: "Inter", "Noto Sans Arabic", "Roobert", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  display: flex;
+  flex-direction: column;
+  width: 800px;
+  height: 500px;
+  background-color: #0d0d0d;
+  border-radius: 15px;
+  border: 1px solid #232323;
+  position: relative;
+  font-family:
+    "Inter", "Noto Sans Arabic", "Roobert", "Helvetica Neue", Helvetica, Arial,
+    sans-serif !important;
 `;
 
 const Gradient = styled.div`
-	position: absolute;
-	top: 0;
-	left: 0;
-	height: 100%;
-	width: 100%;
-	z-index: 999;
-	border-radius: 15px;
-	pointer-events: none;
-	mix-blend-mode: hard-light;
-	background: radial-gradient(
-		circle 400px at 5% 8%,
-		rgba(155, 89, 182, 0.3),
-		transparent
-	);
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 999;
+  border-radius: 15px;
+  pointer-events: none;
+  mix-blend-mode: hard-light;
+  background: radial-gradient(
+    circle 400px at 5% 8%,
+    rgba(155, 89, 182, 0.3),
+    transparent
+  );
 `;
 
 const Header = styled.header`
-	display: flex;
-	align-items: center;
-	padding: 12px 20px;
-	color: white;
-	font-size: 14px;
-	border-bottom: 1px solid #161616;
-	gap: 12px;
-	height: 52px;
-	box-sizing: border-box;
-	position: relative;
-	z-index: 1001;
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  color: white;
+  font-size: 14px;
+  border-bottom: 1px solid #161616;
+  gap: 12px;
+  height: 52px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1001;
 `;
 
 const LogoContainer = styled.div`
-	width: 35px;
-	height: 35px;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	border-radius: 7px;
-	box-shadow: inset 0px 1px 0px 0px #333333;
-	background: linear-gradient(to bottom, #282728 5%, #1c1d1f 100%);
-	flex-shrink: 0;
-	align-self: center;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 7px;
+  box-shadow: inset 0px 1px 0px 0px #333333;
+  background: linear-gradient(to bottom, #282728 5%, #1c1d1f 100%);
+  flex-shrink: 0;
+  align-self: center;
 `;
 
 const Logo = styled.img`
-	width: 25px;
-	height: 25px;
+  width: 25px;
+  height: 25px;
 `;
 
 const SearchContainer = styled.div`
-	flex: 1;
-	display: flex;
-	align-items: center;
-	background: #161616;
-	border: 1px solid #232323;
-	border-radius: 7px;
-	padding: 0 10px;
-	transition: border-color 0.2s;
-	height: 35px;
-	box-sizing: border-box;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #161616;
+  border: 1px solid #232323;
+  border-radius: 7px;
+  padding: 0 10px;
+  transition: border-color 0.2s;
+  height: 35px;
+  box-sizing: border-box;
 
-	&:focus-within {
-		border-color: #9147ff;
-	}
+  &:focus-within {
+    border-color: #9147ff;
+  }
 `;
 
 const SearchInput = styled.input`
-	flex: 1;
-	background: none;
-	border: none;
-	color: white;
-	font-size: 12px;
-	padding: 0;
-	outline: none;
-	height: 100%;
+  flex: 1;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 12px;
+  padding: 0;
+  outline: none;
+  height: 100%;
 
-	&::placeholder {
-		color: #565656;
-	}
+  &::placeholder {
+    color: #565656;
+  }
 `;
 
 const ClearButton = styled.button`
-	background: none;
-	border: none;
-	cursor: pointer;
-	color: #565656;
-	padding: 4px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	align-self: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #565656;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
 
-	&:hover {
-		color: white;
-	}
+  &:hover {
+    color: white;
+  }
 `;
 
 const CategoryJumpButton = styled.div`
-	background: transparent;
-	border: none;
-	color: #565656;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 4px;
-	border-radius: 4px;
-	flex-shrink: 0;
-	position: relative;
+  background: transparent;
+  border: none;
+  color: #565656;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  position: relative;
 
-	&:hover {
-		color: #9147ff;
-		background: rgba(145, 71, 255, 0.1);
-	}
+  &:hover {
+    color: #9147ff;
+    background: rgba(145, 71, 255, 0.1);
+  }
 `;
 
 const CategoryDropdown = styled.div<{ visible: boolean }>`
-	position: absolute;
-	top: calc(100% + 12px);
-	left: 0;
-	background: #161616;
-	border: 1px solid #232323;
-	border-radius: 7px;
-	min-width: 150px;
-	max-height: 200px;
-	overflow-y: auto;
-	z-index: 1001;
-	display: ${(props) => (props.visible ? "block" : "none")};
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  background: #161616;
+  border: 1px solid #232323;
+  border-radius: 7px;
+  min-width: 150px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1001;
+  display: ${(props) => (props.visible ? "block" : "none")};
 
-	&::-webkit-scrollbar {
-		width: 6px;
-	}
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
 
-	&::-webkit-scrollbar-thumb {
-		background: #333333;
-		border-radius: 3px;
-	}
+  &::-webkit-scrollbar-thumb {
+    background: #333333;
+    border-radius: 3px;
+  }
 `;
 
 const CategoryDropdownItem = styled.button`
-	display: block;
-	width: 100%;
-	background: none;
-	border: none;
-	color: #ccc;
-	font-size: 12px;
-	padding: 10px 12px;
-	text-align: left;
-	cursor: pointer;
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 12px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
 
-	&:hover {
-		background: #232323;
-		color: white;
-	}
+  &:hover {
+    background: #232323;
+    color: white;
+  }
 `;
 
 const CloseButton = styled.button`
-	background: none;
-	border: none;
-	cursor: pointer;
-	color: #565656;
-	flex-shrink: 0;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	align-self: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #565656;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
 
-	&:hover {
-		color: white;
-	}
+  &:hover {
+    color: white;
+  }
 `;
 
 const SettingsContent = styled.div`
-	overflow-y: auto;
-	flex: 1;
+  overflow-y: auto;
+  flex: 1;
 
-	&::-webkit-scrollbar {
-		width: 8px;
-	}
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
 
-	&::-webkit-scrollbar-track {
-		background: #0d0d0d;
-		border-radius: 4px;
-	}
+  &::-webkit-scrollbar-track {
+    background: #0d0d0d;
+    border-radius: 4px;
+  }
 
-	&::-webkit-scrollbar-thumb {
-		background: #232323;
-		border-radius: 4px;
-		border: 1px solid #161616;
-	}
+  &::-webkit-scrollbar-thumb {
+    background: #232323;
+    border-radius: 4px;
+    border: 1px solid #161616;
+  }
 
-	&::-webkit-scrollbar-thumb:hover {
-		background: #2a2a2a;
-	}
+  &::-webkit-scrollbar-thumb:hover {
+    background: #2a2a2a;
+  }
 
-	scrollbar-width: thin;
-	scrollbar-color: #232323 #0d0d0d;
+  scrollbar-width: thin;
+  scrollbar-color: #232323 #0d0d0d;
 `;
 
 const CategoryHeader = styled.div`
-	padding: 12px 20px 10px 20px;
-	font-size: 12px;
-	font-weight: 600;
-	color: #9147ff;
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
-	background: #0d0d0d;
-	border-bottom: 1px solid #232323;
-	z-index: 10;
-	display: flex;
-	align-items: center;
+  padding: 12px 20px 10px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9147ff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #0d0d0d;
+  z-index: 10;
+  display: flex;
+  align-items: center;
 `;
 
 const CategorySettings = styled.div`
-	padding: 0 20px;
-	border-top: 1px solid #232323;
+  padding: 0 20px;
+  border-top: 1px solid #232323;
 `;
 
 const Setting = styled.div`
-	display: flex;
-	padding: 15px 0;
-	border-bottom: 1px solid #1a1a1a;
-	justify-content: space-between;
-	align-items: center;
-	gap: 20px;
+  display: flex;
+  padding: 15px 0;
+  border-bottom: 1px solid #1a1a1a;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
 
-	&:last-child {
-		border-bottom: none;
-	}
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
 const SettingInfo = styled.div`
-	flex: 1;
+  flex: 1;
 `;
 
 const SettingTitle = styled.div`
-	font-size: 14px;
-	color: white;
-	margin-bottom: 4px;
+  font-size: 14px;
+  color: white;
+  margin-bottom: 4px;
 `;
 
 const SettingDescription = styled.div`
-	color: rgb(131 122 122);
-	font-size: 12px;
+  color: rgb(131 122 122);
+  font-size: 12px;
 `;
 
 const RefreshWarning = styled.div`
-	color: #ed5959;
-	font-size: 12px;
-	margin-top: 4px;
-	display: flex;
-	align-items: center;
-	gap: 4px;
+  color: #ed5959;
+  font-size: 12px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 `;
 
 const SettingControl = styled.div`
-	flex-shrink: 0;
+  flex-shrink: 0;
 `;
 
 const ToggleContainer = styled.div`
-	display: inline-block;
-	position: relative;
-	width: 50px;
-	height: 25px;
+  display: inline-block;
+  position: relative;
+  width: 50px;
+  height: 25px;
 `;
 
 const ToggleInput = styled.input`
-	display: none;
+  display: none;
 `;
 
 const ToggleSwitch = styled.label<{ checked: boolean }>`
-	position: absolute;
-	cursor: pointer;
-	background-color: ${(props) => (props.checked ? "#9147ff" : "#232323")};
-	border-radius: 25px;
-	width: 100%;
-	height: 100%;
-	transition: background-color 0.3s;
+  position: absolute;
+  cursor: pointer;
+  background-color: ${(props) => (props.checked ? "#9147ff" : "#232323")};
+  border-radius: 25px;
+  width: 100%;
+  height: 100%;
+  transition: background-color 0.3s;
 `;
 
 const ToggleCircle = styled.span<{ checked: boolean }>`
-	position: absolute;
-	top: 3px;
-	left: ${(props) => (props.checked ? "28px" : "5px")};
-	width: 18px;
-	height: 18px;
-	background-color: #fff;
-	border-radius: 50%;
-	transition: left 0.3s;
+  position: absolute;
+  top: 3px;
+  left: ${(props) => (props.checked ? "28px" : "5px")};
+  width: 18px;
+  height: 18px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: left 0.3s;
 `;
 
 const TextInput = styled.input`
-	background: none;
-	border: 1px solid #232323;
-	color: white;
-	font-size: 11px;
-	border-radius: 7px;
-	padding: 10px;
-	min-width: 200px;
+  background: none;
+  border: 1px solid #232323;
+  color: white;
+  font-size: 11px;
+  border-radius: 7px;
+  padding: 10px;
+  min-width: 200px;
 `;
 
 const NumberInput = styled(TextInput)`
-	min-width: 100px;
+  min-width: 100px;
 `;
 
 const FileInputContainer = styled.div`
-	background: #0d0d0d;
-	border: 1px solid #232323;
-	border-radius: 7px;
-	padding: 4px;
-	min-width: 200px;
-	min-height: 38px;
-	display: flex;
-	align-items: center;
-	position: relative;
-	transition: border-color 0.2s ease;
+  background: #0d0d0d;
+  border: 1px solid #232323;
+  border-radius: 7px;
+  padding: 4px;
+  min-width: 200px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  transition: border-color 0.2s ease;
 
-	&:hover {
-		border-color: #333333;
-	}
+  &:hover {
+    border-color: #333333;
+  }
 `;
 
 const UploadTriggerLabel = styled.label`
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	width: 100%;
-	height: 100%;
-	color: white;
-	font-size: 12px;
-	font-weight: 500;
-	cursor: pointer;
-	padding: 6px;
-	border-radius: 5px;
-	transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 5px;
+  transition: background-color 0.2s ease;
 
-	svg {
-		width: 16px;
-		height: 16px;
-		color: #9147ff;
-	}
+  svg {
+    width: 16px;
+    height: 16px;
+    color: #9147ff;
+  }
 
-	&:hover {
-		background: #232323;
-	}
+  &:hover {
+    background: #232323;
+  }
 `;
 
 const FileStatus = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	flex: 1;
-	padding-left: 8px;
-	color: #ccc;
-	font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  padding-left: 8px;
+  color: #ccc;
+  font-size: 11px;
 
-	svg {
-		color: #9147ff;
-		flex-shrink: 0;
-	}
+  svg {
+    color: #9147ff;
+    flex-shrink: 0;
+  }
 `;
 
 const FileName = styled.span`
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 const HiddenFileInput = styled.input`
-	display: none;
+  display: none;
 `;
 
 const RemoveFileButton = styled.button`
-	background: transparent;
-	border: none;
-	color: #565656;
-	cursor: pointer;
-	padding: 4px;
-	height: 28px;
-	width: 28px;
-	border-radius: 5px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	transition: all 0.2s ease;
-	margin-left: auto;
+  background: transparent;
+  border: none;
+  color: #565656;
+  cursor: pointer;
+  padding: 4px;
+  height: 28px;
+  width: 28px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin-left: auto;
 
-	&:hover {
-		background: rgba(255, 71, 87, 0.1);
-		color: #ff4757;
-	}
+  &:hover {
+    background: rgba(255, 71, 87, 0.1);
+    color: #ff4757;
+  }
 `;
 
 const FileUploadError = styled.div`
-	color: #ff4757;
-	font-size: 11px;
-	margin-top: 6px;
-	padding: 6px 8px;
-	background: rgba(255, 71, 87, 0.1);
-	border-radius: 5px;
-	border-left: 2px solid #ff4757;
-	text-align: center;
+  color: #ff4757;
+  font-size: 11px;
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: rgba(255, 71, 87, 0.1);
+  border-radius: 5px;
+  border-left: 2px solid #ff4757;
+  text-align: center;
 `;
 
 const Select = styled.select`
-	background: #0d0d0d;
-	padding: 10px;
-	border-radius: 7px;
-	color: #565656;
-	border: 1px solid #232323;
-	font-size: 11px;
-	cursor: pointer;
-	min-width: 150px;
+  background: #0d0d0d;
+  padding: 10px;
+  border-radius: 7px;
+  color: #565656;
+  border: 1px solid #232323;
+  font-size: 11px;
+  cursor: pointer;
+  min-width: 150px;
 `;
 
 const RadioContainer = styled.div`
-	display: flex;
-	gap: 10px;
-	flex-wrap: wrap;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 `;
 
 const RadioInput = styled.input`
-	display: none;
+  display: none;
 `;
 
 const RadioLabel = styled.label<{ checked: boolean }>`
-	background: ${(props) => (props.checked ? "#9147ff" : "#232323")};
-	padding: 10px;
-	border-radius: 7px;
-	color: ${(props) => (props.checked ? "white" : "#565656")};
-	cursor: pointer;
+  background: ${(props) => (props.checked ? "#9147ff" : "#232323")};
+  padding: 10px;
+  border-radius: 7px;
+  color: ${(props) => (props.checked ? "white" : "#565656")};
+  cursor: pointer;
 `;
 
 const ArrayContainer = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-	min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 200px;
 `;
 
 const ArrayItem = styled.div`
-	display: flex;
-	gap: 10px;
-	align-items: center;
+  display: flex;
+  gap: 10px;
+  align-items: center;
 `;
 
 const ArrayInput = styled(TextInput)`
-	min-width: 150px;
+  min-width: 150px;
 `;
 
 const ArrayButton = styled.button<{ variant: "add" | "remove" }>`
-	background: ${(props) => (props.variant === "add" ? "#9147ff" : "#ff4757")};
-	border: none;
-	color: white;
-	padding: 8px 12px;
-	border-radius: 5px;
-	cursor: pointer;
-	font-size: 12px;
+  background: ${(props) => (props.variant === "add" ? "#9147ff" : "#ff4757")};
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
 `;
 
 const TextContent = styled.div`
-	color: #ccc;
-	line-height: 1.6;
-	max-width: 500px;
+  color: #ccc;
+  line-height: 1.6;
+  max-width: 500px;
 `;
 
 const ModalOverlay = styled.div`
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background: rgba(0, 0, 0, 0.7);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	z-index: 1001;
-	backdrop-filter: blur(4px);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  backdrop-filter: blur(4px);
 `;
 
 const ModalContent = styled.div`
-	background-color: #0d0d0d;
-	border-radius: 15px;
-	border: 1px solid #232323;
-	font-family: "Inter", "Noto Sans Arabic", "Roobert", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-	padding: 25px;
-	box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.5);
-	max-width: 500px;
-	width: 90%;
+  background-color: #0d0d0d;
+  border-radius: 15px;
+  border: 1px solid #232323;
+  font-family:
+    "Inter", "Noto Sans Arabic", "Roobert", "Helvetica Neue", Helvetica, Arial,
+    sans-serif !important;
+  padding: 25px;
+  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.5);
+  max-width: 500px;
+  width: 90%;
 `;
 
 const ModalHeader = styled.h3`
-	color: white;
-	margin-bottom: 15px;
-	font-size: 18px;
-	text-align: center;
+  color: white;
+  margin-bottom: 15px;
+  font-size: 18px;
+  text-align: center;
 `;
 
 const ModalMessage = styled.p`
-	color: #ccc;
-	font-size: 14px;
-	margin-bottom: 20px;
-	line-height: 1.5;
+  color: #ccc;
+  font-size: 14px;
+  margin-bottom: 20px;
+  line-height: 1.5;
 `;
 
 const ModalButtonContainer = styled.div`
-	display: flex;
-	justify-content: flex-end;
-	gap: 10px;
-	margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
 `;
 
 const ModalButton = styled.button<{ primary?: boolean }>`
-	padding: 8px 15px;
-	border-radius: 5px;
-	font-size: 12px;
-	cursor: pointer;
-	border: none;
-	transition: background-color 0.2s ease, color 0.2s ease;
-	${(props) =>
+  padding: 8px 15px;
+  border-radius: 5px;
+  font-size: 12px;
+  cursor: pointer;
+  border: none;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+  ${(props) =>
 		props.primary
 			? `
     background-color: #9147ff;
@@ -558,10 +563,10 @@ const ModalButton = styled.button<{ primary?: boolean }>`
 `;
 
 const NoResults = styled.div`
-	padding: 40px 20px;
-	text-align: center;
-	color: #565656;
-	font-size: 14px;
+  padding: 40px 20px;
+  text-align: center;
+  color: #565656;
+  font-size: 14px;
 `;
 
 function tokenize(text: string): string[] {
@@ -855,8 +860,13 @@ const Settings = <T,>({
 										onChange={(e) => {
 											const newValue =
 												typeof item === "object" && item !== null
-													? { ...(item as Record<string, unknown>), [field.name]: (e.target as HTMLInputElement).value }
-													: { [field.name]: (e.target as HTMLInputElement).value };
+													? {
+															...(item as Record<string, unknown>),
+															[field.name]: (e.target as HTMLInputElement).value,
+														}
+													: {
+															[field.name]: (e.target as HTMLInputElement).value,
+														};
 											updateArraySetting(setting.id as keyof T, index, newValue, "update");
 										}}
 									/>
@@ -1113,7 +1123,10 @@ const Settings = <T,>({
 											return (
 												<Setting
 													key={`setting-${setting.id as string}`}
-													style={{ flexDirection: "column", alignItems: "stretch" }}
+													style={{
+														flexDirection: "column",
+														alignItems: "stretch",
+													}}
 												>
 													<SettingControl style={{ flexShrink: "unset" }}>
 														{renderSettingControl(setting)}
@@ -1184,24 +1197,24 @@ const Settings = <T,>({
 export default Settings;
 
 const SettingsOverlayBackground = styled.div`
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	z-index: -1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
 `;
 
 export const SettingsOverlay = styled.div`
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100vw;
-	height: 100vh;
-	background: rgba(0, 0, 0, 0.8);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	z-index: 10000;
-	backdrop-filter: blur(4px);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
 `;
