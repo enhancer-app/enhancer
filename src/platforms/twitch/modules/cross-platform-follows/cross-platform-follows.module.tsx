@@ -1,14 +1,10 @@
-import SharedDataCache from "$shared/shared-data/shared-data.cache.ts";
 import TwitchFollowSyncer from "$twitch/modules/cross-platform-follows/twitch.follow-syncer.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class CrossPlatformFollowsModule extends TwitchModule {
 	private static readonly SYNC_INTERVAL_MS = 5 * 60 * 1000;
-	private readonly twitchFollowsSyncer = new TwitchFollowSyncer(
-		new SharedDataCache(this.workerService()),
-		this.twitchUtils(),
-	);
+	private readonly twitchFollowsSyncer = new TwitchFollowSyncer(this.sharedData(), this.twitchUtils());
 
 	config: TwitchModuleConfig = {
 		name: "cross-platform-follows",

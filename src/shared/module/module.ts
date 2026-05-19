@@ -1,6 +1,7 @@
 import type EnhancerApi from "$shared/apis/enhancer.api.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import type SettingsCache from "$shared/settings/settings.service.ts";
+import type SharedDataCache from "$shared/shared-data/shared-data.cache.ts";
 import type StorageRepository from "$shared/storage/storage-repository.ts";
 import type UtilsRepository from "$shared/utils/utils.repository.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
@@ -24,6 +25,7 @@ export default abstract class Module<
 		private readonly utilsRepository: UtilsRepository,
 		private readonly _enhancerApi: EnhancerApi,
 		private readonly _workerService: WorkerService,
+		private readonly _sharedDataCache: SharedDataCache,
 	) {}
 
 	async setup() {
@@ -74,5 +76,9 @@ export default abstract class Module<
 
 	protected workerService() {
 		return this._workerService;
+	}
+
+	protected sharedData(): SharedDataCache {
+		return this._sharedDataCache;
 	}
 }

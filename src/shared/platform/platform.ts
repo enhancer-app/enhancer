@@ -5,6 +5,7 @@ import EventModuleApplier from "$shared/module/applier/event-module-applier.ts";
 import SelectorModuleApplier from "$shared/module/applier/selector-module-applier.ts";
 import type Module from "$shared/module/module.ts";
 import SettingsCache from "$shared/settings/settings.service.ts";
+import SharedDataCache from "$shared/shared-data/shared-data.cache.ts";
 import StorageRepository from "$shared/storage/storage-repository.ts";
 import UtilsRepository from "$shared/utils/utils.repository.ts";
 import WorkerService from "$shared/worker/worker.service.ts";
@@ -26,6 +27,7 @@ export default abstract class Platform<
 	protected readonly enhancerApi: EnhancerApi;
 	protected readonly workerApi = new WorkerService();
 	protected readonly settingsCache: SettingsCache<TSettings>;
+	protected readonly sharedDataCache = new SharedDataCache(this.workerApi);
 
 	protected constructor(protected readonly config: PlatformConfig) {
 		this.enhancerApi = new EnhancerApi(config.type);
@@ -39,6 +41,7 @@ export default abstract class Platform<
 			this.logger.error("EnhancerApi init failed:", err);
 		});
 		await this.workerApi.start();
+		await this.sharedDataCache.initialize();
 		await this.settingsCache.initialize();
 		await this.initialize();
 		await this.loadModules();

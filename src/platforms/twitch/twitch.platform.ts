@@ -24,6 +24,7 @@ import ChatHighlightUserModule from "./modules/chat-highlight-user/chat-highligh
 import ChatMessagePopupModule from "./modules/chat-message-popup/chat-message-popup.module.tsx";
 import ChatModule from "./modules/chat/chat.module.tsx";
 import ClipDownloadModule from "./modules/clip-download/clip-download.module.tsx";
+import CrossPlatformFollowsModule from "./modules/cross-platform-follows/cross-platform-follows.module.tsx";
 import StreamLatencyReducerModule from "./modules/stream-latency-reducer/stream-latency-reducer.module.tsx";
 import StreamLatencyModule from "./modules/stream-latency/stream-latency.module.tsx";
 import type TwitchModule from "./twitch.module.ts";
@@ -45,6 +46,7 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			this.utilsRepository,
 			this.enhancerApi,
 			this.workerApi,
+			this.sharedDataCache,
 			this.twitchUtils,
 			this.twitchApi,
 		] as const;
@@ -72,6 +74,7 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			new ChatMentionSoundModule(...dependencies),
 			new AdditionalFontsModule(...dependencies),
 			new FunnyModule(...dependencies),
+			new CrossPlatformFollowsModule(...dependencies),
 		];
 	}
 

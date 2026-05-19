@@ -1,14 +1,10 @@
 import KickModule from "$kick/kick.module.ts";
 import KickFollowSyncer from "$kick/modules/cross-platform-follows/kick.follow-syncer.ts";
-import SharedDataCache from "$shared/shared-data/shared-data.cache.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class CrossPlatformFollowsModule extends KickModule {
 	private static readonly SYNC_INTERVAL_MS = 5 * 60 * 1000;
-	private readonly kickFollowsSyncer = new KickFollowSyncer(
-		new SharedDataCache(this.workerService()),
-		this.commonUtils(),
-	);
+	private readonly kickFollowsSyncer = new KickFollowSyncer(this.sharedData(), this.commonUtils());
 
 	config: KickModuleConfig = {
 		name: "cross-platform-follows",

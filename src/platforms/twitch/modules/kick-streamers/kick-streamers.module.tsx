@@ -1,5 +1,4 @@
 import KickApi from "$kick/apis/kick.api.ts";
-import SharedDataCache from "$shared/shared-data/shared-data.cache.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { ChannelResponse } from "$types/platforms/kick/kick.api.types.ts";
 import type { KickStreamerInfo, StreamerInfo } from "$types/platforms/twitch/twitch.utils.types.ts";
@@ -28,7 +27,6 @@ export default class KickStreamersModule extends TwitchModule {
 	private updateInterval: NodeJS.Timeout | undefined;
 
 	private readonly kickApi = new KickApi();
-	private readonly sharedDataCache = new SharedDataCache(this.workerService());
 	private cachedKickStreamers: string[] | null = null;
 	private readonly streamers: Signal<StreamerInfo[]> = signal([]);
 	private platformIcons: Record<string, string> = {};
@@ -98,7 +96,7 @@ export default class KickStreamersModule extends TwitchModule {
 
 	private async loadStreamersFromCommon(): Promise<void> {
 		try {
-			const kickFollows = this.sharedDataCache.get().crossPlatformFollows.kick.follows;
+			const kickFollows = this.sharedData().get().crossPlatformFollows.kick.follows;
 			this.cachedKickStreamers = kickFollows;
 			this.logger.debug("Loaded Kick streamer nicknames for Twitch:", this.cachedKickStreamers);
 		} catch (error) {

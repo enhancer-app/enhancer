@@ -1,5 +1,4 @@
 import KickModule from "$kick/kick.module.ts";
-import SharedDataCache from "$shared/shared-data/shared-data.cache.ts";
 import TwitchApi from "$twitch/apis/twitch.api.ts";
 import type { TwitchMultiChannelResponse } from "$types/platforms/twitch/twitch.api.types.ts";
 import type { StreamerInfo } from "$types/platforms/twitch/twitch.utils.types.ts";
@@ -33,7 +32,6 @@ export default class TwitchStreamsModule extends KickModule {
 	private remountDebounce: number | undefined;
 
 	private readonly twitchApi = new TwitchApi({} as any);
-	private readonly sharedDataCache = new SharedDataCache(this.workerService());
 	private cachedTwitchStreamers: string[] | null = null;
 	private readonly streamers: Signal<StreamerInfo[]> = signal([]);
 	private platformIcons: Record<string, string> = {};
@@ -148,7 +146,7 @@ export default class TwitchStreamsModule extends KickModule {
 
 	private async loadStreamersFromCommon(): Promise<void> {
 		try {
-			const twitchFollows = this.sharedDataCache.get().crossPlatformFollows.twitch.follows;
+			const twitchFollows = this.sharedData().get().crossPlatformFollows.twitch.follows;
 			this.cachedTwitchStreamers = twitchFollows;
 			this.logger.debug("Loaded Twitch streamer nicknames for Kick:", this.cachedTwitchStreamers);
 		} catch (error) {

@@ -3,6 +3,7 @@ import type KickUtils from "$kick/kick.utils.ts";
 import type EnhancerApi from "$shared/apis/enhancer.api.ts";
 import Module from "$shared/module/module.ts";
 import type SettingsCache from "$shared/settings/settings.service.ts";
+import type SharedDataCache from "$shared/shared-data/shared-data.cache.ts";
 import type StorageRepository from "$shared/storage/storage-repository.ts";
 import type UtilsRepository from "$shared/utils/utils.repository.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
@@ -19,10 +20,11 @@ export default abstract class KickModule extends Module<KickEvents, KickStorage,
 		utilsRepository: UtilsRepository,
 		enhancerApi: EnhancerApi,
 		workerApi: WorkerService,
+		sharedDataCache: SharedDataCache,
 		private readonly _kickUtils: KickUtils,
 		private readonly _kickApi: KickApi,
 	) {
-		super(emitter, storageRepository, settingsCache, utilsRepository, enhancerApi, workerApi);
+		super(emitter, storageRepository, settingsCache, utilsRepository, enhancerApi, workerApi, sharedDataCache);
 	}
 
 	protected kickUtils() {

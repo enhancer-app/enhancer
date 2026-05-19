@@ -23,6 +23,7 @@ import Platform from "$shared/platform/platform.ts";
 import type { KickEvents } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickSettings } from "$types/platforms/kick/kick.settings.types.ts";
 import type { KickStorage } from "$types/platforms/kick/kick.storage.types.ts";
+import CrossPlatformFollowsModule from "./modules/cross-platform-follows/cross-platform-follows.module";
 
 export default class KickPlatform extends Platform<KickModule, KickEvents, KickStorage, KickSettings> {
 	constructor() {
@@ -40,6 +41,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			this.utilsRepository,
 			this.enhancerApi,
 			this.workerApi,
+			this.sharedDataCache,
 			this.kickUtils,
 			this.kickApi,
 		] as const;
@@ -62,6 +64,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			new AdditionalFontsModule(...dependencies),
 			new ChatFixAutoScrollModule(...dependencies),
 			new FunnyModule(...dependencies),
+			new CrossPlatformFollowsModule(...dependencies),
 		];
 	}
 
