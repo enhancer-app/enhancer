@@ -1,14 +1,10 @@
 import KickModule from "$kick/kick.module.ts";
-import { FUNNY_NAMES, FUNNY_TOOLTIPS } from "$shared/funny-thing/funny-things.ts";
 import { ChatNicknameCustomizationHelper } from "$shared/module/helpers/chat-nickname-customization.helper.ts";
-import type { EnhancerUser } from "$types/apis/enhancer.apis.ts";
 import type { KickChatMessageData, KickChatMessageEvent } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class ChatNicknameCustomizationModule extends KickModule {
 	private readonly chatNicknameCustomizationHelper = new ChatNicknameCustomizationHelper();
-
-	private isFunnyEnabled = false;
 
 	config: KickModuleConfig = {
 		name: "chat-nickname-customization",
@@ -18,14 +14,6 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 				key: "chat-nickname-customization",
 				event: "kick:chatMessage",
 				callback: this.handleMessage.bind(this),
-			},
-			{
-				type: "event",
-				key: "chat-nickname-customization",
-				event: "kick:settings:_funnyThings",
-				callback: (value) => {
-					this.isFunnyEnabled = value;
-				},
 			},
 		],
 		enabled: () => this.settings().chatNicknameCustomizationEnabled,
@@ -41,23 +29,12 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 		];
 		if (usernameElements.length < 1) return;
 
-		let userCustomization = this.enhancerApi().findUserForCurrentChannel(message.sender.id.toString());
+		const userCustomization = this.enhancerApi().findUserForCurrentChannel(message.sender.id.toString());
 
-		const username = message.sender.username.toLowerCase();
-		const funnyTooltip = FUNNY_TOOLTIPS[username] ?? "was definitely not changed by Enhancer";
-		let addTooltip = false;
-		if (this.isFunnyEnabled && this.commonUtils().isFunnyDay()) {
-			const funnyNickname = FUNNY_NAMES[username];
-			if (funnyNickname) {
-				userCustomization = { customNickname: funnyNickname } as EnhancerUser;
-				addTooltip = true;
-			}
-		}
 		if (!userCustomization) return;
 
 		usernameElements.forEach((usernameElement) => {
 			if (userCustomization.customNickname) {
-				if (addTooltip) usernameElement.title = `Name ${funnyTooltip}`;
 				usernameElement.innerText = userCustomization.customNickname;
 			}
 			if (userCustomization.hasGlow) {
@@ -80,9 +57,5 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 			messageData.sender.identity.color ||
 			"white";
 		this.chatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
-	}
-
-	initialize(): void {
-		this.isFunnyEnabled = this.settings()._funnyThings;
 	}
 }
