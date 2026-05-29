@@ -44,6 +44,7 @@ export default class SettingsButtonModule extends TwitchModule {
 			.top-nav__menu .enhancer-settings-button { order: -5 !important; }
 		    .top-nav__menu .ffz-top-nav { order: -4 !important; }
 		    .top-nav__menu #seventv-settings-button { order: -3 !important; }
+		    .top-nav__menu .seventv-settings-module-root { display: flex; order: -3 !important; }
 		`);
 	}
 }
@@ -58,12 +59,11 @@ const StyledSettingsButton = styled.button`
   cursor: pointer;
   position: relative;
   margin-top: 4px;
-	
+
   border: none;
   background: transparent;
   padding: 0;
   color: inherit;
-	
 
   &:hover {
     background: var(--color-background-button-text-hover);
