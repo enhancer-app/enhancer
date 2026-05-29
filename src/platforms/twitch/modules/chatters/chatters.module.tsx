@@ -14,7 +14,7 @@ export default class ChattersModule extends TwitchModule {
 
 	config: TwitchModuleConfig = {
 		name: "chatters",
-		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chattersEnabled"),
+		enabled: () => this.settings().chattersEnabled,
 		appliers: [
 			{
 				type: "selector",

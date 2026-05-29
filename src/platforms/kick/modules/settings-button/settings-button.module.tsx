@@ -9,7 +9,7 @@ export default class SettingsButtonModule extends KickModule {
 		appliers: [
 			{
 				type: "selector",
-				selectors: ["nav"],
+				selectors: ["div.group\\/main > nav"],
 				callback: this.run.bind(this),
 				key: "settings-button-main",
 				once: true,
@@ -34,28 +34,28 @@ export default class SettingsButtonModule extends KickModule {
 }
 
 const StyledSettingsButton = styled.button`
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 8px;
-	width: 30px;
-	height: 30px;
-	cursor: pointer;
-	position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  position: relative;
 
-	border: none;
-	background: transparent;
-	padding: 0;
-	color: inherit;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: inherit;
 
-	&:hover {
-		background: #36393f;
-	}
+  &:hover {
+    background: #36393f;
+  }
 
-	&:focus-visible {
-		outline: 2px solid #007bff;
-		outline-offset: 2px;
-	}
+  &:focus-visible {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+  }
 `;
 
 interface SettingsButtonComponentProps {

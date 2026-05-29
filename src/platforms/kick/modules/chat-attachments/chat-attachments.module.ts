@@ -15,7 +15,7 @@ import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 export default class ChatAttachmentsModule extends KickModule {
 	private readonly httpClient = new HttpClient();
 	private readonly imageAttachmentConfig = new ImageChatAttachmentConfig(
-		this.settingsService(),
+		this.settings(),
 		this.workerService(),
 		async () => await this.kickUtils().scrollToBottomOnChat(),
 	);
@@ -52,7 +52,7 @@ export default class ChatAttachmentsModule extends KickModule {
 				callback: (enabled) => (enabled ? this.startInputMonitoring() : this.stopInputMonitoring()),
 			},
 		],
-		isModuleEnabledCallback: () => this.settingsService().getSettingsKey("chatImagesEnabled"),
+		enabled: () => this.settings().chatImagesEnabled,
 	};
 
 	private readonly chatAttachmentHandlers: ChatAttachmentHandler[] = [

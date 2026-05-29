@@ -5,23 +5,22 @@ on:
     types: [created]
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+  contents: read
+  pull-requests: read
+  issues: read
 
 jobs:
   bump:
     name: Bump version
     runs-on: ubuntu-latest
-    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/bump')
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/bump') && contains(fromJSON('["OWNER","MEMBER"]'), github.event.comment.author_association)
 
     steps:
       - name: Get PR Details
-        uses: actions/github-script@v6
-        id: get-branch
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+        id: get-pr
         with:
           github-token: ${{ secrets.ENHANCER_BOT_TOKEN }}
-          result-encoding: string
           script: |
             const request = {
               owner: context.repo.owner,
@@ -29,41 +28,60 @@ jobs:
               pull_number: context.issue.number
             }
             const pr = await github.rest.pulls.get(request);
-            return pr.data.head.ref;
+
+            if (pr.data.base.ref !== 'release') {
+              core.setFailed('/bump is only allowed on PRs targeting the release branch.');
+              return;
+            }
+
+            if (pr.data.head.repo.full_name !== `${context.repo.owner}/${context.repo.repo}`) {
+              core.setFailed('/bump is only allowed on same-repository PRs.');
+              return;
+            }
+
+            core.setOutput('ref', pr.data.head.ref);
+            core.setOutput('sha', pr.data.head.sha);
 
       - name: Checkout PR Branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           token: ${{ secrets.ENHANCER_BOT_TOKEN }}
-          ref: ${{ steps.get-branch.outputs.result }}
+          ref: ${{ steps.get-pr.outputs.sha }}
+          persist-credentials: false
 
       - name: Process Bump Command
         id: bump
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          BOT_EMAIL: ${{ secrets.ENHANCER_BOT_EMAIL }}
         run: |
-          COMMENT="${{ github.event.comment.body }}"
-          TYPE=$(echo $COMMENT | awk '{print $2}')
-          
+          TYPE=$(printf '%s' "$COMMENT_BODY" | awk '{print $2}')
+
           if [[ "$TYPE" != "patch" && "$TYPE" != "minor" && "$TYPE" != "major" ]]; then
              echo "Invalid bump type. Use patch, minor, or major."
              exit 1
           fi
 
           git config --global user.name "Enhancer Bot"
-          git config --global user.email "${{ secrets.ENHANCER_BOT_EMAIL }}"
+          git config --global user.email "$BOT_EMAIL"
 
-          NEW_VER=$(npm version $TYPE --no-git-tag-version)
-          
+          NEW_VER=$(npm version "$TYPE" --no-git-tag-version)
+
           echo "BUMPED_VER=$NEW_VER" >> $GITHUB_OUTPUT
 
       - name: Commit and Push
+        env:
+          BOT_TOKEN: ${{ secrets.ENHANCER_BOT_TOKEN }}
+          BRANCH_NAME: ${{ steps.get-pr.outputs.ref }}
+          BUMPED_VER: ${{ steps.bump.outputs.BUMPED_VER }}
         run: |
           git add package.json
-          git commit -m "chore: bump version to ${{ steps.bump.outputs.BUMPED_VER }}"
-          
-          git push "https://x-access-token:${{ secrets.ENHANCER_BOT_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:${{ steps.get-branch.outputs.result }}
+          git commit -m "chore: bump version to $BUMPED_VER"
+
+          git push "https://x-access-token:${BOT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${BRANCH_NAME}"
 
       - name: React to Comment
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
         with:
           github-token: ${{ secrets.ENHANCER_BOT_TOKEN }}
           script: |

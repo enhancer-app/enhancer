@@ -1,13 +1,30 @@
+import { KICK_DEFAULT_SETTINGS } from "$kick/kick.constants.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
-import { SettingsService } from "$shared/worker/settings/settings-worker.service.ts";
-import { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
+import { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
+import { WatchtimeAccumulator } from "$shared/worker/watchtime/watchtime.accumulator.ts";
+import { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
+import { TWITCH_DEFAULT_SETTINGS } from "$twitch/twitch.constants.ts";
+import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
+import type { PlatformType } from "$types/shared/worker/worker.types.ts";
 
 export default class WorkerBackground {
 	private readonly logger = new Logger({ context: "background" });
-	private readonly watchtimeService = new WatchtimeService();
-	private readonly settingsService = new SettingsService();
-	private readonly handlerRegistry = new HandlerRegistry(this.logger, this.watchtimeService, this.settingsService);
+
+	private readonly settingsDatabase = new SettingsDatabase(
+		new Map<PlatformType, PlatformSettings>([
+			["twitch", TWITCH_DEFAULT_SETTINGS],
+			["kick", KICK_DEFAULT_SETTINGS],
+		]),
+	);
+	private readonly watchtimeDatabase = new WatchtimeDatabase();
+	private readonly watchtimeAccumulator = new WatchtimeAccumulator(this.watchtimeDatabase);
+	private readonly handlerRegistry = new HandlerRegistry(
+		this.logger,
+		this.settingsDatabase,
+		this.watchtimeDatabase,
+		this.watchtimeAccumulator,
+	);
 
 	private isInitialized = false;
 	private messageQueue: Array<{
@@ -18,7 +35,8 @@ export default class WorkerBackground {
 	async start() {
 		this.setupMessageListener();
 
-		await Promise.all([this.watchtimeService.initialize(), this.settingsService.initialize()]);
+		await Promise.all([this.settingsDatabase.initialize(), this.watchtimeDatabase.initialize()]);
+		this.watchtimeAccumulator.initialize();
 		this.isInitialized = true;
 		this.logger.info("Background worker started");
 

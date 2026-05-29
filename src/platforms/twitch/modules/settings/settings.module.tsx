@@ -1,14 +1,21 @@
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
-import Settings, { SettingsOverlay } from "$shared/components/settings/settings.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
+import { SettingsHelper } from "$shared/module/helpers/settings.helper.tsx";
 import { TWITCH_DEFAULT_SETTINGS } from "$twitch/twitch.constants.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchSettings } from "$types/platforms/twitch/twitch.settings.types.ts";
-import type { SettingDefinition, TabDefinition } from "$types/shared/components/settings.component.types.ts";
+import type { SettingCategory, SettingDefinition } from "$types/shared/components/settings.component.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
-import { render } from "preact";
+import type { Signal } from "@preact/signals";
+
+const CATEGORY = {
+	GENERAL: "general",
+	CHAT: "chat",
+	CHANNEL: "channel",
+	LATENCY: "latency",
+	ABOUT: "about",
+} as const;
 
 export default class SettingsModule extends TwitchModule {
 	config: TwitchModuleConfig = {
@@ -23,67 +30,56 @@ export default class SettingsModule extends TwitchModule {
 			{
 				type: "event",
 				event: "extension:settings-open",
-				callback: this.openSettings.bind(this),
+				callback: () => this.openSettings(),
 				key: "settings-open",
 			},
 			{
 				type: "event",
 				event: "extension:settings-refresh",
-				callback: this.loadSettings.bind(this),
+				callback: () => this.loadSettings(),
 				key: "settings-refresh",
 			},
 		],
 	};
 
-	private SETTINGS_TABS: TabDefinition[] = [];
+	private settingsHelper: SettingsHelper<TwitchSettings> | null = null;
+	private SETTINGS_CATEGORIES: SettingCategory[] = [];
 	private SETTING_DEFINITIONS: SettingDefinition<TwitchSettings>[] = [];
-
-	private settingsSignal: Signal<TwitchSettings> = signal(TWITCH_DEFAULT_SETTINGS);
-	private isOpenSignal: Signal<boolean> = signal(false);
-	private settingsContainer: HTMLDivElement | null = null;
+	private settingsSignal: Signal<TwitchSettings> | null = null;
+	private openSettingsFn: (() => void) | null = null;
 
 	async initialize() {
+		this.settingsHelper = new SettingsHelper<TwitchSettings>(
+			this.settingsCache(),
+			this.workerService(),
+			this.emitter,
+			this.logger,
+			this.commonUtils(),
+		);
+
 		const workerService = this.workerService();
-		this.SETTINGS_TABS = [
-			{
-				title: "General",
-				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/general.svg"),
-			},
-			{
-				title: "Chat",
-				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/chat.svg"),
-			},
-			{
-				title: "Channel",
-				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/channel.svg"),
-			},
-			{
-				title: "Latency",
-				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/latency.svg"),
-			},
-			// {
-			// 	title: "Experimental",
-			// 	iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/experimental.svg"),
-			// },
-			{
-				title: "About",
-				iconUrl: await this.commonUtils().getAssetFile(this.workerService(), "settings/about.svg"),
-			},
-		] as const;
-		const tabIndexes = Object.fromEntries(this.SETTINGS_TABS.map((tab, index) => [tab.title, index]));
+		this.SETTINGS_CATEGORIES = [
+			{ id: CATEGORY.GENERAL, title: "General", order: 0 },
+			{ id: CATEGORY.CHAT, title: "Chat", order: 1 },
+			{ id: CATEGORY.CHANNEL, title: "Channel", order: 2 },
+			{ id: CATEGORY.LATENCY, title: "Latency", order: 3 },
+			{ id: CATEGORY.ABOUT, title: "About", order: 4 },
+		];
+
 		const brandIcons = {
 			website: await this.commonUtils().getAssetFile(this.workerService(), "brands/website.svg"),
 			github: await this.commonUtils().getAssetFile(this.workerService(), "brands/github.svg"),
 			twitter: await this.commonUtils().getAssetFile(this.workerService(), "brands/twitter.svg"),
 			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
 		} as const;
+
 		this.SETTING_DEFINITIONS = [
 			{
 				id: "chattersEnabled",
 				title: "Enable Chatters Counter",
 				description: "Shows the number of chatters (users connected to chat) next to the viewer count.",
 				type: "toggle",
-				tabIndex: tabIndexes.General,
+				categoryId: CATEGORY.GENERAL,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -91,7 +87,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Real Video Time",
 				description: "Displays the real-world time of the VOD.",
 				type: "toggle",
-				tabIndex: tabIndexes.General,
+				categoryId: CATEGORY.GENERAL,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -99,7 +95,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Pinning Streamers",
 				description: "Allows you to pin your favorite streamers for easy access.",
 				type: "toggle",
-				tabIndex: tabIndexes.General,
+				categoryId: CATEGORY.GENERAL,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -108,7 +104,7 @@ export default class SettingsModule extends TwitchModule {
 				description:
 					"Displays watchtime in usercards and via the /watchtime command for Polish channels by xayo.pl service.",
 				type: "toggle",
-				tabIndex: tabIndexes.General,
+				categoryId: CATEGORY.GENERAL,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -116,14 +112,14 @@ export default class SettingsModule extends TwitchModule {
 				title: "12-Hour Time Format",
 				description: "Display real video time in 12-hour format (AM/PM) instead of 24-hour format.",
 				type: "toggle",
-				tabIndex: tabIndexes.General,
+				categoryId: CATEGORY.GENERAL,
 			},
 			{
 				id: "channelSection",
 				title: "Channel Section",
 				description: "Shows a section with watch time and quick access links.",
 				type: "toggle",
-				tabIndex: tabIndexes.General,
+				categoryId: CATEGORY.GENERAL,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -131,7 +127,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Loading Additional Fonts",
 				description: "Loads additional font assets used by Enhancer for enhanced visual variety.",
 				type: "toggle",
-				tabIndex: tabIndexes.General,
+				categoryId: CATEGORY.GENERAL,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -139,24 +135,24 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Chat Images",
 				description: "Display images sent in chat messages.",
 				type: "toggle",
+				categoryId: CATEGORY.CHAT,
 				confirmOnEnable: true,
 				confirmationMessage:
 					"Enhancer is not responsible for the content of images sent in the chat by users. By enabling this option, you can see images in the chat that may not look good. We do not moderate them in any way, we simply display them. Are you sure you want to enable this option?",
-				tabIndex: tabIndexes.Chat,
 			},
 			{
 				id: "chatImagesOnHover",
 				title: "Show Images on Hover",
 				description: "Images are hidden until you hover your mouse to reveal them.",
 				type: "toggle",
-				tabIndex: tabIndexes.Chat,
+				categoryId: CATEGORY.CHAT,
 			},
 			{
 				id: "chatImagesSize",
 				title: "Chat Image Size",
 				description: "Maximum size of images allowed in chat messages (in megabytes).",
 				type: "number",
-				tabIndex: tabIndexes.Chat,
+				categoryId: CATEGORY.CHAT,
 				min: 1,
 				step: 1,
 			},
@@ -165,21 +161,21 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Chat Badges",
 				description: "Show custom chat badges from Enhancer extension.",
 				type: "toggle",
-				tabIndex: tabIndexes.Chat,
+				categoryId: CATEGORY.CHAT,
 			},
 			{
 				id: "chatNicknameCustomizationEnabled",
 				title: "Enable Nickname Customization",
 				description: "Show custom chat nickname customizations from Enhancer extension in chat.",
 				type: "toggle",
-				tabIndex: tabIndexes.Chat,
+				categoryId: CATEGORY.CHAT,
 			},
 			{
 				id: "chatMessageMenuEnabled",
 				title: "Enable Chat Message Menu",
 				description: "Show a menu with message options when you right-click a chat message.",
 				type: "toggle",
-				tabIndex: tabIndexes.Chat,
+				categoryId: CATEGORY.CHAT,
 			},
 			{
 				id: "chatMessageMenuUseAddInsteadOfSet",
@@ -187,14 +183,14 @@ export default class SettingsModule extends TwitchModule {
 				description:
 					"When using the chat message menu, new content will be added to the message in chat input instead of replacing it.",
 				type: "toggle",
-				tabIndex: tabIndexes.Chat,
+				categoryId: CATEGORY.CHAT,
 			},
 			{
 				id: "chatMentionSoundEnabled",
 				title: "Enable Chat Mention Sound",
 				description: "Turn on to receive a sound notification when someone mentions you in chat.",
 				type: "toggle",
-				tabIndex: tabIndexes.Chat,
+				categoryId: CATEGORY.CHAT,
 			},
 			{
 				id: "chatMentionSoundFile",
@@ -202,7 +198,7 @@ export default class SettingsModule extends TwitchModule {
 				description:
 					"Upload a custom audio file to play when you are mentioned in chat. Leave empty to use the default sound.",
 				type: "file",
-				tabIndex: tabIndexes.Chat,
+				categoryId: CATEGORY.CHAT,
 				validTypes: ["audio/mpeg", "audio/mp3", "audio/ogg", "audio/wav", "audio/webm", "audio/aac", "audio/flac"],
 			},
 			{
@@ -213,7 +209,7 @@ export default class SettingsModule extends TwitchModule {
 				min: 0,
 				max: 100,
 				step: 1,
-				tabIndex: tabIndexes.Chat,
+				categoryId: CATEGORY.CHAT,
 			},
 			{
 				id: "quickAccessLinks",
@@ -221,7 +217,7 @@ export default class SettingsModule extends TwitchModule {
 				description:
 					"Manage your quick access links. Use %username% in the URL to dynamically include the streamer's name.",
 				type: "array",
-				tabIndex: tabIndexes.Channel,
+				categoryId: CATEGORY.CHANNEL,
 				arrayItemFields: [
 					{ name: "title", placeholder: "Enter link name..." },
 					{ name: "url", placeholder: "Enter URL..." },
@@ -234,7 +230,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Watchtime List",
 				description: "Watchtime List",
 				type: "text",
-				tabIndex: tabIndexes.Channel,
+				categoryId: CATEGORY.CHANNEL,
 				content: () => {
 					return <WatchtimeListComponent platform="twitch" workerService={workerService} emitter={this.emitter} />;
 				},
@@ -245,7 +241,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Export/Import Data",
 				description: "Export and import your settings and watchtime data",
 				type: "text",
-				tabIndex: tabIndexes.General,
+				categoryId: CATEGORY.GENERAL,
 				content: () => {
 					return <ExportImportComponent platform="twitch" workerService={workerService} emitter={this.emitter} />;
 				},
@@ -256,7 +252,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Stream Latency",
 				description: "Shows the current stream delay on top of the chat.",
 				type: "toggle",
-				tabIndex: tabIndexes.Latency,
+				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -264,7 +260,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enable Stream Latency Reducer (Experimental)",
 				description: "Reduces stream latency by adjusting playback rate. (Disabled without Low Latency Mode)",
 				type: "toggle",
-				tabIndex: tabIndexes.Latency,
+				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -272,7 +268,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Minimum Playback Rate",
 				description: "The minimum playback rate the stream will be speeded up to.",
 				type: "number",
-				tabIndex: tabIndexes.Latency,
+				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -280,7 +276,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Maximum Playback Rate",
 				description: "The maximum playback rate the stream will be speeded up to.",
 				type: "number",
-				tabIndex: tabIndexes.Latency,
+				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -289,7 +285,7 @@ export default class SettingsModule extends TwitchModule {
 				description:
 					"The latency threshold (in seconds) at which the playback rate will be speeded up to the minimum rate.",
 				type: "number",
-				tabIndex: tabIndexes.Latency,
+				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -298,7 +294,7 @@ export default class SettingsModule extends TwitchModule {
 				description:
 					"The latency threshold (in seconds) at which the playback rate will be speeded up to the maximum rate.",
 				type: "number",
-				tabIndex: tabIndexes.Latency,
+				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
 			},
 			{
@@ -306,105 +302,34 @@ export default class SettingsModule extends TwitchModule {
 				title: "About This Extension",
 				description: "Information about the extension",
 				type: "text",
-				tabIndex: tabIndexes.About,
+				categoryId: CATEGORY.ABOUT,
 				content: () => {
 					return <EnhancerAboutComponent icons={brandIcons} />;
 				},
 				hideInfo: true,
 			},
 		];
-		if (this.commonUtils().isFunnyDay()) {
-			this.SETTING_DEFINITIONS = [
-				{
-					id: "_funnyThings",
-					title: "Enable Funny Things",
-					description: "Enables Funny Things, on Funny Day, right?",
-					type: "toggle",
-					tabIndex: tabIndexes.General,
-					requiresRefreshToDisable: true,
-				},
-				...this.SETTING_DEFINITIONS,
-			];
-		}
 	}
 
 	private async run() {
-		await this.loadSettings();
-		await this.createSettingsContainer();
-		this.setupKeyboardShortcut();
-	}
-
-	private async loadSettings() {
-		try {
-			const settings = await this.workerService().send("getSettings", {
-				platform: "twitch",
-			});
-			if (!settings) throw Error("Failed to load settings from worker");
-			this.settingsSignal.value = { ...TWITCH_DEFAULT_SETTINGS, ...settings };
-		} catch (error) {
-			console.error("Failed to load settings:", error);
-		}
-	}
-
-	private async saveSettings(settings: TwitchSettings, updatedKey: keyof TwitchSettings) {
-		try {
-			await this.workerService().send("updateSettings", { settings, platform: "twitch" });
-			this.settingsSignal.value = settings;
-			this.emitter.emit(`twitch:settings:${updatedKey}`, settings[updatedKey]);
-			this.logger.debug(`Settings changed "${updatedKey}" to`, settings[updatedKey]);
-		} catch (error) {
-			console.error("Failed to save settings:", error);
-		}
-	}
-
-	private async createSettingsContainer() {
-		const wrapper = this.commonUtils().createElementByParent(
-			"enhancer-settings",
-			"div",
-			document.body,
-		) as HTMLDivElement;
-		this.settingsContainer = wrapper as HTMLDivElement;
-		const logo = await this.commonUtils().getAssetFile(
-			this.workerService(),
-			"enhancer/logo.svg",
-			"https://enhancer.at/assets/brand/logo.png",
-		);
-		const renderSettings = () => {
-			if (this.settingsContainer) {
-				render(
-					<SettingsOverlay style={{ display: this.isOpenSignal.value ? "flex" : "none" }}>
-						<Settings
-							logoSrc={logo}
-							tabs={this.SETTINGS_TABS}
-							settingDefinitions={this.SETTING_DEFINITIONS}
-							settings={this.settingsSignal.value}
-							onSettingsChange={(newSettings, updatedKey) => this.saveSettings(newSettings, updatedKey)}
-							onClose={() => this.closeSettings()}
-						/>
-					</SettingsOverlay>,
-					this.settingsContainer,
-				);
-			}
-		};
-		renderSettings();
-
-		this.isOpenSignal.subscribe(renderSettings);
-		this.settingsSignal.subscribe(renderSettings);
-	}
-
-	private setupKeyboardShortcut() {
-		document.addEventListener("keydown", (e) => {
-			if (e.key === "Escape" && this.isOpenSignal.value) {
-				this.closeSettings();
-			}
+		if (!this.settingsHelper) return;
+		const settings = this.settingsHelper.loadSettings(TWITCH_DEFAULT_SETTINGS);
+		const result = await this.settingsHelper.createSettingsContainer({
+			defaults: settings,
+			categories: this.SETTINGS_CATEGORIES,
+			definitions: this.SETTING_DEFINITIONS,
+			eventPrefix: "twitch:settings:",
 		});
+		this.settingsSignal = result.settingsSignal;
+		this.openSettingsFn = result.openSettings;
+		this.settingsHelper.setupKeyboardShortcut();
 	}
 
+	private loadSettings() {
+		if (!this.settingsHelper) return;
+		this.settingsHelper.loadSettings(TWITCH_DEFAULT_SETTINGS);
+	}
 	private openSettings() {
-		this.isOpenSignal.value = true;
-	}
-
-	private closeSettings() {
-		this.isOpenSignal.value = false;
+		this.openSettingsFn?.();
 	}
 }

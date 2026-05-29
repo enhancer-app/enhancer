@@ -1,4 +1,8 @@
-import type { ExtensionMessageDetail, ExtensionResponseDetail } from "$types/shared/worker/worker.types.ts";
+import type {
+	ExtensionMessageDetail,
+	ExtensionResponseDetail,
+	WorkerBroadcast,
+} from "$types/shared/worker/worker.types.ts";
 
 export default class WorkerBridge {
 	private bridgeElement: HTMLElement | null = null;
@@ -14,7 +18,7 @@ export default class WorkerBridge {
 				for (const node of mutation.addedNodes) {
 					if (node instanceof HTMLElement && node.tagName === "ENHANCER-BRIDGE") {
 						this.bridgeElement = node;
-						this.setupMessageListener();
+						this.setupListeners();
 						observer.disconnect();
 						return;
 					}
@@ -23,7 +27,7 @@ export default class WorkerBridge {
 		});
 		this.bridgeElement = document.querySelector("enhancer-bridge");
 		if (this.bridgeElement) {
-			this.setupMessageListener();
+			this.setupListeners();
 		} else {
 			observer.observe(document.body, {
 				childList: true,
@@ -32,11 +36,17 @@ export default class WorkerBridge {
 		}
 	}
 
-	private setupMessageListener() {
+	private setupListeners() {
 		if (!this.bridgeElement) return;
+		this.setupMessageForwarding();
+		this.setupBroadcastReceiving();
+		this.bridgeElement.dispatchEvent(new CustomEvent("enhancer-bridge-ready"));
 		this.log("WorkerService bridge started!");
+	}
+
+	private setupMessageForwarding() {
+		if (!this.bridgeElement) return;
 		this.bridgeElement.addEventListener("enhancer-message", (async (event: CustomEvent<string>) => {
-			//ExtensionMessageDetail
 			const detail = JSON.parse(event.detail) as ExtensionMessageDetail;
 			const { messageId, action, payload } = detail;
 			try {
@@ -45,13 +55,11 @@ export default class WorkerBridge {
 					payload,
 				});
 				const responseEvent = new CustomEvent<string>("enhancer-response", {
-					// ExtensionResponseDetail
 					detail: JSON.stringify({ messageId, data: response }),
 				});
 				// biome-ignore lint/style/noNonNullAssertion: we are checking it above, it cannot be null
 				this.bridgeElement!.dispatchEvent(responseEvent);
 			} catch (error) {
-				// ExtensionResponseDetail
 				const errorEvent = new CustomEvent<string>("enhancer-response", {
 					detail: JSON.stringify({ messageId, error: (error as Error).message }),
 				});
@@ -59,6 +67,16 @@ export default class WorkerBridge {
 				this.bridgeElement!.dispatchEvent(errorEvent);
 			}
 		}) as unknown as EventListener);
+	}
+
+	private setupBroadcastReceiving() {
+		chrome.runtime.onMessage.addListener((message: WorkerBroadcast) => {
+			if (!this.bridgeElement || !message.type) return;
+			const broadcastEvent = new CustomEvent<string>("enhancer-broadcast", {
+				detail: JSON.stringify(message),
+			});
+			this.bridgeElement.dispatchEvent(broadcastEvent);
+		});
 	}
 
 	private log(...data: any[]) {

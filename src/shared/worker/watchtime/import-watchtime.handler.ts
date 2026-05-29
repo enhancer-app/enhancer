@@ -1,12 +1,18 @@
 import type { Logger } from "$shared/logger/logger.ts";
 import { MessageHandler } from "$shared/worker/message.handler.ts";
-import type { WatchtimeService } from "$shared/worker/watchtime/watchtime.service.ts";
-import type { ImportWatchtimePayload, PlatformType, WatchtimeResponse } from "$types/shared/worker/worker.types.ts";
+import type { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
+import { createWatchtimeId } from "$shared/worker/watchtime/watchtime.utils.ts";
+import type {
+	ImportWatchtimePayload,
+	PlatformType,
+	WatchtimeRecord,
+	WatchtimeResponse,
+} from "$types/shared/worker/worker.types.ts";
 
 export class ImportWatchtimeHandler extends MessageHandler {
 	constructor(
 		logger: Logger,
-		private readonly watchtimeService: WatchtimeService,
+		private readonly database: WatchtimeDatabase,
 	) {
 		super(logger);
 	}
@@ -25,12 +31,21 @@ export class ImportWatchtimeHandler extends MessageHandler {
 		this.logger.debug(
 			`Importing watchtime for ${payload.platform} channel: ${payload.username}, time: ${payload.time}`,
 		);
-		return await this.watchtimeService.importWatchtime(
-			payload.platform,
-			payload.username,
-			payload.time,
-			payload.firstUpdate,
-			payload.lastUpdate,
-		);
+
+		const now = Date.now();
+		const normalizedUsername = payload.username.toLowerCase();
+		const id = createWatchtimeId(payload.platform, normalizedUsername);
+
+		const watchtimeRecord: WatchtimeRecord = {
+			id,
+			platform: payload.platform as PlatformType,
+			username: normalizedUsername,
+			time: payload.time,
+			firstUpdate: payload.firstUpdate ?? now,
+			lastUpdate: payload.lastUpdate ?? now,
+		};
+
+		await this.database.setWatchtime(watchtimeRecord);
+		return watchtimeRecord;
 	}
 }

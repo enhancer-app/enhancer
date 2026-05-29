@@ -32,7 +32,7 @@ export default class WatchTimeModule extends TwitchModule {
 				once: true,
 			},
 		],
-		isModuleEnabledCallback: async () => await this.settingsService().getSettingsKey("xayoWatchtimeEnabled"),
+		enabled: () => this.settings().xayoWatchtimeEnabled,
 	};
 
 	private async run(elements: Element[]) {
