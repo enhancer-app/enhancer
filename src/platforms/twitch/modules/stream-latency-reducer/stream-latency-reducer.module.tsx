@@ -3,7 +3,7 @@ import TwitchModule from "../../twitch.module.ts";
 
 export default class StreamLatencyReducerModule extends TwitchModule {
 	private updateInterval: NodeJS.Timeout | undefined;
-	private isLiveCache = true;
+	private isLiveCache = false;
 
 	readonly config: TwitchModuleConfig = {
 		name: "stream-latency-reducer",
