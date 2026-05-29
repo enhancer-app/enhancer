@@ -3,6 +3,7 @@ import TwitchModule from "../../twitch.module.ts";
 
 export default class StreamLatencyReducerModule extends TwitchModule {
 	private updateInterval: NodeJS.Timeout | undefined;
+	private isLiveCache = true;
 
 	readonly config: TwitchModuleConfig = {
 		name: "stream-latency-reducer",
@@ -21,7 +22,8 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 	private run() {
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(() => {
-			if (!this.isLive()) return;
+			this.isLiveCache = this.isLive();
+			if (!this.isLiveCache) return;
 			const status = this.getPlaybackRateStatus();
 			if (status === "catchingUpMax") {
 				this.setPlaybackRateMode("catchUpMax");
@@ -32,15 +34,15 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 			}
 		}, 1000);
 
+		const self = this;
 		function playbackRateSetHook(this: HTMLVideoElement, rate: number) {
-			// Workaround for twitch native delay reducer interfering, block any other attempts of changing playbackRate other than ours or if it is the VOD
 			const pathname = window.location.pathname;
 			const isVodOrClipRoute =
 				pathname.includes("/videos/") ||
 				pathname.includes("/video/") ||
 				pathname.includes("/clip/") ||
 				window.location.hostname === "clips.twitch.tv";
-			const isAllowed = (this as any)._enhancerAllowRateChange || isVodOrClipRoute;
+			const isAllowed = (this as any)._enhancerAllowRateChange || isVodOrClipRoute || !self.isLiveCache;
 			if (isAllowed) {
 				return orig_playbackRate_set.call(this, rate);
 			}
