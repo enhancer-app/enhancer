@@ -301,7 +301,11 @@ export default class TwitchUtils {
 			100,
 		)?.stateNode.props;
 		if (!props) return;
-		return { displayName: props.displayName, channelLogin: props.channelLogin, channelId: props.channelID };
+		return {
+			displayName: props.displayName,
+			channelLogin: props.channelLogin,
+			channelId: props.channelID,
+		};
 	}
 
 	getApolloClient() {
@@ -329,5 +333,9 @@ export default class TwitchUtils {
 		const mediaPlayer = this.getMediaPlayerInstance();
 		if (!mediaPlayer) return;
 		return mediaPlayer.core.renderSurface.video.element().playbackRate;
+	}
+
+	is7TV() {
+		return document.querySelector("html")?.className.includes("seventv");
 	}
 }
