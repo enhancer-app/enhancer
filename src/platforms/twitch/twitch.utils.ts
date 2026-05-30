@@ -25,8 +25,6 @@ import type {
 export default class TwitchUtils {
 	constructor(protected readonly reactUtils: ReactUtils) {}
 
-	private is7TVCache: boolean | undefined;
-
 	getCurrentChannelByUrl() {
 		let url = window.location.href;
 		url = url.replace(/(^\w+:|^)\/\//, "");
@@ -338,8 +336,6 @@ export default class TwitchUtils {
 	}
 
 	is7TV() {
-		if (this.is7TVCache !== undefined) return this.is7TVCache;
-		this.is7TVCache = document.querySelector("html")?.className.includes("seventv");
-		return this.is7TVCache;
+		return document.querySelector("html")?.className.includes("seventv");
 	}
 }
