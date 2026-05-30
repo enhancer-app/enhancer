@@ -25,6 +25,8 @@ import type {
 export default class TwitchUtils {
 	constructor(protected readonly reactUtils: ReactUtils) {}
 
+	private is7TVCache: boolean | undefined;
+
 	getCurrentChannelByUrl() {
 		let url = window.location.href;
 		url = url.replace(/(^\w+:|^)\/\//, "");
@@ -301,7 +303,11 @@ export default class TwitchUtils {
 			100,
 		)?.stateNode.props;
 		if (!props) return;
-		return { displayName: props.displayName, channelLogin: props.channelLogin, channelId: props.channelID };
+		return {
+			displayName: props.displayName,
+			channelLogin: props.channelLogin,
+			channelId: props.channelID,
+		};
 	}
 
 	getApolloClient() {
@@ -329,5 +335,11 @@ export default class TwitchUtils {
 		const mediaPlayer = this.getMediaPlayerInstance();
 		if (!mediaPlayer) return;
 		return mediaPlayer.core.renderSurface.video.element().playbackRate;
+	}
+
+	is7TV() {
+		if (this.is7TVCache !== undefined) return this.is7TVCache;
+		this.is7TVCache = document.querySelector("html")?.className.includes("seventv");
+		return this.is7TVCache;
 	}
 }
