@@ -23,7 +23,6 @@ export default class ChatCopyEmoteModule extends TwitchModule {
 		if (emotes.length < 1) return;
 
 		emotes.forEach((emote) => {
-			this.logger.debug(emote.classList);
 			emote.addEventListener("contextmenu", (event) => {
 				event.preventDefault();
 				const altValue = emote.getAttribute("alt");
