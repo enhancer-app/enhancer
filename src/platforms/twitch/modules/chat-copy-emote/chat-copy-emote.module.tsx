@@ -15,11 +15,15 @@ export default class ChatCopyEmoteModule extends TwitchModule {
 		],
 	};
 
-	private handleMessage({ element }: TwitchChatMessageEvent) {
-		const emotes = element.querySelectorAll(".seventv-chat-emote, .chat-line__message--emote");
+	private async handleMessage({ element }: TwitchChatMessageEvent) {
+		if (this.twitchUtils().is7TV()) {
+			await this.commonUtils().delay(5);
+		}
+		const emotes = element.querySelectorAll(".seventv-emote .seventv-chat-emote, .chat-line__message--emote");
 		if (emotes.length < 1) return;
 
 		emotes.forEach((emote) => {
+			this.logger.debug(emote.classList);
 			emote.addEventListener("contextmenu", (event) => {
 				event.preventDefault();
 				const altValue = emote.getAttribute("alt");
