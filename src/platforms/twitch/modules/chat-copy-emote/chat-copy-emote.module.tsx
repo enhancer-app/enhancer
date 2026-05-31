@@ -16,12 +16,16 @@ export default class ChatCopyEmoteModule extends TwitchModule {
 	};
 
 	private async handleMessage({ element }: TwitchChatMessageEvent) {
-		if (this.twitchUtils().is7TV()) {
+		const is7TV = this.twitchUtils().is7TV();
+		if (is7TV) {
+			this.logger.debug("Detected 7TV, waiting 5ms before checking emotes...");
 			await this.commonUtils().delay(5);
 		}
-		const emotes = element.querySelectorAll(".seventv-emote .seventv-chat-emote, .chat-line__message--emote");
-		if (emotes.length < 1) return;
 
+		const emotes = element.querySelectorAll(".seventv-emote, .seventv-chat-emote, .chat-line__message--emote");
+		this.logger.debug(element);
+		this.logger.debug(emotes);
+		if (emotes.length < 1) return;
 		emotes.forEach((emote) => {
 			emote.addEventListener("contextmenu", (event) => {
 				event.preventDefault();
