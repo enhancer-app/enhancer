@@ -21,11 +21,16 @@ export type EnhancerBadgeSize = "1x" | "2x" | "4x";
 
 export type EnhancerChannelDto = {
 	channelId: string;
-	platform: PlatformType; //TODO Its upperCase
+	platform: Uppercase<PlatformType>;
 	playSoundsEnabled: boolean;
 	partner: boolean;
 	users: EnhancerUser[];
 	badges: EnhancerBadge[];
+};
+
+export type EnhancerChannelErrorDto = {
+	status: number;
+	message: string;
 };
 
 export type EnhancerResponseMap = {
