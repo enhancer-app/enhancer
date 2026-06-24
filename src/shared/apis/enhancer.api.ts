@@ -1,15 +1,17 @@
+import { ENHANCER_GLOBAL_CHANNEL_MOCKS } from "$shared/apis/enhancer-api.mock.ts";
 import { HttpClient } from "$shared/http/http-client.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import type {
 	EnhancerBadge,
 	EnhancerChannelDto,
+	EnhancerChannelErrorDto,
 	EnhancerStreamerWatchTimeData,
 	EnhancerUser,
 } from "$types/apis/enhancer.apis.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 
-interface ApiResponse<T> {
-	data: T;
+interface ApiResponse<TData, TError = unknown> {
+	data: TData | TError;
 	ok: boolean;
 	status: number;
 }
@@ -20,9 +22,6 @@ export default class EnhancerApi {
 	private isInitialized = false;
 
 	private static readonly GLOBAL_CHANNEL_ID = "0";
-	private static readonly API_URL = "https://api.enhancer.at";
-	//private static readonly API_URL = "http://localhost:8080";
-
 	private static readonly CACHE_KEYS = {
 		GLOBAL: "global",
 		CHANNEL: (id: string) => `channel:${id}`,
@@ -39,7 +38,7 @@ export default class EnhancerApi {
 		try {
 			const globalChannel = await this.fetchChannel(EnhancerApi.GLOBAL_CHANNEL_ID);
 			if (globalChannel.ok) {
-				this.cache.set(EnhancerApi.CACHE_KEYS.GLOBAL, globalChannel.data);
+				this.cache.set(EnhancerApi.CACHE_KEYS.GLOBAL, globalChannel.data as EnhancerChannelDto);
 				this.logger.debug("Global channel loaded successfully");
 			} else {
 				this.logger.warn("Failed to load global channel");
@@ -54,7 +53,14 @@ export default class EnhancerApi {
 	async joinChannel(channelId: string): Promise<boolean> {
 		if (!channelId || channelId === this.currentChannelId) return false;
 		try {
-			const { data: channelData } = await this.fetchChannel(channelId);
+			const channel = await this.fetchChannel(channelId);
+			if (!channel.ok) {
+				this.currentChannelId = channelId;
+				this.cache.delete(EnhancerApi.CACHE_KEYS.CHANNEL(channelId));
+				this.logger.info(`Channel ${channelId} not found`);
+				return true;
+			}
+			const channelData = channel.data as EnhancerChannelDto;
 			this.handleChannelResult(channelId, channelData);
 			this.currentChannelId = channelId;
 			this.logger.info(`Successfully joined channel: ${channelId}`);
@@ -80,8 +86,9 @@ export default class EnhancerApi {
 
 		const result = await this.fetchChannel(channelId);
 		if (result.ok) {
-			this.cache.set(cacheKey, result.data);
-			return result.data;
+			const channelData = result.data as EnhancerChannelDto;
+			this.cache.set(cacheKey, channelData);
+			return channelData;
 		}
 		return null;
 	}
@@ -137,16 +144,19 @@ export default class EnhancerApi {
 		this.isInitialized = false;
 	}
 
-	private async fetchChannel(channelId: string): Promise<ApiResponse<EnhancerChannelDto>> {
-		const { data, status } = await this.httpClient.request<EnhancerChannelDto>(
-			`${EnhancerApi.API_URL}/v2/channel/${this.platform}/${channelId}`,
-			{
-				method: "GET",
-				responseType: "json",
-				validateStatus: (status) => [200, 404].includes(status),
+	private async fetchChannel(channelId: string): Promise<ApiResponse<EnhancerChannelDto, EnhancerChannelErrorDto>> {
+		if (channelId === EnhancerApi.GLOBAL_CHANNEL_ID) {
+			return { data: ENHANCER_GLOBAL_CHANNEL_MOCKS[this.platform], ok: true, status: 200 };
+		}
+
+		return {
+			data: {
+				status: 404,
+				message: "Channel not found",
 			},
-		);
-		return { data, ok: status === 200, status };
+			ok: false,
+			status: 404,
+		};
 	}
 
 	private getCurrentChannelData<T>(keyFactory: (id: string) => string): T | null {
