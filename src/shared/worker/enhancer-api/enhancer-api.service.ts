@@ -28,7 +28,10 @@ export class EnhancerApiService {
 
 	private readonly clients = new Map<string, EnhancerApiClient>();
 	private readonly subscriptions = new Map<string, SubscriptionState>();
+	private readonly pendingSubscriptions = new Map<string, SubscriptionState>();
 	private readonly pageCache = new Map<string, CachedPage>();
+	private readonly confirmedGlobals = new Set<PlatformType>();
+	private readonly retryPendingPlatforms = new Set<PlatformType>();
 	private socket: WebSocket | null = null;
 	private serverReady = false;
 	private connectionPromise: Promise<void> | null = null;
@@ -121,9 +124,6 @@ export class EnhancerApiService {
 		const topic = this.getTopic(client.platform, scope, externalId);
 		let state = this.subscriptions.get(topic);
 		if (!state) {
-			if (this.subscriptions.size >= EnhancerApiService.MAX_SUBSCRIPTIONS) {
-				throw new Error("Enhancer WebSocket subscription limit reached");
-			}
 			const platform = client.platform.toUpperCase() as Uppercase<PlatformType>;
 			const subscription: EnhancerSubscription =
 				scope === "GLOBAL" ? { scope, platform } : { scope, platform, externalId: externalId as string };
@@ -152,6 +152,10 @@ export class EnhancerApiService {
 			this.subscriptions.set(topic, state);
 			this.logger.debug("Created topic", { topic, subscriptionCount: this.subscriptions.size });
 		}
+		if (scope === "CHANNEL" && !state.confirmed) {
+			this.pendingSubscriptions.set(topic, state);
+			this.logger.debug("Added pending topic", { topic });
+		}
 		state.active = true;
 		state.subscribers.add(client.clientId);
 		client.topics.add(topic);
@@ -176,8 +180,10 @@ export class EnhancerApiService {
 		this.unsubscribe(state);
 		this.releaseSubscription(state);
 		this.subscriptions.delete(topic);
+		this.pendingSubscriptions.delete(topic);
 		if (!preserveCursor) void this.clearCursor(state);
 		if (this.subscriptions.size === 0) this.closeConnection();
+		else this.sendNextSubscription();
 	}
 
 	private unregisterClient(clientId: string, preserveCursor = false): void {
@@ -195,7 +201,7 @@ export class EnhancerApiService {
 	}
 
 	private getTopic(platform: PlatformType, scope: AggregateScope, externalId?: string): string {
-		const suffix = scope === "CHANNEL" ? `:${externalId?.toLowerCase()}` : "";
+		const suffix = scope === "CHANNEL" ? `:${externalId}` : "";
 		return `${scope.toLowerCase()}:${platform.toUpperCase()}${suffix}`;
 	}
 
@@ -284,7 +290,8 @@ export class EnhancerApiService {
 	private handleSocketMessage(message: EnhancerWebSocketMessage): void {
 		if (!("type" in message)) {
 			this.logger.warn(`Enhancer WebSocket error: ${message.error.code}: ${message.error.message}`);
-			this.releasePendingSubscription();
+			if (message.error.code === "NOT_FOUND") this.rejectPendingSubscription();
+			else this.closeConnection();
 			return;
 		}
 
@@ -292,14 +299,21 @@ export class EnhancerApiService {
 			const state = this.subscriptions.get(message.topic) ?? this.pendingSubscription ?? undefined;
 			if (!state) return;
 			this.logger.debug("Subscription confirmed", { requestedTopic: state.topic, confirmedTopic: message.topic });
+			const requestedTopic = state.topic;
 			if (state.topic !== message.topic) this.renameTopic(state, message.topic);
 			state.confirmed = true;
 			state.rejected = false;
+			this.pendingSubscriptions.delete(requestedTopic);
+			this.pendingSubscriptions.delete(message.topic);
 			if (this.pendingSubscription === state) this.pendingSubscription = null;
 			if (state.confirmationRetry) clearTimeout(state.confirmationRetry);
 			state.confirmationRetry = null;
 			for (const resolve of state.confirmationWaiters) resolve();
 			state.confirmationWaiters.clear();
+			if (state.scope === "GLOBAL") {
+				this.confirmedGlobals.add(state.platform);
+				if (this.retryPendingPlatforms.delete(state.platform)) this.retryPendingForPlatform(state.platform);
+			}
 			this.sendNextSubscription();
 			void this.refreshAggregate(state, true).catch((error) =>
 				this.logger.error(`Failed to refresh ${message.topic}:`, error),
@@ -309,7 +323,7 @@ export class EnhancerApiService {
 
 		if (message.type === "replay.complete") {
 			const state = this.subscriptions.get(message.topic);
-			if (!state) return;
+			if (!state || state.recovering) return;
 			const events = state.replayBuffer.sort((left, right) => this.compareCursors(left.cursor, right.cursor));
 			state.replayBuffer = [];
 			state.replaying = false;
@@ -340,7 +354,7 @@ export class EnhancerApiService {
 
 		if (message.type === "error") {
 			this.logger.warn(`Enhancer WebSocket protocol error: ${message.code}`);
-			this.releasePendingSubscription();
+			this.rejectPendingSubscription();
 		}
 	}
 
@@ -349,6 +363,7 @@ export class EnhancerApiService {
 		this.subscriptions.delete(previousTopic);
 		state.topic = topic;
 		this.subscriptions.set(topic, state);
+		if (this.pendingSubscriptions.delete(previousTopic)) this.pendingSubscriptions.set(topic, state);
 		for (const clientId of state.subscribers) {
 			const client = this.clients.get(clientId);
 			if (!client) continue;
@@ -359,9 +374,13 @@ export class EnhancerApiService {
 	}
 
 	private handleDataEvent(event: EnhancerMessageEvent | EnhancerStateEvent): void {
+		if (event.type === "sync.required") {
+			this.logger.debug("Received account availability event", { reason: event.reason, topics: event.topics });
+			this.retryPendingTopics(event.topics);
+		}
 		for (const topic of this.getEventTopics(event)) {
 			const state = this.subscriptions.get(topic);
-			if (!state) continue;
+			if (!state?.confirmed) continue;
 			if (state.replaying) state.replayBuffer.push(event);
 			else this.processDataEvent(state, event);
 		}
@@ -397,6 +416,7 @@ export class EnhancerApiService {
 		if (state.recovering) return;
 		state.recovering = true;
 		state.replaying = true;
+		await state.processing;
 		state.cursor = undefined;
 		state.seenCursors.clear();
 		let attempt = 0;
@@ -416,27 +436,53 @@ export class EnhancerApiService {
 		state.replaying = false;
 		state.recovering = false;
 		for (const event of events) this.processDataEvent(state, event);
+		if (state.scope === "GLOBAL") this.retryPendingForPlatform(state.platform);
 	}
 
 	private getEventTopics(event: EnhancerMessageEvent | EnhancerStateEvent): string[] {
 		if (event.type === "sync.required") return event.topics;
 		if (event.type === "message") {
 			const { target } = event;
-			const suffix = "externalId" in target ? `:${target.externalId.toLowerCase()}` : "";
+			const suffix = "externalId" in target ? `:${target.externalId}` : "";
 			return [`${target.scope.toLowerCase()}:${target.platform}${suffix}`];
 		}
 		const scope = event.channelExternalId ? "channel" : "global";
-		const suffix = event.channelExternalId ? `:${event.channelExternalId.toLowerCase()}` : "";
+		const suffix = event.channelExternalId ? `:${event.channelExternalId}` : "";
 		return [`${scope}:${event.platform}${suffix}`];
 	}
 
-	private releasePendingSubscription(): void {
+	private rejectPendingSubscription(): void {
 		if (this.pendingSubscription) {
 			this.pendingSubscription.rejected = true;
+			this.pendingSubscriptions.set(this.pendingSubscription.topic, this.pendingSubscription);
+			this.logger.debug("Keeping topic pending", { topic: this.pendingSubscription.topic });
 			this.releaseSubscription(this.pendingSubscription);
 		}
 		this.pendingSubscription = null;
 		this.sendNextSubscription();
+	}
+
+	private retryPendingTopics(topics: string[]): void {
+		let retried = false;
+		for (const topic of topics) {
+			const state = this.pendingSubscriptions.get(topic);
+			if (!state?.active || !this.confirmedGlobals.has(state.platform)) continue;
+			state.rejected = false;
+			retried = true;
+			this.logger.debug("Retrying pending topic", { topic, reason: "availability-event" });
+		}
+		if (retried) this.sendNextSubscription();
+	}
+
+	private retryPendingForPlatform(platform: PlatformType): void {
+		let retried = false;
+		for (const state of this.pendingSubscriptions.values()) {
+			if (state.platform !== platform || !state.active) continue;
+			state.rejected = false;
+			retried = true;
+			this.logger.debug("Retrying pending topic", { topic: state.topic, reason: "global-confirmed" });
+		}
+		if (retried) this.sendNextSubscription();
 	}
 
 	private releaseSubscription(state: SubscriptionState): void {
@@ -457,6 +503,8 @@ export class EnhancerApiService {
 		) {
 			return;
 		}
+		if (state.scope !== "GLOBAL" && !this.confirmedGlobals.has(state.platform)) return;
+		if (this.getServerSubscriptionCount() >= EnhancerApiService.MAX_SUBSCRIPTIONS) return;
 		if (this.pendingSubscription && this.pendingSubscription !== state) return;
 		this.pendingSubscription = state;
 		state.requested = true;
@@ -474,8 +522,20 @@ export class EnhancerApiService {
 
 	private sendNextSubscription(): void {
 		if (this.pendingSubscription) return;
-		const next = [...this.subscriptions.values()].find((state) => state.active && !state.confirmed && !state.rejected);
+		const next = [...this.subscriptions.values()]
+			.filter(
+				(state) =>
+					state.active &&
+					!state.confirmed &&
+					!state.rejected &&
+					(state.scope === "GLOBAL" || this.confirmedGlobals.has(state.platform)),
+			)
+			.sort((left, right) => Number(right.scope === "GLOBAL") - Number(left.scope === "GLOBAL"))[0];
 		if (next) this.sendSubscription(next);
+	}
+
+	private getServerSubscriptionCount(): number {
+		return [...this.subscriptions.values()].filter((state) => state.confirmed || state.requested).length;
 	}
 
 	private unsubscribe(state: SubscriptionState): void {
@@ -488,7 +548,6 @@ export class EnhancerApiService {
 		if (this.pendingSubscription === state) this.pendingSubscription = null;
 		if (state.confirmationRetry) clearTimeout(state.confirmationRetry);
 		state.confirmationRetry = null;
-		this.sendNextSubscription();
 	}
 
 	private scheduleConfirmationRetry(state: SubscriptionState): void {
@@ -739,6 +798,10 @@ export class EnhancerApiService {
 	}
 
 	private resetSubscriptions(): void {
+		this.confirmedGlobals.clear();
+		for (const state of this.pendingSubscriptions.values()) {
+			if (state.active) this.retryPendingPlatforms.add(state.platform);
+		}
 		for (const state of this.subscriptions.values()) {
 			state.confirmed = false;
 			state.requested = false;

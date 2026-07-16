@@ -44,6 +44,7 @@ test("shares one WebSocket and topics between clients", async () => {
 		static instance: FakeWebSocket;
 		static instances = 0;
 		static commands: any[] = [];
+		static notFoundOnce = new Set<string>();
 		readonly readyState = FakeWebSocket.OPEN;
 
 		constructor(_url: string) {
@@ -58,9 +59,13 @@ test("shares one WebSocket and topics between clients", async () => {
 			FakeWebSocket.commands.push(command);
 			if (command.type === "subscribe") {
 				const { subscription } = command;
-				const suffix = subscription.externalId ? `:${subscription.externalId.toLowerCase()}` : "";
+				const suffix = subscription.externalId ? `:${subscription.externalId}` : "";
 				const topic = `${subscription.scope.toLowerCase()}:${subscription.platform}${suffix}`;
-				queueMicrotask(() => this.receive({ type: "subscription.confirmed", topic }));
+				if (FakeWebSocket.notFoundOnce.delete(topic)) {
+					queueMicrotask(() => this.receive({ error: { code: "NOT_FOUND", message: "Channel not found" } }));
+				} else {
+					queueMicrotask(() => this.receive({ type: "subscription.confirmed", topic }));
+				}
 			}
 		}
 
@@ -178,5 +183,28 @@ test("shares one WebSocket and topics between clients", async () => {
 			(command) => command.type === "unsubscribe" && command.subscription.externalId === "100",
 		),
 	).toHaveLength(1);
+
+	FakeWebSocket.notFoundOnce.add("channel:KICK:AbC300");
+	await service.initialize(10, 0, "client-d", "kick");
+	await service.joinChannel(10, 0, "client-d", "kick", "AbC300");
+	expect(
+		FakeWebSocket.commands.filter(
+			(command) => command.type === "subscribe" && command.subscription.externalId === "AbC300",
+		),
+	).toHaveLength(1);
+	FakeWebSocket.instance.receive({
+		type: "sync.required",
+		topics: ["global:KICK", "channel:KICK:AbC300"],
+		reason: "account.created",
+		cursor: "1720953600002-0",
+	});
+	await new Promise((resolve) => setTimeout(resolve, 10));
+	expect(
+		FakeWebSocket.commands.filter(
+			(command) => command.type === "subscribe" && command.subscription.externalId === "AbC300",
+		),
+	).toHaveLength(2);
+	expect(FakeWebSocket.instances).toBe(1);
 	closeTab(8);
+	closeTab(10);
 });

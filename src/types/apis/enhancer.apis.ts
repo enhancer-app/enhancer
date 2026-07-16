@@ -79,7 +79,7 @@ export type EnhancerStateEvent =
 	| {
 			type: "sync.required";
 			topics: string[];
-			reason: "account.updated";
+			reason: "account.created" | "account.updated";
 			cursor: string;
 	  };
 
