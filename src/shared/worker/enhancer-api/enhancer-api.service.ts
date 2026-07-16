@@ -496,9 +496,30 @@ export class EnhancerApiService {
 		state.confirmationRetry = setTimeout(() => {
 			state.confirmationRetry = null;
 			if (!state.active || state.confirmed || !this.serverReady) return;
-			this.logger.debug("Subscription confirmation timed out, reconnecting", { topic: state.topic });
-			this.closeConnection();
+			void this.handleSubscriptionTimeout(state);
 		}, EnhancerApiService.CONFIRMATION_TIMEOUT_MS);
+	}
+
+	private async handleSubscriptionTimeout(state: SubscriptionState): Promise<void> {
+		this.logger.debug("Subscription confirmation timed out, checking aggregate", { topic: state.topic });
+		try {
+			const aggregate = await this.refreshAggregate(state, false);
+			if (!state.active || state.confirmed) return;
+			if (aggregate === null) {
+				this.logger.debug("Rejecting unavailable topic", { topic: state.topic });
+				state.rejected = true;
+				this.releaseSubscription(state);
+				if (this.pendingSubscription === state) this.pendingSubscription = null;
+				this.sendNextSubscription();
+				return;
+			}
+		} catch (error) {
+			this.logger.warn(`Failed to verify timed out subscription ${state.topic}:`, error);
+		}
+		if (state.active && !state.confirmed) {
+			this.logger.debug("Reconnecting after unconfirmed available topic", { topic: state.topic });
+			this.closeConnection();
+		}
 	}
 
 	private waitForConfirmation(state: SubscriptionState): Promise<void> {
@@ -720,7 +741,6 @@ export class EnhancerApiService {
 	private resetSubscriptions(): void {
 		for (const state of this.subscriptions.values()) {
 			state.confirmed = false;
-			state.rejected = false;
 			state.requested = false;
 			state.replaying = false;
 			state.replayBuffer = [];
