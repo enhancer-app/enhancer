@@ -27,6 +27,8 @@ export function getManifest(isDevelopment: boolean) {
 			service_worker: "worker.background.js",
 			type: "module",
 		},
+		permissions: ["storage"],
+		host_permissions: ["https://api.enhancer.at/*", "https://xayo.pl/*"],
 		web_accessible_resources: [
 			{
 				matches: ["*://*.twitch.tv/*", "*://*.kick.com/*"],

@@ -54,6 +54,9 @@ export default class WorkerBridge {
 					action,
 					payload,
 				});
+				if (response && typeof response === "object" && "__enhancerWorkerError" in response) {
+					throw new Error(response.__enhancerWorkerError as string);
+				}
 				const responseEvent = new CustomEvent<string>("enhancer-response", {
 					detail: JSON.stringify({ messageId, data: response }),
 				});

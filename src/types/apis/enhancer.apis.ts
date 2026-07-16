@@ -3,13 +3,12 @@ import type { PlatformType } from "$types/shared/platform.types.ts";
 export type EnhancerBadge = {
 	badgeId: string;
 	name: string;
-	description: string;
-	sources: Record<EnhancerBadgeSize, string>;
+	sources: Record<string, string>;
 	priority: number;
 };
 
-export type EnhancerUser = {
-	userId: string;
+export type EnhancerAccount = {
+	accountId: string;
 	externalId: string;
 	badgesIds: string[];
 	customNickname: string | null;
@@ -17,24 +16,88 @@ export type EnhancerUser = {
 	customFont: string | null;
 };
 
-export type EnhancerBadgeSize = "1x" | "2x" | "4x";
-
 export type EnhancerChannelDto = {
-	channelId: string;
+	channelId: string | null;
 	platform: Uppercase<PlatformType>;
-	playSoundsEnabled: boolean;
-	partner: boolean;
-	users: EnhancerUser[];
+	accounts: EnhancerAccount[];
 	badges: EnhancerBadge[];
 };
 
-export type EnhancerChannelErrorDto = {
-	status: number;
-	message: string;
+export type EnhancerAggregatePage = EnhancerChannelDto & {
+	page: number;
+	hasNextPage: boolean;
 };
 
-export type EnhancerResponseMap = {
-	channel: EnhancerChannelDto;
+export type EnhancerSubscription =
+	| { scope: "GLOBAL"; platform: Uppercase<PlatformType> }
+	| { scope: "CHANNEL" | "USER"; platform: Uppercase<PlatformType>; externalId: string };
+
+export type EnhancerMessageEvent = {
+	type: "message";
+	target: EnhancerSubscription;
+	name: string;
+	data?: unknown;
+	cursor: string;
+};
+
+export type EnhancerStateEvent =
+	| {
+			type: "badge.updated";
+			platform: Uppercase<PlatformType>;
+			badgeId: string;
+			channelExternalId?: string;
+			changes: {
+				sources?: Record<string, string>;
+				name?: string;
+				priority?: number;
+				status?: "ACTIVE" | "DISABLED" | "ARCHIVED";
+			};
+			cursor: string;
+	  }
+	| {
+			type: "badge-assignment.updated";
+			platform: Uppercase<PlatformType>;
+			userExternalId: string;
+			badgeId: string;
+			channelExternalId?: string;
+			status: "ACTIVE" | "DISABLED" | "ARCHIVED";
+			cursor: string;
+	  }
+	| {
+			type: "appearance.updated";
+			platform: Uppercase<PlatformType>;
+			userExternalId: string;
+			channelExternalId?: string;
+			changes: {
+				customNickname?: string | null;
+				customFont?: string | null;
+				hasGlow?: boolean;
+				status?: "ACTIVE" | "DISABLED" | "ARCHIVED";
+			};
+			cursor: string;
+	  }
+	| {
+			type: "sync.required";
+			topics: string[];
+			reason: "account.updated";
+			cursor: string;
+	  };
+
+export type EnhancerWebSocketMessage =
+	| { type: "connection.ready" }
+	| { type: "subscription.confirmed" | "subscription.removed" | "replay.complete"; topic: string }
+	| { type: "pong" }
+	| { type: "error"; code: string }
+	| { type: "sync.required"; topic: string }
+	| { error: { code: string; message: string } }
+	| EnhancerMessageEvent
+	| EnhancerStateEvent;
+
+export type EnhancerApiError = {
+	error: {
+		code: string;
+		message: string;
+	};
 };
 
 export type EnhancerStreamerWatchTimeData = {
