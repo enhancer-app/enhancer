@@ -125,6 +125,9 @@ export default class EnhancerApi {
 
 	private readonly handleMessage = (payload: EnhancerApiMessagePayload): void => {
 		if (payload.platform !== this.platform || payload.clientId !== this.clientId) return;
+		if (payload.message.target.scope === "CHANNEL" && payload.message.target.externalId !== this.currentChannelId) {
+			return;
+		}
 		this.emitter.emit("extension:enhancer-api-message", payload.message);
 	};
 
@@ -153,9 +156,12 @@ export default class EnhancerApi {
 	}
 
 	private readonly disconnect = (event: PageTransitionEvent): void => {
-		if (event.persisted) return;
 		void this.worker
-			.send("disconnectEnhancerApi", { platform: this.platform, clientId: this.clientId })
+			.send("disconnectEnhancerApi", {
+				platform: this.platform,
+				clientId: this.clientId,
+				preserveCursor: event.persisted,
+			})
 			.catch(() => {});
 	};
 

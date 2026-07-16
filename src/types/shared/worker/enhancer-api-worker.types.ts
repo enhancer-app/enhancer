@@ -21,16 +21,20 @@ export interface CachedPage {
 }
 
 export interface SubscriptionState {
+	topic: string;
+	platform: PlatformType;
 	scope: AggregateScope;
 	externalId?: string;
 	subscription: EnhancerSubscription;
-	topic?: string;
+	subscribers: Set<string>;
 	confirmed: boolean;
+	rejected: boolean;
 	requested: boolean;
 	active: boolean;
 	aggregate?: EnhancerChannelDto | null;
 	cursor?: string;
 	cursorLoaded: boolean;
+	cursorLoadPromise?: Promise<void>;
 	replaying: boolean;
 	recovering: boolean;
 	replayBuffer: Array<EnhancerMessageEvent | EnhancerStateEvent>;
@@ -43,20 +47,14 @@ export interface SubscriptionState {
 	processing: Promise<void>;
 }
 
-export interface EnhancerApiSession {
+export interface EnhancerApiClient {
 	tabId: number;
 	frameId: number;
 	clientId: string;
 	platform: PlatformType;
-	socket: WebSocket | null;
-	serverReady: boolean;
-	connectionPromise: Promise<void> | null;
-	heartbeat: ReturnType<typeof setInterval> | null;
-	reconnectTimer: ReturnType<typeof setTimeout> | null;
-	reconnectAttempt: number;
-	subscriptions: Map<AggregateScope, SubscriptionState>;
-	pageCache: Map<string, CachedPage>;
-	disposed: boolean;
+	topics: Set<string>;
+	channelTopic?: string;
+	generation: number;
 }
 
 export interface InitializeEnhancerApiPayload {
@@ -77,6 +75,7 @@ export interface GetEnhancerWatchTimePayload {
 export interface DisconnectEnhancerApiPayload {
 	platform: PlatformType;
 	clientId: string;
+	preserveCursor?: boolean;
 }
 
 export interface EnhancerApiUpdatedPayload {

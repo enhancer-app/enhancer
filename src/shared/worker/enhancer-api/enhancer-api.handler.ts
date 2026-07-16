@@ -32,8 +32,8 @@ export class EnhancerApiHandler extends MessageHandler {
 		}
 		if (sender?.tab?.id == null) throw new Error("Enhancer API requests require a browser tab");
 		if (this.action === "disconnectEnhancerApi") {
-			const { platform, clientId } = payload as DisconnectEnhancerApiPayload;
-			this.service.disconnect(sender.tab.id, sender.frameId ?? 0, clientId, platform);
+			const { platform, clientId, preserveCursor } = payload as DisconnectEnhancerApiPayload;
+			this.service.disconnect(sender.tab.id, sender.frameId ?? 0, clientId, platform, preserveCursor);
 			return { success: true };
 		}
 		if (this.action === "initializeEnhancerApi") {
