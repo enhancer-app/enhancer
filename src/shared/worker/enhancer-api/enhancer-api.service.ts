@@ -48,6 +48,7 @@ export class EnhancerApiService {
 		clientId: string,
 		platform: PlatformType,
 	): Promise<EnhancerChannelDto> {
+		this.logger.debug("Initializing client", { tabId, frameId, clientId, platform });
 		const client = this.registerClient(tabId, frameId, clientId, platform);
 		const state = this.subscribeClient(client, "GLOBAL");
 		const aggregate = await this.subscribeAndFetch(state);
@@ -63,6 +64,7 @@ export class EnhancerApiService {
 		externalId: string,
 	): Promise<EnhancerChannelDto | null> {
 		if (!externalId) throw new Error("Channel external ID is required");
+		this.logger.debug("Joining channel", { tabId, frameId, clientId, platform, externalId });
 		const client = this.registerClient(tabId, frameId, clientId, platform);
 		const topic = this.getTopic(platform, "CHANNEL", externalId);
 		if (client.channelTopic && client.channelTopic !== topic) this.unsubscribeClient(client, client.channelTopic);
@@ -148,10 +150,16 @@ export class EnhancerApiService {
 				processing: Promise.resolve(),
 			};
 			this.subscriptions.set(topic, state);
+			this.logger.debug("Created topic", { topic, subscriptionCount: this.subscriptions.size });
 		}
 		state.active = true;
 		state.subscribers.add(client.clientId);
 		client.topics.add(topic);
+		this.logger.debug("Subscribed client to topic", {
+			topic,
+			clientId: client.clientId,
+			clients: state.subscribers.size,
+		});
 		return state;
 	}
 
@@ -162,6 +170,7 @@ export class EnhancerApiService {
 		if (!state) return;
 		state.subscribers.delete(client.clientId);
 		if (state.subscribers.size > 0) return;
+		this.logger.debug("Removing unused topic", { topic });
 		if (this.pendingSubscription === state && !state.confirmed) this.closeConnection();
 		state.active = false;
 		this.unsubscribe(state);
@@ -174,6 +183,7 @@ export class EnhancerApiService {
 	private unregisterClient(clientId: string, preserveCursor = false): void {
 		const client = this.clients.get(clientId);
 		if (!client) return;
+		this.logger.debug("Unregistering client", { clientId, preserveCursor, topics: [...client.topics] });
 		for (const topic of [...client.topics]) this.unsubscribeClient(client, topic, preserveCursor);
 		this.clients.delete(clientId);
 	}
@@ -215,6 +225,7 @@ export class EnhancerApiService {
 			this.reconnectTimer = null;
 		}
 
+		this.logger.debug("Opening WebSocket", { url: EnhancerApiService.WEBSOCKET_URL });
 		this.connectionPromise = new Promise<void>((resolve, reject) => {
 			const socket = new WebSocket(EnhancerApiService.WEBSOCKET_URL);
 			this.socket = socket;
@@ -236,10 +247,12 @@ export class EnhancerApiService {
 					this.logger.warn("Invalid Enhancer WebSocket message:", error);
 					return;
 				}
+				this.logger.debug("Received WebSocket message", message);
 				if ("type" in message && message.type === "connection.ready") {
 					this.serverReady = true;
 					this.reconnectAttempt = 0;
 					this.startHeartbeat();
+					this.logger.debug("WebSocket ready", { topics: [...this.subscriptions.keys()] });
 					for (const state of this.subscriptions.values()) this.sendSubscription(state);
 					if (!settled) {
 						settled = true;
@@ -278,6 +291,7 @@ export class EnhancerApiService {
 		if (message.type === "subscription.confirmed") {
 			const state = this.subscriptions.get(message.topic) ?? this.pendingSubscription ?? undefined;
 			if (!state) return;
+			this.logger.debug("Subscription confirmed", { requestedTopic: state.topic, confirmedTopic: message.topic });
 			if (state.topic !== message.topic) this.renameTopic(state, message.topic);
 			state.confirmed = true;
 			state.rejected = false;
@@ -448,13 +462,13 @@ export class EnhancerApiService {
 		state.requested = true;
 		state.replaying = Boolean(state.cursor);
 		state.replayBuffer = [];
-		this.socket.send(
-			JSON.stringify({
-				type: "subscribe",
-				subscription: state.subscription,
-				...(state.cursor ? { after: state.cursor } : {}),
-			}),
-		);
+		const command = {
+			type: "subscribe",
+			subscription: state.subscription,
+			...(state.cursor ? { after: state.cursor } : {}),
+		};
+		this.logger.debug("Sending WebSocket subscription", { topic: state.topic, command });
+		this.socket.send(JSON.stringify(command));
 		this.scheduleConfirmationRetry(state);
 	}
 
@@ -466,7 +480,9 @@ export class EnhancerApiService {
 
 	private unsubscribe(state: SubscriptionState): void {
 		if (this.serverReady && this.socket?.readyState === WebSocket.OPEN) {
-			this.socket.send(JSON.stringify({ type: "unsubscribe", subscription: state.subscription }));
+			const command = { type: "unsubscribe", subscription: state.subscription };
+			this.logger.debug("Sending WebSocket unsubscribe", { topic: state.topic, command });
+			this.socket.send(JSON.stringify(command));
 		}
 		state.requested = false;
 		if (this.pendingSubscription === state) this.pendingSubscription = null;
@@ -480,6 +496,7 @@ export class EnhancerApiService {
 		state.confirmationRetry = setTimeout(() => {
 			state.confirmationRetry = null;
 			if (!state.active || state.confirmed || !this.serverReady) return;
+			this.logger.debug("Subscription confirmation timed out, reconnecting", { topic: state.topic });
 			this.closeConnection();
 		}, EnhancerApiService.CONFIRMATION_TIMEOUT_MS);
 	}
@@ -539,9 +556,11 @@ export class EnhancerApiService {
 			);
 			url.searchParams.set("page", page.toString());
 			const cached = this.pageCache.get(url.href);
+			this.logger.debug("Fetching aggregate page", { platform, externalId, page, cached: Boolean(cached) });
 			const response = await fetch(url, {
 				headers: cached ? { "If-None-Match": cached.etag } : undefined,
 			});
+			this.logger.debug("Aggregate page response", { platform, externalId, page, status: response.status });
 			if (response.status === 404) return null;
 			if (!response.ok && response.status !== 304) {
 				const body = (await response.json()) as EnhancerApiError;
@@ -593,6 +612,7 @@ export class EnhancerApiService {
 		state: SubscriptionState,
 		createMessage: (client: EnhancerApiClient) => WorkerBroadcast,
 	): Promise<void> {
+		this.logger.debug("Broadcasting topic update", { topic: state.topic, clients: state.subscribers.size });
 		const staleClients: Array<{ clientId: string; generation: number }> = [];
 		await Promise.all(
 			[...state.subscribers].map(async (clientId) => {
@@ -667,6 +687,7 @@ export class EnhancerApiService {
 
 	private handleSocketClose(socket: WebSocket): void {
 		if (this.socket && this.socket !== socket) return;
+		this.logger.debug("WebSocket closed", { activeTopics: [...this.subscriptions.keys()] });
 		this.serverReady = false;
 		this.socket = null;
 		this.pendingSubscription = null;
@@ -675,6 +696,7 @@ export class EnhancerApiService {
 		this.resetSubscriptions();
 		if (this.reconnectTimer || this.subscriptions.size === 0) return;
 		const delay = Math.min(1000 * 2 ** this.reconnectAttempt, 30_000) + Math.floor(Math.random() * 500);
+		this.logger.debug("Scheduling WebSocket reconnect", { delay, attempt: this.reconnectAttempt + 1 });
 		this.reconnectAttempt++;
 		this.reconnectTimer = setTimeout(() => {
 			this.reconnectTimer = null;

@@ -11,6 +11,7 @@ import type { PlatformType } from "$types/shared/worker/worker.types.ts";
 
 export default class WorkerBackground {
 	private readonly logger = new Logger({ context: "background" });
+	private readonly enhancerApiLogger = new Logger({ context: "enhancer-api-worker" });
 
 	private readonly settingsDatabase = new SettingsDatabase(
 		new Map<PlatformType, PlatformSettings>([
@@ -20,7 +21,7 @@ export default class WorkerBackground {
 	);
 	private readonly watchtimeDatabase = new WatchtimeDatabase();
 	private readonly watchtimeAccumulator = new WatchtimeAccumulator(this.watchtimeDatabase);
-	private readonly enhancerApiService = new EnhancerApiService(this.logger);
+	private readonly enhancerApiService = new EnhancerApiService(this.enhancerApiLogger);
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.settingsDatabase,
