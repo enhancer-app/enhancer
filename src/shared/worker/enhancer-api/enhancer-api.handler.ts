@@ -3,17 +3,12 @@ import type { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-ap
 import { MessageHandler } from "$shared/worker/message.handler.ts";
 import type {
 	DisconnectEnhancerApiPayload,
+	EnhancerApiAction,
 	GetEnhancerWatchTimePayload,
 	InitializeEnhancerApiPayload,
 	JoinEnhancerChannelPayload,
 } from "$types/shared/worker/enhancer-api-worker.types.ts";
 import type { WorkerApiActions } from "$types/shared/worker/worker.types.ts";
-
-type EnhancerApiAction =
-	| "initializeEnhancerApi"
-	| "joinEnhancerChannel"
-	| "getEnhancerWatchTime"
-	| "disconnectEnhancerApi";
 
 export class EnhancerApiHandler extends MessageHandler {
 	constructor(

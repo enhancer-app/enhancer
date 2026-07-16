@@ -10,53 +10,12 @@ import type {
 	EnhancerWebSocketMessage,
 } from "$types/apis/enhancer.apis.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
+import type {
+	AggregateScope,
+	EnhancerApiSession,
+	SubscriptionState,
+} from "$types/shared/worker/enhancer-api-worker.types.ts";
 import type { WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
-
-type AggregateScope = "GLOBAL" | "CHANNEL";
-
-interface CachedPage {
-	etag: string;
-	body: EnhancerAggregatePage;
-}
-
-interface SubscriptionState {
-	scope: AggregateScope;
-	externalId?: string;
-	subscription: EnhancerSubscription;
-	topic?: string;
-	confirmed: boolean;
-	requested: boolean;
-	active: boolean;
-	aggregate?: EnhancerChannelDto | null;
-	cursor?: string;
-	cursorLoaded: boolean;
-	replaying: boolean;
-	recovering: boolean;
-	replayBuffer: Array<EnhancerMessageEvent | EnhancerStateEvent>;
-	confirmationRetry: ReturnType<typeof setTimeout> | null;
-	dirty: boolean;
-	broadcastRequested: boolean;
-	refreshPromise?: Promise<EnhancerChannelDto | null>;
-	confirmationWaiters: Set<() => void>;
-	seenCursors: Set<string>;
-	processing: Promise<void>;
-}
-
-interface EnhancerApiSession {
-	tabId: number;
-	frameId: number;
-	clientId: string;
-	platform: PlatformType;
-	socket: WebSocket | null;
-	serverReady: boolean;
-	connectionPromise: Promise<void> | null;
-	heartbeat: ReturnType<typeof setInterval> | null;
-	reconnectTimer: ReturnType<typeof setTimeout> | null;
-	reconnectAttempt: number;
-	subscriptions: Map<AggregateScope, SubscriptionState>;
-	pageCache: Map<string, CachedPage>;
-	disposed: boolean;
-}
 
 export class EnhancerApiService {
 	private static readonly HTTP_BASE_URL = "https://api.enhancer.at";
