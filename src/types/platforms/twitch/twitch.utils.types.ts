@@ -19,6 +19,7 @@ export type ChatControllerComponent = {
 		channelID: string;
 		messageHandlerAPI: {
 			addMessageHandler: (callback: (message: TwitchChatMessage) => void) => void;
+			removeMessageHandler?: (callback: (message: TwitchChatMessage) => void) => void;
 		};
 	};
 };

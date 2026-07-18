@@ -1,6 +1,8 @@
+import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchChatMessageEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
+import { render } from "preact";
 
 export default class ChatBadgesModule extends TwitchModule {
 	config: TwitchModuleConfig = {
@@ -16,7 +18,7 @@ export default class ChatBadgesModule extends TwitchModule {
 		enabled: () => this.settings().chatBadgesEnabled,
 	};
 
-	private async handleMessage({ message, element }: TwitchChatMessageEvent) {
+	private async handleMessage({ message, element, type }: TwitchChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
 		const badgeList =
 			element.querySelector(".seventv-chat-user-badge-list") ||
@@ -27,7 +29,10 @@ export default class ChatBadgesModule extends TwitchModule {
 		const userBadges = this.enhancerApi().findUserBadgesForCurrentChannel(message.user.userID) ?? [];
 		const badgeIds = new Set(userBadges.map((badge) => badge.badgeId));
 		badgeList.querySelectorAll<HTMLElement>(".enhancer-badges").forEach((badge) => {
-			if (!badge.dataset.enhancerBadge || !badgeIds.has(badge.dataset.enhancerBadge)) badge.remove();
+			if (!badge.dataset.enhancerBadge || !badgeIds.has(badge.dataset.enhancerBadge)) {
+				render(null, badge);
+				badge.remove();
+			}
 		});
 
 		for (const badge of userBadges) {
@@ -35,19 +40,33 @@ export default class ChatBadgesModule extends TwitchModule {
 			if (!lowestSourceUrl) throw new Error("Badge is missing a source url");
 			if (badgeList.querySelector(`[data-enhancer-badge="${CSS.escape(badge.badgeId)}"]`)) continue;
 
-			const badgeImage = document.createElement("img");
-			badgeImage.classList.add("enhancer-badges");
-			badgeImage.dataset.enhancerBadge = badge.badgeId;
-			badgeImage.src = lowestSourceUrl;
-			badgeImage.alt = badge.name;
-			badgeImage.title = badge.name;
-			badgeImage.width = 18;
-			badgeImage.height = 18;
-			badgeImage.style.marginTop = "2px";
-			badgeImage.style.marginRight = ".25em";
-			badgeImage.style.verticalAlign = "baseline";
+			const badgeWrapper = document.createElement("span");
+			badgeWrapper.classList.add("enhancer-badges");
+			badgeWrapper.dataset.enhancerBadge = badge.badgeId;
+			if (type === "7TV") {
+				badgeWrapper.style.display = "inline-block";
+				badgeWrapper.style.marginRight = ".25em";
+				badgeWrapper.style.verticalAlign = "baseline";
+			}
+			const size = type === "7TV" ? 20 : 18;
+			render(
+				<TooltipComponent content={<p>{badge.name}</p>} position="right">
+					<img
+						src={lowestSourceUrl}
+						alt={badge.name}
+						width={size}
+						height={size}
+						style={{
+							marginRight: type === "7TV" ? 0 : ".25em",
+							marginBottom: type === "7TV" ? 0 : "1.5px",
+							verticalAlign: "middle",
+						}}
+					/>
+				</TooltipComponent>,
+				badgeWrapper,
+			);
 
-			badgeList.insertBefore(badgeImage, badgeList.firstChild);
+			badgeList.insertBefore(badgeWrapper, badgeList.firstChild);
 		}
 	}
 }

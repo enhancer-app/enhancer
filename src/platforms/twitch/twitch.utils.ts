@@ -183,19 +183,6 @@ export default class TwitchUtils {
 		)?.memoizedProps.message;
 	}
 
-	getSevenTvChatMessage(message: Element) {
-		const components = new Set<any>();
-		for (const element of [message, ...message.querySelectorAll("*")]) {
-			let component = (element as any).__vueParentComponent;
-			while (component && !components.has(component)) {
-				components.add(component);
-				const messageData = component.props?.msgData ?? component.vnode?.props?.msgData;
-				if (messageData && typeof messageData === "object") return messageData as TwitchChatMessage;
-				component = component.parent;
-			}
-		}
-	}
-
 	getAutoCompleteHandler() {
 		return this.reactUtils.findReactChildren<ChatInputComponent>(
 			this.reactUtils.getReactInstance(document.querySelector(".chat-input__textarea")),

@@ -1,6 +1,8 @@
 import KickModule from "$kick/kick.module.ts";
+import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import type { KickChatMessageEvent } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
+import { render } from "preact";
 
 export default class ChatBadgesModule extends KickModule {
 	config: KickModuleConfig = {
@@ -28,7 +30,10 @@ export default class ChatBadgesModule extends KickModule {
 		const badgeIds = new Set(userBadges.map((badge) => badge.badgeId));
 		for (const container of badgesContainers) {
 			container?.querySelectorAll<HTMLElement>(".enhancer-badges").forEach((badge) => {
-				if (!badge.dataset.enhancerBadge || !badgeIds.has(badge.dataset.enhancerBadge)) badge.remove();
+				if (!badge.dataset.enhancerBadge || !badgeIds.has(badge.dataset.enhancerBadge)) {
+					render(null, badge);
+					badge.remove();
+				}
 			});
 		}
 
@@ -38,17 +43,19 @@ export default class ChatBadgesModule extends KickModule {
 
 			for (const container of badgesContainers) {
 				if (!container || container.querySelector(`[data-enhancer-badge="${CSS.escape(badge.badgeId)}"]`)) continue;
-				const badgeImage = document.createElement("img");
-				badgeImage.classList.add("enhancer-badges");
-				badgeImage.dataset.enhancerBadge = badge.badgeId;
-				badgeImage.src = lowestSourceUrl;
-				badgeImage.alt = badge.name;
-				badgeImage.title = badge.name;
-				badgeImage.width = 18;
-				badgeImage.height = 18;
-				badgeImage.style.alignSelf = "center";
-				badgeImage.style.marginRight = ".25em";
-				container.insertBefore(badgeImage, container.firstChild);
+				const badgeWrapper = document.createElement("span");
+				badgeWrapper.classList.add("enhancer-badges");
+				badgeWrapper.dataset.enhancerBadge = badge.badgeId;
+				badgeWrapper.style.alignSelf = "center";
+				badgeWrapper.style.alignItems = "center";
+				badgeWrapper.style.display = "inline-flex";
+				render(
+					<TooltipComponent content={<p>{badge.name}</p>} position="right" delay={200}>
+						<img src={lowestSourceUrl} alt={badge.name} width={18} height={18} style={{ marginRight: ".25em" }} />
+					</TooltipComponent>,
+					badgeWrapper,
+				);
+				container.insertBefore(badgeWrapper, container.firstChild);
 			}
 		}
 	}
