@@ -25,7 +25,7 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 		if (!(await this.isModuleEnabled())) return;
 		const usernameElements = [
 			...element.querySelectorAll<HTMLElement>(".ntv__chat-message__username"),
-			...element.querySelectorAll<HTMLElement>(`[title='${message.sender.slug}']`),
+			...element.querySelectorAll<HTMLElement>('button[data-prevent-expand="true"]'),
 		];
 		if (usernameElements.length < 1) return;
 
@@ -34,6 +34,7 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 		if (!userCustomization) return;
 
 		usernameElements.forEach((usernameElement) => {
+			usernameElement.dataset.enhancerUsername = message.sender.slug.toLowerCase();
 			if (userCustomization.customNickname) {
 				usernameElement.innerText = userCustomization.customNickname;
 			}

@@ -1,9 +1,6 @@
 import KickModule from "$kick/kick.module.ts";
-import { BadgeComponent } from "$shared/components/badge/badge.component.tsx";
-import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import type { KickChatMessageEvent } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
-import { render } from "preact";
 
 export default class ChatFixAutoScrollModule extends KickModule {
 	config: KickModuleConfig = {
@@ -18,7 +15,8 @@ export default class ChatFixAutoScrollModule extends KickModule {
 		],
 	};
 
-	private async handleMessage() {
+	private async handleMessage({ isRerender }: KickChatMessageEvent) {
+		if (isRerender) return;
 		await this.commonUtils().delay(3);
 		await this.kickUtils().scrollToBottomOnChat();
 	}

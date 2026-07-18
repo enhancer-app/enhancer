@@ -1,9 +1,6 @@
 import KickModule from "$kick/kick.module.ts";
-import { BadgeComponent } from "$shared/components/badge/badge.component.tsx";
-import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import type { KickChatMessageEvent } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
-import { render } from "preact";
 
 export default class ChatBadgesModule extends KickModule {
 	config: KickModuleConfig = {
@@ -19,46 +16,40 @@ export default class ChatBadgesModule extends KickModule {
 		enabled: () => this.settings().chatBadgesEnabled,
 	};
 
-	private async handleMessage({ message, element, isUsingNTV }: KickChatMessageEvent) {
+	private async handleMessage({ message, element }: KickChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
-		const userBadges = this.enhancerApi().findUserBadgesForCurrentChannel(message.sender.id.toString());
-		if (!userBadges?.length) return;
-
 		const badgesContainers = [
 			element.querySelector(".ntv__chat-message__badges"),
-			element.querySelector(`button[title="${message.sender.username}"]`)?.parentElement,
+			element.querySelector('button[data-prevent-expand="true"]')?.parentElement,
 		].filter(Boolean);
 
 		if (!badgesContainers.length) return;
+		const userBadges = this.enhancerApi().findUserBadgesForCurrentChannel(message.sender.id.toString()) ?? [];
+		const badgeIds = new Set(userBadges.map((badge) => badge.badgeId));
+		for (const container of badgesContainers) {
+			container?.querySelectorAll<HTMLElement>(".enhancer-badges").forEach((badge) => {
+				if (!badge.dataset.enhancerBadge || !badgeIds.has(badge.dataset.enhancerBadge)) badge.remove();
+			});
+		}
 
 		for (const badge of userBadges) {
-			const badgeWrapper = document.createElement("div");
-			badgeWrapper.classList.add("enhancer-badges");
-			badgeWrapper.style.alignSelf = "center";
-
 			const lowestSourceUrl = this.commonUtils().getLowestBadgeSourceUrl(badge.sources);
 			if (!lowestSourceUrl) throw new Error("Badge is missing a source url");
-			render(
-				<TooltipComponent content={<p>{badge.name}</p>} position="right" delay={200}>
-					<BadgeComponent sourceUrl={lowestSourceUrl} name={badge.name} marginRight=".25em" marginTop="2px" />
-				</TooltipComponent>,
-				badgeWrapper,
-			);
 
 			for (const container of badgesContainers) {
-				if (container) {
-					container.insertBefore(badgeWrapper.cloneNode(true), container.firstChild);
-				}
+				if (!container || container.querySelector(`[data-enhancer-badge="${CSS.escape(badge.badgeId)}"]`)) continue;
+				const badgeImage = document.createElement("img");
+				badgeImage.classList.add("enhancer-badges");
+				badgeImage.dataset.enhancerBadge = badge.badgeId;
+				badgeImage.src = lowestSourceUrl;
+				badgeImage.alt = badge.name;
+				badgeImage.title = badge.name;
+				badgeImage.width = 18;
+				badgeImage.height = 18;
+				badgeImage.style.alignSelf = "center";
+				badgeImage.style.marginRight = ".25em";
+				container.insertBefore(badgeImage, container.firstChild);
 			}
 		}
-	}
-
-	async initialize(): Promise<void> {
-		this.commonUtils().createGlobalStyle(`
-			.ntv__chat-message__badge {
-				width: 18px;
-				height: 18px;
-			}
-		`);
 	}
 }

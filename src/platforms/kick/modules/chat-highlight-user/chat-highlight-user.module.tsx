@@ -16,6 +16,7 @@ export default class ChatHighlightUserModule extends KickModule {
 		"rgba(255, 159, 67, 0.1)",
 	];
 	private currentColorIndex = 0;
+	private readonly listenerControllers = new WeakMap<HTMLElement, AbortController>();
 
 	readonly config: KickModuleConfig = {
 		name: "chat-highlight-user",
@@ -30,6 +31,9 @@ export default class ChatHighlightUserModule extends KickModule {
 	};
 
 	private handleMessage({ message, element }: KickChatMessageEvent) {
+		const messageElement = element as HTMLElement;
+		if (messageElement.matches(":hover")) this.removeHighlightedUserMentions();
+		this.listenerControllers.get(messageElement)?.abort();
 		const mentionRegex = /@(\w+)/g;
 		const mentions = [...message.content.matchAll(mentionRegex)];
 		if (mentions.length === 0) return;
@@ -37,9 +41,14 @@ export default class ChatHighlightUserModule extends KickModule {
 		const mentionedUsernames = mentions.map((match) => match[1].toLowerCase());
 		this.logger.debug(`Highlighting ${mentionedUsernames.length} users: ${mentionedUsernames.join(", ")}`);
 
-		const messageElement = element as HTMLElement;
-		messageElement.addEventListener("mouseenter", () => this.highlightUserMentions(mentionedUsernames));
-		messageElement.addEventListener("mouseleave", this.removeHighlightedUserMentions.bind(this));
+		const controller = new AbortController();
+		this.listenerControllers.set(messageElement, controller);
+		messageElement.addEventListener("mouseenter", () => this.highlightUserMentions(mentionedUsernames), {
+			signal: controller.signal,
+		});
+		messageElement.addEventListener("mouseleave", this.removeHighlightedUserMentions.bind(this), {
+			signal: controller.signal,
+		});
 	}
 
 	private highlightUserMentions(usernames: string[]): void {
@@ -58,12 +67,12 @@ export default class ChatHighlightUserModule extends KickModule {
 		const chatMessages = document.querySelectorAll("#channel-chatroom .ntv__chat-message, div[data-index]");
 		chatMessages.forEach((messageElement) => {
 			const authorElement =
-				messageElement.querySelector(".ntv__chat-message__username") || messageElement.querySelector("button[title]");
+				messageElement.querySelector(".ntv__chat-message__username") ||
+				messageElement.querySelector('button[data-prevent-expand="true"]');
 			if (!authorElement) return;
 
-			const authorName = authorElement.textContent?.toLowerCase() || "";
-			const title = (authorElement as HTMLElement).title?.toLowerCase() || "";
-			const username = authorName || title;
+			const username =
+				(authorElement as HTMLElement).dataset.enhancerUsername || authorElement.textContent?.toLowerCase() || "";
 
 			if (!usernames.includes(username)) return;
 			const color = highlightedUsers.get(username);
