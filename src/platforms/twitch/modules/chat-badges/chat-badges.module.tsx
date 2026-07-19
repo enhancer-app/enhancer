@@ -48,14 +48,13 @@ export default class ChatBadgesModule extends TwitchModule {
 				badgeWrapper.style.marginRight = ".25em";
 				badgeWrapper.style.verticalAlign = "baseline";
 			}
-			const size = type === "7TV" ? 20 : 18;
 			render(
 				<TooltipComponent content={<p>{badge.name}</p>} position="right">
 					<img
 						src={lowestSourceUrl}
 						alt={badge.name}
-						width={size}
-						height={size}
+						width={18}
+						height={18}
 						style={{
 							marginRight: type === "7TV" ? 0 : ".25em",
 							marginBottom: type === "7TV" ? 0 : "2.2px",
