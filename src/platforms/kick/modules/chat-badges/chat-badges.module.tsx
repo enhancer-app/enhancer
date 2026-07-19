@@ -39,7 +39,10 @@ export default class ChatBadgesModule extends KickModule {
 
 		for (const badge of userBadges) {
 			const lowestSourceUrl = this.commonUtils().getLowestBadgeSourceUrl(badge.sources);
-			if (!lowestSourceUrl) throw new Error("Badge is missing a source url");
+			if (!lowestSourceUrl) {
+				this.logger.warn(`Badge ${badge.badgeId} is missing a source url`);
+				continue;
+			}
 			const size = isUsingNTV ? 16.38 : 19.38;
 
 			for (const container of badgesContainers) {

@@ -76,7 +76,9 @@ export default class ChatModule extends KickModule {
 			if (element.classList.contains("ntv__chat-message--unrendered")) {
 				const marker = element.getAttribute("enhancer-message-handled");
 				if (marker && !marker.endsWith(":PENDING")) {
-					element.setAttribute("enhancer-message-handled", `${marker.slice(0, marker.indexOf(":"))}:PENDING`);
+					const colonIndex = marker.lastIndexOf(":");
+					const baseMarker = colonIndex === -1 ? marker : marker.slice(0, colonIndex);
+					element.setAttribute("enhancer-message-handled", `${baseMarker}:PENDING`);
 				}
 				return;
 			}
@@ -102,16 +104,19 @@ export default class ChatModule extends KickModule {
 		if (this.animationFrame !== undefined) return;
 		this.animationFrame = requestAnimationFrame(() => {
 			this.animationFrame = undefined;
-			for (const message of this.pendingMessages) this.handleMessage(message);
+			const messages = Array.from(this.pendingMessages);
 			this.pendingMessages.clear();
+			for (const message of messages) this.handleMessage(message);
 		});
 	}
 
 	private scheduleMessagesFromNode(node: Node) {
 		if (!(node instanceof Element)) return;
 		const parentMessage = node.closest("div[data-index]");
-		if (parentMessage) this.scheduleMessage(parentMessage);
-		if (node.matches("div[data-index]")) this.scheduleMessage(node);
+		if (parentMessage) {
+			this.scheduleMessage(parentMessage);
+			return;
+		}
 		node.querySelectorAll("div[data-index]").forEach((message) => this.scheduleMessage(message));
 	}
 

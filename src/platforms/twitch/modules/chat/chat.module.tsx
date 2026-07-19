@@ -17,6 +17,8 @@ export default class ChatModule extends TwitchModule {
 	private observer: MutationObserver | undefined;
 	private messageHandlerApi: ChatControllerComponent["props"]["messageHandlerAPI"] | undefined;
 	private messageHandler: ChatControllerComponent["props"]["messageHandlerAPI"]["handleMessage"] | undefined;
+	private messageHandlerGetter: PropertyDescriptor["get"];
+	private readonly emittedMessages = new WeakSet<TwitchChatMessage>();
 	private readonly sevenTvMessageQueue = new QueueFactory<TwitchChatMessage & QueueValue>().create({ expire: 300 });
 
 	readonly config: TwitchModuleConfig = {
@@ -111,12 +113,12 @@ export default class ChatModule extends TwitchModule {
 	}
 
 	private handleMessages(node: Element, selector: string, type: ChatType, isReplay: boolean) {
-		const elements = new Set<Element>();
 		const parentMessage = node.closest(selector);
-		if (parentMessage) elements.add(parentMessage);
-		if (node.matches(selector)) elements.add(node);
-		node.querySelectorAll(selector).forEach((element) => elements.add(element));
-		elements.forEach((element) => this.handleMessage(element, type, isReplay));
+		if (parentMessage) {
+			this.handleMessage(parentMessage, type, isReplay);
+			return;
+		}
+		node.querySelectorAll(selector).forEach((element) => this.handleMessage(element, type, isReplay));
 	}
 
 	private handleMessage(element: Element, type: ChatType, isReplay: boolean) {
@@ -132,11 +134,13 @@ export default class ChatModule extends TwitchModule {
 		const marker = `${type}:${message.nonce || message.id}`;
 		if (element.getAttribute("enhancer-message-handled") === marker) return;
 		element.setAttribute("enhancer-message-handled", marker);
+		const wasEmitted = this.emittedMessages.has(message);
+		this.emittedMessages.add(message);
 		this.emitter.emit("twitch:chatMessage", {
 			element,
 			message: { ...message, createdAt: message.createdAt ?? Date.now() },
 			type,
-			isReplay,
+			isReplay: isReplay || wasEmitted,
 		});
 	}
 
@@ -145,27 +149,55 @@ export default class ChatModule extends TwitchModule {
 	) {
 		if (!document.querySelector(ChatModule.SEVENTV_CHAT_SELECTOR)) return;
 		if (!messageHandlerApi) return;
-		if (messageHandlerApi === this.messageHandlerApi && messageHandlerApi.handleMessage === this.messageHandler) return;
-		const originalHandler = messageHandlerApi.handleMessage;
 		const descriptor = Object.getOwnPropertyDescriptor(messageHandlerApi, "handleMessage");
-		if (typeof originalHandler !== "function" || (descriptor && !descriptor.configurable)) return;
+		if (
+			messageHandlerApi === this.messageHandlerApi &&
+			((this.messageHandlerGetter && descriptor?.get === this.messageHandlerGetter) ||
+				(this.messageHandler && descriptor?.value === this.messageHandler))
+		) {
+			return;
+		}
+		if (descriptor && !descriptor.configurable) return;
 
 		const chatModule = this;
-		const messageHandler = function (
-			this: ChatControllerComponent["props"]["messageHandlerAPI"],
-			message: Parameters<typeof originalHandler>[0],
-		) {
-			chatModule.bufferSevenTvMessage(message);
-			return originalHandler.call(this, message);
+		const wrapHandler = (originalHandler: ChatControllerComponent["props"]["messageHandlerAPI"]["handleMessage"]) => {
+			return function (
+				this: ChatControllerComponent["props"]["messageHandlerAPI"],
+				...messages: Parameters<typeof originalHandler>
+			) {
+				for (const message of messages) chatModule.bufferSevenTvMessage(message);
+				return originalHandler.apply(this, messages);
+			};
 		};
+
+		if (descriptor?.get) {
+			const originalGetter = descriptor.get;
+			const messageHandlerGetter = function (this: ChatControllerComponent["props"]["messageHandlerAPI"]) {
+				const originalHandler = originalGetter.call(this);
+				return typeof originalHandler === "function" ? wrapHandler(originalHandler) : originalHandler;
+			};
+			Object.defineProperty(messageHandlerApi, "handleMessage", {
+				...descriptor,
+				get: messageHandlerGetter,
+			});
+			this.messageHandlerApi = messageHandlerApi;
+			this.messageHandler = undefined;
+			this.messageHandlerGetter = messageHandlerGetter;
+			return;
+		}
+
+		const originalHandler = messageHandlerApi.handleMessage;
+		if (typeof originalHandler !== "function") return;
+		const messageHandler = wrapHandler(originalHandler);
 		Object.defineProperty(messageHandlerApi, "handleMessage", {
 			configurable: true,
 			enumerable: descriptor?.enumerable ?? false,
 			value: messageHandler,
-			writable: true,
+			writable: descriptor?.writable ?? true,
 		});
 		this.messageHandlerApi = messageHandlerApi;
 		this.messageHandler = messageHandler;
+		this.messageHandlerGetter = undefined;
 	}
 
 	private bufferSevenTvMessage(rawMessage: TwitchChatMessage) {
@@ -205,7 +237,7 @@ export default class ChatModule extends TwitchModule {
 	private getSevenTvMessage(element: Element) {
 		const id = element.getAttribute("msg-id");
 		if (!id) return;
-		const queuedMessage = this.sevenTvMessageQueue.getAndRemove(id);
+		const queuedMessage = this.sevenTvMessageQueue.get(id);
 		if (queuedMessage) {
 			if (queuedMessage.nonce) this.sevenTvMessageQueue.remove(queuedMessage.nonce);
 			return queuedMessage;

@@ -32,7 +32,8 @@ export default class ChatHighlightUserModule extends KickModule {
 
 	private handleMessage({ message, element }: KickChatMessageEvent) {
 		const messageElement = element as HTMLElement;
-		if (messageElement.matches(":hover")) this.removeHighlightedUserMentions();
+		const isHovered = messageElement.matches(":hover");
+		if (isHovered) this.removeHighlightedUserMentions();
 		this.listenerControllers.get(messageElement)?.abort();
 		const mentionRegex = /@(\w+)/g;
 		const mentions = [...message.content.matchAll(mentionRegex)];
@@ -49,6 +50,7 @@ export default class ChatHighlightUserModule extends KickModule {
 		messageElement.addEventListener("mouseleave", this.removeHighlightedUserMentions.bind(this), {
 			signal: controller.signal,
 		});
+		if (isHovered) this.highlightUserMentions(mentionedUsernames);
 	}
 
 	private highlightUserMentions(usernames: string[]): void {
