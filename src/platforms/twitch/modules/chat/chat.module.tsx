@@ -56,13 +56,6 @@ export default class ChatModule extends TwitchModule {
 
 	private run(elements: Element[]) {
 		if (elements.length > 1) this.logger.warn("Found multiple chat elements");
-		this.logSevenTvDebug("setup", {
-			matchedRoots: elements.length,
-			nativeRoots: document.querySelectorAll(ChatModule.TWITCHTV_CHAT_SELECTOR).length,
-			sevenTvRoots: document.querySelectorAll(ChatModule.SEVENTV_CHAT_SELECTOR).length,
-			sevenTvNativeRoots: document.querySelectorAll(ChatModule.SEVENTV_NATIVE_CHAT_SELECTOR).length,
-			sevenTvRows: document.querySelectorAll(ChatModule.SEVENTV_MESSAGE_SELECTOR).length,
-		});
 		this.subscribeToSevenTvMessages();
 		this.createObserver([
 			...document.querySelectorAll(ChatModule.TWITCHTV_CHAT_SELECTOR),
@@ -94,12 +87,6 @@ export default class ChatModule extends TwitchModule {
 
 	private createObserver(elements: Element[]) {
 		this.observer?.disconnect();
-		this.logSevenTvDebug("observer-started", {
-			roots: elements.map((element) => ({
-				className: element.className,
-				tagName: element.tagName,
-			})),
-		});
 		this.observer = new MutationObserver((list) => {
 			for (const mutation of list) {
 				if (mutation.type === "attributes") this.handleAddedNode(mutation.target);
@@ -129,39 +116,13 @@ export default class ChatModule extends TwitchModule {
 		if (parentMessage) elements.add(parentMessage);
 		if (node.matches(selector)) elements.add(node);
 		node.querySelectorAll(selector).forEach((element) => elements.add(element));
-		if (type === "7TV") {
-			for (const element of elements) {
-				this.logSevenTvDebug("dom-row", {
-					isReplay,
-					marker: element.getAttribute("enhancer-message-handled"),
-					messageId: element.getAttribute("msg-id"),
-				});
-			}
-		}
 		elements.forEach((element) => this.handleMessage(element, type, isReplay));
 	}
 
 	private handleMessage(element: Element, type: ChatType, isReplay: boolean) {
 		const message = type === "7TV" ? this.getSevenTvMessage(element) : this.twitchUtils().getChatMessage(element);
-		if (!message?.id) {
-			if (type === "7TV") {
-				this.logSevenTvDebug("message-rejected", {
-					messageId: element.getAttribute("msg-id"),
-					reason: "model-not-found",
-				});
-			}
-			return;
-		}
-		if (!ChatModule.VALID_MESSAGE_TYPES_IDS.includes(message.type ?? 0)) {
-			if (type === "7TV") {
-				this.logSevenTvDebug("message-rejected", {
-					messageId: message.id,
-					reason: "invalid-type",
-					type: message.type,
-				});
-			}
-			return;
-		}
+		if (!message?.id) return;
+		if (!ChatModule.VALID_MESSAGE_TYPES_IDS.includes(message.type ?? 0)) return;
 		if (type === "TWITCH" && document.querySelector(ChatModule.SEVENTV_CHAT_SELECTOR)) {
 			const sevenTvElement = this.findSevenTvMessageElement(message.id);
 			if (sevenTvElement) this.handleMessage(sevenTvElement, "7TV", isReplay);
@@ -169,19 +130,8 @@ export default class ChatModule extends TwitchModule {
 		}
 
 		const marker = `${type}:${message.nonce || message.id}`;
-		if (element.getAttribute("enhancer-message-handled") === marker) {
-			if (type === "7TV") this.logSevenTvDebug("message-skipped", { marker, reason: "duplicate" });
-			return;
-		}
+		if (element.getAttribute("enhancer-message-handled") === marker) return;
 		element.setAttribute("enhancer-message-handled", marker);
-		if (type === "7TV") {
-			this.logSevenTvDebug("emit", {
-				isReplay,
-				marker,
-				messageId: message.id,
-				userId: message.user.userID,
-			});
-		}
 		this.emitter.emit("twitch:chatMessage", {
 			element,
 			message: { ...message, createdAt: message.createdAt ?? Date.now() },
@@ -193,37 +143,18 @@ export default class ChatModule extends TwitchModule {
 	private subscribeToSevenTvMessages(
 		messageHandlerApi = this.twitchUtils().getChatController()?.props.messageHandlerAPI,
 	) {
-		if (!document.querySelector(ChatModule.SEVENTV_CHAT_SELECTOR)) {
-			this.logSevenTvDebug("api-subscribe-skipped", { reason: "7tv-root-missing" });
-			return;
-		}
-		if (!messageHandlerApi) {
-			this.logSevenTvDebug("api-subscribe-skipped", { reason: "api-missing" });
-			return;
-		}
-		if (messageHandlerApi === this.messageHandlerApi && messageHandlerApi.handleMessage === this.messageHandler) {
-			this.logSevenTvDebug("api-subscribe-skipped", { reason: "already-subscribed" });
-			return;
-		}
+		if (!document.querySelector(ChatModule.SEVENTV_CHAT_SELECTOR)) return;
+		if (!messageHandlerApi) return;
+		if (messageHandlerApi === this.messageHandlerApi && messageHandlerApi.handleMessage === this.messageHandler) return;
 		const originalHandler = messageHandlerApi.handleMessage;
 		const descriptor = Object.getOwnPropertyDescriptor(messageHandlerApi, "handleMessage");
-		if (typeof originalHandler !== "function" || (descriptor && !descriptor.configurable)) {
-			this.logSevenTvDebug("api-subscribe-skipped", { reason: "handle-message-unavailable" });
-			return;
-		}
+		if (typeof originalHandler !== "function" || (descriptor && !descriptor.configurable)) return;
 
 		const chatModule = this;
 		const messageHandler = function (
 			this: ChatControllerComponent["props"]["messageHandlerAPI"],
 			message: Parameters<typeof originalHandler>[0],
 		) {
-			const wrappedMessage = (message as any).message;
-			chatModule.logSevenTvDebug("api-message", {
-				id: message.id,
-				nonce: message.nonce,
-				type: message.type,
-				wrappedId: typeof wrappedMessage === "object" ? wrappedMessage?.id : undefined,
-			});
 			chatModule.bufferSevenTvMessage(message);
 			return originalHandler.call(this, message);
 		};
@@ -235,18 +166,6 @@ export default class ChatModule extends TwitchModule {
 		});
 		this.messageHandlerApi = messageHandlerApi;
 		this.messageHandler = messageHandler;
-		this.logSevenTvDebug("api-intercepted", {
-			handleMessage: descriptor
-				? {
-						configurable: descriptor.configurable,
-						enumerable: descriptor.enumerable,
-						hasGetter: typeof descriptor.get === "function",
-						hasSetter: typeof descriptor.set === "function",
-						valueType: typeof descriptor.value,
-					}
-				: null,
-			keys: Object.keys(messageHandlerApi),
-		});
 	}
 
 	private bufferSevenTvMessage(rawMessage: TwitchChatMessage) {
@@ -255,12 +174,6 @@ export default class ChatModule extends TwitchModule {
 			wrappedMessage && typeof wrappedMessage === "object" && "id" in wrappedMessage && "user" in wrappedMessage;
 		const message = isWrappedMessage ? (wrappedMessage as TwitchChatMessage) : rawMessage;
 		const createdAt = Date.now();
-		this.logSevenTvDebug("buffer-message", {
-			id: message.id,
-			isWrappedMessage: !!isWrappedMessage,
-			nonce: message.nonce,
-			type: message.type,
-		});
 
 		if (ChatModule.VALID_MESSAGE_TYPES_IDS.includes(message.type) || isWrappedMessage) {
 			if (message.nonce) {
@@ -275,22 +188,13 @@ export default class ChatModule extends TwitchModule {
 
 		if (message.type !== ChatModule.LINK_MESSAGE_ID || (!message.nonce && !message.id)) return;
 		const queuedMessage = this.sevenTvMessageQueue.getAndRemove(message.nonce);
-		if (!queuedMessage || !message.id) {
-			this.logSevenTvDebug("link-message-rejected", {
-				finalId: message.id,
-				nonce: message.nonce,
-				reason: queuedMessage ? "final-id-missing" : "nonce-not-found",
-			});
-			return;
-		}
+		if (!queuedMessage || !message.id) return;
 		this.sevenTvMessageQueue.addByValue({ ...queuedMessage, id: message.id, queueKey: message.id });
-		this.logSevenTvDebug("link-message-finalized", { finalId: message.id, nonce: message.nonce });
 		this.processSevenTvMessage(message.id);
 	}
 
 	private processSevenTvMessage(id: string) {
 		const element = this.findSevenTvMessageElement(id);
-		this.logSevenTvDebug("process-buffered-message", { domRowFound: !!element, messageId: id });
 		if (element) this.handleMessage(element, "7TV", false);
 	}
 
@@ -304,24 +208,13 @@ export default class ChatModule extends TwitchModule {
 		const queuedMessage = this.sevenTvMessageQueue.getAndRemove(id);
 		if (queuedMessage) {
 			if (queuedMessage.nonce) this.sevenTvMessageQueue.remove(queuedMessage.nonce);
-			this.logSevenTvDebug("resolve", { messageId: id, source: "queue" });
 			return queuedMessage;
 		}
 
 		const nativeElements = document.querySelectorAll(ChatModule.TWITCHTV_MESSAGE_SELECTOR);
 		for (const nativeElement of nativeElements) {
 			const message = this.twitchUtils().getChatMessage(nativeElement);
-			if (message?.id === id) {
-				this.logSevenTvDebug("resolve", { messageId: id, source: "native-dom" });
-				return message;
-			}
-		}
-		this.logSevenTvDebug("resolve", { messageId: id, nativeRows: nativeElements.length, source: "miss" });
-	}
-
-	private logSevenTvDebug(stage: string, data: Record<string, unknown>) {
-		if (typeof localStorage !== "undefined" && localStorage.getItem("enhancer:debug:7tv") === "1") {
-			this.logger.info(`[7TV] ${stage}`, data);
+			if (message?.id === id) return message;
 		}
 	}
 }
