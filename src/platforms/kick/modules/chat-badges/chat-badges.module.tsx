@@ -18,7 +18,7 @@ export default class ChatBadgesModule extends KickModule {
 		enabled: () => this.settings().chatBadgesEnabled,
 	};
 
-	private async handleMessage({ message, element }: KickChatMessageEvent) {
+	private async handleMessage({ message, element, isUsingNTV }: KickChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
 		const badgesContainers = [
 			element.querySelector(".ntv__chat-message__badges"),
@@ -40,6 +40,7 @@ export default class ChatBadgesModule extends KickModule {
 		for (const badge of userBadges) {
 			const lowestSourceUrl = this.commonUtils().getLowestBadgeSourceUrl(badge.sources);
 			if (!lowestSourceUrl) throw new Error("Badge is missing a source url");
+			const size = isUsingNTV ? 16.38 : 19.38;
 
 			for (const container of badgesContainers) {
 				if (!container || container.querySelector(`[data-enhancer-badge="${CSS.escape(badge.badgeId)}"]`)) continue;
@@ -51,7 +52,7 @@ export default class ChatBadgesModule extends KickModule {
 				badgeWrapper.style.display = "inline-flex";
 				render(
 					<TooltipComponent content={<p>{badge.name}</p>} position="right" delay={200}>
-						<img src={lowestSourceUrl} alt={badge.name} width={18} height={18} style={{ marginRight: ".25em" }} />
+						<img src={lowestSourceUrl} alt={badge.name} width={size} height={size} style={{ marginRight: ".25em" }} />
 					</TooltipComponent>,
 					badgeWrapper,
 				);
