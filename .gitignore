@@ -4,3 +4,4 @@ dist
 !.idea/icon.svg
 *.zip
 tsconfig.tsbuildinfo
+.playwright-mcp
