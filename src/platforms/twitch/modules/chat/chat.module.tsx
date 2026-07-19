@@ -16,7 +16,7 @@ export default class ChatModule extends TwitchModule {
 
 	private observer: MutationObserver | undefined;
 	private messageHandlerApi: ChatControllerComponent["props"]["messageHandlerAPI"] | undefined;
-	private messageHandler: ((message: TwitchChatMessage) => void) | undefined;
+	private messageHandler: ChatControllerComponent["props"]["messageHandlerAPI"]["handleMessage"] | undefined;
 	private readonly sevenTvMessageQueue = new QueueFactory<TwitchChatMessage & QueueValue>().create({ expire: 300 });
 
 	readonly config: TwitchModuleConfig = {
@@ -201,29 +201,41 @@ export default class ChatModule extends TwitchModule {
 			this.logSevenTvDebug("api-subscribe-skipped", { reason: "api-missing" });
 			return;
 		}
-		if (messageHandlerApi === this.messageHandlerApi) {
+		if (messageHandlerApi === this.messageHandlerApi && messageHandlerApi.handleMessage === this.messageHandler) {
 			this.logSevenTvDebug("api-subscribe-skipped", { reason: "already-subscribed" });
 			return;
 		}
-		if (this.messageHandler) this.messageHandlerApi?.removeMessageHandler?.(this.messageHandler);
-		this.messageHandlerApi = messageHandlerApi;
-		this.messageHandler = (message) => {
-			if (this.messageHandlerApi !== messageHandlerApi) {
-				this.logSevenTvDebug("api-message-skipped", { reason: "stale-api" });
-				return;
-			}
+		const originalHandler = messageHandlerApi.handleMessage;
+		const descriptor = Object.getOwnPropertyDescriptor(messageHandlerApi, "handleMessage");
+		if (typeof originalHandler !== "function" || (descriptor && !descriptor.configurable)) {
+			this.logSevenTvDebug("api-subscribe-skipped", { reason: "handle-message-unavailable" });
+			return;
+		}
+
+		const chatModule = this;
+		const messageHandler = function (
+			this: ChatControllerComponent["props"]["messageHandlerAPI"],
+			message: Parameters<typeof originalHandler>[0],
+		) {
 			const wrappedMessage = (message as any).message;
-			this.logSevenTvDebug("api-message", {
+			chatModule.logSevenTvDebug("api-message", {
 				id: message.id,
 				nonce: message.nonce,
 				type: message.type,
 				wrappedId: typeof wrappedMessage === "object" ? wrappedMessage?.id : undefined,
 			});
-			this.bufferSevenTvMessage(message);
+			chatModule.bufferSevenTvMessage(message);
+			return originalHandler.call(this, message);
 		};
-		messageHandlerApi.addMessageHandler(this.messageHandler);
-		const descriptor = Object.getOwnPropertyDescriptor(messageHandlerApi, "handleMessage");
-		this.logSevenTvDebug("api-subscribed", {
+		Object.defineProperty(messageHandlerApi, "handleMessage", {
+			configurable: true,
+			enumerable: descriptor?.enumerable ?? false,
+			value: messageHandler,
+			writable: true,
+		});
+		this.messageHandlerApi = messageHandlerApi;
+		this.messageHandler = messageHandler;
+		this.logSevenTvDebug("api-intercepted", {
 			handleMessage: descriptor
 				? {
 						configurable: descriptor.configurable,
@@ -233,8 +245,6 @@ export default class ChatModule extends TwitchModule {
 						valueType: typeof descriptor.value,
 					}
 				: null,
-			hasAddMessageHandler: typeof messageHandlerApi.addMessageHandler === "function",
-			hasRemoveMessageHandler: typeof messageHandlerApi.removeMessageHandler === "function",
 			keys: Object.keys(messageHandlerApi),
 		});
 	}
