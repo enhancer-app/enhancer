@@ -58,8 +58,7 @@ export default class ChatBadgesModule extends TwitchModule {
 						height={size}
 						style={{
 							marginRight: type === "7TV" ? 0 : ".25em",
-							marginBottom: type === "7TV" ? 0 : "1.5px",
-							transform: type === "7TV" ? undefined : "translateY(-1px)",
+							marginBottom: type === "7TV" ? 0 : "2.2px",
 							verticalAlign: "middle",
 						}}
 					/>
