@@ -18,12 +18,19 @@ export type KickChatMessage = {
 };
 export type KickChatMessageData = {
 	id: string;
-	chat_id: number;
-	user_id: number;
+	chatroom_id: number;
 	content: string;
 	type: string;
 	metadata: {
-		message_ref: string;
+		message_ref?: string;
+		original_sender?: {
+			id: number;
+			username: string;
+		};
+		original_message?: {
+			id: string;
+			content: string;
+		};
 	};
 	created_at: string;
 	sender: {
@@ -36,6 +43,14 @@ export type KickChatMessageData = {
 				type: string;
 				text: string;
 			}>;
+			badges_v2: Array<{
+				name: string;
+				badge_type: string;
+				image_url: string;
+				metadata: Record<string, string | number | boolean | null>;
+				selected: boolean;
+				sort_order: number;
+			}>;
 		};
 	};
 };
@@ -43,4 +58,5 @@ export type KickChatMessageEvent = {
 	message: KickChatMessageData;
 	element: Element;
 	isUsingNTV: boolean;
+	isRerender: boolean;
 };

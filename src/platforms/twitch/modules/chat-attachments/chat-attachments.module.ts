@@ -58,7 +58,7 @@ export default class ChatAttachmentsModule extends TwitchModule {
 	];
 
 	private async handleMessage(message: TwitchChatMessageEvent) {
-		if (!(await this.isModuleEnabled())) return;
+		if (message.isReplay || !(await this.isModuleEnabled())) return;
 
 		await this.commonUtils().delay(1); // Doing this for FFZ Rich Embed Check
 		if (message.element.querySelector(ChatAttachmentsModule.FFZ_RICH_EMBED_CLASS)) return;

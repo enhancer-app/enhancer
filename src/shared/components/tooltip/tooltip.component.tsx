@@ -10,9 +10,6 @@ interface TooltipComponentProps {
 	delay?: number;
 }
 
-const TOOLTIP_SHOW_EVENT = "ENHANCER_TOOLTIP";
-let tooltipIdCounter = 0;
-
 export function useTooltipPosition(
 	containerRef: preact.RefObject<HTMLElement>,
 	tooltipRef: preact.RefObject<HTMLElement>,
@@ -74,11 +71,10 @@ export function useTooltipPosition(
 
 export function TooltipComponent({ children, content, position = "top", delay = 300 }: TooltipComponentProps) {
 	const [isVisible, setIsVisible] = useState(false);
-	const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 	const [actualPosition, setActualPosition] = useState(position);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const tooltipRef = useRef<HTMLDivElement>(null);
-	const idRef = useRef(++tooltipIdCounter);
+	const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
 	const calculatePosition = useCallback(() => {
 		if (!containerRef.current || !tooltipRef.current) return;
@@ -126,27 +122,23 @@ export function TooltipComponent({ children, content, position = "top", delay = 
 	}, [position]);
 
 	const showTooltip = useCallback(() => {
-		if (timeoutId) clearTimeout(timeoutId);
-		window.dispatchEvent(new CustomEvent(TOOLTIP_SHOW_EVENT, { detail: idRef.current }));
-		const id = setTimeout(() => {
+		if (timeoutRef.current) clearTimeout(timeoutRef.current);
+		timeoutRef.current = setTimeout(() => {
+			if (!containerRef.current?.isConnected) return;
 			setIsVisible(true);
 			setTimeout(calculatePosition, 0);
 		}, delay);
-		setTimeoutId(id);
-	}, [timeoutId, delay, calculatePosition]);
+	}, [delay, calculatePosition]);
 
 	const hideTooltip = useCallback(() => {
-		if (timeoutId) clearTimeout(timeoutId);
+		if (timeoutRef.current) clearTimeout(timeoutRef.current);
 		setIsVisible(false);
-	}, [timeoutId]);
+	}, []);
 
 	useEffect(() => {
-		const handler = (e: Event) => {
-			const detail = (e as CustomEvent).detail;
-			if (detail !== idRef.current) setIsVisible(false);
+		return () => {
+			if (timeoutRef.current) clearTimeout(timeoutRef.current);
 		};
-		window.addEventListener(TOOLTIP_SHOW_EVENT, handler);
-		return () => window.removeEventListener(TOOLTIP_SHOW_EVENT, handler);
 	}, []);
 
 	useEffect(() => {
@@ -154,9 +146,14 @@ export function TooltipComponent({ children, content, position = "top", delay = 
 		calculatePosition();
 		const handleResize = () => calculatePosition();
 		const handleScroll = () => setIsVisible(false);
+		const observer = new MutationObserver(() => {
+			if (!containerRef.current?.isConnected) setIsVisible(false);
+		});
+		observer.observe(document.body, { childList: true, subtree: true });
 		window.addEventListener("resize", handleResize);
 		window.addEventListener("scroll", handleScroll, { passive: true });
 		return () => {
+			observer.disconnect();
 			window.removeEventListener("resize", handleResize);
 			window.removeEventListener("scroll", handleScroll);
 		};
