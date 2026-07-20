@@ -1,4 +1,15 @@
+import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
+import type {
+	CachedAggregateSeed,
+	DisconnectEnhancerApiPayload,
+	EnhancerApiMessagePayload,
+	EnhancerApiSeedRequestPayload,
+	EnhancerApiUpdatedPayload,
+	GetEnhancerWatchTimePayload,
+	InitializeEnhancerApiPayload,
+	JoinEnhancerChannelPayload,
+} from "$types/shared/worker/enhancer-api-worker.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 
 export type { PlatformType };
@@ -27,6 +38,7 @@ export interface PingResponse {
 	status: "alive";
 	timestamp: number;
 	message: string;
+	instanceId: string;
 }
 
 export interface WatchtimeRecord {
@@ -117,6 +129,22 @@ export interface WorkerApiActions {
 		payload: UpdateSettingsPayload;
 		response: UpdateSettingsResponse;
 	};
+	initializeEnhancerApi: {
+		payload: InitializeEnhancerApiPayload;
+		response: CachedAggregateSeed;
+	};
+	joinEnhancerChannel: {
+		payload: JoinEnhancerChannelPayload;
+		response: { seed: CachedAggregateSeed | null };
+	};
+	getEnhancerWatchTime: {
+		payload: GetEnhancerWatchTimePayload;
+		response: EnhancerStreamerWatchTimeData[];
+	};
+	disconnectEnhancerApi: {
+		payload: DisconnectEnhancerApiPayload;
+		response: { success: true };
+	};
 }
 
 export type WorkerAction = keyof WorkerApiActions;
@@ -126,7 +154,8 @@ export interface SettingsBroadcastPayload {
 	settings: PlatformSettings;
 }
 
-export interface WorkerBroadcast {
-	type: "settings-updated";
-	payload: SettingsBroadcastPayload;
-}
+export type WorkerBroadcast =
+	| { type: "settings-updated"; payload: SettingsBroadcastPayload }
+	| { type: "enhancer-api-updated"; payload: EnhancerApiUpdatedPayload }
+	| { type: "enhancer-api-message"; payload: EnhancerApiMessagePayload }
+	| { type: "enhancer-api-seed-request"; payload: EnhancerApiSeedRequestPayload };

@@ -23,28 +23,36 @@ export default abstract class Platform<
 	protected readonly emitter: Emitter<TEvents> = new EventEmitterFactory<TEvents>().create();
 	protected readonly storageRepository = new StorageRepository<TStorage>();
 	protected readonly utilsRepository = new UtilsRepository();
-	protected readonly enhancerApi: EnhancerApi;
 	protected readonly workerApi = new WorkerService();
+	protected readonly enhancerApi: EnhancerApi;
 	protected readonly settingsCache: SettingsCache<TSettings>;
 
 	protected constructor(protected readonly config: PlatformConfig) {
-		this.enhancerApi = new EnhancerApi(config.type);
+		this.enhancerApi = new EnhancerApi(config.type, this.workerApi, this.emitter);
 		this.settingsCache = new SettingsCache<TSettings>(config.type, this.workerApi, this.emitter);
 	}
 
 	protected async initialize(): Promise<void> {}
 
 	async start() {
-		this.tryInitializeEnhancerApi().catch((err) => {
-			this.logger.error("EnhancerApi init failed:", err);
-		});
 		await this.workerApi.start();
-		await this.settingsCache.initialize();
+		await Promise.all([this.settingsCache.initialize(), this.initializeEnhancerApi()]);
 		await this.initialize();
 		await this.loadModules();
 		this.logger.info(`Started ${this.config.type} extension`);
 		// @ts-ignore tbh idk, it just works, typescript magic
 		this.emitter.emit("extension:start");
+	}
+
+	private async initializeEnhancerApi(attempt = 1): Promise<void> {
+		try {
+			await this.enhancerApi.initialize();
+		} catch (error) {
+			this.logger.error(`EnhancerApi init attempt ${attempt} failed:`, error);
+			if (attempt < 5) {
+				setTimeout(() => void this.initializeEnhancerApi(attempt + 1), 5000);
+			}
+		}
 	}
 
 	private appliers = [
@@ -74,22 +82,6 @@ export default abstract class Platform<
 			}
 		}
 		this.appliers.forEach((applier) => applier.start());
-	}
-
-	private async tryInitializeEnhancerApi(retries = 5, delayMs = 5000): Promise<void> {
-		for (let attempt = 1; attempt <= retries; attempt++) {
-			try {
-				await this.enhancerApi.initialize();
-				this.logger.info("EnhancerApi initialized successfully");
-				return;
-			} catch (err) {
-				this.logger.warn(`EnhancerApi init attempt ${attempt} failed:`, err);
-				if (attempt < retries) {
-					await new Promise((res) => setTimeout(res, delayMs));
-				}
-			}
-		}
-		throw new Error(`Failed to initialize EnhancerApi after ${retries} attempts`);
 	}
 
 	getPlatformType() {

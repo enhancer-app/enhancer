@@ -1,5 +1,6 @@
 import KickModule from "$kick/kick.module.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
+import type { EnhancerMessageEvent } from "$types/apis/enhancer.apis.ts";
 import type { ChatMessagePopupEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { KickModuleConfig, TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { h, render } from "preact";
@@ -16,8 +17,26 @@ export default class ChatMessagePopupModule extends KickModule {
 				callback: this.render.bind(this),
 				key: "message-popup",
 			},
+			{
+				type: "event",
+				event: "extension:enhancer-api-message",
+				callback: this.renderEnhancerMessage.bind(this),
+				key: "enhancer-message-popup",
+			},
 		],
 	};
+
+	private renderEnhancerMessage(message: EnhancerMessageEvent) {
+		const text =
+			typeof message.data === "object" &&
+			message.data !== null &&
+			"text" in message.data &&
+			typeof message.data.text === "string"
+				? message.data.text
+				: null;
+		if (!text?.trim()) return;
+		this.render({ title: "Enhancer", content: text, autoclose: text.length > 120 ? 30 : 10 });
+	}
 
 	private render(message: ChatMessagePopupEvent) {
 		const contentElement = document.querySelector("#chatroom-footer");

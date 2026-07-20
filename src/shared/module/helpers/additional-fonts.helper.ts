@@ -44,14 +44,14 @@ export class AdditionalFontsHelper {
 	}
 
 	getUsedFonts(): string[] {
-		const allUsers = [
-			...(this.enhancerApi.getGlobalChannel()?.users ?? []),
-			...(this.enhancerApi.getCurrentChannel()?.users ?? []),
+		const allAccounts = [
+			...(this.enhancerApi.getGlobalChannel()?.accounts ?? []),
+			...(this.enhancerApi.getCurrentChannel()?.accounts ?? []),
 		];
 
 		const uniqueFonts = new Map<string, string>();
-		for (const user of allUsers) {
-			const font = user.customFont;
+		for (const account of allAccounts) {
+			const font = account.customFont;
 			if (!font) {
 				continue;
 			}

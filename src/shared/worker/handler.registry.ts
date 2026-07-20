@@ -1,4 +1,6 @@
 import type { Logger } from "$shared/logger/logger.ts";
+import { EnhancerApiHandler } from "$shared/worker/enhancer-api/enhancer-api.handler.ts";
+import type { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { AssetsFileHandler } from "$shared/worker/file/assets-file.handler.ts";
 import type { MessageHandler } from "$shared/worker/message.handler.ts";
 import { PingHandler } from "$shared/worker/ping/ping.handler.ts";
@@ -21,6 +23,7 @@ export class HandlerRegistry {
 		private readonly settingsDatabase: SettingsDatabase,
 		private readonly watchtimeDatabase: WatchtimeDatabase,
 		private readonly watchtimeAccumulator: WatchtimeAccumulator,
+		private readonly enhancerApiService: EnhancerApiService,
 	) {
 		this.registerHandlers();
 	}
@@ -34,6 +37,22 @@ export class HandlerRegistry {
 		this.handlers.set("importWatchtime", new ImportWatchtimeHandler(this.logger, this.watchtimeDatabase));
 		this.handlers.set("getSettings", new GetSettingsHandler(this.logger, this.settingsDatabase));
 		this.handlers.set("updateSettings", new UpdateSettingsHandler(this.logger, this.settingsDatabase));
+		this.handlers.set(
+			"initializeEnhancerApi",
+			new EnhancerApiHandler(this.logger, this.enhancerApiService, "initializeEnhancerApi"),
+		);
+		this.handlers.set(
+			"joinEnhancerChannel",
+			new EnhancerApiHandler(this.logger, this.enhancerApiService, "joinEnhancerChannel"),
+		);
+		this.handlers.set(
+			"getEnhancerWatchTime",
+			new EnhancerApiHandler(this.logger, this.enhancerApiService, "getEnhancerWatchTime"),
+		);
+		this.handlers.set(
+			"disconnectEnhancerApi",
+			new EnhancerApiHandler(this.logger, this.enhancerApiService, "disconnectEnhancerApi"),
+		);
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {
