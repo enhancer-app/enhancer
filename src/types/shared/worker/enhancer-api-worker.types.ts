@@ -1,8 +1,11 @@
 import type {
-	EnhancerAggregatePage,
+	EnhancerAccount,
+	EnhancerAggregateSnapshotEvent,
+	EnhancerAggregateTopic,
+	EnhancerBadge,
+	EnhancerBufferedEvent,
 	EnhancerChannelDto,
 	EnhancerMessageEvent,
-	EnhancerStateEvent,
 	EnhancerSubscription,
 } from "$types/apis/enhancer.apis.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
@@ -15,13 +18,28 @@ export type EnhancerApiAction =
 
 export type AggregateScope = "GLOBAL" | "CHANNEL";
 
-export interface CachedPage {
-	etag: string;
-	body: EnhancerAggregatePage;
+export interface CachedAggregateSeed {
+	topic: EnhancerAggregateTopic;
+	aggregate: EnhancerChannelDto;
+	cursor: string;
+}
+
+export interface AggregateMaps {
+	channelId: string | null;
+	platform: Uppercase<PlatformType>;
+	accounts: Map<string, EnhancerAccount>;
+	badges: Map<string, EnhancerBadge>;
+}
+
+export interface AggregateSnapshot {
+	snapshotId: string;
+	cursor: string;
+	pages: Map<number, EnhancerAggregateSnapshotEvent>;
+	lastPage?: number;
 }
 
 export interface SubscriptionState {
-	topic: string;
+	topic: EnhancerAggregateTopic;
 	platform: PlatformType;
 	scope: AggregateScope;
 	externalId?: string;
@@ -31,20 +49,21 @@ export interface SubscriptionState {
 	rejected: boolean;
 	requested: boolean;
 	active: boolean;
-	aggregate?: EnhancerChannelDto | null;
+	aggregate?: AggregateMaps | null;
 	cursor?: string;
-	cursorLoaded: boolean;
-	cursorLoadPromise?: Promise<void>;
 	replaying: boolean;
-	recovering: boolean;
-	replayBuffer: Array<EnhancerMessageEvent | EnhancerStateEvent>;
+	replayComplete: boolean;
+	seedCollecting: boolean;
+	transitioning: boolean;
+	eventBuffer: EnhancerBufferedEvent[];
+	snapshot?: AggregateSnapshot;
 	confirmationRetry: ReturnType<typeof setTimeout> | null;
-	dirty: boolean;
-	broadcastRequested: boolean;
-	refreshPromise?: Promise<EnhancerChannelDto | null>;
 	confirmationWaiters: Set<() => void>;
+	syncWaiters: Set<() => void>;
 	seenCursors: Set<string>;
 	processing: Promise<void>;
+	bootstrapPromise?: Promise<CachedAggregateSeed | null>;
+	redirect?: SubscriptionState;
 }
 
 export interface EnhancerApiClient {
@@ -52,20 +71,22 @@ export interface EnhancerApiClient {
 	frameId: number;
 	clientId: string;
 	platform: PlatformType;
-	topics: Set<string>;
-	channelTopic?: string;
+	topics: Set<EnhancerAggregateTopic>;
+	channelTopic?: EnhancerAggregateTopic;
 	generation: number;
 }
 
 export interface InitializeEnhancerApiPayload {
 	platform: PlatformType;
 	clientId: string;
+	seed?: CachedAggregateSeed;
 }
 
 export interface JoinEnhancerChannelPayload {
 	platform: PlatformType;
 	externalId: string;
 	clientId: string;
+	seed?: CachedAggregateSeed;
 }
 
 export interface GetEnhancerWatchTimePayload {
@@ -75,19 +96,26 @@ export interface GetEnhancerWatchTimePayload {
 export interface DisconnectEnhancerApiPayload {
 	platform: PlatformType;
 	clientId: string;
-	preserveCursor?: boolean;
 }
 
 export interface EnhancerApiUpdatedPayload {
 	platform: PlatformType;
 	clientId: string;
-	scope: "GLOBAL" | "CHANNEL";
-	externalId?: string;
+	scope: AggregateScope;
+	topic: EnhancerAggregateTopic;
 	aggregate: EnhancerChannelDto | null;
+	cursor: string;
+	replacementTopic?: EnhancerAggregateTopic;
 }
 
 export interface EnhancerApiMessagePayload {
 	platform: PlatformType;
 	clientId: string;
+	topic: EnhancerAggregateTopic;
 	message: EnhancerMessageEvent;
+}
+
+export interface EnhancerApiSeedRequestPayload {
+	requestId: string;
+	topic: EnhancerAggregateTopic;
 }

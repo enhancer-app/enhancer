@@ -32,17 +32,17 @@ export class EnhancerApiHandler extends MessageHandler {
 		}
 		if (sender?.tab?.id == null) throw new Error("Enhancer API requests require a browser tab");
 		if (this.action === "disconnectEnhancerApi") {
-			const { platform, clientId, preserveCursor } = payload as DisconnectEnhancerApiPayload;
-			this.service.disconnect(sender.tab.id, sender.frameId ?? 0, clientId, platform, preserveCursor);
+			const { platform, clientId } = payload as DisconnectEnhancerApiPayload;
+			this.service.disconnect(sender.tab.id, sender.frameId ?? 0, clientId, platform);
 			return { success: true };
 		}
 		if (this.action === "initializeEnhancerApi") {
-			const { platform, clientId } = payload as InitializeEnhancerApiPayload;
-			return this.service.initialize(sender.tab.id, sender.frameId ?? 0, clientId, platform);
+			const { platform, clientId, seed } = payload as InitializeEnhancerApiPayload;
+			return this.service.initialize(sender.tab.id, sender.frameId ?? 0, clientId, platform, seed);
 		}
-		const { platform, externalId, clientId } = payload as JoinEnhancerChannelPayload;
+		const { platform, externalId, clientId, seed } = payload as JoinEnhancerChannelPayload;
 		return {
-			aggregate: await this.service.joinChannel(sender.tab.id, sender.frameId ?? 0, clientId, platform, externalId),
+			seed: await this.service.joinChannel(sender.tab.id, sender.frameId ?? 0, clientId, platform, externalId, seed),
 		};
 	}
 }

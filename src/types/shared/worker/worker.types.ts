@@ -1,8 +1,10 @@
-import type { EnhancerChannelDto, EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
+import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type {
+	CachedAggregateSeed,
 	DisconnectEnhancerApiPayload,
 	EnhancerApiMessagePayload,
+	EnhancerApiSeedRequestPayload,
 	EnhancerApiUpdatedPayload,
 	GetEnhancerWatchTimePayload,
 	InitializeEnhancerApiPayload,
@@ -129,11 +131,11 @@ export interface WorkerApiActions {
 	};
 	initializeEnhancerApi: {
 		payload: InitializeEnhancerApiPayload;
-		response: EnhancerChannelDto;
+		response: CachedAggregateSeed;
 	};
 	joinEnhancerChannel: {
 		payload: JoinEnhancerChannelPayload;
-		response: { aggregate: EnhancerChannelDto | null };
+		response: { seed: CachedAggregateSeed | null };
 	};
 	getEnhancerWatchTime: {
 		payload: GetEnhancerWatchTimePayload;
@@ -155,4 +157,5 @@ export interface SettingsBroadcastPayload {
 export type WorkerBroadcast =
 	| { type: "settings-updated"; payload: SettingsBroadcastPayload }
 	| { type: "enhancer-api-updated"; payload: EnhancerApiUpdatedPayload }
-	| { type: "enhancer-api-message"; payload: EnhancerApiMessagePayload };
+	| { type: "enhancer-api-message"; payload: EnhancerApiMessagePayload }
+	| { type: "enhancer-api-seed-request"; payload: EnhancerApiSeedRequestPayload };

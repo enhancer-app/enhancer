@@ -1,5 +1,9 @@
 import { Logger } from "$shared/logger/logger.ts";
 import type {
+	CachedAggregateSeed,
+	EnhancerApiSeedRequestPayload,
+} from "$types/shared/worker/enhancer-api-worker.types.ts";
+import type {
 	ExtensionMessageDetail,
 	ExtensionResponseDetail,
 	WorkerAction,
@@ -14,6 +18,9 @@ export default class WorkerService {
 	private pingInterval: number | null = null;
 	private broadcastHandlers = new Map<string, Set<(payload: any) => void>>();
 	private restartHandlers = new Set<() => void>();
+	private enhancerApiSeedHandlers = new Set<
+		(topic: EnhancerApiSeedRequestPayload["topic"]) => CachedAggregateSeed | null
+	>();
 	private workerInstanceId: string | null = null;
 
 	constructor() {
@@ -68,6 +75,12 @@ export default class WorkerService {
 		this.restartHandlers.add(handler);
 	}
 
+	onEnhancerApiSeedRequest(
+		handler: (topic: EnhancerApiSeedRequestPayload["topic"]) => CachedAggregateSeed | null,
+	): void {
+		this.enhancerApiSeedHandlers.add(handler);
+	}
+
 	private startPing() {
 		this.pingInterval = window.setInterval(() => void this.ping(), 5000);
 	}
@@ -102,6 +115,19 @@ export default class WorkerService {
 	}
 
 	private setupBroadcastListener() {
+		this.element.addEventListener("enhancer-api-seed-request", ((event: CustomEvent<string>) => {
+			const request = JSON.parse(event.detail) as EnhancerApiSeedRequestPayload;
+			let seed: CachedAggregateSeed | null = null;
+			for (const handler of this.enhancerApiSeedHandlers) {
+				seed = handler(request.topic);
+				if (seed) break;
+			}
+			this.element.dispatchEvent(
+				new CustomEvent<string>("enhancer-api-seed-response", {
+					detail: JSON.stringify({ requestId: request.requestId, seed }),
+				}),
+			);
+		}) as EventListener);
 		this.element.addEventListener("enhancer-broadcast", ((event: CustomEvent<string>) => {
 			try {
 				const broadcast = JSON.parse(event.detail) as WorkerBroadcast;

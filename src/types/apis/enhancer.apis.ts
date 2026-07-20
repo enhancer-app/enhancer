@@ -23,10 +23,13 @@ export type EnhancerChannelDto = {
 	badges: EnhancerBadge[];
 };
 
-export type EnhancerAggregatePage = EnhancerChannelDto & {
-	page: number;
-	hasNextPage: boolean;
+export type EnhancerAggregateResponse = EnhancerChannelDto & {
+	cursor: string;
 };
+
+export type EnhancerGlobalTopic = `global:${Uppercase<PlatformType>}`;
+export type EnhancerChannelTopic = `channel:${Uppercase<PlatformType>}:${string}`;
+export type EnhancerAggregateTopic = EnhancerGlobalTopic | EnhancerChannelTopic;
 
 export type EnhancerSubscription =
 	| { scope: "GLOBAL"; platform: Uppercase<PlatformType> }
@@ -40,55 +43,55 @@ export type EnhancerMessageEvent = {
 	cursor: string;
 };
 
+export type EnhancerAggregateUpdatedEvent = {
+	type: "aggregate.updated";
+	topic: EnhancerAggregateTopic;
+	accountsUpsert: EnhancerAccount[];
+	accountIdsRemove: string[];
+	badgesUpsert: EnhancerBadge[];
+	badgeIdsRemove: string[];
+	cursor: string;
+};
+
+export type EnhancerAggregateSnapshotEvent = EnhancerChannelDto & {
+	type: "aggregate.snapshot";
+	topic: EnhancerAggregateTopic;
+	snapshotId: string;
+	page: number;
+	hasNextPage: boolean;
+	cursor: string;
+};
+
+export type EnhancerChannelAvailableEvent = {
+	type: "channel.available";
+	topic: EnhancerChannelTopic;
+	reason: "created" | "restored" | "renamed";
+	cursor: string;
+};
+
+export type EnhancerChannelUnavailableEvent = {
+	type: "channel.unavailable";
+	topic: EnhancerChannelTopic;
+	reason: "archived" | "renamed";
+	replacementTopic?: EnhancerChannelTopic;
+	cursor: string;
+};
+
 export type EnhancerStateEvent =
-	| {
-			type: "badge.updated";
-			platform: Uppercase<PlatformType>;
-			badgeId: string;
-			channelExternalId?: string;
-			changes: {
-				sources?: Record<string, string>;
-				name?: string;
-				priority?: number;
-				status?: "ACTIVE" | "DISABLED" | "ARCHIVED";
-			};
-			cursor: string;
-	  }
-	| {
-			type: "badge-assignment.updated";
-			platform: Uppercase<PlatformType>;
-			userExternalId: string;
-			badgeId: string;
-			channelExternalId?: string;
-			status: "ACTIVE" | "DISABLED" | "ARCHIVED";
-			cursor: string;
-	  }
-	| {
-			type: "appearance.updated";
-			platform: Uppercase<PlatformType>;
-			userExternalId: string;
-			channelExternalId?: string;
-			changes: {
-				customNickname?: string | null;
-				customFont?: string | null;
-				hasGlow?: boolean;
-				status?: "ACTIVE" | "DISABLED" | "ARCHIVED";
-			};
-			cursor: string;
-	  }
-	| {
-			type: "sync.required";
-			topics: string[];
-			reason: "account.created" | "account.updated";
-			cursor: string;
-	  };
+	| EnhancerAggregateUpdatedEvent
+	| EnhancerAggregateSnapshotEvent
+	| EnhancerChannelAvailableEvent
+	| EnhancerChannelUnavailableEvent;
+
+export type EnhancerDataEvent = EnhancerMessageEvent | EnhancerAggregateUpdatedEvent;
+export type EnhancerBufferedEvent = EnhancerDataEvent | EnhancerChannelAvailableEvent | EnhancerChannelUnavailableEvent;
 
 export type EnhancerWebSocketMessage =
 	| { type: "connection.ready" }
-	| { type: "subscription.confirmed" | "subscription.removed" | "replay.complete"; topic: string }
+	| { type: "subscription.confirmed" | "subscription.removed" | "replay.complete"; topic: EnhancerAggregateTopic }
 	| { type: "pong" }
 	| { type: "error"; code: string }
-	| { type: "sync.required"; topic: string }
+	| { type: "sync.required"; topic: EnhancerAggregateTopic }
 	| { error: { code: string; message: string } }
 	| EnhancerMessageEvent
 	| EnhancerStateEvent;
