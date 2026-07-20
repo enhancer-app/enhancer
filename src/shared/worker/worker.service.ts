@@ -26,11 +26,11 @@ export default class WorkerService {
 	constructor() {
 		this.element = document.createElement("enhancer-bridge");
 		document.body.appendChild(this.element);
+		this.setupBroadcastListener();
 	}
 
 	async start() {
 		this.setupMessageListener();
-		this.setupBroadcastListener();
 		await this.waitForBridge();
 		await this.ping();
 		this.startPing();
