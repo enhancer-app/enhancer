@@ -17,13 +17,13 @@ export default class ChatModule extends KickModule {
 	};
 
 	private observer: MutationObserver | undefined;
+	private readonly pendingMessages = new Set<Element>();
+	private animationFrame: number | undefined;
 
 	private async run([chatRoom]: Element[]): Promise<void> {
-		[...chatRoom.querySelectorAll(".ntv__chat-message"), ...chatRoom.querySelectorAll("div[data-index]")].forEach(
-			(message) => this.handleMessage(message),
-		);
-		await this.initializeChannel();
 		this.createObserver(chatRoom);
+		chatRoom.querySelectorAll("div[data-index]").forEach((message) => this.scheduleMessage(message));
+		await this.initializeChannel();
 	}
 
 	private async initializeChannel() {
@@ -61,7 +61,7 @@ export default class ChatModule extends KickModule {
 		}
 	}
 
-	private getMessageData(element: Element): Omit<KickChatMessageEvent, "isUsingNTV"> | null {
+	private getMessageData(element: Element): Omit<KickChatMessageEvent, "isUsingNTV" | "isRerender"> | null {
 		const messageData = this.kickUtils().getMessageData(element);
 		if (!messageData) return null;
 		return {
@@ -70,40 +70,69 @@ export default class ChatModule extends KickModule {
 		};
 	}
 
-	private async handleMessage(element: Element) {
+	private handleMessage(element: Element) {
 		try {
-			if (this.isMessageHandled(element)) return;
+			if (!element.isConnected) return;
+			if (element.classList.contains("ntv__chat-message--unrendered")) {
+				const marker = element.getAttribute("enhancer-message-handled");
+				if (marker && !marker.endsWith(":PENDING")) {
+					const colonIndex = marker.lastIndexOf(":");
+					const baseMarker = colonIndex === -1 ? marker : marker.slice(0, colonIndex);
+					element.setAttribute("enhancer-message-handled", `${baseMarker}:PENDING`);
+				}
+				return;
+			}
 			const messageData = this.getMessageData(element);
 			if (!messageData) return;
-			if (!element.matches("div[data-index]")) return;
-			this.markMessageAsHandled(element);
-			await this.commonUtils().delay(20); // Have to leave this delay, because NTV rendering can be disabled via NTV options
 			const isUsingNTV = this.kickUtils().isUsingNTV(element);
-			this.emitter.emit("kick:chatMessage", { ...messageData, isUsingNTV });
+			const marker = `${messageData.message.id}:${isUsingNTV ? "NTV" : "KICK"}`;
+			const previousMarker = element.getAttribute("enhancer-message-handled");
+			if (previousMarker === marker) return;
+			element.setAttribute("enhancer-message-handled", marker);
+			this.emitter.emit("kick:chatMessage", {
+				...messageData,
+				isUsingNTV,
+				isRerender: previousMarker?.startsWith(`${messageData.message.id}:`) ?? false,
+			});
 		} catch (err) {
 			this.logger.error("Failed to parse chat message", err);
 		}
+	}
+
+	private scheduleMessage(element: Element) {
+		this.pendingMessages.add(element);
+		if (this.animationFrame !== undefined) return;
+		this.animationFrame = requestAnimationFrame(() => {
+			this.animationFrame = undefined;
+			const messages = Array.from(this.pendingMessages);
+			this.pendingMessages.clear();
+			for (const message of messages) this.handleMessage(message);
+		});
+	}
+
+	private scheduleMessagesFromNode(node: Node) {
+		if (!(node instanceof Element)) return;
+		const parentMessage = node.closest("div[data-index]");
+		if (parentMessage) {
+			this.scheduleMessage(parentMessage);
+			return;
+		}
+		node.querySelectorAll("div[data-index]").forEach((message) => this.scheduleMessage(message));
 	}
 
 	private createObserver(chatRoom: Element): void {
 		this.observer?.disconnect();
 		this.observer = new MutationObserver((mutations) => {
 			for (const mutation of mutations) {
-				for (const node of mutation.addedNodes) {
-					if (node instanceof HTMLElement) {
-						this.handleMessage(node);
-					}
-				}
+				if (mutation.type === "attributes") this.scheduleMessagesFromNode(mutation.target);
+				for (const node of mutation.addedNodes) this.scheduleMessagesFromNode(node);
 			}
 		});
-		this.observer.observe(chatRoom, { childList: true, subtree: true });
-	}
-
-	private isMessageHandled(element: Element) {
-		return element.hasAttribute("enhancer-message-handled");
-	}
-
-	private markMessageAsHandled(element: Element) {
-		element.setAttribute("enhancer-message-handled", "true");
+		this.observer.observe(chatRoom, {
+			attributes: true,
+			attributeFilter: ["class"],
+			childList: true,
+			subtree: true,
+		});
 	}
 }

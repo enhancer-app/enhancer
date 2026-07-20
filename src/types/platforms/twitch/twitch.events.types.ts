@@ -47,6 +47,7 @@ export type TwitchChatMessageEvent = {
 	message: TwitchChatMessage;
 	element: Element;
 	type: ChatType;
+	isReplay: boolean;
 };
 
 export type ChatMessagePopupEvent = {
