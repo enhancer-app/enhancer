@@ -78,6 +78,35 @@ const Description = styled.p`
 	font-size: 11px;
 `;
 
+const ServiceList = styled.ul`
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+	gap: 12px;
+	margin: 0 0 34px;
+	padding: 0;
+	list-style: none;
+`;
+
+const ServiceItem = styled.li`
+	padding: 16px;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+
+	a {
+		color: #9147ff;
+		font-size: 11px;
+		font-weight: 600;
+		text-decoration: none;
+	}
+
+	p {
+		margin: 6px 0 0;
+		color: #aaa;
+		font-size: 10px;
+	}
+`;
+
 const ContributorGrid = styled.div`
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -170,6 +199,43 @@ interface EnhancerAboutComponentProps {
 }
 
 export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
+	const externalServices = [
+		{
+			name: "api.enhancer.at",
+			url: "https://api.enhancer.at",
+			description: "Enhancer's backend for custom badges, nickname customizations, and real-time extension data.",
+		},
+		{
+			name: "xayo.pl",
+			url: "https://xayo.pl",
+			description: "Retrieves viewer watchtime for Polish Twitch channels when Usercard Watchtime is enabled.",
+		},
+		{
+			name: "gql.twitch.tv",
+			url: "https://gql.twitch.tv/gql",
+			description: "Twitch's API for feature data such as chatter counts and VOD timestamps.",
+		},
+		{
+			name: "kick.com/api/v2",
+			url: "https://kick.com/api/v2",
+			description: "Kick's API for channel information used by Kick features.",
+		},
+		{
+			name: "corsgo.enhancer.at",
+			url: "https://corsgo.enhancer.at",
+			description: "Loads metadata for supported chat image links when the source blocks browser requests.",
+		},
+		{
+			name: "preview.enhancer.at",
+			url: "https://preview.enhancer.at",
+			description: "Resolves previews for Discord cached image links when chat images are enabled.",
+		},
+		{
+			name: "Google Fonts",
+			url: "https://fonts.google.com",
+			description: "Loads optional custom fonts when Additional Fonts is enabled.",
+		},
+	];
 	const contributors = ["igorovh", "czestereq", "d33zor", "kawre", "usermacieg", "kaedriz", "esteeming"];
 	const testers = [
 		"piotrgamerpl",
@@ -197,6 +263,21 @@ export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
 				<Subtitle>Open-source extension that adds missing features to streaming platforms</Subtitle>
 				<VersionBadge>Version {__version__}</VersionBadge>
 			</Header>
+
+			<Section>
+				<SectionTitle>External APIs and Services</SectionTitle>
+				<Description>Depending on the platform and enabled features, Enhancer uses these services:</Description>
+				<ServiceList>
+					{externalServices.map((service) => (
+						<ServiceItem key={service.name}>
+							<a href={service.url} target="_blank" rel="noopener noreferrer">
+								{service.name}
+							</a>
+							<p>{service.description}</p>
+						</ServiceItem>
+					))}
+				</ServiceList>
+			</Section>
 
 			<SocialSection>
 				<SectionTitle>Get in Touch</SectionTitle>
