@@ -22,6 +22,12 @@ export default class AdditionalFontsModule extends TwitchModule {
 				callback: this.updateFonts.bind(this),
 				key: "update-fonts",
 			},
+			{
+				type: "event",
+				event: "extension:enhancer-api-refresh",
+				callback: this.updateFonts.bind(this),
+				key: "refresh-fonts",
+			},
 		],
 	};
 

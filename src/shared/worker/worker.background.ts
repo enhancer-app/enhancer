@@ -1,5 +1,6 @@
 import { KICK_DEFAULT_SETTINGS } from "$kick/kick.constants.ts";
 import { Logger } from "$shared/logger/logger.ts";
+import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
 import { WatchtimeAccumulator } from "$shared/worker/watchtime/watchtime.accumulator.ts";
@@ -10,6 +11,7 @@ import type { PlatformType } from "$types/shared/worker/worker.types.ts";
 
 export default class WorkerBackground {
 	private readonly logger = new Logger({ context: "background" });
+	private readonly enhancerApiLogger = new Logger({ context: "enhancer-api-worker" });
 
 	private readonly settingsDatabase = new SettingsDatabase(
 		new Map<PlatformType, PlatformSettings>([
@@ -19,16 +21,19 @@ export default class WorkerBackground {
 	);
 	private readonly watchtimeDatabase = new WatchtimeDatabase();
 	private readonly watchtimeAccumulator = new WatchtimeAccumulator(this.watchtimeDatabase);
+	private readonly enhancerApiService = new EnhancerApiService(this.enhancerApiLogger);
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.settingsDatabase,
 		this.watchtimeDatabase,
 		this.watchtimeAccumulator,
+		this.enhancerApiService,
 	);
 
 	private isInitialized = false;
 	private messageQueue: Array<{
 		message: { action: string; payload?: any };
+		sender: chrome.runtime.MessageSender;
 		sendResponse: (response?: any) => void;
 	}> = [];
 
@@ -46,15 +51,15 @@ export default class WorkerBackground {
 	private setupMessageListener() {
 		chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 			if (!this.isInitialized) {
-				this.messageQueue.push({ message, sendResponse });
+				this.messageQueue.push({ message, sender, sendResponse });
 				return true;
 			}
 
-			this.handleMessage(message)
+			this.handleMessage(message, sender)
 				.then(sendResponse)
 				.catch((error) => {
 					this.logger.error("Message handling failed:", error);
-					sendResponse({ error: error.message });
+					sendResponse({ __enhancerWorkerError: error.message });
 				});
 
 			return true;
@@ -66,13 +71,13 @@ export default class WorkerBackground {
 
 		this.logger.info(`Processing ${this.messageQueue.length} queued messages`);
 
-		const promises = this.messageQueue.map(async ({ message, sendResponse }) => {
+		const promises = this.messageQueue.map(async ({ message, sender, sendResponse }) => {
 			try {
-				const result = await this.handleMessage(message);
+				const result = await this.handleMessage(message, sender);
 				sendResponse(result);
 			} catch (error) {
 				this.logger.error("Queued message handling failed:", error);
-				sendResponse({ error: (error as Error).message });
+				sendResponse({ __enhancerWorkerError: (error as Error).message });
 			}
 		});
 
@@ -80,13 +85,13 @@ export default class WorkerBackground {
 		this.messageQueue = [];
 	}
 
-	private async handleMessage(message: { action: string; payload?: any }) {
+	private async handleMessage(message: { action: string; payload?: any }, sender: chrome.runtime.MessageSender) {
 		const { action, payload } = message;
 		if (!this.handlerRegistry.hasHandler(action)) {
 			throw new Error(`Unknown action: ${action}`);
 		}
 		const handler = this.handlerRegistry.getHandler(action);
-		return await handler.handle(payload);
+		return await handler.handle(payload, sender);
 	}
 }
 

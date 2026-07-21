@@ -116,6 +116,6 @@ export default class StreamLatencyModule extends KickModule {
 	}
 
 	private getVideoElement(): HTMLVideoElement | null {
-		return document.querySelector("video");
+		return document.querySelector("video#video-player");
 	}
 }

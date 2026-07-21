@@ -81,11 +81,7 @@ export default class KickUtils {
 
 	isUsingNTV(element?: Element): boolean {
 		const elementToSerach = element ?? document;
-		return !!(
-			elementToSerach.querySelector(".ntv__chat-message__username") ||
-			elementToSerach.querySelector(".ntv__chat-message__inner") ||
-			elementToSerach.querySelector("[class*='ntv__']")
-		);
+		return !!elementToSerach.querySelector(".ntv__chat-message__inner");
 	}
 
 	private getChatInput() {

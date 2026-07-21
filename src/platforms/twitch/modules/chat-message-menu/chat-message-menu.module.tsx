@@ -5,6 +5,7 @@ import TwitchModule from "../../twitch.module.ts";
 
 export default class ChatMessageMenuModule extends TwitchModule {
 	private useAddActionInsteadOfSet = false;
+	private readonly listenerControllers = new WeakMap<HTMLElement, AbortController>();
 
 	readonly config: TwitchModuleConfig = {
 		name: "chat-chat-message-menu",
@@ -36,19 +37,26 @@ export default class ChatMessageMenuModule extends TwitchModule {
 	private async handleMessage({ message, element: _element }: TwitchChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
 		const element = _element as HTMLElement;
-		element.addEventListener("contextmenu", async (event) => {
-			if (window.getSelection()?.toString()) return;
-			const tag = (event.target as HTMLElement | null)?.tagName.toLowerCase();
-			if (ChatMessageMenuModule.BLOCKED_TAGS.includes(tag || "")) return;
-			event.preventDefault();
-			const options = this.getOptions(message);
-			if (options.length < 1) return;
-			this.emitter.emit("twitch:messageMenu", {
-				options,
-				x: event.x,
-				y: event.y,
-			});
-		});
+		this.listenerControllers.get(element)?.abort();
+		const controller = new AbortController();
+		this.listenerControllers.set(element, controller);
+		element.addEventListener(
+			"contextmenu",
+			async (event) => {
+				if (window.getSelection()?.toString()) return;
+				const tag = (event.target as HTMLElement | null)?.tagName.toLowerCase();
+				if (ChatMessageMenuModule.BLOCKED_TAGS.includes(tag || "")) return;
+				event.preventDefault();
+				const options = this.getOptions(message);
+				if (options.length < 1) return;
+				this.emitter.emit("twitch:messageMenu", {
+					options,
+					x: event.x,
+					y: event.y,
+				});
+			},
+			{ signal: controller.signal },
+		);
 	}
 
 	private getOptions(message: TwitchChatMessage): MessageMenuOption[] {

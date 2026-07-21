@@ -1,22 +1,25 @@
 import QueueFactory from "$shared/queue/queue-factory.ts";
-import type { TwitchChatMessage } from "$types/platforms/twitch/twitch.utils.types.ts";
+import type { ChatType, TwitchChatMessage } from "$types/platforms/twitch/twitch.events.types.ts";
+import type { ChatControllerComponent } from "$types/platforms/twitch/twitch.utils.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import type { QueueValue } from "$types/shared/queue.types.ts";
 import TwitchModule from "../../twitch.module.ts";
-import type ChatMessageListener from "./listener/chat-message.listener.ts";
-import SeventvChatMessageListener from "./listener/seventv-chat-message.listener.ts";
-import TwitchChatMessageListener from "./listener/twitch-chat-message.listener.ts";
 
 export default class ChatModule extends TwitchModule {
 	static readonly TWITCHTV_CHAT_SELECTOR = ".chat-scrollable-area__message-container";
 	static readonly SEVENTV_CHAT_SELECTOR = "main.seventv-chat-list";
+	static readonly SEVENTV_NATIVE_CHAT_SELECTOR = "seventv-container.seventv-chat-list";
+	static readonly TWITCHTV_MESSAGE_SELECTOR = ".chat-line__message";
+	static readonly SEVENTV_MESSAGE_SELECTOR = ".seventv-message[msg-id]";
 	static readonly VALID_MESSAGE_TYPES_IDS = [0];
 	static readonly LINK_MESSAGE_ID = 51;
 
-	private listener = {} as ChatMessageListener;
 	private observer: MutationObserver | undefined;
-	private readonly queue = new QueueFactory<TwitchChatMessage & QueueValue>().create({ expire: 300 });
-	private type: "TWITCH" | "7TV" = "TWITCH";
+	private messageHandlerApi: ChatControllerComponent["props"]["messageHandlerAPI"] | undefined;
+	private messageHandler: ChatControllerComponent["props"]["messageHandlerAPI"]["handleMessage"] | undefined;
+	private messageHandlerGetter: PropertyDescriptor["get"];
+	private readonly emittedMessages = new WeakSet<TwitchChatMessage>();
+	private readonly sevenTvMessageQueue = new QueueFactory<TwitchChatMessage & QueueValue>().create({ expire: 300 });
 
 	readonly config: TwitchModuleConfig = {
 		name: "chat",
@@ -24,7 +27,11 @@ export default class ChatModule extends TwitchModule {
 			{
 				type: "selector",
 				key: "chat",
-				selectors: [ChatModule.TWITCHTV_CHAT_SELECTOR, ChatModule.SEVENTV_CHAT_SELECTOR],
+				selectors: [
+					ChatModule.TWITCHTV_CHAT_SELECTOR,
+					ChatModule.SEVENTV_CHAT_SELECTOR,
+					ChatModule.SEVENTV_NATIVE_CHAT_SELECTOR,
+				],
 				callback: this.run.bind(this),
 				once: true,
 			},
@@ -51,30 +58,27 @@ export default class ChatModule extends TwitchModule {
 
 	private run(elements: Element[]) {
 		if (elements.length > 1) this.logger.warn("Found multiple chat elements");
-		const element = elements[0];
-		if (element.classList.contains(ChatModule.TWITCHTV_CHAT_SELECTOR.replace(".", ""))) {
-			this.type = "TWITCH";
-			this.listener = new TwitchChatMessageListener(this.logger, this.twitchUtils());
-		} else if (element.className.includes("seventv")) {
-			this.type = "7TV";
-			this.listener = new SeventvChatMessageListener(this.logger, this.twitchUtils());
-		}
-		this.listener.emitter.on("inject", () => this.logger.info(`Injected ${this.type} chat module`));
-		this.listener.emitter.on("message", (message) => this.handleMessage(message));
-		this.listener.inject();
-		this.createObserver(elements);
+		this.subscribeToSevenTvMessages();
+		this.createObserver([
+			...document.querySelectorAll(ChatModule.TWITCHTV_CHAT_SELECTOR),
+			...document.querySelectorAll(ChatModule.SEVENTV_CHAT_SELECTOR),
+			...document.querySelectorAll(ChatModule.SEVENTV_NATIVE_CHAT_SELECTOR),
+		]);
+		this.logger.info("Injected chat module");
 
 		this.broadcastInitializeChannel();
 	}
 
 	async broadcastInitializeChannel() {
 		await this.commonUtils()
-			.waitFor<string>(
+			.waitFor<ChatControllerComponent>(
 				() => {
-					return this.twitchUtils().getChatController()?.props.channelID;
+					const controller = this.twitchUtils().getChatController();
+					return controller?.props.channelID && controller.props.messageHandlerAPI ? controller : undefined;
 				},
-				(channelId, attempt) => {
-					this.emitter.emit("twitch:chatInitialized", channelId);
+				(controller, attempt) => {
+					this.subscribeToSevenTvMessages(controller.props.messageHandlerAPI);
+					this.emitter.emit("twitch:chatInitialized", controller.props.channelID);
 					this.logger.info(`Initialized chat (attempt: ${attempt})`);
 					return true;
 				},
@@ -85,77 +89,164 @@ export default class ChatModule extends TwitchModule {
 
 	private createObserver(elements: Element[]) {
 		this.observer?.disconnect();
-		this.observer = new MutationObserver(async (list) => {
+		this.observer = new MutationObserver((list) => {
 			for (const mutation of list) {
-				if (mutation.type === "childList" && mutation.addedNodes) {
-					for (const node of mutation.addedNodes) {
-						const element = node as Element;
-						const seventvId = element.getAttribute("msg-id");
-						const messageProps = this.twitchUtils().getChatMessage(node);
-						const id = seventvId ?? messageProps?.message.id;
-						if (!id) continue;
-						let message = this.queue.getAndRemove(id);
-						if (messageProps?.message.nonce && !message) message = this.queue.getAndRemove(messageProps?.message.nonce); // Handling re-rendering handlers
-						if (!message) continue;
-						this.emitter.emit("twitch:chatMessage", {
-							element,
-							message,
-							type: this.type,
-						});
-					}
-				}
+				if (mutation.type === "attributes") this.handleAddedNode(mutation.target);
+				for (const node of mutation.addedNodes) this.handleAddedNode(node);
 			}
 		});
-		elements.forEach((element) => this.observer?.observe(element, { attributes: true, childList: true }));
-	}
-
-	private isWrappedMessage(message: TwitchChatMessage) {
-		const wrappedMessage = message.message;
-		if (!wrappedMessage || typeof wrappedMessage !== "object" || wrappedMessage === null) {
-			return false;
-		}
-		return (
-			"id" in wrappedMessage &&
-			"user" in wrappedMessage &&
-			("message" in wrappedMessage || "messageBody" in wrappedMessage)
+		elements.forEach((element) =>
+			this.observer?.observe(element, {
+				attributes: true,
+				attributeFilter: ["msg-id"],
+				childList: true,
+				subtree: true,
+			}),
 		);
+		elements.forEach((element) => this.handleAddedNode(element, true));
 	}
 
-	private async handleMessage(_message: TwitchChatMessage) {
-		let message = _message;
+	private handleAddedNode(node: Node, isReplay = false) {
+		if (!(node instanceof Element)) return;
+		this.handleMessages(node, ChatModule.TWITCHTV_MESSAGE_SELECTOR, "TWITCH", isReplay);
+		this.handleMessages(node, ChatModule.SEVENTV_MESSAGE_SELECTOR, "7TV", isReplay);
+	}
 
-		const isWrappedMessage = this.isWrappedMessage(message);
-		if (isWrappedMessage) {
-			this.logger.debug("Found wrapped message, replacing it...");
-			message = message.message as unknown as TwitchChatMessage;
+	private handleMessages(node: Element, selector: string, type: ChatType, isReplay: boolean) {
+		const parentMessage = node.closest(selector);
+		if (parentMessage) {
+			this.handleMessage(parentMessage, type, isReplay);
+			return;
 		}
+		node.querySelectorAll(selector).forEach((element) => this.handleMessage(element, type, isReplay));
+	}
+
+	private handleMessage(element: Element, type: ChatType, isReplay: boolean) {
+		const message = type === "7TV" ? this.getSevenTvMessage(element) : this.twitchUtils().getChatMessage(element);
+		if (!message?.id) return;
+		if (!ChatModule.VALID_MESSAGE_TYPES_IDS.includes(message.type ?? 0)) return;
+		if (type === "TWITCH" && document.querySelector(ChatModule.SEVENTV_CHAT_SELECTOR)) {
+			const sevenTvElement = this.findSevenTvMessageElement(message.id);
+			if (sevenTvElement) this.handleMessage(sevenTvElement, "7TV", isReplay);
+			return;
+		}
+
+		const marker = `${type}:${message.nonce || message.id}`;
+		if (element.getAttribute("enhancer-message-handled") === marker) return;
+		element.setAttribute("enhancer-message-handled", marker);
+		const wasEmitted = this.emittedMessages.has(message);
+		this.emittedMessages.add(message);
+		this.emitter.emit("twitch:chatMessage", {
+			element,
+			message: { ...message, createdAt: message.createdAt ?? Date.now() },
+			type,
+			isReplay: isReplay || wasEmitted,
+		});
+	}
+
+	private subscribeToSevenTvMessages(
+		messageHandlerApi = this.twitchUtils().getChatController()?.props.messageHandlerAPI,
+	) {
+		if (!document.querySelector(ChatModule.SEVENTV_CHAT_SELECTOR)) return;
+		if (!messageHandlerApi) return;
+		const descriptor = Object.getOwnPropertyDescriptor(messageHandlerApi, "handleMessage");
+		if (
+			messageHandlerApi === this.messageHandlerApi &&
+			((this.messageHandlerGetter && descriptor?.get === this.messageHandlerGetter) ||
+				(this.messageHandler && descriptor?.value === this.messageHandler))
+		) {
+			return;
+		}
+		if (descriptor && !descriptor.configurable) return;
+
+		const chatModule = this;
+		const wrapHandler = (originalHandler: ChatControllerComponent["props"]["messageHandlerAPI"]["handleMessage"]) => {
+			return function (
+				this: ChatControllerComponent["props"]["messageHandlerAPI"],
+				...messages: Parameters<typeof originalHandler>
+			) {
+				for (const message of messages) chatModule.bufferSevenTvMessage(message);
+				return originalHandler.apply(this, messages);
+			};
+		};
+
+		if (descriptor?.get) {
+			const originalGetter = descriptor.get;
+			const messageHandlerGetter = function (this: ChatControllerComponent["props"]["messageHandlerAPI"]) {
+				const originalHandler = originalGetter.call(this);
+				return typeof originalHandler === "function" ? wrapHandler(originalHandler) : originalHandler;
+			};
+			Object.defineProperty(messageHandlerApi, "handleMessage", {
+				...descriptor,
+				get: messageHandlerGetter,
+			});
+			this.messageHandlerApi = messageHandlerApi;
+			this.messageHandler = undefined;
+			this.messageHandlerGetter = messageHandlerGetter;
+			return;
+		}
+
+		const originalHandler = messageHandlerApi.handleMessage;
+		if (typeof originalHandler !== "function") return;
+		const messageHandler = wrapHandler(originalHandler);
+		Object.defineProperty(messageHandlerApi, "handleMessage", {
+			configurable: true,
+			enumerable: descriptor?.enumerable ?? false,
+			value: messageHandler,
+			writable: descriptor?.writable ?? true,
+		});
+		this.messageHandlerApi = messageHandlerApi;
+		this.messageHandler = messageHandler;
+		this.messageHandlerGetter = undefined;
+	}
+
+	private bufferSevenTvMessage(rawMessage: TwitchChatMessage) {
+		const wrappedMessage = (rawMessage as any).message;
+		const isWrappedMessage =
+			wrappedMessage && typeof wrappedMessage === "object" && "id" in wrappedMessage && "user" in wrappedMessage;
+		const message = isWrappedMessage ? (wrappedMessage as TwitchChatMessage) : rawMessage;
+		const createdAt = Date.now();
 
 		if (ChatModule.VALID_MESSAGE_TYPES_IDS.includes(message.type) || isWrappedMessage) {
-			if (message.id) {
-				this.queue.addByValue({
-					...message,
-					queueKey: message.id,
-				});
-			}
-			// Add backup message with nonce for paused chat in 7TV and re-rendering self handlers in native chat
 			if (message.nonce) {
-				this.queue.addByValue({
-					...message,
-					queueKey: message.nonce,
-				});
+				this.sevenTvMessageQueue.addByValue({ ...message, createdAt, queueKey: message.nonce });
 			}
-		} else if (message.type === ChatModule.LINK_MESSAGE_ID) {
-			if (!message.nonce && !message.id) return;
-			const queueMessage = this.queue.getAndRemove(message.nonce);
-			if (!queueMessage) return;
 			if (message.id) {
-				this.queue.addByValue({
-					...queueMessage,
-					queueKey: message.id,
-				});
+				this.sevenTvMessageQueue.addByValue({ ...message, createdAt, queueKey: message.id });
+				this.processSevenTvMessage(message.id);
 			}
-		} else {
-			this.logger.warn(`Unknown message with id: ${message.type}`, message);
+			return;
+		}
+
+		if (message.type !== ChatModule.LINK_MESSAGE_ID || (!message.nonce && !message.id)) return;
+		const queuedMessage = this.sevenTvMessageQueue.getAndRemove(message.nonce);
+		if (!queuedMessage || !message.id) return;
+		this.sevenTvMessageQueue.addByValue({ ...queuedMessage, id: message.id, queueKey: message.id });
+		this.processSevenTvMessage(message.id);
+	}
+
+	private processSevenTvMessage(id: string) {
+		const element = this.findSevenTvMessageElement(id);
+		if (element) this.handleMessage(element, "7TV", false);
+	}
+
+	private findSevenTvMessageElement(id: string) {
+		return document.querySelector(`${ChatModule.SEVENTV_MESSAGE_SELECTOR}[msg-id="${CSS.escape(id)}"]`);
+	}
+
+	private getSevenTvMessage(element: Element) {
+		const id = element.getAttribute("msg-id");
+		if (!id) return;
+		const queuedMessage = this.sevenTvMessageQueue.get(id);
+		if (queuedMessage) {
+			if (queuedMessage.nonce) this.sevenTvMessageQueue.remove(queuedMessage.nonce);
+			return queuedMessage;
+		}
+
+		const nativeElements = document.querySelectorAll(ChatModule.TWITCHTV_MESSAGE_SELECTOR);
+		for (const nativeElement of nativeElements) {
+			const message = this.twitchUtils().getChatMessage(nativeElement);
+			if (message?.id === id) return message;
 		}
 	}
 }
