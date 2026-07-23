@@ -1,0 +1,70 @@
+name: Bug report
+description: Create a report to help us improve
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting, please search existing issues to make sure it hasn't already been reported.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Where does the bug occur?
+      options:
+        - Twitch
+        - Kick
+        - Both
+    validations:
+      required: true
+  - type: dropdown
+    id: extensions
+    attributes:
+      label: Active third-party extensions
+      description: Which extensions were active when the bug occurred? Select all that apply.
+      multiple: true
+      options:
+        - None
+        - 7TV
+        - BetterTTV
+        - FrankerFaceZ
+        - NipahTV
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Enhancer version
+      description: The version of Enhancer you are running.
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behavior
+      description: Describe what is happening. Include any error messages if possible.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See the issue
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Add any screenshots, related issues (e.g. `Closes #123`), or other context here.
