@@ -10,7 +10,7 @@ const originalChrome = globalThis.chrome;
 const originalEnvironment = (globalThis as typeof globalThis & { __environment__?: string }).__environment__;
 
 afterEach(() => {
-	Object.defineProperty(globalThis, "chrome", { configurable: true, value: originalChrome });
+	Object.defineProperty(globalThis, "chrome", { configurable: true, writable: true, value: originalChrome });
 	Object.defineProperty(globalThis, "__environment__", { configurable: true, value: originalEnvironment });
 });
 
@@ -19,6 +19,7 @@ test("keeps settings in extension storage after a worker restart", async () => {
 	Object.defineProperty(globalThis, "__environment__", { configurable: true, value: "test" });
 	Object.defineProperty(globalThis, "chrome", {
 		configurable: true,
+		writable: true,
 		value: {
 			storage: {
 				local: {
