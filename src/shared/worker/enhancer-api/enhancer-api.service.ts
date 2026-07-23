@@ -883,7 +883,7 @@ export class EnhancerApiService {
 	}
 
 	private async requestSeeds(topic: EnhancerAggregateTopic): Promise<CachedAggregateSeed[]> {
-		const tabs = await chrome.tabs.query({});
+		const tabs = await chrome.tabs.query({ url: ["*://*.twitch.tv/*", "*://*.kick.com/*"] });
 		const request: WorkerBroadcast = {
 			type: "enhancer-api-seed-request",
 			payload: { requestId: crypto.randomUUID(), topic },
