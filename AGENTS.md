@@ -15,6 +15,17 @@ Enhancer is a Manifest V3 browser extension that adds features to Twitch and Kic
 
 Always run `bun run typecheck` and `npx @biomejs/biome check src/` after making changes.
 
+## Browser Compatibility Testing
+
+To run Enhancer from `dist`, run `bun run pack`, reload Enhancer in `chrome://extensions`, and refresh the Twitch or Kick page. Repeat these steps after making changes to Enhancer so the browser uses the latest build.
+
+For browser-visible changes, keep Enhancer enabled and test each third-party extension configuration separately:
+
+- Twitch: current 7TV (3.x), legacy 7TV (1.x), BetterTTV, FrankerFaceZ, and no third-party extension.
+- Kick: 7TV, NipahTV, and no third-party extension.
+
+Disable the other third-party extensions for each test run so compatibility issues can be attributed correctly.
+
 ## Directory Structure
 
 ```
