@@ -25,7 +25,7 @@ body:
       description: Which extensions were active when the bug occurred? Select all that apply.
       multiple: true
       options:
-        - None
+        - No third-party extensions
         - 7TV
         - BetterTTV
         - FrankerFaceZ
