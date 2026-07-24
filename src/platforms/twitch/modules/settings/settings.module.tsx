@@ -267,7 +267,7 @@ export default class SettingsModule extends TwitchModule {
 			},
 			{
 				id: "streamLatencyReducerEnabled",
-				title: "Enable Stream Latency Reducer (Experimental)",
+				title: "Enable Stream Latency Reducer",
 				description: "Reduces stream latency by adjusting playback rate. (Disabled without Low Latency Mode)",
 				type: "toggle",
 				categoryId: CATEGORY.LATENCY,
