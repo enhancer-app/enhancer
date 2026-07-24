@@ -92,6 +92,14 @@ export default class SettingsModule extends TwitchModule {
 				requiresRefreshToDisable: true,
 			},
 			{
+				id: "realVideoTimeFormat12h",
+				title: "12-Hour Time Format",
+				description: "Display real video time in 12-hour format (AM/PM) instead of 24-hour format.",
+				type: "toggle",
+				categoryId: CATEGORY.GENERAL,
+				dependsOn: { key: "realVideoTimeEnabled" },
+			},
+			{
 				id: "pinnedStreamersEnabled",
 				title: "Enable Pinning Streamers",
 				description: "Allows you to pin your favorite streamers for easy access.",
@@ -107,14 +115,6 @@ export default class SettingsModule extends TwitchModule {
 				type: "toggle",
 				categoryId: CATEGORY.GENERAL,
 				requiresRefreshToDisable: true,
-			},
-			{
-				id: "realVideoTimeFormat12h",
-				title: "12-Hour Time Format",
-				description: "Display real video time in 12-hour format (AM/PM) instead of 24-hour format.",
-				type: "toggle",
-				categoryId: CATEGORY.GENERAL,
-				dependsOn: { key: "realVideoTimeEnabled" },
 			},
 			{
 				id: "channelSection",
