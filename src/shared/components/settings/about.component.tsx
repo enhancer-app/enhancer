@@ -66,6 +66,90 @@ const Card = styled.div`
 	padding: 20px;
 `;
 
+const Disclosure = styled.details`
+	background: #111111;
+	border: 1px solid #1e1e1e;
+	border-radius: 12px;
+	overflow: hidden;
+`;
+
+const DisclosureSummary = styled.summary`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 20px;
+	cursor: pointer;
+	list-style: none;
+
+	&::-webkit-details-marker {
+		display: none;
+	}
+
+	&:hover > span:first-child {
+		color: #9147ff;
+	}
+`;
+
+const DisclosureTitle = styled.span`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: #ffffff;
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1;
+	transition: color 0.15s ease;
+
+	&::before {
+		content: "";
+		width: 3px;
+		height: 16px;
+		background: #9147ff;
+		border-radius: 2px;
+	}
+`;
+
+const DisclosureHint = styled.span`
+	display: flex;
+	align-items: center;
+	color: #7c7c7c;
+	font-size: 11px;
+	line-height: 1;
+	flex-shrink: 0;
+
+	&::after {
+		content: "+";
+		color: #9147ff;
+		font-size: 16px;
+		margin-left: 8px;
+	}
+
+	${Disclosure}[open] &::after {
+		content: "-";
+	}
+`;
+
+const DisclosureContent = styled.div`
+	border-top: 1px solid #1e1e1e;
+	padding: 16px 20px 20px;
+	color: #7c7c7c;
+	font-size: 11.5px;
+	line-height: 1.6;
+
+	p {
+		margin: 0;
+	}
+
+	p + p {
+		margin-top: 12px;
+	}
+
+	p + ul {
+		margin-top: 18px;
+	}
+`;
+
 const SectionTitle = styled.h2`
 	color: #ffffff;
 	margin: 0 0 6px 0;
@@ -270,21 +354,6 @@ export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
 			</Header>
 
 			<Card>
-				<SectionTitle>External APIs and Services</SectionTitle>
-				<Description>Depending on the platform and enabled features, Enhancer uses these services:</Description>
-				<ServiceList>
-					{externalServices.map((service) => (
-						<ServiceItem key={service.name}>
-							<a href={service.url} target="_blank" rel="noopener noreferrer">
-								{service.name}
-							</a>
-							<p>{service.description}</p>
-						</ServiceItem>
-					))}
-				</ServiceList>
-			</Card>
-
-			<Card>
 				<SectionTitle>Get in Touch</SectionTitle>
 				<BugReportText>
 					Found a bug or have a suggestion? We'd love to hear from you! Report issues on GitHub or join our Discord
@@ -335,6 +404,49 @@ export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
 					))}
 				</ContributorGrid>
 			</Card>
+
+			<Disclosure>
+				<DisclosureSummary>
+					<DisclosureTitle>External APIs and Services</DisclosureTitle>
+					<DisclosureHint>View details</DisclosureHint>
+				</DisclosureSummary>
+				<DisclosureContent>
+					<Description>Depending on the platform and enabled features, Enhancer uses these services:</Description>
+					<ServiceList>
+						{externalServices.map((service) => (
+							<ServiceItem key={service.name}>
+								<a href={service.url} target="_blank" rel="noopener noreferrer">
+									{service.name}
+								</a>
+								<p>{service.description}</p>
+							</ServiceItem>
+						))}
+					</ServiceList>
+				</DisclosureContent>
+			</Disclosure>
+
+			<Disclosure>
+				<DisclosureSummary>
+					<DisclosureTitle>Privacy &amp; data</DisclosureTitle>
+					<DisclosureHint>View details</DisclosureHint>
+				</DisclosureSummary>
+				<DisclosureContent>
+					<p>
+						Enhancer connects to our API to provide data required by some features. During a connection, we process
+						limited technical information such as the extension version and connection source type. The country may be
+						inferred from the connection IP address.
+					</p>
+					<p>
+						Enhancer does not store IP addresses or use them for profiling, advertising, or identifying users. An IP
+						address may only be processed temporarily to determine the country and to prevent abuse or excessive
+						connections. It is not stored in user-facing metrics.
+					</p>
+					<p>
+						Technical information may be used in aggregated statistics for compatibility, security, and service
+						performance monitoring, and retained according to the monitoring system&apos;s retention period.
+					</p>
+				</DisclosureContent>
+			</Disclosure>
 		</Container>
 	);
 }
