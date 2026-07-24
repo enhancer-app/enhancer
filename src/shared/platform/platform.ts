@@ -36,7 +36,8 @@ export default abstract class Platform<
 
 	async start() {
 		await this.workerApi.start();
-		await Promise.all([this.settingsCache.initialize(), this.initializeEnhancerApi()]);
+		await this.settingsCache.initialize();
+		void this.initializeEnhancerApi();
 		await this.initialize();
 		await this.loadModules();
 		this.logger.info(`Started ${this.config.type} extension`);

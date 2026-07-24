@@ -108,7 +108,7 @@ export default class ChatMentionSoundModule extends TwitchModule {
 	private setCurrentUsername() {
 		const scrollableChat = this.twitchUtils().getScrollableChat()?.props;
 		if (!scrollableChat) return;
-		this.currentUsername = scrollableChat.currentUserLogin.toLowerCase();
+		this.currentUsername = scrollableChat.currentUserLogin?.toLowerCase();
 		this.logger.debug(`Joined chat as ${this.currentUsername}`);
 	}
 

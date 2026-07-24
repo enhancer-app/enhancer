@@ -205,11 +205,14 @@ export default class ChattersModule extends TwitchModule {
 	}
 
 	private getLoginsOrIsAllowedPage() {
-		return this.twitchUtils().isDirectTwitchPlayer() || this.twitchUtils().isModeratorView() || this.getLogins();
+		if (this.twitchUtils().isDirectTwitchPlayer() || this.twitchUtils().isModeratorView()) return true;
+		const logins = this.getLogins();
+		return logins?.length ? logins : undefined;
 	}
 
-	private getLogins(): string[] {
+	private getLogins(): string[] | undefined {
 		const streamInfo = this.twitchUtils().getStreamInfo();
+		if (!streamInfo) return;
 		const organizerLogin = streamInfo?.channelLogin;
 		const costreamerLogins = streamInfo?.costreamDetails?.topCostreamers.map((streamer) => streamer.login) ?? [];
 		const guestStarLogins = streamInfo?.guestStarGuests.map((guest) => guest.user.login) ?? [];
