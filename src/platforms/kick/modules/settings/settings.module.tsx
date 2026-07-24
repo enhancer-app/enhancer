@@ -62,6 +62,7 @@ export default class SettingsModule extends KickModule {
 
 	async initialize() {
 		this.settingsHelper = new SettingsHelper<KickSettings>(
+			"kick",
 			this.settingsCache(),
 			this.workerService(),
 			this.emitter,
@@ -100,6 +101,7 @@ export default class SettingsModule extends KickModule {
 				description: "Display real video time in 12-hour format (AM/PM) instead of 24-hour format.",
 				type: "toggle",
 				categoryId: CATEGORY.GENERAL,
+				dependsOn: { key: "realVideoTimeEnabled" },
 			},
 			{
 				id: "channelSection",
@@ -133,15 +135,18 @@ export default class SettingsModule extends KickModule {
 				description: "Images are hidden until you hover your mouse to reveal them.",
 				type: "toggle",
 				categoryId: CATEGORY.CHAT,
+				dependsOn: { key: "chatImagesEnabled" },
 			},
 			{
 				id: "chatImagesSize",
 				title: "Chat Image Size",
-				description: "Maximum size of images allowed in chat messages (in megabytes).",
+				description: "Maximum size of images allowed in chat messages.",
 				type: "number",
 				categoryId: CATEGORY.CHAT,
 				min: 1,
 				step: 1,
+				unit: "MB",
+				dependsOn: { key: "chatImagesEnabled" },
 			},
 			{
 				id: "chatBadgesEnabled",
@@ -202,7 +207,7 @@ export default class SettingsModule extends KickModule {
 			},
 			{
 				id: "streamLatencyReducerEnabled",
-				title: "Enable Stream Latency Reducer (Experimental)",
+				title: "Enable Stream Latency Reducer",
 				description: "Reduces stream latency by adjusting playback rate.",
 				type: "toggle",
 				categoryId: CATEGORY.LATENCY,
@@ -215,6 +220,11 @@ export default class SettingsModule extends KickModule {
 				type: "number",
 				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
+				dependsOn: { key: "streamLatencyReducerEnabled" },
+				min: 1,
+				max: 2,
+				step: 0.01,
+				unit: "x",
 			},
 			{
 				id: "streamLatencyReducerMaxRate",
@@ -223,24 +233,35 @@ export default class SettingsModule extends KickModule {
 				type: "number",
 				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
+				dependsOn: { key: "streamLatencyReducerEnabled" },
+				min: 1,
+				max: 2,
+				step: 0.01,
+				unit: "x",
 			},
 			{
 				id: "streamLatencyReducerMinThreshold",
 				title: "Minimum Latency Threshold",
-				description:
-					"The latency threshold (in seconds) at which the playback rate will be speeded up to the minimum rate.",
+				description: "The latency at which the playback rate will be speeded up to the minimum rate.",
 				type: "number",
 				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
+				dependsOn: { key: "streamLatencyReducerEnabled" },
+				min: 0,
+				step: 0.5,
+				unit: "s",
 			},
 			{
 				id: "streamLatencyReducerMaxThreshold",
 				title: "Maximum Latency Threshold",
-				description:
-					"The latency threshold (in seconds) at which the playback rate will be speeded up to the maximum rate.",
+				description: "The latency at which the playback rate will be speeded up to the maximum rate.",
 				type: "number",
 				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
+				dependsOn: { key: "streamLatencyReducerEnabled" },
+				min: 0,
+				step: 0.5,
+				unit: "s",
 			},
 			{
 				id: "about",
@@ -267,7 +288,6 @@ export default class SettingsModule extends KickModule {
 		});
 		this.settingsSignal = result.settingsSignal;
 		this.openSettingsFn = result.openSettings;
-		this.settingsHelper.setupKeyboardShortcut();
 	}
 
 	private loadSettings() {

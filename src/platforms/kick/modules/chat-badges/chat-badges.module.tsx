@@ -20,17 +20,20 @@ export default class ChatBadgesModule extends KickModule {
 
 	private async handleMessage({ message, element, isUsingNTV }: KickChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
-		const badgesContainers = [
-			element.querySelector(".ntv__chat-message__badges"),
-			element.querySelector('button[data-prevent-expand="true"]')?.parentElement,
-		].filter(Boolean);
+		const ntvBadgesContainer = element.querySelector(".ntv__chat-message__badges");
+		const kickBadgesContainer = element.querySelector('button[data-prevent-expand="true"]')?.parentElement;
+		const badgesContainer = isUsingNTV ? ntvBadgesContainer : kickBadgesContainer;
+		if (!badgesContainer) return;
 
-		if (!badgesContainers.length) return;
 		const userBadges = this.enhancerApi().findUserBadgesForCurrentChannel(message.sender.id.toString()) ?? [];
 		const badgeIds = new Set(userBadges.map((badge) => badge.badgeId));
-		for (const container of badgesContainers) {
+		for (const container of [ntvBadgesContainer, kickBadgesContainer]) {
 			container?.querySelectorAll<HTMLElement>(".enhancer-badges").forEach((badge) => {
-				if (!badge.dataset.enhancerBadge || !badgeIds.has(badge.dataset.enhancerBadge)) {
+				if (
+					container !== badgesContainer ||
+					!badge.dataset.enhancerBadge ||
+					!badgeIds.has(badge.dataset.enhancerBadge)
+				) {
 					render(null, badge);
 					badge.remove();
 				}
@@ -44,23 +47,20 @@ export default class ChatBadgesModule extends KickModule {
 				continue;
 			}
 			const size = isUsingNTV ? 16.38 : 19.38;
-
-			for (const container of badgesContainers) {
-				if (!container || container.querySelector(`[data-enhancer-badge="${CSS.escape(badge.badgeId)}"]`)) continue;
-				const badgeWrapper = document.createElement("span");
-				badgeWrapper.classList.add("enhancer-badges");
-				badgeWrapper.dataset.enhancerBadge = badge.badgeId;
-				badgeWrapper.style.alignSelf = "center";
-				badgeWrapper.style.alignItems = "center";
-				badgeWrapper.style.display = "inline-flex";
-				render(
-					<TooltipComponent content={<p>{badge.name}</p>} position="right" delay={200}>
-						<img src={lowestSourceUrl} alt={badge.name} width={size} height={size} style={{ marginRight: ".25em" }} />
-					</TooltipComponent>,
-					badgeWrapper,
-				);
-				container.insertBefore(badgeWrapper, container.firstChild);
-			}
+			if (badgesContainer.querySelector(`[data-enhancer-badge="${CSS.escape(badge.badgeId)}"]`)) continue;
+			const badgeWrapper = document.createElement("span");
+			badgeWrapper.classList.add("enhancer-badges");
+			badgeWrapper.dataset.enhancerBadge = badge.badgeId;
+			badgeWrapper.style.alignSelf = "center";
+			badgeWrapper.style.alignItems = "center";
+			badgeWrapper.style.display = "inline-flex";
+			render(
+				<TooltipComponent content={<p>{badge.name}</p>} position="right" delay={200}>
+					<img src={lowestSourceUrl} alt={badge.name} width={size} height={size} style={{ marginRight: ".25em" }} />
+				</TooltipComponent>,
+				badgeWrapper,
+			);
+			badgesContainer.insertBefore(badgeWrapper, badgesContainer.firstChild);
 		}
 	}
 }

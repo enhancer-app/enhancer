@@ -3,584 +3,954 @@ import type {
 	SettingDefinition,
 	SettingsProps,
 } from "$types/shared/components/settings.component.types.ts";
-import { h } from "preact";
+import type { JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
 
+const FONT = `"Inter", "Noto Sans Arabic", "Roobert", "Helvetica Neue", Helvetica, Arial, sans-serif`;
+
 const SettingsContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  width: 800px;
-  height: 500px;
-  background-color: #0d0d0d;
-  border-radius: 15px;
-  border: 1px solid #232323;
-  position: relative;
-  font-family:
-    "Inter", "Noto Sans Arabic", "Roobert", "Helvetica Neue", Helvetica, Arial,
-    sans-serif !important;
+	display: flex;
+	flex-direction: column;
+	width: min(940px, 92vw);
+	height: min(640px, 86vh);
+	background-color: #0d0d0d;
+	border-radius: 16px;
+	border: 1px solid #232323;
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+	position: relative;
+	overflow: hidden;
+	font-family: ${FONT} !important;
+
+	* {
+		box-sizing: border-box;
+	}
 `;
 
 const Gradient = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  z-index: 999;
-  border-radius: 15px;
-  pointer-events: none;
-  mix-blend-mode: hard-light;
-  background: radial-gradient(
-    circle 400px at 5% 8%,
-    rgba(155, 89, 182, 0.3),
-    transparent
-  );
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 320px;
+	width: 420px;
+	z-index: 0;
+	pointer-events: none;
+	background: radial-gradient(circle 320px at 0% 0%, rgba(145, 71, 255, 0.18), transparent 70%);
 `;
 
 const Header = styled.header`
-  display: flex;
-  align-items: center;
-  padding: 12px 20px;
-  color: white;
-  font-size: 14px;
-  border-bottom: 1px solid #161616;
-  gap: 12px;
-  height: 52px;
-  box-sizing: border-box;
-  position: relative;
-  z-index: 1001;
+	display: flex;
+	align-items: center;
+	padding: 0 16px;
+	color: white;
+	gap: 12px;
+	height: 60px;
+	flex-shrink: 0;
+	border-bottom: 1px solid #1c1c1c;
+	position: relative;
+	z-index: 2;
+`;
+
+const Brand = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
 `;
 
 const LogoContainer = styled.div`
-  width: 35px;
-  height: 35px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 7px;
-  box-shadow: inset 0px 1px 0px 0px #333333;
-  background: linear-gradient(to bottom, #282728 5%, #1c1d1f 100%);
-  flex-shrink: 0;
-  align-self: center;
+	width: 34px;
+	height: 34px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	border-radius: 9px;
+	box-shadow: inset 0 1px 0 0 #333333;
+	background: linear-gradient(to bottom, #282728 5%, #1c1d1f 100%);
+	flex-shrink: 0;
 `;
 
 const Logo = styled.img`
-  width: 25px;
-  height: 25px;
+	width: 22px;
+	height: 22px;
+`;
+
+const BrandText = styled.div`
+	display: flex;
+	flex-direction: column;
+	line-height: 1.15;
+`;
+
+const BrandName = styled.span`
+	font-size: 14px;
+	font-weight: 600;
+	color: #ffffff;
+`;
+
+const BrandMeta = styled.span`
+	font-size: 10px;
+	color: #6a6a6a;
+	text-transform: capitalize;
+`;
+
+const HeaderSpacer = styled.div`
+	flex: 1;
 `;
 
 const SearchContainer = styled.div`
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background: #161616;
-  border: 1px solid #232323;
-  border-radius: 7px;
-  padding: 0 10px;
-  transition: border-color 0.2s;
-  height: 35px;
-  box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 260px;
+	background: #141414;
+	border: 1px solid #232323;
+	border-radius: 9px;
+	padding: 0 10px;
+	height: 34px;
+	color: #565656;
+	transition: border-color 0.15s ease, background 0.15s ease;
 
-  &:focus-within {
-    border-color: #9147ff;
-  }
+	&:focus-within {
+		border-color: #9147ff;
+		background: #171717;
+		color: #9147ff;
+	}
 `;
 
 const SearchInput = styled.input`
-  flex: 1;
-  background: none;
-  border: none;
-  color: white;
-  font-size: 12px;
-  padding: 0;
-  outline: none;
-  height: 100%;
+	flex: 1;
+	min-width: 0;
+	background: none;
+	border: none;
+	color: white;
+	font-family: ${FONT};
+	font-size: 12px;
+	padding: 0;
+	outline: none;
+	height: 100%;
 
-  &::placeholder {
-    color: #565656;
-  }
+	&::placeholder {
+		color: #565656;
+	}
 `;
 
-const ClearButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #565656;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-self: center;
+const IconButton = styled.button`
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: #6a6a6a;
+	padding: 0;
+	width: 22px;
+	height: 22px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 5px;
+	flex-shrink: 0;
+	transition: color 0.15s ease, background 0.15s ease;
 
-  &:hover {
-    color: white;
-  }
+	&:hover {
+		color: white;
+	}
 `;
 
-const CategoryJumpButton = styled.div`
-  background: transparent;
-  border: none;
-  color: #565656;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  border-radius: 4px;
-  flex-shrink: 0;
-  position: relative;
+const CloseButton = styled(IconButton)`
+	width: 30px;
+	height: 30px;
 
-  &:hover {
-    color: #9147ff;
-    background: rgba(145, 71, 255, 0.1);
-  }
+	&:hover {
+		background: #1e1e1e;
+		color: white;
+	}
 `;
 
-const CategoryDropdown = styled.div<{ visible: boolean }>`
-  position: absolute;
-  top: calc(100% + 12px);
-  left: 0;
-  background: #161616;
-  border: 1px solid #232323;
-  border-radius: 7px;
-  min-width: 150px;
-  max-height: 200px;
-  overflow-y: auto;
-  z-index: 1001;
-  display: ${(props) => (props.visible ? "block" : "none")};
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #333333;
-    border-radius: 3px;
-  }
+const Body = styled.div`
+	display: flex;
+	flex: 1;
+	min-height: 0;
+	position: relative;
+	z-index: 1;
 `;
 
-const CategoryDropdownItem = styled.button`
-  display: block;
-  width: 100%;
-  background: none;
-  border: none;
-  color: #ccc;
-  font-size: 12px;
-  padding: 10px 12px;
-  text-align: left;
-  cursor: pointer;
-
-  &:hover {
-    background: #232323;
-    color: white;
-  }
+const Sidebar = styled.nav`
+	width: 194px;
+	flex-shrink: 0;
+	border-right: 1px solid #1c1c1c;
+	display: flex;
+	flex-direction: column;
+	padding: 12px 10px;
+	gap: 2px;
+	overflow-y: auto;
 `;
 
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #565656;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-self: center;
+const NavItem = styled.button<{ active: boolean; dimmed: boolean }>`
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	border: none;
+	cursor: pointer;
+	text-align: left;
+	font-family: ${FONT};
+	font-size: 13px;
+	padding: 9px 10px;
+	border-radius: 8px;
+	transition: background 0.15s ease, color 0.15s ease;
+	background: ${(props) => (props.active ? "rgba(145, 71, 255, 0.14)" : "transparent")};
+	color: ${(props) => (props.active ? "#ffffff" : props.dimmed ? "#4a4a4a" : "#a5a5a5")};
 
-  &:hover {
-    color: white;
-  }
+	svg {
+		flex-shrink: 0;
+		color: ${(props) => (props.active ? "#9147ff" : "currentColor")};
+	}
+
+	&:hover {
+		background: ${(props) => (props.active ? "rgba(145, 71, 255, 0.18)" : "#161616")};
+		color: ${(props) => (props.active ? "#ffffff" : "#e5e5e5")};
+	}
 `;
 
-const SettingsContent = styled.div`
-  overflow-y: auto;
-  flex: 1;
-
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #0d0d0d;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #232323;
-    border-radius: 4px;
-    border: 1px solid #161616;
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background: #2a2a2a;
-  }
-
-  scrollbar-width: thin;
-  scrollbar-color: #232323 #0d0d0d;
+const NavLabel = styled.span`
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 `;
 
-const CategoryHeader = styled.div`
-  padding: 12px 20px 10px 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #9147ff;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: #0d0d0d;
-  z-index: 10;
-  display: flex;
-  align-items: center;
+const NavCount = styled.span`
+	font-size: 10px;
+	font-weight: 600;
+	color: #9147ff;
+	background: rgba(145, 71, 255, 0.15);
+	border-radius: 10px;
+	padding: 2px 7px;
 `;
 
-const CategorySettings = styled.div`
-  padding: 0 20px;
-  border-top: 1px solid #232323;
+const SidebarFooter = styled.div`
+	margin-top: auto;
+	padding: 12px 10px 2px;
+	border-top: 1px solid #1c1c1c;
+	font-size: 10px;
+	color: #4a4a4a;
+	display: flex;
+	justify-content: space-between;
+	gap: 6px;
 `;
 
-const Setting = styled.div`
-  display: flex;
-  padding: 15px 0;
-  border-bottom: 1px solid #1a1a1a;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
+const Content = styled.div`
+	flex: 1;
+	min-width: 0;
+	overflow-y: auto;
+	padding: 22px 24px 28px;
 
-  &:last-child {
-    border-bottom: none;
-  }
+	&::-webkit-scrollbar {
+		width: 10px;
+	}
+
+	&::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	&::-webkit-scrollbar-thumb {
+		background: #232323;
+		border-radius: 10px;
+		border: 3px solid #0d0d0d;
+	}
+
+	&::-webkit-scrollbar-thumb:hover {
+		background: #2f2f2f;
+	}
+
+	scrollbar-width: thin;
+	scrollbar-color: #232323 transparent;
 `;
 
-const SettingInfo = styled.div`
-  flex: 1;
+const SectionTitle = styled.h2`
+	margin: 0 0 14px;
+	font-size: 16px;
+	font-weight: 600;
+	color: #ffffff;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+
+	&::after {
+		content: "";
+		flex: 1;
+		height: 1px;
+		background: #1c1c1c;
+	}
 `;
 
-const SettingTitle = styled.div`
-  font-size: 14px;
-  color: white;
-  margin-bottom: 4px;
+const Section = styled.section`
+	& + & {
+		margin-top: 26px;
+	}
 `;
 
-const SettingDescription = styled.div`
-  color: rgb(131 122 122);
-  font-size: 12px;
+const Card = styled.div`
+	background: #111111;
+	border: 1px solid #1e1e1e;
+	border-radius: 12px;
+	overflow: hidden;
+
+	& + & {
+		margin-top: 12px;
+	}
 `;
 
-const RefreshWarning = styled.div`
-  color: #ed5959;
-  font-size: 12px;
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+const Panel = styled.div`
+	margin: 12px 0 0;
+
+	&:first-child {
+		margin-top: 0;
+	}
 `;
 
-const SettingControl = styled.div`
-  flex-shrink: 0;
+const Row = styled.div<{ disabled: boolean; nested: boolean }>`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 24px;
+	padding: 14px 16px;
+	padding-left: ${(props) => (props.nested ? "30px" : "16px")};
+	position: relative;
+	opacity: ${(props) => (props.disabled ? 0.4 : 1)};
+	transition: opacity 0.15s ease;
+
+	& + & {
+		border-top: 1px solid #1a1a1a;
+	}
+
+	${(props) =>
+		props.nested
+			? `
+		&::before {
+			content: "";
+			position: absolute;
+			left: 16px;
+			top: 14px;
+			bottom: 14px;
+			width: 2px;
+			border-radius: 2px;
+			background: #262626;
+		}
+	`
+			: ""}
 `;
 
-const ToggleContainer = styled.div`
-  display: inline-block;
-  position: relative;
-  width: 50px;
-  height: 25px;
+const RowInfo = styled.div`
+	flex: 1;
+	min-width: 0;
+`;
+
+const RowTitle = styled.div`
+	font-size: 13px;
+	font-weight: 500;
+	color: #f0f0f0;
+	margin-bottom: 3px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+`;
+
+const RowDescription = styled.div`
+	color: #7c7c7c;
+	font-size: 11.5px;
+	line-height: 1.5;
+`;
+
+const CategoryTag = styled.span`
+	font-size: 9px;
+	font-weight: 600;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	color: #7a5cbf;
+	border: 1px solid #2a2233;
+	border-radius: 5px;
+	padding: 2px 6px;
+`;
+
+const RowControl = styled.div<{ disabled: boolean }>`
+	flex-shrink: 0;
+	display: flex;
+	justify-content: flex-end;
+	pointer-events: ${(props) => (props.disabled ? "none" : "auto")};
+`;
+
+const ToggleTrack = styled.label<{ checked: boolean }>`
+	position: relative;
+	display: inline-block;
+	width: 42px;
+	height: 24px;
+	flex-shrink: 0;
+	cursor: pointer;
+	border-radius: 24px;
+	background-color: ${(props) => (props.checked ? "#9147ff" : "#2a2a2a")};
+	transition: background-color 0.2s ease;
+
+	&:hover {
+		background-color: ${(props) => (props.checked ? "#a06bff" : "#333333")};
+	}
+
+	&:has(input:focus-visible) {
+		outline: 2px solid #9147ff;
+		outline-offset: 2px;
+	}
 `;
 
 const ToggleInput = styled.input`
-  display: none;
-`;
-
-const ToggleSwitch = styled.label<{ checked: boolean }>`
-  position: absolute;
-  cursor: pointer;
-  background-color: ${(props) => (props.checked ? "#9147ff" : "#232323")};
-  border-radius: 25px;
-  width: 100%;
-  height: 100%;
-  transition: background-color 0.3s;
+	position: absolute;
+	opacity: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	cursor: pointer;
 `;
 
 const ToggleCircle = styled.span<{ checked: boolean }>`
-  position: absolute;
-  top: 3px;
-  left: ${(props) => (props.checked ? "28px" : "5px")};
-  width: 18px;
-  height: 18px;
-  background-color: #fff;
-  border-radius: 50%;
-  transition: left 0.3s;
+	position: absolute;
+	top: 3px;
+	left: ${(props) => (props.checked ? "21px" : "3px")};
+	width: 18px;
+	height: 18px;
+	background-color: #fff;
+	border-radius: 50%;
+	pointer-events: none;
+	transition: left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 `;
 
 const TextInput = styled.input`
-  background: none;
-  border: 1px solid #232323;
-  color: white;
-  font-size: 11px;
-  border-radius: 7px;
-  padding: 10px;
-  min-width: 200px;
+	background: #0d0d0d;
+	border: 1px solid #262626;
+	color: white;
+	font-family: ${FONT};
+	font-size: 12px;
+	border-radius: 8px;
+	padding: 9px 11px;
+	min-width: 220px;
+	outline: none;
+	transition: border-color 0.15s ease;
+
+	&::placeholder {
+		color: #4f4f4f;
+	}
+
+	&:focus {
+		border-color: #9147ff;
+	}
+`;
+
+const NumberField = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 8px;
 `;
 
 const NumberInput = styled(TextInput)`
-  min-width: 100px;
+	min-width: 90px;
+	width: 90px;
+	text-align: center;
+
+	&::-webkit-inner-spin-button,
+	&::-webkit-outer-spin-button {
+		opacity: 1;
+		height: 22px;
+	}
+`;
+
+const Unit = styled.span`
+	font-size: 11px;
+	color: #6a6a6a;
+	min-width: 18px;
+`;
+
+const SliderField = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 220px;
+`;
+
+const Slider = styled.input`
+	flex: 1;
+	appearance: none;
+	height: 4px;
+	border-radius: 4px;
+	background: #262626;
+	outline: none;
+	cursor: pointer;
+
+	&::-webkit-slider-thumb {
+		appearance: none;
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		background: #9147ff;
+		cursor: pointer;
+		transition: transform 0.15s ease;
+	}
+
+	&::-webkit-slider-thumb:hover {
+		transform: scale(1.2);
+	}
+
+	&::-moz-range-thumb {
+		width: 14px;
+		height: 14px;
+		border: none;
+		border-radius: 50%;
+		background: #9147ff;
+		cursor: pointer;
+	}
+`;
+
+const SliderValue = styled.span`
+	font-size: 11px;
+	color: #a5a5a5;
+	min-width: 42px;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
 `;
 
 const FileInputContainer = styled.div`
-  background: #0d0d0d;
-  border: 1px solid #232323;
-  border-radius: 7px;
-  padding: 4px;
-  min-width: 200px;
-  min-height: 38px;
-  display: flex;
-  align-items: center;
-  position: relative;
-  transition: border-color 0.2s ease;
+	background: #0d0d0d;
+	border: 1px solid #262626;
+	border-radius: 8px;
+	padding: 4px;
+	min-width: 220px;
+	min-height: 38px;
+	display: flex;
+	align-items: center;
+	transition: border-color 0.15s ease;
 
-  &:hover {
-    border-color: #333333;
-  }
+	&:hover {
+		border-color: #333333;
+	}
 `;
 
 const UploadTriggerLabel = styled.label`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  height: 100%;
-  color: white;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 5px;
-  transition: background-color 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: 100%;
+	color: #e5e5e5;
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	padding: 5px;
+	border-radius: 6px;
+	transition: background-color 0.15s ease;
 
-  svg {
-    width: 16px;
-    height: 16px;
-    color: #9147ff;
-  }
+	svg {
+		color: #9147ff;
+	}
 
-  &:hover {
-    background: #232323;
-  }
+	&:hover {
+		background: #1c1c1c;
+	}
 `;
 
 const FileStatus = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  padding-left: 8px;
-  color: #ccc;
-  font-size: 11px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: 1;
+	min-width: 0;
+	padding-left: 8px;
+	color: #ccc;
+	font-size: 11px;
 
-  svg {
-    color: #9147ff;
-    flex-shrink: 0;
-  }
+	svg {
+		color: #9147ff;
+		flex-shrink: 0;
+	}
 `;
 
 const FileName = styled.span`
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 `;
 
 const HiddenFileInput = styled.input`
-  display: none;
+	display: none;
 `;
 
 const RemoveFileButton = styled.button`
-  background: transparent;
-  border: none;
-  color: #565656;
-  cursor: pointer;
-  padding: 4px;
-  height: 28px;
-  width: 28px;
-  border-radius: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  margin-left: auto;
+	background: transparent;
+	border: none;
+	color: #565656;
+	cursor: pointer;
+	height: 28px;
+	width: 28px;
+	border-radius: 6px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.15s ease;
+	margin-left: auto;
 
-  &:hover {
-    background: rgba(255, 71, 87, 0.1);
-    color: #ff4757;
-  }
+	&:hover {
+		background: rgba(255, 71, 87, 0.12);
+		color: #ff4757;
+	}
 `;
 
 const FileUploadError = styled.div`
-  color: #ff4757;
-  font-size: 11px;
-  margin-top: 6px;
-  padding: 6px 8px;
-  background: rgba(255, 71, 87, 0.1);
-  border-radius: 5px;
-  border-left: 2px solid #ff4757;
-  text-align: center;
+	color: #ff4757;
+	font-size: 11px;
+	margin-top: 6px;
+	padding: 6px 8px;
+	background: rgba(255, 71, 87, 0.1);
+	border-radius: 6px;
+	border-left: 2px solid #ff4757;
 `;
 
 const Select = styled.select`
-  background: #0d0d0d;
-  padding: 10px;
-  border-radius: 7px;
-  color: #565656;
-  border: 1px solid #232323;
-  font-size: 11px;
-  cursor: pointer;
-  min-width: 150px;
+	background: #0d0d0d;
+	padding: 9px 11px;
+	border-radius: 8px;
+	color: #e5e5e5;
+	border: 1px solid #262626;
+	font-family: ${FONT};
+	font-size: 12px;
+	cursor: pointer;
+	min-width: 160px;
+	outline: none;
+
+	&:focus {
+		border-color: #9147ff;
+	}
 `;
 
 const RadioContainer = styled.div`
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	background: #0d0d0d;
+	border: 1px solid #262626;
+	border-radius: 8px;
+	padding: 3px;
 `;
 
 const RadioInput = styled.input`
-  display: none;
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
 `;
 
 const RadioLabel = styled.label<{ checked: boolean }>`
-  background: ${(props) => (props.checked ? "#9147ff" : "#232323")};
-  padding: 10px;
-  border-radius: 7px;
-  color: ${(props) => (props.checked ? "white" : "#565656")};
-  cursor: pointer;
+	background: ${(props) => (props.checked ? "#9147ff" : "transparent")};
+	padding: 7px 12px;
+	border-radius: 6px;
+	font-size: 12px;
+	color: ${(props) => (props.checked ? "white" : "#8a8a8a")};
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease;
+
+	&:hover {
+		color: ${(props) => (props.checked ? "white" : "#e5e5e5")};
+	}
 `;
 
 const ArrayContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 200px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 340px;
 `;
 
 const ArrayItem = styled.div`
-  display: flex;
-  gap: 10px;
-  align-items: center;
+	display: flex;
+	gap: 8px;
+	align-items: center;
 `;
 
 const ArrayInput = styled(TextInput)`
-  min-width: 150px;
+	min-width: 0;
+	flex: 1;
 `;
 
-const ArrayButton = styled.button<{ variant: "add" | "remove" }>`
-  background: ${(props) => (props.variant === "add" ? "#9147ff" : "#ff4757")};
-  border: none;
-  color: white;
-  padding: 8px 12px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
+const ArrayEmpty = styled.div`
+	font-size: 11.5px;
+	color: #565656;
+	padding: 4px 0;
 `;
 
-const TextContent = styled.div`
-  color: #ccc;
-  line-height: 1.6;
-  max-width: 500px;
+const GhostButton = styled.button`
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	background: transparent;
+	border: 1px dashed #2e2e2e;
+	color: #a5a5a5;
+	padding: 8px 12px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-family: ${FONT};
+	font-size: 12px;
+	transition: all 0.15s ease;
+
+	&:hover {
+		border-color: #9147ff;
+		color: #9147ff;
+	}
 `;
 
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1001;
-  backdrop-filter: blur(4px);
+const RemoveButton = styled.button`
+	background: transparent;
+	border: 1px solid #262626;
+	color: #6a6a6a;
+	width: 32px;
+	height: 34px;
+	flex-shrink: 0;
+	border-radius: 8px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.15s ease;
+
+	&:hover {
+		border-color: rgba(255, 71, 87, 0.4);
+		background: rgba(255, 71, 87, 0.1);
+		color: #ff4757;
+	}
 `;
 
-const ModalContent = styled.div`
-  background-color: #0d0d0d;
-  border-radius: 15px;
-  border: 1px solid #232323;
-  font-family:
-    "Inter", "Noto Sans Arabic", "Roobert", "Helvetica Neue", Helvetica, Arial,
-    sans-serif !important;
-  padding: 25px;
-  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.5);
-  max-width: 500px;
-  width: 90%;
+const RefreshBar = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
+	padding: 10px 16px;
+	border-top: 1px solid #1c1c1c;
+	background: rgba(145, 71, 255, 0.06);
+	color: #cfc2e6;
+	font-size: 12px;
+	position: relative;
+	z-index: 2;
+
+	svg {
+		color: #9147ff;
+		flex-shrink: 0;
+	}
 `;
 
-const ModalHeader = styled.h3`
-  color: white;
-  margin-bottom: 15px;
-  font-size: 18px;
-  text-align: center;
+const RefreshBarText = styled.span`
+	flex: 1;
 `;
 
-const ModalMessage = styled.p`
-  color: #ccc;
-  font-size: 14px;
-  margin-bottom: 20px;
-  line-height: 1.5;
+const PrimaryButton = styled.button`
+	background: #9147ff;
+	border: none;
+	color: white;
+	font-family: ${FONT};
+	font-size: 12px;
+	font-weight: 500;
+	padding: 7px 14px;
+	border-radius: 7px;
+	cursor: pointer;
+	transition: background 0.15s ease;
+
+	&:hover {
+		background: #7f39e0;
+	}
 `;
 
-const ModalButtonContainer = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-`;
+const SecondaryButton = styled(PrimaryButton)`
+	background: #232323;
+	color: #ccc;
 
-const ModalButton = styled.button<{ primary?: boolean }>`
-  padding: 8px 15px;
-  border-radius: 5px;
-  font-size: 12px;
-  cursor: pointer;
-  border: none;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
-  ${(props) =>
-		props.primary
-			? `
-    background-color: #9147ff;
-    color: white;
-    &:hover {
-      background-color: #7a3cc8;
-    }
-  `
-			: `
-    background-color: #232323;
-    color: #ccc;
-    &:hover {
-      background-color: #333333;
-    }
-  `}
+	&:hover {
+		background: #2f2f2f;
+	}
 `;
 
 const NoResults = styled.div`
-  padding: 40px 20px;
-  text-align: center;
-  color: #565656;
-  font-size: 14px;
+	padding: 60px 20px;
+	text-align: center;
+	color: #565656;
+	font-size: 13px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+
+	svg {
+		color: #2e2e2e;
+	}
 `;
 
-function tokenize(text: string): string[] {
-	return text.toLowerCase().split(/\s+/).filter(Boolean);
+const ModalOverlay = styled.div`
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.65);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 10;
+	backdrop-filter: blur(3px);
+	padding: 20px;
+`;
+
+const ModalContent = styled.div`
+	background-color: #121212;
+	border-radius: 14px;
+	border: 1px solid #262626;
+	font-family: ${FONT} !important;
+	padding: 22px;
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+	max-width: 460px;
+	width: 100%;
+`;
+
+const ModalHeader = styled.h3`
+	color: white;
+	margin: 0 0 10px;
+	font-size: 15px;
+	font-weight: 600;
+`;
+
+const ModalMessage = styled.p`
+	color: #a5a5a5;
+	font-size: 12.5px;
+	margin: 0;
+	line-height: 1.6;
+`;
+
+const ModalButtonContainer = styled.div`
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 20px;
+`;
+
+const icon = (paths: JSX.Element, size = 16) => (
+	<svg
+		xmlns="http://www.w3.org/2000/svg"
+		width={size}
+		height={size}
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		strokeWidth="2"
+		strokeLinecap="round"
+		strokeLinejoin="round"
+	>
+		{paths}
+	</svg>
+);
+
+const CloseIcon = (size?: number) =>
+	icon(
+		<>
+			<path d="M18 6l-12 12" />
+			<path d="M6 6l12 12" />
+		</>,
+		size,
+	);
+
+const SearchIcon = icon(
+	<>
+		<circle cx="11" cy="11" r="7" />
+		<path d="M21 21l-4.3-4.3" />
+	</>,
+	14,
+);
+
+const RefreshIcon = icon(
+	<>
+		<path d="M20 11a8 8 0 1 0-2.3 5.7" />
+		<path d="M20 4v7h-7" />
+	</>,
+	15,
+);
+
+const PlusIcon = icon(
+	<>
+		<path d="M12 5v14" />
+		<path d="M5 12h14" />
+	</>,
+	14,
+);
+
+const CATEGORY_ICONS: Record<string, JSX.Element> = {
+	general: icon(
+		<>
+			<circle cx="12" cy="12" r="3" />
+			<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+		</>,
+	),
+	chat: icon(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />),
+	channel: icon(
+		<>
+			<rect x="2" y="7" width="20" height="15" rx="2" />
+			<path d="M17 2l-5 5-5-5" />
+		</>,
+	),
+	latency: icon(
+		<>
+			<circle cx="12" cy="12" r="9" />
+			<path d="M12 7v5l3 3" />
+		</>,
+	),
+	about: icon(
+		<>
+			<circle cx="12" cy="12" r="9" />
+			<path d="M12 16v-5" />
+			<path d="M12 8h.01" />
+		</>,
+	),
+};
+
+const FALLBACK_CATEGORY_ICON = icon(
+	<>
+		<circle cx="12" cy="12" r="9" />
+		<path d="M12 8v8" />
+	</>,
+);
+
+function normalize(text: string): string {
+	return text
+		.toLowerCase()
+		.normalize("NFD")
+		.replace(/\p{Diacritic}/gu, "");
 }
 
 function matchesQuery(text: string, query: string): boolean {
-	const textTokens = tokenize(text);
-	const queryTokens = tokenize(query);
+	const textTokens = normalize(text).split(/\s+/).filter(Boolean);
+	const queryTokens = normalize(query).split(/\s+/).filter(Boolean);
 	return queryTokens.every((qt) => textTokens.some((tt) => tt.includes(qt)));
+}
+
+type RenderGroup<T> = { kind: "card"; items: SettingDefinition<T>[] } | { kind: "panel"; item: SettingDefinition<T> };
+
+function groupSettings<T>(settings: SettingDefinition<T>[]): RenderGroup<T>[] {
+	const groups: RenderGroup<T>[] = [];
+	for (const setting of settings) {
+		if (setting.hideInfo) {
+			groups.push({ kind: "panel", item: setting });
+			continue;
+		}
+		const last = groups[groups.length - 1];
+		if (last?.kind === "card") {
+			last.items.push(setting);
+			continue;
+		}
+		groups.push({ kind: "card", items: [setting] });
+	}
+	return groups;
 }
 
 const Settings = <T,>({
 	logoSrc = "Logo.svg",
+	platform,
+	isOpen = true,
 	categories,
 	settingDefinitions,
 	settings,
@@ -588,25 +958,91 @@ const Settings = <T,>({
 	onClose = () => {},
 }: SettingsProps<T>) => {
 	const [searchQuery, setSearchQuery] = useState("");
-	const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+	const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 	const [pendingToggle, setPendingToggle] = useState<{
 		key: keyof T;
 		value: boolean;
 		confirmationMessage?: string;
 	} | null>(null);
-
 	const [pendingArrayRemove, setPendingArrayRemove] = useState<{
 		key: keyof T;
 		index: number;
 		itemTitle?: string;
 		confirmationMessage?: string;
 	} | null>(null);
-
-	const [justTurnedOff, setJustTurnedOff] = useState<keyof T | null>(null);
+	const [refreshPending, setRefreshPending] = useState<string[]>([]);
 	const [fileUploadError, setFileUploadError] = useState<string | null>(null);
 
+	const searchRef = useRef<HTMLInputElement>(null);
 	const contentRef = useRef<HTMLDivElement>(null);
-	const categoryRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+	const sortedCategories = useMemo(() => [...categories].sort((a, b) => a.order - b.order), [categories]);
+	const isSearching = searchQuery.trim().length > 0;
+
+	const selectedCategoryId = activeCategoryId ?? sortedCategories[0]?.id ?? null;
+
+	const matchCounts = useMemo(() => {
+		const counts = new Map<string, number>();
+		for (const category of sortedCategories) {
+			const matching = settingDefinitions.filter(
+				(setting) => setting.categoryId === category.id && settingMatches(setting, category, searchQuery),
+			);
+			counts.set(category.id, matching.length);
+		}
+		return counts;
+	}, [sortedCategories, settingDefinitions, searchQuery]);
+
+	const visibleSections = useMemo(() => {
+		const source = isSearching
+			? sortedCategories.filter((category) => (matchCounts.get(category.id) ?? 0) > 0)
+			: sortedCategories.filter((category) => category.id === selectedCategoryId);
+
+		return source.map((category) => ({
+			category,
+			settings: settingDefinitions.filter(
+				(setting) =>
+					setting.categoryId === category.id && (!isSearching || settingMatches(setting, category, searchQuery)),
+			),
+		}));
+	}, [isSearching, sortedCategories, matchCounts, selectedCategoryId, settingDefinitions, searchQuery]);
+
+	useEffect(() => {
+		if (!isOpen) {
+			setSearchQuery("");
+			setPendingToggle(null);
+			setPendingArrayRemove(null);
+			setFileUploadError(null);
+			return;
+		}
+		searchRef.current?.focus();
+	}, [isOpen]);
+
+	useEffect(() => {
+		contentRef.current?.scrollTo({ top: 0 });
+	}, [selectedCategoryId, isSearching]);
+
+	useEffect(() => {
+		if (!isOpen) return;
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key !== "Escape") return;
+			event.stopPropagation();
+			if (pendingToggle) {
+				setPendingToggle(null);
+				return;
+			}
+			if (pendingArrayRemove) {
+				setPendingArrayRemove(null);
+				return;
+			}
+			if (searchQuery) {
+				setSearchQuery("");
+				return;
+			}
+			onClose();
+		};
+		document.addEventListener("keydown", handleKeyDown, true);
+		return () => document.removeEventListener("keydown", handleKeyDown, true);
+	}, [isOpen, pendingToggle, pendingArrayRemove, searchQuery, onClose]);
 
 	const updateSetting = (key: keyof T, value: unknown) => {
 		const newSettings = { ...settings, [key]: value };
@@ -614,7 +1050,7 @@ const Settings = <T,>({
 	};
 
 	const updateArraySetting = (key: keyof T, index: number, value: unknown, action: "update" | "add" | "remove") => {
-		const currentArray = settings[key] as unknown[];
+		const currentArray = (settings[key] as unknown[]) || [];
 		let newArray: unknown[];
 
 		switch (action) {
@@ -644,8 +1080,7 @@ const Settings = <T,>({
 
 		if (setting.type === "file" && setting.validTypes && setting.validTypes.length > 0) {
 			if (!setting.validTypes.includes(file.type)) {
-				const errorMsg = "Invalid file type.";
-				setFileUploadError(errorMsg);
+				setFileUploadError("Invalid file type.");
 				target.value = "";
 				return;
 			}
@@ -655,8 +1090,7 @@ const Settings = <T,>({
 			if (file.size > setting.maxSizeBytes) {
 				const maxSizeMB = (setting.maxSizeBytes / 1024 / 1024).toFixed(2);
 				const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-				const errorMsg = `File size (${fileSizeMB}MB) exceeds maximum allowed size of ${maxSizeMB}MB.`;
-				setFileUploadError(errorMsg);
+				setFileUploadError(`File size (${fileSizeMB}MB) exceeds maximum allowed size of ${maxSizeMB}MB.`);
 				target.value = "";
 				return;
 			}
@@ -664,12 +1098,10 @@ const Settings = <T,>({
 
 		const reader = new FileReader();
 		reader.onload = (e) => {
-			const result = e.target?.result as string;
-			updateSetting(setting.id as keyof T, result);
+			updateSetting(setting.id as keyof T, e.target?.result as string);
 		};
 		reader.onerror = () => {
-			const errorMsg = "Failed to read the selected file. Please try again.";
-			setFileUploadError(errorMsg);
+			setFileUploadError("Failed to read the selected file. Please try again.");
 		};
 		reader.readAsDataURL(file);
 		target.value = "";
@@ -689,29 +1121,24 @@ const Settings = <T,>({
 				value: checked,
 				confirmationMessage: setting.confirmationMessage ?? "Are you sure you want to enable this setting?",
 			});
-		} else {
-			updateSetting(setting.id as keyof T, checked);
-			setPendingToggle(null);
+			return;
+		}
 
-			if (setting.requiresRefreshToDisable && settings[setting.id as keyof T] === true && !checked) {
-				setJustTurnedOff(setting.id as keyof T);
-				setTimeout(() => {
-					setJustTurnedOff((current) => (current === setting.id ? null : current));
-				}, 5000);
-			} else if (checked && justTurnedOff === setting.id) {
-				setJustTurnedOff(null);
-			}
+		const wasEnabled = settings[setting.id as keyof T] === true;
+		updateSetting(setting.id as keyof T, checked);
+
+		if (setting.requiresRefreshToDisable && wasEnabled && !checked) {
+			setRefreshPending((current) =>
+				current.includes(setting.id as string) ? current : [...current, setting.id as string],
+			);
+		} else if (checked) {
+			setRefreshPending((current) => current.filter((id) => id !== setting.id));
 		}
 	};
 
 	const confirmToggle = () => {
-		if (pendingToggle) {
-			updateSetting(pendingToggle.key, pendingToggle.value);
-			setPendingToggle(null);
-		}
-	};
-
-	const cancelToggle = () => {
+		if (!pendingToggle) return;
+		updateSetting(pendingToggle.key, pendingToggle.value);
 		setPendingToggle(null);
 	};
 
@@ -727,40 +1154,27 @@ const Settings = <T,>({
 				itemTitle,
 				confirmationMessage: setting.confirmationMessage,
 			});
-		} else {
-			updateArraySetting(setting.id as keyof T, index, null, "remove");
+			return;
 		}
+		updateArraySetting(setting.id as keyof T, index, null, "remove");
 	};
 
 	const confirmArrayRemove = () => {
-		if (pendingArrayRemove) {
-			updateArraySetting(pendingArrayRemove.key, pendingArrayRemove.index, null, "remove");
-			setPendingArrayRemove(null);
-		}
-	};
-
-	const cancelArrayRemove = () => {
+		if (!pendingArrayRemove) return;
+		updateArraySetting(pendingArrayRemove.key, pendingArrayRemove.index, null, "remove");
 		setPendingArrayRemove(null);
 	};
 
-	const jumpToCategory = (categoryId: string) => {
-		const element = categoryRefs.current.get(categoryId);
-		if (element) {
-			element.scrollIntoView({ behavior: "smooth", block: "start" });
-		}
-		setShowCategoryDropdown(false);
+	const isDisabled = (setting: SettingDefinition<T>): boolean => {
+		if (!setting.dependsOn) return false;
+		const expected = setting.dependsOn.value ?? true;
+		return settings[setting.dependsOn.key as keyof T] !== expected;
 	};
 
-	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			const target = event.target as HTMLElement;
-			if (!target.closest(".category-jump-container")) {
-				setShowCategoryDropdown(false);
-			}
-		};
-		document.addEventListener("click", handleClickOutside);
-		return () => document.removeEventListener("click", handleClickOutside);
-	}, []);
+	const selectCategory = (categoryId: string) => {
+		setSearchQuery("");
+		setActiveCategoryId(categoryId);
+	};
 
 	const renderSettingControl = (setting: SettingDefinition<T>) => {
 		const value = settings[setting.id as keyof T];
@@ -768,21 +1182,15 @@ const Settings = <T,>({
 		switch (setting.type) {
 			case "toggle": {
 				return (
-					<ToggleContainer>
+					<ToggleTrack checked={value as boolean}>
 						<ToggleInput
 							type="checkbox"
 							id={setting.id as string}
 							checked={value as boolean}
 							onChange={(e) => handleToggleChange(e, setting, (e.target as HTMLInputElement).checked)}
 						/>
-						<ToggleSwitch
-							htmlFor={setting.id as string}
-							checked={value as boolean}
-							onClick={(e) => e.stopPropagation()}
-						>
-							<ToggleCircle checked={value as boolean} />
-						</ToggleSwitch>
-					</ToggleContainer>
+						<ToggleCircle checked={value as boolean} />
+					</ToggleTrack>
 				);
 			}
 			case "input": {
@@ -795,15 +1203,36 @@ const Settings = <T,>({
 				);
 			}
 			case "number": {
+				if (setting.slider) {
+					return (
+						<SliderField>
+							<Slider
+								type="range"
+								value={(value as number) ?? 0}
+								min={setting.min ?? 0}
+								max={setting.max ?? 100}
+								step={setting.step ?? 1}
+								onInput={(e) => updateSetting(setting.id as keyof T, Number((e.target as HTMLInputElement).value))}
+							/>
+							<SliderValue>
+								{(value as number) ?? 0}
+								{setting.unit ?? ""}
+							</SliderValue>
+						</SliderField>
+					);
+				}
 				return (
-					<NumberInput
-						type="number"
-						value={(value as number) || 0}
-						min={setting.min}
-						max={setting.max}
-						step={setting.step}
-						onChange={(e) => updateSetting(setting.id as keyof T, Number((e.target as HTMLInputElement).value))}
-					/>
+					<NumberField>
+						<NumberInput
+							type="number"
+							value={(value as number) ?? 0}
+							min={setting.min}
+							max={setting.max}
+							step={setting.step}
+							onChange={(e) => updateSetting(setting.id as keyof T, Number((e.target as HTMLInputElement).value))}
+						/>
+						{setting.unit ? <Unit>{setting.unit}</Unit> : null}
+					</NumberField>
 				);
 			}
 			case "select": {
@@ -846,6 +1275,7 @@ const Settings = <T,>({
 
 				return (
 					<ArrayContainer>
+						{arrayValue.length === 0 ? <ArrayEmpty>No items yet.</ArrayEmpty> : null}
 						{arrayValue.map((item, index) => (
 							<ArrayItem key={`array-item-${setting.id as string}-${index}`}>
 								{fields.map((field: { name: string; placeholder: string }) => (
@@ -864,20 +1294,21 @@ const Settings = <T,>({
 															...(item as Record<string, unknown>),
 															[field.name]: (e.target as HTMLInputElement).value,
 														}
-													: {
-															[field.name]: (e.target as HTMLInputElement).value,
-														};
+													: { [field.name]: (e.target as HTMLInputElement).value };
 											updateArraySetting(setting.id as keyof T, index, newValue, "update");
 										}}
 									/>
 								))}
-								<ArrayButton variant="remove" onClick={() => handleArrayRemove(setting, index, item)}>
-									Remove
-								</ArrayButton>
+								<RemoveButton
+									title="Remove"
+									aria-label="Remove"
+									onClick={() => handleArrayRemove(setting, index, item)}
+								>
+									{CloseIcon(14)}
+								</RemoveButton>
 							</ArrayItem>
 						))}
-						<ArrayButton
-							variant="add"
+						<GhostButton
 							onClick={() => {
 								const newValue = fields.reduce(
 									(acc: Record<string, string>, field: { name: string; placeholder: string }) => {
@@ -889,8 +1320,9 @@ const Settings = <T,>({
 								updateArraySetting(setting.id as keyof T, arrayValue.length, newValue, "add");
 							}}
 						>
-							Add Item
-						</ArrayButton>
+							{PlusIcon}
+							Add item
+						</GhostButton>
 					</ArrayContainer>
 				);
 			}
@@ -908,62 +1340,30 @@ const Settings = <T,>({
 				const hasFile = fileValue && fileValue.length > 0;
 
 				return (
-					<>
+					<div>
 						<FileInputContainer>
 							{hasFile ? (
 								<>
 									<FileStatus>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="16"
-											height="16"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											strokeWidth="2"
-											strokeLinecap="round"
-											strokeLinejoin="round"
-										>
-											<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-										</svg>
+										{icon(
+											<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />,
+										)}
 										<FileName>File uploaded</FileName>
 									</FileStatus>
 									<RemoveFileButton onClick={() => clearFile(setting.id as keyof T)} title="Remove file">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="16"
-											height="16"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											strokeWidth="2"
-											strokeLinecap="round"
-											strokeLinejoin="round"
-										>
-											<path stroke="none" d="M0 0h24v24H0z" fill="none" />
-											<path d="M18 6l-12 12" />
-											<path d="M6 6l12 12" />
-										</svg>
+										{CloseIcon(14)}
 									</RemoveFileButton>
 								</>
 							) : (
 								<UploadTriggerLabel htmlFor={`file-${setting.id as string}`}>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="16"
-										height="16"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										strokeWidth="2"
-										strokeLinecap="round"
-										strokeLinejoin="round"
-									>
-										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-										<polyline points="17 8 12 3 7 8" />
-										<line x1="12" y1="3" x2="12" y2="15" />
-									</svg>
-									Upload File
+									{icon(
+										<>
+											<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+											<polyline points="17 8 12 3 7 8" />
+											<line x1="12" y1="3" x2="12" y2="15" />
+										</>,
+									)}
+									Upload file
 									<HiddenFileInput
 										id={`file-${setting.id as string}`}
 										type="file"
@@ -974,7 +1374,7 @@ const Settings = <T,>({
 							)}
 						</FileInputContainer>
 						{fileUploadError && <FileUploadError>{fileUploadError}</FileUploadError>}
-					</>
+					</div>
 				);
 			}
 			default:
@@ -982,239 +1382,183 @@ const Settings = <T,>({
 		}
 	};
 
-	const filteredCategories = useMemo(() => {
-		const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
-
-		if (!searchQuery.trim()) {
-			return sortedCategories.map((category) => ({
-				...category,
-				settings: settingDefinitions.filter((s) => s.categoryId === category.id),
-			}));
-		}
-
-		return sortedCategories
-			.map((category) => {
-				const matchingSettings = settingDefinitions.filter((setting) => {
-					if (setting.categoryId !== category.id) return false;
-
-					const searchText = [setting.title, setting.description, String(setting.id), ...(setting.tags || [])].join(
-						" ",
-					);
-
-					const categorySearchText = [category.title, ...(category.tags || [])].join(" ");
-
-					return matchesQuery(searchText, searchQuery) || matchesQuery(categorySearchText, searchQuery);
-				});
-
-				return {
-					...category,
-					settings: matchingSettings,
-				};
-			})
-			.filter((category) => category.settings.length > 0);
-	}, [categories, settingDefinitions, searchQuery]);
+	const totalMatches = isSearching ? visibleSections.reduce((total, section) => total + section.settings.length, 0) : 0;
 
 	return (
 		<>
 			<SettingsOverlayBackground onClick={onClose} />
-			<SettingsContainer>
+			{/* biome-ignore lint/a11y/useSemanticElements: native <dialog> renders in the top layer and breaks styling inside the injected overlay */}
+			<SettingsContainer role="dialog" aria-modal="true" aria-label="Enhancer settings">
 				<Gradient />
 				<Header>
-					<LogoContainer>
-						<Logo src={logoSrc} alt="logo" />
-					</LogoContainer>
-					<CategoryJumpButton
-						className="category-jump-container"
-						onClick={(e) => {
-							e.stopPropagation();
-							setShowCategoryDropdown(!showCategoryDropdown);
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="14"
-							height="14"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="2"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						>
-							<path d="M3 6h18" />
-							<path d="M3 12h18" />
-							<path d="M3 18h18" />
-						</svg>
-						<CategoryDropdown visible={showCategoryDropdown}>
-							{filteredCategories.map((c) => (
-								<CategoryDropdownItem
-									key={c.id}
-									onClick={(e) => {
-										e.stopPropagation();
-										jumpToCategory(c.id);
-									}}
-								>
-									{c.title}
-								</CategoryDropdownItem>
-							))}
-						</CategoryDropdown>
-					</CategoryJumpButton>
+					<Brand>
+						<LogoContainer>
+							<Logo src={logoSrc} alt="Enhancer" />
+						</LogoContainer>
+						<BrandText>
+							<BrandName>Enhancer</BrandName>
+							<BrandMeta>{platform ? `${platform} settings` : "Settings"}</BrandMeta>
+						</BrandText>
+					</Brand>
+					<HeaderSpacer />
 					<SearchContainer>
+						{SearchIcon}
 						<SearchInput
+							ref={searchRef}
 							type="text"
 							placeholder="Search settings..."
 							value={searchQuery}
 							onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
 						/>
 						{searchQuery && (
-							<ClearButton onClick={() => setSearchQuery("")}>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="14"
-									height="14"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									strokeWidth="2"
-									strokeLinecap="round"
-									strokeLinejoin="round"
-								>
-									<path stroke="none" d="M0 0h24v24H0z" fill="none" />
-									<path d="M18 6l-12 12" />
-									<path d="M6 6l12 12" />
-								</svg>
-							</ClearButton>
+							<IconButton onClick={() => setSearchQuery("")} title="Clear search" aria-label="Clear search">
+								{CloseIcon(14)}
+							</IconButton>
 						)}
 					</SearchContainer>
-					<CloseButton onClick={onClose}>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="2"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						>
-							<path stroke="none" d="M0 0h24v24H0z" fill="none" />
-							<path d="M18 6l-12 12" />
-							<path d="M6 6l12 12" />
-						</svg>
+					<CloseButton onClick={onClose} title="Close" aria-label="Close settings">
+						{CloseIcon(18)}
 					</CloseButton>
 				</Header>
-				<SettingsContent ref={contentRef}>
-					{filteredCategories.length === 0 ? (
-						<NoResults>No settings found matching "{searchQuery}"</NoResults>
-					) : (
-						filteredCategories.map((category, index) => (
-							<div
-								key={category.id}
-								ref={(el) => {
-									if (el) categoryRefs.current.set(category.id, el);
-								}}
-							>
-								<CategoryHeader>{category.title}</CategoryHeader>
-								<CategorySettings>
-									{category.settings.map((setting) => {
-										const value = settings[setting.id as keyof T];
-										if (setting.hideInfo) {
-											return (
-												<Setting
-													key={`setting-${setting.id as string}`}
-													style={{
-														flexDirection: "column",
-														alignItems: "stretch",
-													}}
-												>
-													<SettingControl style={{ flexShrink: "unset" }}>
-														{renderSettingControl(setting)}
-													</SettingControl>
-												</Setting>
-											);
-										}
-										return (
-											<Setting key={`setting-${setting.id as string}`}>
-												<SettingInfo>
-													<SettingTitle>{setting.title}</SettingTitle>
-													<SettingDescription>{setting.description}</SettingDescription>
-													{setting.requiresRefreshToDisable && justTurnedOff === setting.id && (
-														<RefreshWarning>
-															Disabling this feature requires a page refresh to fully take effect.
-														</RefreshWarning>
-													)}
-												</SettingInfo>
-												<SettingControl>{renderSettingControl(setting)}</SettingControl>
-											</Setting>
-										);
-									})}
-								</CategorySettings>
-							</div>
-						))
-					)}
-				</SettingsContent>
+				<Body>
+					<Sidebar>
+						{sortedCategories.map((category) => {
+							const count = matchCounts.get(category.id) ?? 0;
+							return (
+								<NavItem
+									key={category.id}
+									active={!isSearching && category.id === selectedCategoryId}
+									dimmed={isSearching && count === 0}
+									onClick={() => selectCategory(category.id)}
+								>
+									{CATEGORY_ICONS[category.id] ?? FALLBACK_CATEGORY_ICON}
+									<NavLabel>{category.title}</NavLabel>
+									{isSearching && count > 0 ? <NavCount>{count}</NavCount> : null}
+								</NavItem>
+							);
+						})}
+						<SidebarFooter>
+							<span>Enhancer</span>
+							<span>v{__version__}</span>
+						</SidebarFooter>
+					</Sidebar>
+					<Content ref={contentRef}>
+						{isSearching && totalMatches === 0 ? (
+							<NoResults>
+								{icon(
+									<>
+										<circle cx="11" cy="11" r="7" />
+										<path d="M21 21l-4.3-4.3" />
+									</>,
+									28,
+								)}
+								No settings found matching "{searchQuery}"
+							</NoResults>
+						) : (
+							visibleSections.map((section) => (
+								<Section key={section.category.id}>
+									<SectionTitle>{section.category.title}</SectionTitle>
+									{groupSettings(section.settings).map((group, groupIndex) =>
+										group.kind === "panel" ? (
+											<Panel key={`panel-${group.item.id as string}`}>{renderSettingControl(group.item)}</Panel>
+										) : (
+											<Card key={`card-${section.category.id}-${groupIndex}`}>
+												{group.items.map((setting) => {
+													const disabled = isDisabled(setting);
+													return (
+														<Row
+															key={`setting-${setting.id as string}`}
+															disabled={disabled}
+															nested={Boolean(setting.dependsOn)}
+														>
+															<RowInfo>
+																<RowTitle>
+																	{setting.title}
+																	{isSearching ? <CategoryTag>{section.category.title}</CategoryTag> : null}
+																</RowTitle>
+																<RowDescription>{setting.description}</RowDescription>
+															</RowInfo>
+															<RowControl disabled={disabled}>{renderSettingControl(setting)}</RowControl>
+														</Row>
+													);
+												})}
+											</Card>
+										),
+									)}
+								</Section>
+							))
+						)}
+					</Content>
+				</Body>
+				{refreshPending.length > 0 && (
+					<RefreshBar>
+						{RefreshIcon}
+						<RefreshBarText>Some of your changes need a page refresh to fully take effect.</RefreshBarText>
+						<SecondaryButton onClick={() => setRefreshPending([])}>Dismiss</SecondaryButton>
+						<PrimaryButton onClick={() => window.location.reload()}>Reload page</PrimaryButton>
+					</RefreshBar>
+				)}
+				{pendingToggle && (
+					<ModalOverlay onClick={() => setPendingToggle(null)}>
+						<ModalContent onClick={(e) => e.stopPropagation()}>
+							<ModalHeader>Confirm action</ModalHeader>
+							<ModalMessage>
+								{pendingToggle.confirmationMessage || "Are you sure you want to enable this setting?"}
+							</ModalMessage>
+							<ModalButtonContainer>
+								<SecondaryButton onClick={() => setPendingToggle(null)}>Cancel</SecondaryButton>
+								<PrimaryButton onClick={confirmToggle}>Confirm</PrimaryButton>
+							</ModalButtonContainer>
+						</ModalContent>
+					</ModalOverlay>
+				)}
+				{pendingArrayRemove && (
+					<ModalOverlay onClick={() => setPendingArrayRemove(null)}>
+						<ModalContent onClick={(e) => e.stopPropagation()}>
+							<ModalHeader>Confirm removal</ModalHeader>
+							<ModalMessage>
+								{pendingArrayRemove.confirmationMessage ||
+									(pendingArrayRemove.itemTitle
+										? `Are you sure you want to remove "${pendingArrayRemove.itemTitle}"?`
+										: "Are you sure you want to remove this item?")}
+							</ModalMessage>
+							<ModalButtonContainer>
+								<SecondaryButton onClick={() => setPendingArrayRemove(null)}>Cancel</SecondaryButton>
+								<PrimaryButton onClick={confirmArrayRemove}>Remove</PrimaryButton>
+							</ModalButtonContainer>
+						</ModalContent>
+					</ModalOverlay>
+				)}
 			</SettingsContainer>
-			{pendingToggle && (
-				<ModalOverlay onClick={cancelToggle}>
-					<ModalContent onClick={(e) => e.stopPropagation()}>
-						<ModalHeader>Confirm Action</ModalHeader>
-						<ModalMessage>
-							{pendingToggle.confirmationMessage || "Are you sure you want to enable this setting?"}
-						</ModalMessage>
-						<ModalButtonContainer>
-							<ModalButton primary onClick={confirmToggle}>
-								Confirm
-							</ModalButton>
-							<ModalButton onClick={cancelToggle}>Cancel</ModalButton>
-						</ModalButtonContainer>
-					</ModalContent>
-				</ModalOverlay>
-			)}
-			{pendingArrayRemove && (
-				<ModalOverlay onClick={cancelArrayRemove}>
-					<ModalContent onClick={(e) => e.stopPropagation()}>
-						<ModalHeader>Confirm Removal</ModalHeader>
-						<ModalMessage>
-							{pendingArrayRemove.confirmationMessage ||
-								(pendingArrayRemove.itemTitle
-									? `Are you sure you want to remove "${pendingArrayRemove.itemTitle}"?`
-									: "Are you sure you want to remove this item?")}
-						</ModalMessage>
-						<ModalButtonContainer>
-							<ModalButton primary onClick={confirmArrayRemove}>
-								Remove
-							</ModalButton>
-							<ModalButton onClick={cancelArrayRemove}>Cancel</ModalButton>
-						</ModalButtonContainer>
-					</ModalContent>
-				</ModalOverlay>
-			)}
 		</>
 	);
 };
 
+function settingMatches<T>(setting: SettingDefinition<T>, category: SettingCategory, query: string): boolean {
+	if (!query.trim()) return true;
+	const settingText = [setting.title, setting.description, String(setting.id), ...(setting.tags || [])].join(" ");
+	const categoryText = [category.title, ...(category.tags || [])].join(" ");
+	return matchesQuery(settingText, query) || matchesQuery(categoryText, query);
+}
+
 export default Settings;
 
 const SettingsOverlayBackground = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
+	position: absolute;
+	inset: 0;
+	z-index: -1;
 `;
 
 export const SettingsOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  backdrop-filter: blur(4px);
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.8);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 10000;
+	backdrop-filter: blur(4px);
 `;

@@ -50,6 +50,7 @@ export default class SettingsModule extends TwitchModule {
 
 	async initialize() {
 		this.settingsHelper = new SettingsHelper<TwitchSettings>(
+			"twitch",
 			this.settingsCache(),
 			this.workerService(),
 			this.emitter,
@@ -91,6 +92,14 @@ export default class SettingsModule extends TwitchModule {
 				requiresRefreshToDisable: true,
 			},
 			{
+				id: "realVideoTimeFormat12h",
+				title: "12-Hour Time Format",
+				description: "Display real video time in 12-hour format (AM/PM) instead of 24-hour format.",
+				type: "toggle",
+				categoryId: CATEGORY.GENERAL,
+				dependsOn: { key: "realVideoTimeEnabled" },
+			},
+			{
 				id: "pinnedStreamersEnabled",
 				title: "Enable Pinning Streamers",
 				description: "Allows you to pin your favorite streamers for easy access.",
@@ -106,13 +115,6 @@ export default class SettingsModule extends TwitchModule {
 				type: "toggle",
 				categoryId: CATEGORY.GENERAL,
 				requiresRefreshToDisable: true,
-			},
-			{
-				id: "realVideoTimeFormat12h",
-				title: "12-Hour Time Format",
-				description: "Display real video time in 12-hour format (AM/PM) instead of 24-hour format.",
-				type: "toggle",
-				categoryId: CATEGORY.GENERAL,
 			},
 			{
 				id: "channelSection",
@@ -146,15 +148,18 @@ export default class SettingsModule extends TwitchModule {
 				description: "Images are hidden until you hover your mouse to reveal them.",
 				type: "toggle",
 				categoryId: CATEGORY.CHAT,
+				dependsOn: { key: "chatImagesEnabled" },
 			},
 			{
 				id: "chatImagesSize",
 				title: "Chat Image Size",
-				description: "Maximum size of images allowed in chat messages (in megabytes).",
+				description: "Maximum size of images allowed in chat messages.",
 				type: "number",
 				categoryId: CATEGORY.CHAT,
 				min: 1,
 				step: 1,
+				unit: "MB",
+				dependsOn: { key: "chatImagesEnabled" },
 			},
 			{
 				id: "chatBadgesEnabled",
@@ -184,6 +189,7 @@ export default class SettingsModule extends TwitchModule {
 					"When using the chat message menu, new content will be added to the message in chat input instead of replacing it.",
 				type: "toggle",
 				categoryId: CATEGORY.CHAT,
+				dependsOn: { key: "chatMessageMenuEnabled" },
 			},
 			{
 				id: "chatMentionSoundEnabled",
@@ -200,16 +206,20 @@ export default class SettingsModule extends TwitchModule {
 				type: "file",
 				categoryId: CATEGORY.CHAT,
 				validTypes: ["audio/mpeg", "audio/mp3", "audio/ogg", "audio/wav", "audio/webm", "audio/aac", "audio/flac"],
+				dependsOn: { key: "chatMentionSoundEnabled" },
 			},
 			{
 				id: "chatMentionSoundVolume",
-				title: "Custom Mention Sound Volume",
+				title: "Mention Sound Volume",
 				description: "Adjust the volume level for your mention notification sound.",
 				type: "number",
 				min: 0,
 				max: 100,
 				step: 1,
+				unit: "%",
+				slider: true,
 				categoryId: CATEGORY.CHAT,
+				dependsOn: { key: "chatMentionSoundEnabled" },
 			},
 			{
 				id: "quickAccessLinks",
@@ -257,7 +267,7 @@ export default class SettingsModule extends TwitchModule {
 			},
 			{
 				id: "streamLatencyReducerEnabled",
-				title: "Enable Stream Latency Reducer (Experimental)",
+				title: "Enable Stream Latency Reducer",
 				description: "Reduces stream latency by adjusting playback rate. (Disabled without Low Latency Mode)",
 				type: "toggle",
 				categoryId: CATEGORY.LATENCY,
@@ -270,6 +280,11 @@ export default class SettingsModule extends TwitchModule {
 				type: "number",
 				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
+				dependsOn: { key: "streamLatencyReducerEnabled" },
+				min: 1,
+				max: 2,
+				step: 0.01,
+				unit: "x",
 			},
 			{
 				id: "streamLatencyReducerMaxRate",
@@ -278,6 +293,11 @@ export default class SettingsModule extends TwitchModule {
 				type: "number",
 				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
+				dependsOn: { key: "streamLatencyReducerEnabled" },
+				min: 1,
+				max: 2,
+				step: 0.01,
+				unit: "x",
 			},
 			{
 				id: "streamLatencyReducerMinThreshold",
@@ -287,6 +307,10 @@ export default class SettingsModule extends TwitchModule {
 				type: "number",
 				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
+				dependsOn: { key: "streamLatencyReducerEnabled" },
+				min: 0,
+				step: 1,
+				unit: "s",
 			},
 			{
 				id: "streamLatencyReducerMaxThreshold",
@@ -296,6 +320,10 @@ export default class SettingsModule extends TwitchModule {
 				type: "number",
 				categoryId: CATEGORY.LATENCY,
 				requiresRefreshToDisable: true,
+				dependsOn: { key: "streamLatencyReducerEnabled" },
+				min: 0,
+				step: 1,
+				unit: "s",
 			},
 			{
 				id: "about",
@@ -322,7 +350,6 @@ export default class SettingsModule extends TwitchModule {
 		});
 		this.settingsSignal = result.settingsSignal;
 		this.openSettingsFn = result.openSettings;
-		this.settingsHelper.setupKeyboardShortcut();
 	}
 
 	private loadSettings() {

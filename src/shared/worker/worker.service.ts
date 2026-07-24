@@ -32,7 +32,7 @@ export default class WorkerService {
 	async start() {
 		this.setupMessageListener();
 		await this.waitForBridge();
-		await this.ping();
+		void this.ping();
 		this.startPing();
 		this.logger.info("WorkerService started");
 	}

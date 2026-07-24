@@ -45,7 +45,10 @@ export class EnhancerApiService {
 	private clientGeneration = 0;
 	private pendingSubscription: SubscriptionState | null = null;
 
-	constructor(private readonly logger: Logger) {
+	constructor(
+		private readonly logger: Logger,
+		private readonly version = "unknown",
+	) {
 		chrome.tabs.onRemoved.addListener((tabId) => this.removeTabClients(tabId));
 	}
 
@@ -274,7 +277,7 @@ export class EnhancerApiService {
 		}
 
 		this.connectionPromise = new Promise<void>((resolve, reject) => {
-			const socket = new WebSocket(EnhancerApiService.WEBSOCKET_URL);
+			const socket = new WebSocket(`${EnhancerApiService.WEBSOCKET_URL}?v=${encodeURIComponent(this.version)}`);
 			this.socket = socket;
 			let settled = false;
 			const timeout = setTimeout(() => {
@@ -883,7 +886,7 @@ export class EnhancerApiService {
 	}
 
 	private async requestSeeds(topic: EnhancerAggregateTopic): Promise<CachedAggregateSeed[]> {
-		const tabs = await chrome.tabs.query({});
+		const tabs = await chrome.tabs.query({ url: ["*://*.twitch.tv/*", "*://*.kick.com/*"] });
 		const request: WorkerBroadcast = {
 			type: "enhancer-api-seed-request",
 			payload: { requestId: crypto.randomUUID(), topic },
