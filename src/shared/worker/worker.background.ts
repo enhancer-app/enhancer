@@ -21,7 +21,7 @@ export default class WorkerBackground {
 	);
 	private readonly watchtimeDatabase = new WatchtimeDatabase();
 	private readonly watchtimeAccumulator = new WatchtimeAccumulator(this.watchtimeDatabase);
-	private readonly enhancerApiService = new EnhancerApiService(this.enhancerApiLogger);
+	private readonly enhancerApiService = new EnhancerApiService(this.enhancerApiLogger, __version__);
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.settingsDatabase,
