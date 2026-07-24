@@ -1,3 +1,4 @@
+import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { h } from "preact";
 
 export type SettingCategory = {
@@ -5,6 +6,11 @@ export type SettingCategory = {
 	title: string;
 	order: number;
 	tags?: string[];
+};
+
+export type SettingDependency = {
+	key: string;
+	value?: unknown;
 };
 
 export type CommonSettingDefinition<T = any> = {
@@ -15,6 +21,7 @@ export type CommonSettingDefinition<T = any> = {
 	tags?: string[];
 	hideInfo?: boolean;
 	requiresRefreshToDisable?: boolean;
+	dependsOn?: SettingDependency;
 };
 
 export type ToggleSettingDefinition<T = any> = {
@@ -33,6 +40,8 @@ export type NumberSettingDefinition<T = any> = {
 	min?: number;
 	max?: number;
 	step?: number;
+	unit?: string;
+	slider?: boolean;
 } & CommonSettingDefinition<T>;
 
 export type SelectSettingDefinition<T = any> = {
@@ -76,6 +85,8 @@ export type SettingDefinition<T = any> =
 
 export type SettingsProps<T = any> = {
 	logoSrc?: string;
+	platform?: PlatformType;
+	isOpen?: boolean;
 	categories: SettingCategory[];
 	settingDefinitions: SettingDefinition<T>[];
 	settings: T;

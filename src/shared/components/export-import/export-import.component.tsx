@@ -13,68 +13,69 @@ const Container = styled.div`
 	justify-content: space-between;
 	gap: 24px;
 	width: 100%;
-	padding: 10px 0;
+	background: #111111;
+	border: 1px solid #1e1e1e;
+	border-radius: 12px;
+	padding: 16px;
 `;
 
 const InfoSection = styled.div`
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 3px;
 	flex: 1;
+	min-width: 0;
 `;
 
 const InfoTitle = styled.span`
-	color: #e0e0e0;
+	color: #f0f0f0;
 	font-size: 13px;
-	font-weight: 600;
-	letter-spacing: 0.5px;
+	font-weight: 500;
 `;
 
 const InfoDescription = styled.span`
-	color: #888;
-	font-size: 11px;
+	color: #7c7c7c;
+	font-size: 11.5px;
+	line-height: 1.5;
 `;
 
 const PlatformTag = styled.span`
-	color: #b887ff;
+	color: #9147ff;
 	font-weight: 600;
 	text-transform: capitalize;
 `;
 
 const ButtonGroup = styled.div`
 	display: flex;
-	gap: 12px;
+	gap: 8px;
 	flex-shrink: 0;
-	padding-left: 24px;
 `;
 
 const ActionButton = styled.button`
-	background: rgba(145, 71, 255, 0.1);
-	border: 1px solid rgba(145, 71, 255, 0.3);
-	color: #b887ff;
-	padding: 8px 20px;
-	border-radius: 6px;
+	background: #1a1a1a;
+	border: 1px solid #262626;
+	color: #e5e5e5;
+	padding: 8px 18px;
+	border-radius: 8px;
 	font-size: 12px;
-	font-weight: 600;
+	font-weight: 500;
 	cursor: pointer;
-	transition: all 0.2s ease;
-	min-width: 120px;
+	transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+	min-width: 104px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
 
 	&:hover:not(:disabled) {
-		background: rgba(145, 71, 255, 0.2);
-		border-color: rgba(145, 71, 255, 0.5);
-		color: #fff;
-		transform: translateY(-1px);
+		border-color: #9147ff;
+		color: #9147ff;
+		background: #171717;
 	}
 
 	&:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
-		transform: none;
 	}
 `;
 
@@ -86,15 +87,15 @@ const StatusOverlay = styled.div<{ type: "success" | "error" }>`
 	position: fixed;
 	bottom: 20px;
 	right: 20px;
-	padding: 12px 24px;
-	border-radius: 8px;
+	padding: 12px 20px;
+	border-radius: 10px;
 	font-size: 13px;
 	font-weight: 500;
-	z-index: 100;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	z-index: 10001;
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 	animation: slideIn 0.3s ease;
 
-	background: #1f1f1f;
+	background: #121212;
 
 	color: ${(props) => (props.type === "success" ? "#66bb6a" : "#ff5252")};
 
