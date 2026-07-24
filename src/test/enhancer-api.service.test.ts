@@ -12,6 +12,7 @@ class FakeWebSocket extends EventTarget {
 	static readonly OPEN = 1;
 	static instance: FakeWebSocket;
 	static instances = 0;
+	static urls: string[] = [];
 	static commands: any[] = [];
 	static onSubscribe: (socket: FakeWebSocket, command: any, topic: string) => void = (socket, _command, topic) => {
 		queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic }));
@@ -19,10 +20,11 @@ class FakeWebSocket extends EventTarget {
 	};
 	readonly readyState = FakeWebSocket.OPEN;
 
-	constructor(_url: string) {
+	constructor(url: string) {
 		super();
 		FakeWebSocket.instance = this;
 		FakeWebSocket.instances++;
+		FakeWebSocket.urls.push(url);
 		queueMicrotask(() => this.receive({ type: "connection.ready" }));
 	}
 
@@ -46,6 +48,7 @@ class FakeWebSocket extends EventTarget {
 
 	static reset(): void {
 		FakeWebSocket.instances = 0;
+		FakeWebSocket.urls = [];
 		FakeWebSocket.commands = [];
 		FakeWebSocket.onSubscribe = (socket, _command, topic) => {
 			queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic }));
@@ -114,7 +117,7 @@ test("uses one HTTP snapshot and applies final patches without refetching", asyn
 		return Response.json(aggregate("100-0"));
 	}) as typeof fetch;
 
-	const service = new EnhancerApiService(logger);
+	const service = new EnhancerApiService(logger, "5.1.41");
 	const first = await service.initialize(7, 0, "client-a", "twitch");
 	const second = await service.initialize(8, 0, "client-b", "twitch");
 
@@ -123,6 +126,7 @@ test("uses one HTTP snapshot and applies final patches without refetching", asyn
 	expect(first.cursor).toBe("100-0");
 	expect(second.aggregate.accounts).toHaveLength(1);
 	expect(FakeWebSocket.instances).toBe(1);
+	expect(FakeWebSocket.urls).toEqual(["wss://api.enhancer.at/v1/ws?v=5.1.41"]);
 	expect(FakeWebSocket.commands.find((command) => command.type === "subscribe")?.after).toBe("100-0");
 
 	FakeWebSocket.instance.receive({
