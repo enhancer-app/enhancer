@@ -4,6 +4,7 @@ import type SettingsCache from "$shared/settings/settings.service.ts";
 import type CommonUtils from "$shared/utils/common.utils.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { SettingCategory, SettingDefinition } from "$types/shared/components/settings.component.types.ts";
+import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import type { Emitter } from "nanoevents";
@@ -15,6 +16,7 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 	private settingsContainer: HTMLDivElement | null = null;
 
 	constructor(
+		private readonly platformType: PlatformType,
 		private readonly settingsCache: SettingsCache<TSettings>,
 		private readonly workerService: WorkerService,
 		private readonly emitter: Emitter<any>,
@@ -83,6 +85,8 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 					<SettingsOverlay style={{ display: this.isOpenSignal.value ? "flex" : "none" }}>
 						<Settings
 							logoSrc={logo}
+							platform={this.platformType}
+							isOpen={this.isOpenSignal.value}
 							categories={props.categories}
 							settingDefinitions={props.definitions}
 							settings={this.settingsSignal.value}
@@ -107,13 +111,5 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 			},
 			closeSettings,
 		};
-	}
-
-	setupKeyboardShortcut(): void {
-		document.addEventListener("keydown", (e) => {
-			if (e.key === "Escape" && this.isOpenSignal.value) {
-				this.isOpenSignal.value = false;
-			}
-		});
 	}
 }

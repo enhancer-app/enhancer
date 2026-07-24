@@ -6,51 +6,70 @@ const Container = styled.div`
 	color: #ccc;
 	width: 100%;
 	max-width: none;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
 `;
 
 const Header = styled.div`
 	text-align: center;
-	margin-bottom: 40px;
-	padding: 30px 40px;
-	background: linear-gradient(135deg, rgba(145, 71, 255, 0.1) 0%, rgba(145, 71, 255, 0.05) 100%);
+	padding: 28px 32px;
+	background: #111111;
 	border-radius: 12px;
-	border: 1px solid rgba(145, 71, 255, 0.2);
+	border: 1px solid #1e1e1e;
+	position: relative;
+	overflow: hidden;
+
+	&::before {
+		content: "";
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 100%;
+		background: radial-gradient(circle 260px at 50% 0%, rgba(145, 71, 255, 0.12), transparent 70%);
+		pointer-events: none;
+	}
 `;
 
 const Title = styled.h1`
-	color: #9147ff;
-	margin: 0 0 12px 0;
-	font-size: 30px;
+	color: #ffffff;
+	margin: 0 0 8px 0;
+	font-size: 24px;
 	font-weight: 700;
-	text-shadow: 0 0 20px rgba(145, 71, 255, 0.3);
+	position: relative;
 `;
 
 const Subtitle = styled.p`
-	font-size: 13px;
+	font-size: 12px;
 	margin: 0 0 16px 0;
-	color: #e0e0e0;
-	opacity: 0.9;
+	color: #a5a5a5;
+	position: relative;
 `;
 
 const VersionBadge = styled.div`
 	display: inline-block;
-	background: rgba(145, 71, 255, 0.2);
+	background: rgba(145, 71, 255, 0.14);
 	color: #9147ff;
-	padding: 9px 22px;
+	padding: 6px 16px;
 	border-radius: 20px;
 	font-size: 11px;
 	font-weight: 600;
 	border: 1px solid rgba(145, 71, 255, 0.3);
+	position: relative;
 `;
 
-const Section = styled.div`
-	padding: 0 20px;
+const Card = styled.div`
+	background: #111111;
+	border: 1px solid #1e1e1e;
+	border-radius: 12px;
+	padding: 20px;
 `;
 
 const SectionTitle = styled.h2`
-	color: #9147ff;
-	margin: 0 0 20px 0;
-	font-size: 18px;
+	color: #ffffff;
+	margin: 0 0 6px 0;
+	font-size: 15px;
 	font-weight: 600;
 	display: flex;
 	align-items: center;
@@ -58,40 +77,45 @@ const SectionTitle = styled.h2`
 
 	&::before {
 		content: '';
-		width: 4px;
-		height: 22px;
-		background: linear-gradient(to bottom, #9147ff, #b147ff);
+		width: 3px;
+		height: 16px;
+		background: #9147ff;
 		border-radius: 2px;
 	}
 `;
 
 const SubSectionTitle = styled.h3`
-	margin: 26px 0 14px 0;
-	color: #fff;
-	font-size: 13.5px;
-	font-weight: 500;
+	margin: 22px 0 12px 0;
+	color: #f0f0f0;
+	font-size: 12.5px;
+	font-weight: 600;
 `;
 
 const Description = styled.p`
-	margin-bottom: 22px;
-	color: #ccc;
-	font-size: 11px;
+	margin: 0 0 18px;
+	color: #7c7c7c;
+	font-size: 11.5px;
 `;
 
 const ServiceList = styled.ul`
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-	gap: 12px;
-	margin: 0 0 34px;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 10px;
+	margin: 0;
 	padding: 0;
 	list-style: none;
 `;
 
 const ServiceItem = styled.li`
-	padding: 16px;
-	background: rgba(255, 255, 255, 0.03);
-	border: 1px solid rgba(255, 255, 255, 0.1);
+	padding: 14px;
+	background: #0d0d0d;
+	border: 1px solid #1e1e1e;
 	border-radius: 8px;
+	transition: border-color 0.15s ease;
+
+	&:hover {
+		border-color: #2a2a2a;
+	}
 
 	a {
 		color: #9147ff;
@@ -102,91 +126,72 @@ const ServiceItem = styled.li`
 
 	p {
 		margin: 6px 0 0;
-		color: #aaa;
+		color: #7c7c7c;
 		font-size: 10px;
 	}
 `;
 
 const ContributorGrid = styled.div`
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-	gap: 12px;
-	margin-bottom: 22px;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: 8px;
 `;
 
 const ContributorTag = styled.div`
-	background: rgba(255, 255, 255, 0.05);
-	border: 1px solid rgba(255, 255, 255, 0.1);
-	padding: 12px 16px;
+	background: #0d0d0d;
+	border: 1px solid #1e1e1e;
+	padding: 10px 14px;
 	border-radius: 8px;
-	font-size: 10px;
-	color: #e0e0e0;
+	font-size: 10.5px;
+	color: #cfcfcf;
 	text-align: center;
-	transition: all 0.2s ease;
+	transition: border-color 0.15s ease, color 0.15s ease;
 
 	&:hover {
-		background: rgba(145, 71, 255, 0.1);
-		border-color: rgba(145, 71, 255, 0.3);
+		border-color: rgba(145, 71, 255, 0.4);
 		color: #fff;
-		transform: translateY(-1px);
 	}
-`;
-
-const SocialSection = styled.div`
-	background: rgba(255, 255, 255, 0.02);
-	border: 1px solid rgba(255, 255, 255, 0.1);
-	border-radius: 12px;
-	padding: 26px;
-	margin: 34px 20px 32px 20px;
 `;
 
 const SocialLinksContainer = styled.div`
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-	gap: 16px;
-	margin-top: 18px;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 10px;
+	margin-top: 16px;
 `;
 
 const SocialLink = styled.a`
-	color: #9147ff;
+	color: #e5e5e5;
 	text-decoration: none;
 	display: flex;
 	align-items: center;
 	font-size: 11px;
-	padding: 15px 20px;
-	background: rgba(145, 71, 255, 0.05);
-	border: 1px solid rgba(145, 71, 255, 0.2);
+	font-weight: 500;
+	padding: 13px 16px;
+	background: #0d0d0d;
+	border: 1px solid #1e1e1e;
 	border-radius: 8px;
-	transition: all 0.2s ease;
+	transition: border-color 0.15s ease, color 0.15s ease;
 
 	&:hover {
-		background: rgba(145, 71, 255, 0.1);
 		border-color: rgba(145, 71, 255, 0.4);
-		transform: translateY(-1px);
+		color: #fff;
 		text-decoration: none;
 	}
 `;
 
 const IconImage = styled.img`
-	width: 24px;
-	height: 24px;
+	width: 20px;
+	height: 20px;
 	margin-right: 12px;
 	filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(4577%) hue-rotate(252deg) brightness(101%)
 	contrast(101%);
 `;
 
-const SmallText = styled.p`
-	font-size: 10px;
-	color: #999;
-	margin: 26px 20px 0 20px;
-	text-align: center;
-	font-style: italic;
-`;
-
 const BugReportText = styled.p`
-	margin-bottom: 18px;
-	color: #ccc;
-	font-size: 11px;
+	margin: 0;
+	color: #7c7c7c;
+	font-size: 11.5px;
 `;
 
 interface EnhancerAboutComponentProps {
@@ -264,7 +269,7 @@ export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
 				<VersionBadge>Version {__version__}</VersionBadge>
 			</Header>
 
-			<Section>
+			<Card>
 				<SectionTitle>External APIs and Services</SectionTitle>
 				<Description>Depending on the platform and enabled features, Enhancer uses these services:</Description>
 				<ServiceList>
@@ -277,9 +282,9 @@ export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
 						</ServiceItem>
 					))}
 				</ServiceList>
-			</Section>
+			</Card>
 
-			<SocialSection>
+			<Card>
 				<SectionTitle>Get in Touch</SectionTitle>
 				<BugReportText>
 					Found a bug or have a suggestion? We'd love to hear from you! Report issues on GitHub or join our Discord
@@ -303,9 +308,9 @@ export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
 						Discord
 					</SocialLink>
 				</SocialLinksContainer>
-			</SocialSection>
+			</Card>
 
-			<Section>
+			<Card>
 				<SectionTitle>Acknowledgements</SectionTitle>
 				<Description>Thanks to everyone who helped make this extension possible:</Description>
 
@@ -329,7 +334,7 @@ export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
 						<ContributorTag key={person}>{person}</ContributorTag>
 					))}
 				</ContributorGrid>
-			</Section>
+			</Card>
 		</Container>
 	);
 }
