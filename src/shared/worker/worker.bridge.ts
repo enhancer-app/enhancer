@@ -83,9 +83,14 @@ export default class WorkerBridge {
 						seed: unknown;
 					};
 					if (detail.requestId !== requestId) return;
+					clearTimeout(timeout);
 					this.bridgeElement?.removeEventListener("enhancer-api-seed-response", handleResponse);
 					sendResponse(detail.seed);
 				};
+				const timeout = setTimeout(() => {
+					this.bridgeElement?.removeEventListener("enhancer-api-seed-response", handleResponse);
+					sendResponse(null);
+				}, 2000);
 				this.bridgeElement.addEventListener("enhancer-api-seed-response", handleResponse);
 				this.bridgeElement.dispatchEvent(
 					new CustomEvent<string>("enhancer-api-seed-request", { detail: JSON.stringify(message.payload) }),
