@@ -11,15 +11,16 @@ const Container = styled.div`
 
 const Header = styled.div`
 	display: flex;
-	align-items: flex-start;
+	align-items: center;
 	justify-content: space-between;
-	gap: 24px;
+	gap: 20px;
 `;
 
 const Info = styled.div`
 	display: flex;
 	flex-direction: column;
 	gap: 3px;
+	flex: 1;
 	min-width: 0;
 `;
 
@@ -55,21 +56,30 @@ const Description = styled.span`
 `;
 
 const Button = styled.button`
-	background: #9147ff;
-	border: none;
-	color: white;
-	padding: 8px 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-border);
+	color: var(--settings-text);
+	padding: 13px 16px;
 	border-radius: 8px;
-	font-size: 12px;
+	font-size: 11px;
 	font-weight: 500;
 	cursor: pointer;
 	min-width: 132px;
 	flex-shrink: 0;
-	transition: background 0.15s ease, transform 0.15s ease;
+	transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 
 	&:hover:not(:disabled) {
-		background: #7f39e0;
-		transform: translateY(-1px);
+		background: var(--settings-control-hover);
+		border-color: rgba(145, 71, 255, 0.4);
+		color: #9147ff;
+	}
+
+	&:focus-visible {
+		outline: 2px solid #9147ff;
+		outline-offset: 2px;
 	}
 
 	&:disabled {
