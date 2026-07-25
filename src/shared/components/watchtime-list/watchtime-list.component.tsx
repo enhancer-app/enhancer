@@ -7,10 +7,10 @@ import styled from "styled-components";
 
 const Container = styled.div`
 	line-height: 1.6;
-	color: #ccc;
+	color: var(--settings-text);
 	width: 100%;
-	background: #111111;
-	border: 1px solid #1e1e1e;
+	background: var(--settings-surface);
+	border: 1px solid var(--settings-border);
 	border-radius: 12px;
 	overflow: hidden;
 `;
@@ -35,13 +35,13 @@ const TitleGroup = styled.div`
 `;
 
 const Title = styled.span`
-	color: #f0f0f0;
+	color: var(--settings-text-strong);
 	font-size: 13px;
 	font-weight: 500;
 `;
 
 const ActionText = styled.span`
-	color: #7c7c7c;
+	color: var(--settings-text-muted);
 	font-size: 11.5px;
 	transition: color 0.15s ease;
 
@@ -51,7 +51,7 @@ const ActionText = styled.span`
 `;
 
 const Chevron = styled.span<{ $expanded: boolean }>`
-	color: #7c7c7c;
+	color: var(--settings-text-muted);
 	flex-shrink: 0;
 	display: flex;
 	transition: transform 0.2s ease, color 0.15s ease;
@@ -70,9 +70,9 @@ const ExportSection = styled.div<{ $visible: boolean }>`
 `;
 
 const ExportButton = styled.button`
-	background: #1a1a1a;
-	border: 1px solid #262626;
-	color: #e5e5e5;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-control-border);
+	color: var(--settings-text);
 	padding: 7px 14px;
 	border-radius: 8px;
 	font-size: 11px;
@@ -83,7 +83,7 @@ const ExportButton = styled.button`
 	&:hover:not(:disabled) {
 		border-color: #9147ff;
 		color: #9147ff;
-		background: #171717;
+		background: var(--settings-control-hover);
 	}
 
 	&:disabled {
@@ -98,8 +98,8 @@ const Content = styled.div<{ $visible: boolean }>`
 `;
 
 const TableContainer = styled.div`
-	background: #0d0d0d;
-	border: 1px solid #1e1e1e;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-border);
 	border-radius: 10px;
 	overflow: hidden;
 `;
@@ -110,11 +110,11 @@ const Table = styled.table`
 `;
 
 const TableHeader = styled.thead`
-	background: #141414;
+	background: var(--settings-control-hover);
 `;
 
 const TableHeaderRow = styled.tr`
-	border-bottom: 1px solid #1e1e1e;
+	border-bottom: 1px solid var(--settings-border);
 `;
 
 const TableHeaderCell = styled.th`
@@ -135,7 +135,7 @@ const PositionHeaderCell = styled(TableHeaderCell)`
 const TableBody = styled.tbody``;
 
 const TableRow = styled.tr`
-	border-bottom: 1px solid #171717;
+	border-bottom: 1px solid var(--settings-divider-subtle);
 	transition: background 0.15s ease;
 
 	&:hover {
@@ -150,12 +150,12 @@ const TableRow = styled.tr`
 const TableCell = styled.td`
 	padding: 11px 16px;
 	font-size: 11.5px;
-	color: #cfcfcf;
+	color: var(--settings-text);
 `;
 
 const PositionCell = styled(TableCell)`
 	text-align: center;
-	color: #6a6a6a;
+	color: var(--settings-text-dim);
 	font-weight: 600;
 	width: 64px;
 `;
@@ -184,9 +184,9 @@ const PaginationSection = styled.div`
 `;
 
 const PageButton = styled.button`
-	background: #1a1a1a;
-	border: 1px solid #262626;
-	color: #e5e5e5;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-control-border);
+	color: var(--settings-text);
 	padding: 7px 14px;
 	border-radius: 8px;
 	font-size: 11px;
@@ -197,7 +197,7 @@ const PageButton = styled.button`
 	&:hover:not(:disabled) {
 		border-color: #9147ff;
 		color: #9147ff;
-		background: #171717;
+		background: var(--settings-control-hover);
 	}
 
 	&:disabled {
@@ -207,13 +207,13 @@ const PageButton = styled.button`
 `;
 
 const PageInfo = styled.span`
-	color: #7c7c7c;
+	color: var(--settings-text-muted);
 	font-size: 11px;
 `;
 
 const LoadingText = styled.div`
 	text-align: center;
-	color: #7c7c7c;
+	color: var(--settings-text-muted);
 	font-size: 11.5px;
 	padding: 24px;
 `;

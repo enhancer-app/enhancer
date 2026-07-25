@@ -88,12 +88,32 @@ function getActionText(value: Signal<string> | string) {
 }
 
 const Container = styled.div`
-	background: rgba(25, 25, 28, 0.95);
+	--channel-background: rgba(25, 25, 28, 0.95);
+	--channel-header-background: rgba(30, 30, 40, 0.6);
+	--channel-border: rgba(255, 255, 255, 0.05);
+	--channel-title: #ffffff;
+	--channel-text: #b8b8b8;
+	--channel-link-background: rgba(40, 40, 50, 0.6);
+	--channel-action-background: rgba(255, 255, 255, 0.08);
+	--channel-action-text: #ffffff;
+
+	html.tw-root--theme-light & {
+		--channel-background: #ffffff;
+		--channel-header-background: #f1f1f2;
+		--channel-border: #dedee3;
+		--channel-title: #0e0e10;
+		--channel-text: #53535f;
+		--channel-link-background: #efeff1;
+		--channel-action-background: rgba(0, 0, 0, 0.06);
+		--channel-action-text: #0e0e10;
+	}
+
+	background: var(--channel-background);
 	border-radius: 8px;
 	overflow: hidden;
 	margin: 16px 0;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-	border: 1px solid rgba(255, 255, 255, 0.05);
+	border: 1px solid var(--channel-border);
 	transition: all 0.2s ease;
 
 	&:hover {
@@ -107,7 +127,7 @@ const Header = styled.div`
 	align-items: center;
 	justify-content: space-between;
 	padding: 12px 16px;
-	background: rgba(30, 30, 40, 0.6);
+	background: var(--channel-header-background);
 `;
 
 const ChannelInfo = styled.div`
@@ -139,12 +159,12 @@ const ChannelNameRow = styled.div`
 
 const ChannelName = styled.div`
 	font-weight: 600;
-	color: #ffffff;
+	color: var(--channel-title);
 	font-size: 14px;
 `;
 
 const RowText = styled.div`
-	color: #b8b8b8;
+	color: var(--channel-text);
 	font-size: 12px;
 	display: flex;
 	align-items: center;
@@ -163,9 +183,9 @@ const LinkItem = styled.a`
 	display: flex;
 	align-items: center;
 	padding: 8px 12px;
-	background: rgba(40, 40, 50, 0.6);
+	background: var(--channel-link-background);
 	border-radius: 6px;
-	color: #e0e0e0;
+	color: var(--channel-title);
 	text-decoration: none;
 	transition: all 0.2s;
 
@@ -200,8 +220,8 @@ const ActionButton = styled.button`
 	height: 24px;
 	border: none;
 	border-radius: 4px;
-	background: rgba(255, 255, 255, 0.08);
-	color: #ffffff;
+	background: var(--channel-action-background);
+	color: var(--channel-action-text);
 	cursor: pointer;
 	padding: 0;
 	font-size: 14px;
@@ -209,5 +229,6 @@ const ActionButton = styled.button`
 
 	&:hover {
 		background: rgba(145, 71, 255, 0.3);
+		color: #ffffff;
 	}
 `;

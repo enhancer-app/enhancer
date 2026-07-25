@@ -22,10 +22,18 @@ const LatencyWrapper = styled.div`
 	transition: all 0.2s ease;
 	user-select: none;
 
+	html.tw-root--theme-light & {
+		color: #0e0e10;
+	}
+
 	&:hover {
 		color: #ffffff;
 		cursor: pointer;
 		transform: translateY(-1px);
+	}
+
+	html.tw-root--theme-light &:hover {
+		color: #0e0e10;
 	}
 `;
 
@@ -42,6 +50,10 @@ const PlaybackRate = styled.span`
 	font-size: 11px;
 	font-weight: 600;
 	color: rgba(222, 222, 227, 0.5);
+
+	html.tw-root--theme-light & {
+		color: rgba(14, 14, 16, 0.55);
+	}
 `;
 
 export function LatencyComponent({ click, latencyCounter, isLive, playbackRate }: LatencyComponentProps) {

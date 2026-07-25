@@ -325,6 +325,10 @@ const Wrapper = styled.span`
 	font-weight: 600 !important;
 	white-space: nowrap;
 
+	html.tw-root--theme-light & {
+		color: #b4232a;
+	}
+
 	&:hover {
 		opacity: 0.75;
 		cursor: pointer;
@@ -336,8 +340,13 @@ const StreamManagerWrapper = styled(Wrapper)`
 	font-size: 11px;
 	padding: 3px;
 	border-radius: 4px;
-color: #000;
+	color: #000;
 	margin-left: 8px;
+
+	html.tw-root--theme-light & {
+		background-color: #d64a4a;
+		color: #ffffff;
+	}
 `;
 
 const formatChatters = (chatters: number) =>
