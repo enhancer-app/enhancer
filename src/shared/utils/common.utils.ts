@@ -90,4 +90,10 @@ export default class CommonUtils {
 		entries.sort(([left], [right]) => Number.parseInt(left, 10) - Number.parseInt(right, 10));
 		return entries[0]?.[1] ?? null;
 	}
+
+	getHighestBadgeSourceUrl(sources: Record<string, string>): string | null {
+		const entries = Object.entries(sources);
+		entries.sort(([left], [right]) => Number.parseInt(left, 10) - Number.parseInt(right, 10));
+		return entries.at(-1)?.[1] ?? null;
+	}
 }

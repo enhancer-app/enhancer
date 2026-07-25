@@ -42,6 +42,7 @@ export default class ChatBadgesModule extends KickModule {
 
 		for (const badge of userBadges) {
 			const lowestSourceUrl = this.commonUtils().getLowestBadgeSourceUrl(badge.sources);
+			const highestSourceUrl = this.commonUtils().getHighestBadgeSourceUrl(badge.sources);
 			if (!lowestSourceUrl) {
 				this.logger.warn(`Badge ${badge.badgeId} is missing a source url`);
 				continue;
@@ -55,7 +56,24 @@ export default class ChatBadgesModule extends KickModule {
 			badgeWrapper.style.alignItems = "center";
 			badgeWrapper.style.display = "inline-flex";
 			render(
-				<TooltipComponent content={<p>{badge.name}</p>} position="right" delay={200}>
+				<TooltipComponent
+					content={
+						<div style={{ maxWidth: 180, textAlign: "center" }}>
+							{highestSourceUrl && (
+								<img
+									src={highestSourceUrl}
+									alt={badge.name}
+									width={72}
+									height={72}
+									style={{ display: "block", margin: "0 auto" }}
+								/>
+							)}
+							<p style={{ margin: "8px 0 0", overflowWrap: "anywhere" }}>{badge.name}</p>
+						</div>
+					}
+					position="right"
+					delay={200}
+				>
 					<img src={lowestSourceUrl} alt={badge.name} width={size} height={size} style={{ marginRight: ".25em" }} />
 				</TooltipComponent>,
 				badgeWrapper,
