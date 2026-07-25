@@ -322,7 +322,8 @@ export default class TwitchUtils {
 			this.reactUtils.getReactInstance(document.querySelector("#live-channel-stream-information")),
 			(n) =>
 				(n?.pendingProps?.costreamDetails !== undefined && n?.pendingProps?.costreamViewCount !== undefined) ||
-				n?.pendingProps?.guestStarGuests !== undefined,
+				n?.pendingProps?.guestStarGuests !== undefined ||
+				n?.pendingProps?.guestList !== undefined,
 			100,
 		)?.pendingProps;
 		if (!props) return;
