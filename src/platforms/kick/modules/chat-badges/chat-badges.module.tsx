@@ -21,7 +21,8 @@ export default class ChatBadgesModule extends KickModule {
 	private async handleMessage({ message, element, isUsingNTV }: KickChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
 		const ntvBadgesContainer = element.querySelector(".ntv__chat-message__badges");
-		const kickBadgesContainer = element.querySelector('button[data-prevent-expand="true"]')?.parentElement;
+		const kickUsername = element.querySelector('button[data-prevent-expand="true"]');
+		const kickBadgesContainer = kickUsername?.parentElement?.querySelector(":scope > div");
 		const badgesContainer = isUsingNTV ? ntvBadgesContainer : kickBadgesContainer;
 		if (!badgesContainer) return;
 
@@ -38,6 +39,15 @@ export default class ChatBadgesModule extends KickModule {
 					badge.remove();
 				}
 			});
+			container?.querySelectorAll<HTMLElement>("[data-enhancer-badge-content]").forEach((badge) => {
+				if (
+					container !== badgesContainer ||
+					!badge.dataset.enhancerBadgeContent ||
+					!badgeIds.has(badge.dataset.enhancerBadgeContent)
+				) {
+					badge.remove();
+				}
+			});
 		}
 
 		for (const badge of userBadges) {
@@ -48,8 +58,13 @@ export default class ChatBadgesModule extends KickModule {
 				continue;
 			}
 			const size = isUsingNTV ? 16.38 : 19.38;
-			if (badgesContainer.querySelector(`[data-enhancer-badge="${CSS.escape(badge.badgeId)}"]`)) continue;
-			const badgeWrapper = document.createElement("span");
+			const badgeId = CSS.escape(badge.badgeId);
+			if (
+				badgesContainer.querySelector(`[data-enhancer-badge="${badgeId}"], [data-enhancer-badge-content="${badgeId}"]`)
+			) {
+				continue;
+			}
+			const badgeWrapper = document.createElement(isUsingNTV ? "span" : "div");
 			badgeWrapper.classList.add("enhancer-badges");
 			badgeWrapper.dataset.enhancerBadge = badge.badgeId;
 			badgeWrapper.style.alignSelf = "center";
@@ -78,6 +93,9 @@ export default class ChatBadgesModule extends KickModule {
 				</TooltipComponent>,
 				badgeWrapper,
 			);
+			if (badgeWrapper.firstElementChild instanceof HTMLElement) {
+				badgeWrapper.firstElementChild.dataset.enhancerBadgeContent = badge.badgeId;
+			}
 			badgesContainer.insertBefore(badgeWrapper, badgesContainer.firstChild);
 		}
 	}
