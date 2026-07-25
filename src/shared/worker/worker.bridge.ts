@@ -1,4 +1,3 @@
-import { Logger } from "$shared/logger/logger.ts";
 import type { LogEntry } from "$types/shared/logger.types.ts";
 import type {
 	ExtensionMessageDetail,
@@ -6,8 +5,101 @@ import type {
 	WorkerBroadcast,
 } from "$types/shared/worker/worker.types.ts";
 
+class BridgeLogger {
+	private static readonly MAX_ENTRIES = 500;
+	private static readonly MAX_DATA_LENGTH = 2000;
+	private static readonly MAX_ENTRY_LENGTH = 8192;
+	private static readonly SENSITIVE_KEY = /authorization|cookie|token|password|secret|api[_-]?key|credential/i;
+	private static readonly SENSITIVE_HEADER = /((?:authorization|cookie|set-cookie)\s*:\s*)[^\r\n]*/gi;
+	private static readonly SENSITIVE_TEXT =
+		/(["']?(?:authorization|cookie|set-cookie|token|password|secret|api[_-]?key|credential)["']?\s*[:=]\s*)("[^"]*"|'[^']*'|[^,;}\s]*)/gi;
+	private static readonly SENSITIVE_QUERY =
+		/([?&](?:authorization|cookie|token|access_token|refresh_token|password|secret|api[_-]?key|credential)=)[^&#\s]*/gi;
+	private static readonly BEARER_TOKEN = /\bBearer\s+[^\s,;}]+/gi;
+	private static entries: LogEntry[] = [];
+
+	constructor(private readonly context: string) {}
+
+	info(...data: unknown[]): void {
+		this.add("info", data);
+	}
+
+	error(...data: unknown[]): void {
+		this.add("error", data);
+	}
+
+	static getLogs(): LogEntry[] {
+		return BridgeLogger.entries.map((entry) => ({ ...entry, data: [...entry.data] }));
+	}
+
+	private add(level: LogEntry["level"], data: unknown[]): void {
+		const normalizedData: string[] = [];
+		let entryLength = 0;
+		for (const value of data) {
+			const serialized = this.serialize(value);
+			const remaining = BridgeLogger.MAX_ENTRY_LENGTH - entryLength;
+			if (serialized.length > remaining) {
+				const suffix = "...[TRUNCATED]";
+				if (remaining > suffix.length) {
+					normalizedData.push(`${serialized.slice(0, remaining - suffix.length)}${suffix}`);
+				} else if (remaining > 0) {
+					normalizedData.push(suffix.slice(0, remaining));
+				}
+				break;
+			}
+			normalizedData.push(serialized);
+			entryLength += serialized.length;
+		}
+		BridgeLogger.entries.push({
+			timestamp: Date.now(),
+			level,
+			context: this.context,
+			source: "bridge",
+			data: normalizedData,
+		});
+		if (BridgeLogger.entries.length > BridgeLogger.MAX_ENTRIES) BridgeLogger.entries.shift();
+		console[level](`Enhancer worker-bridge ${level.toUpperCase()}`, ...normalizedData);
+	}
+
+	private serialize(value: unknown): string {
+		if (value instanceof Error)
+			return this.sanitize(`${value.name}: ${value.message}${value.stack ? `\n${value.stack}` : ""}`);
+		if (typeof value === "string") return this.sanitize(value);
+		if (value === undefined) return "undefined";
+		if (value === null) return "null";
+		if (typeof value !== "object") return this.sanitize(String(value));
+
+		const seen = new WeakSet<object>();
+		try {
+			const serialized = JSON.stringify(value, (key, nestedValue) => {
+				if (BridgeLogger.SENSITIVE_KEY.test(key)) return "[REDACTED]";
+				if (nestedValue instanceof Error) {
+					return { name: nestedValue.name, message: nestedValue.message, stack: nestedValue.stack };
+				}
+				if (nestedValue && typeof nestedValue === "object") {
+					if (seen.has(nestedValue)) return "[Circular]";
+					seen.add(nestedValue);
+				}
+				return nestedValue;
+			});
+			return this.sanitize(serialized ?? String(value));
+		} catch {
+			return this.sanitize(String(value));
+		}
+	}
+
+	private sanitize(value: string): string {
+		return value
+			.replace(BridgeLogger.SENSITIVE_HEADER, "$1[REDACTED]")
+			.replace(BridgeLogger.BEARER_TOKEN, "Bearer [REDACTED]")
+			.replace(BridgeLogger.SENSITIVE_TEXT, "$1[REDACTED]")
+			.replace(BridgeLogger.SENSITIVE_QUERY, "$1[REDACTED]")
+			.slice(0, BridgeLogger.MAX_DATA_LENGTH);
+	}
+}
+
 export default class WorkerBridge {
-	private readonly logger = new Logger({ context: "worker-bridge", source: "bridge" });
+	private readonly logger = new BridgeLogger("worker-bridge");
 	private bridgeElement: HTMLElement | null = null;
 
 	start() {
@@ -114,7 +206,7 @@ export default class WorkerBridge {
 			try {
 				const { requestId } = JSON.parse(event.detail) as { requestId: string };
 				const response = new CustomEvent<string>("enhancer-bridge-logs-response", {
-					detail: JSON.stringify({ requestId, logs: Logger.getLogs() satisfies LogEntry[] }),
+					detail: JSON.stringify({ requestId, logs: BridgeLogger.getLogs() satisfies LogEntry[] }),
 				});
 				this.bridgeElement?.dispatchEvent(response);
 			} catch (error) {
