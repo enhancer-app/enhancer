@@ -377,7 +377,8 @@ export interface StreamInfoTwitchStreamData {
 	liveSince: string;
 	viewCount: number;
 	collabViewCount: number | null;
-	guestStarGuests: StreamInfoGuestStarGuest[];
+	guestStarGuests?: StreamInfoGuestStarGuest[];
+	guestList?: StreamInfoGuestStarGuest[];
 	guestStarSessionID: string | null;
 	guestStarHostID: string | null;
 	broadcastID: string;
