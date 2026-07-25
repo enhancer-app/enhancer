@@ -1,3 +1,4 @@
+import { Logger } from "$shared/logger/logger.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
@@ -5,6 +6,8 @@ import type { PlatformType, WatchtimeRecord } from "$types/shared/worker/worker.
 import type { Emitter } from "nanoevents";
 import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
+
+const logger = new Logger({ context: "export-import" });
 
 const Container = styled.div`
 	display: flex;
@@ -167,7 +170,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			}
 			return allData;
 		} catch (error) {
-			console.error("Error fetching all watchtime data:", error);
+			logger.error("Error fetching all watchtime data:", error);
 			return allData;
 		}
 	};
@@ -199,7 +202,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 
 			showStatus(`Successfully exported ${platform} backup`, "success");
 		} catch (error) {
-			console.error("Export error:", error);
+			logger.error("Export error:", error);
 			showStatus("Failed to export data", "error");
 		} finally {
 			setLoading(false);
@@ -252,7 +255,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 					importedSettings = Object.keys(data.settings).length;
 					emitter.emit("extension:settings-refresh");
 				} catch (error) {
-					console.error("Failed to import settings:", error);
+					logger.error("Failed to import settings:", error);
 					showStatus("Failed to import settings", "error");
 					return;
 				}
@@ -280,7 +283,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 						importedWatchtime++;
 					} else {
 						failedWatchtime++;
-						console.error(`Failed to import record for ${recordsToImport[index].username}:`, result.reason);
+						logger.error(`Failed to import record for ${recordsToImport[index].username}:`, result.reason);
 					}
 				});
 			}
@@ -306,7 +309,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			const type = failedWatchtime > 0 && importedWatchtime === 0 ? "error" : "success";
 			showStatus(message, type);
 		} catch (error) {
-			console.error("Import error:", error);
+			logger.error("Import error:", error);
 			showStatus("Failed to import data", "error");
 		} finally {
 			setLoading(false);

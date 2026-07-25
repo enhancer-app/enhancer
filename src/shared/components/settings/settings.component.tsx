@@ -1,3 +1,4 @@
+import { Logger } from "$shared/logger/logger.ts";
 import type {
 	SettingCategory,
 	SettingDefinition,
@@ -6,6 +7,8 @@ import type {
 import type { JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
+
+const logger = new Logger({ context: "settings-ui" });
 
 const FONT = `"Inter", "Noto Sans Arabic", "Roobert", "Helvetica Neue", Helvetica, Arial, sans-serif`;
 
@@ -1331,7 +1334,7 @@ const Settings = <T,>({
 					const Component = setting.content;
 					return <Component />;
 				} catch (e) {
-					console.error("Enhancer Error when rendering component", e);
+					logger.error("Enhancer Error when rendering component", e);
 				}
 				return null;
 			}

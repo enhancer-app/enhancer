@@ -1,3 +1,5 @@
+import { Logger } from "$shared/logger/logger.ts";
+import type { LogEntry } from "$types/shared/logger.types.ts";
 import type {
 	ExtensionMessageDetail,
 	ExtensionResponseDetail,
@@ -5,6 +7,7 @@ import type {
 } from "$types/shared/worker/worker.types.ts";
 
 export default class WorkerBridge {
+	private readonly logger = new Logger({ context: "worker-bridge", source: "bridge" });
 	private bridgeElement: HTMLElement | null = null;
 
 	start() {
@@ -40,6 +43,7 @@ export default class WorkerBridge {
 		if (!this.bridgeElement) return;
 		this.setupMessageForwarding();
 		this.setupBroadcastReceiving();
+		this.setupLogRetrieval();
 		this.bridgeElement.dispatchEvent(new CustomEvent("enhancer-bridge-ready"));
 		this.log("WorkerService bridge started!");
 	}
@@ -104,8 +108,23 @@ export default class WorkerBridge {
 		});
 	}
 
+	private setupLogRetrieval() {
+		if (!this.bridgeElement) return;
+		this.bridgeElement.addEventListener("enhancer-bridge-logs-request", ((event: CustomEvent<string>) => {
+			try {
+				const { requestId } = JSON.parse(event.detail) as { requestId: string };
+				const response = new CustomEvent<string>("enhancer-bridge-logs-response", {
+					detail: JSON.stringify({ requestId, logs: Logger.getLogs() satisfies LogEntry[] }),
+				});
+				this.bridgeElement?.dispatchEvent(response);
+			} catch (error) {
+				this.logger.error("Failed to provide bridge logs:", error);
+			}
+		}) as unknown as EventListener);
+	}
+
 	private log(...data: any[]) {
-		console.info("Enhancer worker-bridge", ...data);
+		this.logger.info(...data);
 	}
 }
 

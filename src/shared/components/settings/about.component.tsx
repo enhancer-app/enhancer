@@ -1,3 +1,6 @@
+import { DiagnosticLogsComponent } from "$shared/components/diagnostic-logs/diagnostic-logs.component.tsx";
+import type WorkerService from "$shared/worker/worker.service.ts";
+import type { PlatformType } from "$types/shared/platform.types.ts";
 import styled from "styled-components";
 
 const Container = styled.div`
@@ -279,6 +282,8 @@ const BugReportText = styled.p`
 `;
 
 interface EnhancerAboutComponentProps {
+	platform: PlatformType;
+	workerService: WorkerService;
 	icons: {
 		website: string;
 		github: string;
@@ -287,7 +292,7 @@ interface EnhancerAboutComponentProps {
 	};
 }
 
-export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
+export function EnhancerAboutComponent({ platform, workerService, icons }: EnhancerAboutComponentProps) {
 	const externalServices = [
 		{
 			name: "api.enhancer.at",
@@ -377,6 +382,12 @@ export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
 						Discord
 					</SocialLink>
 				</SocialLinksContainer>
+			</Card>
+
+			<Card>
+				<SectionTitle>Diagnostics</SectionTitle>
+				<Description>Export recent logs when reporting a problem with Enhancer.</Description>
+				<DiagnosticLogsComponent platform={platform} workerService={workerService} />
 			</Card>
 
 			<Card>

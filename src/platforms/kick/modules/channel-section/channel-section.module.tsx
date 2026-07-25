@@ -93,7 +93,7 @@ export default class ChannelSectionModule extends KickModule {
 		try {
 			this.watchtimeCounter.value = await this.getWatchTime(this.currentUsername.value);
 		} catch (error) {
-			console.error("Failed to fetch watch time:", error);
+			this.logger.error("Failed to fetch watch time:", error);
 		}
 	}
 

@@ -163,7 +163,7 @@ export default class ChannelSectionModule extends TwitchModule {
 		try {
 			this.watchtimeCounter.value = await this.getWatchTime(this.currentLogin.value);
 		} catch (error) {
-			console.error("Failed to fetch watch time:", error);
+			this.logger.error("Failed to fetch watch time:", error);
 		}
 	}
 

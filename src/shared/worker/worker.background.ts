@@ -10,8 +10,8 @@ import type { PlatformSettings } from "$types/shared/worker/settings-worker.type
 import type { PlatformType } from "$types/shared/worker/worker.types.ts";
 
 export default class WorkerBackground {
-	private readonly logger = new Logger({ context: "background" });
-	private readonly enhancerApiLogger = new Logger({ context: "enhancer-api-worker" });
+	private readonly logger = new Logger({ context: "background", source: "background" });
+	private readonly enhancerApiLogger = new Logger({ context: "enhancer-api-worker", source: "background" });
 
 	private readonly settingsDatabase = new SettingsDatabase(
 		new Map<PlatformType, PlatformSettings>([

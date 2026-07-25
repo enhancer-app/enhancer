@@ -270,7 +270,7 @@ export default class SettingsModule extends KickModule {
 				type: "text",
 				categoryId: CATEGORY.ABOUT,
 				content: () => {
-					return <EnhancerAboutComponent icons={brandIcons} />;
+					return <EnhancerAboutComponent icons={brandIcons} platform="kick" workerService={workerService} />;
 				},
 				hideInfo: true,
 			},

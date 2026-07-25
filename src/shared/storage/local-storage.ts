@@ -1,6 +1,8 @@
+import { Logger } from "$shared/logger/logger.ts";
 import Storage from "$shared/storage/storage.ts";
 
 export default class LocalStorage<T extends Record<string, any>> extends Storage<T> {
+	private readonly logger = new Logger({ context: "local-storage" });
 	private cache: T | undefined;
 
 	async save<K extends keyof T>(key: K, value: T[K]): Promise<void> {
@@ -33,7 +35,7 @@ export default class LocalStorage<T extends Record<string, any>> extends Storage
 				this.cache = JSON.parse(rawStorage) as T;
 				return JSON.parse(JSON.stringify(this.cache)) as T;
 			} catch (error) {
-				console.error("Failed to parse storage data:", error);
+				this.logger.error("Failed to parse storage data:", error);
 				this.cache = {} as T;
 				return {} as T;
 			}
@@ -52,7 +54,7 @@ export default class LocalStorage<T extends Record<string, any>> extends Storage
 				this.cache = JSON.parse(rawStorage) as T;
 				return this.cache;
 			} catch (error) {
-				console.error("Failed to parse storage data:", error);
+				this.logger.error("Failed to parse storage data:", error);
 				this.cache = {} as T;
 				return {} as T;
 			}
