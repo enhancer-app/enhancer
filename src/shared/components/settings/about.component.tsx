@@ -385,8 +385,6 @@ export function EnhancerAboutComponent({ platform, workerService, icons }: Enhan
 			</Card>
 
 			<Card>
-				<SectionTitle>Diagnostics</SectionTitle>
-				<Description>Export recent logs when reporting a problem with Enhancer.</Description>
 				<DiagnosticLogsComponent platform={platform} workerService={workerService} />
 			</Card>
 
