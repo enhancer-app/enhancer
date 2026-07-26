@@ -6,75 +6,30 @@ import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
 
 const Container = styled.div`
-	width: 100%;
-`;
-
-const Header = styled.div`
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 20px;
-`;
-
-const Info = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 3px;
-	flex: 1;
-	min-width: 0;
-`;
-
-const Title = styled.span`
-	color: var(--settings-text-strong);
-	font-size: 13px;
-	font-weight: 500;
-`;
-
-const Heading = styled(Title)`
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 15px;
-	font-weight: 600;
-	line-height: 1.2;
-
-	&::before {
-		content: "";
-		width: 3px;
-		height: 16px;
-		background: #9147ff;
-		border-radius: 2px;
-	}
-`;
-
-const Description = styled.span`
-	display: block;
-	margin-top: 6px;
-	color: var(--settings-text-muted);
-	font-size: 11.5px;
-	line-height: 1.5;
+	width: auto;
+	flex-shrink: 0;
 `;
 
 const Button = styled.button`
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: var(--settings-control-background);
-	border: 1px solid var(--settings-border);
-	color: var(--settings-text);
-	padding: 13px 16px;
+	background: #0d0d0d;
+	border: 1px solid #1e1e1e;
+	color: #e5e5e5;
+	padding: 8px 14px;
 	border-radius: 8px;
 	font-size: 11px;
 	font-weight: 500;
 	cursor: pointer;
-	min-width: 132px;
+	min-width: 112px;
 	flex-shrink: 0;
 	transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 
 	&:hover:not(:disabled) {
-		background: var(--settings-control-hover);
+		background: #0d0d0d;
 		border-color: rgba(145, 71, 255, 0.4);
-		color: #9147ff;
+		color: #fff;
 	}
 
 	&:focus-visible {
@@ -87,9 +42,6 @@ const Button = styled.button`
 		cursor: not-allowed;
 	}
 
-	@media (max-width: 620px) {
-		min-width: 118px;
-	}
 `;
 
 const Status = styled.div<{ $error: boolean }>`
@@ -177,15 +129,9 @@ export function DiagnosticLogsComponent({ platform, workerService }: DiagnosticL
 	return (
 		<div>
 			<Container>
-				<Header>
-					<Info>
-						<Heading>Diagnostics</Heading>
-						<Description>Exports recent Enhancer logs from this tab and its background worker.</Description>
-					</Info>
-					<Button onClick={exportLogs} disabled={loading}>
-						{loading ? "Exporting..." : "Export logs"}
-					</Button>
-				</Header>
+				<Button onClick={exportLogs} disabled={loading}>
+					{loading ? "Exporting..." : "Export logs"}
+				</Button>
 			</Container>
 			{status && <Status $error={status.error}>{status.message}</Status>}
 		</div>

@@ -281,6 +281,18 @@ const BugReportText = styled.p`
 	font-size: 11.5px;
 `;
 
+const DiagnosticsRow = styled.div`
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 20px;
+`;
+
+const DiagnosticsInfo = styled.div`
+	flex: 1;
+	min-width: 0;
+`;
+
 interface EnhancerAboutComponentProps {
 	platform: PlatformType;
 	workerService: WorkerService;
@@ -385,7 +397,13 @@ export function EnhancerAboutComponent({ platform, workerService, icons }: Enhan
 			</Card>
 
 			<Card>
-				<DiagnosticLogsComponent platform={platform} workerService={workerService} />
+				<DiagnosticsRow>
+					<DiagnosticsInfo>
+						<SectionTitle>Diagnostics</SectionTitle>
+						<Description>Export recent logs when reporting a problem with Enhancer.</Description>
+					</DiagnosticsInfo>
+					<DiagnosticLogsComponent platform={platform} workerService={workerService} />
+				</DiagnosticsRow>
 			</Card>
 
 			<Card>
