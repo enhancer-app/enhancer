@@ -1,4 +1,5 @@
 import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
+import type { LogEntry } from "$types/shared/logger.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type {
 	CachedAggregateSeed,
@@ -97,6 +98,10 @@ export type GetSettingsResponse = PlatformSettings;
 export type UpdateSettingsResponse = { success: true };
 
 export interface WorkerApiActions {
+	getLogs: {
+		payload: never;
+		response: LogEntry[];
+	};
 	ping: {
 		payload?: never;
 		response: PingResponse;

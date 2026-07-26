@@ -4,7 +4,7 @@ import { createWatchtimeId } from "$shared/worker/watchtime/watchtime.utils.ts";
 import type { PlatformType, WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
 
 export class WatchtimeAccumulator {
-	private readonly logger = new Logger({ context: "watchtime-accumulator" });
+	private readonly logger = new Logger({ context: "watchtime-accumulator", source: "background" });
 	private watchedChannels = new Set<string>();
 	private updateInterval: ReturnType<typeof setInterval> | null = null;
 

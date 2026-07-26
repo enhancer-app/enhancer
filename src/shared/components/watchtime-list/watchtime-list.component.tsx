@@ -1,9 +1,12 @@
+import { Logger } from "$shared/logger/logger.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformType } from "$types/shared/worker/worker.types.ts";
 import type { Emitter } from "nanoevents";
 import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
+
+const logger = new Logger({ context: "watchtime-list" });
 
 const Container = styled.div`
 	line-height: 1.6;
@@ -296,7 +299,7 @@ export function WatchtimeListComponent({
 			}
 			return allData;
 		} catch (error) {
-			console.error("Error fetching all watchtime data:", error);
+			logger.error("Error fetching all watchtime data:", error);
 			return allData;
 		}
 	};
