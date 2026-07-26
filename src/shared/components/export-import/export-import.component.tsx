@@ -13,8 +13,8 @@ const Container = styled.div`
 	justify-content: space-between;
 	gap: 24px;
 	width: 100%;
-	background: #111111;
-	border: 1px solid #1e1e1e;
+	background: var(--settings-surface);
+	border: 1px solid var(--settings-border);
 	border-radius: 12px;
 	padding: 16px;
 `;
@@ -28,13 +28,13 @@ const InfoSection = styled.div`
 `;
 
 const InfoTitle = styled.span`
-	color: #f0f0f0;
+	color: var(--settings-text-strong);
 	font-size: 13px;
 	font-weight: 500;
 `;
 
 const InfoDescription = styled.span`
-	color: #7c7c7c;
+	color: var(--settings-text-muted);
 	font-size: 11.5px;
 	line-height: 1.5;
 `;
@@ -52,9 +52,9 @@ const ButtonGroup = styled.div`
 `;
 
 const ActionButton = styled.button`
-	background: #1a1a1a;
-	border: 1px solid #262626;
-	color: #e5e5e5;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-control-border);
+	color: var(--settings-text);
 	padding: 8px 18px;
 	border-radius: 8px;
 	font-size: 12px;
@@ -70,7 +70,7 @@ const ActionButton = styled.button`
 	&:hover:not(:disabled) {
 		border-color: #9147ff;
 		color: #9147ff;
-		background: #171717;
+		background: var(--settings-control-hover);
 	}
 
 	&:disabled {
@@ -95,7 +95,7 @@ const StatusOverlay = styled.div<{ type: "success" | "error" }>`
 	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 	animation: slideIn 0.3s ease;
 
-	background: #121212;
+	background: var(--settings-surface-raised);
 
 	color: ${(props) => (props.type === "success" ? "#66bb6a" : "#ff5252")};
 

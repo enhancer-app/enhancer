@@ -65,6 +65,14 @@ const StyledSettingsButton = styled.button`
   padding: 0;
   color: inherit;
 
+  img {
+    filter: none;
+  }
+
+  html.tw-root--theme-light & img {
+    filter: brightness(0);
+  }
+
   &:hover {
     background: var(--color-background-button-text-hover);
   }
