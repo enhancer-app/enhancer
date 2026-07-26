@@ -293,6 +293,10 @@ const DiagnosticsInfo = styled.div`
 	min-width: 0;
 `;
 
+const DiagnosticsDescription = styled(Description)`
+	margin-bottom: 0;
+`;
+
 interface EnhancerAboutComponentProps {
 	platform: PlatformType;
 	workerService: WorkerService;
@@ -400,7 +404,7 @@ export function EnhancerAboutComponent({ platform, workerService, icons }: Enhan
 				<DiagnosticsRow>
 					<DiagnosticsInfo>
 						<SectionTitle>Diagnostics</SectionTitle>
-						<Description>Export recent logs when reporting a problem with Enhancer.</Description>
+						<DiagnosticsDescription>Export recent logs when reporting a problem with Enhancer.</DiagnosticsDescription>
 					</DiagnosticsInfo>
 					<DiagnosticLogsComponent platform={platform} workerService={workerService} />
 				</DiagnosticsRow>
