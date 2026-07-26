@@ -14,12 +14,22 @@ export default class SettingsButtonModule extends KickModule {
 				key: "settings-button-main",
 				once: true,
 			},
+			{
+				type: "selector",
+				selectors: ['nav a[href^="https://live.kick.com"]'],
+				callback: this.run.bind(this),
+				key: "settings-button-dashboard",
+				useParent: true,
+				once: true,
+			},
 		],
 	};
 
 	private async run(elements: Element[]) {
-		const menu = elements.at(0)?.lastElementChild;
+		const element = elements.at(0);
+		const menu = element?.tagName === "NAV" ? element.lastElementChild : element;
 		if (!menu) return;
+		if (menu.querySelector(`.${this.getId()}`)) return;
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), [menu], "span");
 		const logo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo-gray.svg");
 		wrappers.forEach((element) => {
