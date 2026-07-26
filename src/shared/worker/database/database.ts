@@ -8,7 +8,7 @@ export abstract class Database {
 	protected abstract readonly dbVersion: number;
 
 	protected constructor(context: string) {
-		this.logger = new Logger({ context });
+		this.logger = new Logger({ context, source: "background" });
 	}
 
 	protected abstract onUpgrade(event: IDBVersionChangeEvent, db: IDBDatabase): void;

@@ -1,3 +1,4 @@
+import { Logger } from "$shared/logger/logger.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
@@ -6,6 +7,8 @@ import type { Emitter } from "nanoevents";
 import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
 
+const logger = new Logger({ context: "export-import" });
+
 const Container = styled.div`
 	display: flex;
 	flex-direction: row;
@@ -13,8 +16,8 @@ const Container = styled.div`
 	justify-content: space-between;
 	gap: 24px;
 	width: 100%;
-	background: #111111;
-	border: 1px solid #1e1e1e;
+	background: var(--settings-surface);
+	border: 1px solid var(--settings-border);
 	border-radius: 12px;
 	padding: 16px;
 `;
@@ -28,13 +31,13 @@ const InfoSection = styled.div`
 `;
 
 const InfoTitle = styled.span`
-	color: #f0f0f0;
+	color: var(--settings-text-strong);
 	font-size: 13px;
 	font-weight: 500;
 `;
 
 const InfoDescription = styled.span`
-	color: #7c7c7c;
+	color: var(--settings-text-muted);
 	font-size: 11.5px;
 	line-height: 1.5;
 `;
@@ -52,9 +55,9 @@ const ButtonGroup = styled.div`
 `;
 
 const ActionButton = styled.button`
-	background: #1a1a1a;
-	border: 1px solid #262626;
-	color: #e5e5e5;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-control-border);
+	color: var(--settings-text);
 	padding: 8px 18px;
 	border-radius: 8px;
 	font-size: 12px;
@@ -70,7 +73,7 @@ const ActionButton = styled.button`
 	&:hover:not(:disabled) {
 		border-color: #9147ff;
 		color: #9147ff;
-		background: #171717;
+		background: var(--settings-control-hover);
 	}
 
 	&:disabled {
@@ -95,7 +98,7 @@ const StatusOverlay = styled.div<{ type: "success" | "error" }>`
 	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 	animation: slideIn 0.3s ease;
 
-	background: #121212;
+	background: var(--settings-surface-raised);
 
 	color: ${(props) => (props.type === "success" ? "#66bb6a" : "#ff5252")};
 
@@ -167,7 +170,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			}
 			return allData;
 		} catch (error) {
-			console.error("Error fetching all watchtime data:", error);
+			logger.error("Error fetching all watchtime data:", error);
 			return allData;
 		}
 	};
@@ -199,7 +202,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 
 			showStatus(`Successfully exported ${platform} backup`, "success");
 		} catch (error) {
-			console.error("Export error:", error);
+			logger.error("Export error:", error);
 			showStatus("Failed to export data", "error");
 		} finally {
 			setLoading(false);
@@ -252,7 +255,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 					importedSettings = Object.keys(data.settings).length;
 					emitter.emit("extension:settings-refresh");
 				} catch (error) {
-					console.error("Failed to import settings:", error);
+					logger.error("Failed to import settings:", error);
 					showStatus("Failed to import settings", "error");
 					return;
 				}
@@ -280,7 +283,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 						importedWatchtime++;
 					} else {
 						failedWatchtime++;
-						console.error(`Failed to import record for ${recordsToImport[index].username}:`, result.reason);
+						logger.error(`Failed to import record for ${recordsToImport[index].username}:`, result.reason);
 					}
 				});
 			}
@@ -306,7 +309,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			const type = failedWatchtime > 0 && importedWatchtime === 0 ? "error" : "success";
 			showStatus(message, type);
 		} catch (error) {
-			console.error("Import error:", error);
+			logger.error("Import error:", error);
 			showStatus("Failed to import data", "error");
 		} finally {
 			setLoading(false);

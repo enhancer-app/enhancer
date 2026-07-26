@@ -155,3 +155,119 @@ jobs:
           jwt-issuer: ${{ secrets.AMO_JWT_ISSUER }}
           jwt-secret: ${{ secrets.AMO_JWT_SECRET }}
           self-hosted: false
+
+  announce-discord:
+    name: Announce Release on Discord
+    needs: [build-release, publish-chrome, publish-firefox]
+    if: needs.build-release.outputs.EXISTS == 'false' && needs.publish-chrome.result == 'success' && needs.publish-firefox.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Generate and send changelog
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+        env:
+          DISCORD_CHANGELOG_WEBHOOK: ${{ secrets.DISCORD_CHANGELOG_WEBHOOK }}
+          LLM_GATEWAY_API_KEY: ${{ secrets.LLM_GATEWAY_API_KEY }}
+          LLM_GATEWAY_MODEL: ${{ vars.LLM_GATEWAY_MODEL }}
+          VERSION: ${{ needs.build-release.outputs.VERSION }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const requiredEnv = [
+              "DISCORD_CHANGELOG_WEBHOOK",
+              "LLM_GATEWAY_API_KEY",
+              "LLM_GATEWAY_MODEL",
+            ];
+
+            for (const name of requiredEnv) {
+              if (!process.env[name]) {
+                core.setFailed(`Missing required environment variable: ${name}`);
+                return;
+              }
+            }
+
+            core.setSecret(process.env.DISCORD_CHANGELOG_WEBHOOK);
+            core.setSecret(process.env.LLM_GATEWAY_API_KEY);
+
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: process.env.VERSION,
+            });
+            const releaseNotes = release.data.body?.trim() || "No detailed release notes were provided.";
+            const prompt = [
+              "Write the changelog in English.",
+              "Include only changes that regular users need to know about.",
+              "Use natural, plain language and avoid technical implementation details.",
+              "Do not invent information, mention this instruction, or add an introduction.",
+              "Return only short markdown bullet points, with one change per bullet.",
+              "The final message will use exactly this format:",
+              `**Changelog ${process.env.VERSION}**`,
+              "",
+              "- Clear user-facing change",
+              "- Another user-facing change",
+              "Do not include the Changelog heading in your response; the workflow adds it.",
+              "",
+              "Maximum length for the bullet points: 1700 characters.",
+              "",
+              "Release notes:",
+              "---",
+              releaseNotes,
+              "---",
+            ].join("\n");
+
+            let summary = `**Changelog ${process.env.VERSION}**\n\n${releaseNotes}`;
+            const llmResponse = await fetch("https://api.llmgateway.io/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${process.env.LLM_GATEWAY_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: process.env.LLM_GATEWAY_MODEL,
+                messages: [
+                  {
+                    role: "system",
+                    content: "You write software changelogs for end users.",
+                  },
+                  { role: "user", content: prompt },
+                ],
+                temperature: 0.2,
+                max_tokens: 500,
+                stream: false,
+              }),
+            });
+
+            if (llmResponse.ok) {
+              const completion = await llmResponse.json();
+              const generatedSummary = completion.choices?.[0]?.message?.content?.trim();
+
+              if (generatedSummary) {
+                const generatedBullets = generatedSummary.replace(/^\s*\*\*Changelog[^*]*\*\*\s*/i, "").trim();
+                summary = `**Changelog ${process.env.VERSION}**\n\n${generatedBullets}`;
+              } else {
+                core.warning("LLM Gateway returned an empty summary. Using raw release notes.");
+              }
+            } else {
+              core.warning(`LLM Gateway request failed with status ${llmResponse.status}. Using raw release notes.`);
+            }
+
+            const maxMessageLength = 2000;
+            if (summary.length > maxMessageLength) {
+              summary = `${summary.slice(0, maxMessageLength - 3)}...`;
+            }
+
+            const discordResponse = await fetch(process.env.DISCORD_CHANGELOG_WEBHOOK, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                username: "Enhancer Releases",
+                allowed_mentions: { parse: [] },
+                content: summary,
+              }),
+            });
+
+            if (!discordResponse.ok) {
+              throw new Error(`Discord webhook failed with status ${discordResponse.status}.`);
+            }

@@ -332,7 +332,7 @@ export default class SettingsModule extends TwitchModule {
 				type: "text",
 				categoryId: CATEGORY.ABOUT,
 				content: () => {
-					return <EnhancerAboutComponent icons={brandIcons} />;
+					return <EnhancerAboutComponent icons={brandIcons} platform="twitch" workerService={workerService} />;
 				},
 				hideInfo: true,
 			},

@@ -1,3 +1,4 @@
+import { Logger } from "$shared/logger/logger.ts";
 import type {
 	SettingCategory,
 	SettingDefinition,
@@ -7,16 +8,60 @@ import type { JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
 
+const logger = new Logger({ context: "settings-ui" });
+
 const FONT = `"Inter", "Noto Sans Arabic", "Roobert", "Helvetica Neue", Helvetica, Arial, sans-serif`;
 
 const SettingsContainer = styled.div`
+	--settings-background: #0d0d0d;
+	--settings-surface: #111111;
+	--settings-surface-raised: #121212;
+	--settings-border: #1e1e1e;
+	--settings-divider: #1c1c1c;
+	--settings-divider-subtle: #1a1a1a;
+	--settings-control-background: #0d0d0d;
+	--settings-control-border: #262626;
+	--settings-control-hover: #1c1c1c;
+	--settings-toggle-background: #2a2a2a;
+	--settings-toggle-hover: #333333;
+	--settings-text-primary: #ffffff;
+	--settings-text-strong: #f0f0f0;
+	--settings-text: #e5e5e5;
+	--settings-text-secondary: #a5a5a5;
+	--settings-text-muted: #7c7c7c;
+	--settings-text-dim: #6a6a6a;
+	--settings-text-faint: #565656;
+	--settings-input-placeholder: #4f4f4f;
+
+	html.tw-root--theme-light & {
+		--settings-background: #f7f7f8;
+		--settings-surface: #ffffff;
+		--settings-surface-raised: #ffffff;
+		--settings-border: #dedee3;
+		--settings-divider: #dedee3;
+		--settings-divider-subtle: #e5e5e7;
+		--settings-control-background: #ffffff;
+		--settings-control-border: #cfcfd5;
+		--settings-control-hover: #e5e5e7;
+		--settings-toggle-background: #c4c4c9;
+		--settings-toggle-hover: #b5b5bb;
+		--settings-text-primary: #0e0e10;
+		--settings-text-strong: #18181b;
+		--settings-text: #2f2f35;
+		--settings-text-secondary: #53535f;
+		--settings-text-muted: #6e6e78;
+		--settings-text-dim: #6e6e78;
+		--settings-text-faint: #878791;
+		--settings-input-placeholder: #8f8f99;
+	}
+
 	display: flex;
 	flex-direction: column;
 	width: min(940px, 92vw);
 	height: min(640px, 86vh);
-	background-color: #0d0d0d;
+	background-color: var(--settings-background);
 	border-radius: 16px;
-	border: 1px solid #232323;
+	border: 1px solid var(--settings-border);
 	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
 	position: relative;
 	overflow: hidden;
@@ -42,11 +87,11 @@ const Header = styled.header`
 	display: flex;
 	align-items: center;
 	padding: 0 16px;
-	color: white;
+	color: var(--settings-text-primary);
 	gap: 12px;
 	height: 60px;
 	flex-shrink: 0;
-	border-bottom: 1px solid #1c1c1c;
+	border-bottom: 1px solid var(--settings-divider);
 	position: relative;
 	z-index: 2;
 `;
@@ -65,8 +110,8 @@ const LogoContainer = styled.div`
 	justify-content: center;
 	align-items: center;
 	border-radius: 9px;
-	box-shadow: inset 0 1px 0 0 #333333;
-	background: linear-gradient(to bottom, #282728 5%, #1c1d1f 100%);
+	box-shadow: inset 0 1px 0 0 var(--settings-control-hover);
+	background: linear-gradient(to bottom, var(--settings-control-hover) 5%, var(--settings-divider) 100%);
 	flex-shrink: 0;
 `;
 
@@ -84,12 +129,12 @@ const BrandText = styled.div`
 const BrandName = styled.span`
 	font-size: 14px;
 	font-weight: 600;
-	color: #ffffff;
+	color: var(--settings-text-primary);
 `;
 
 const BrandMeta = styled.span`
 	font-size: 10px;
-	color: #6a6a6a;
+	color: var(--settings-text-dim);
 	text-transform: capitalize;
 `;
 
@@ -102,17 +147,17 @@ const SearchContainer = styled.div`
 	align-items: center;
 	gap: 8px;
 	width: 260px;
-	background: #141414;
-	border: 1px solid #232323;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-border);
 	border-radius: 9px;
 	padding: 0 10px;
 	height: 34px;
-	color: #565656;
+	color: var(--settings-text-faint);
 	transition: border-color 0.15s ease, background 0.15s ease;
 
 	&:focus-within {
 		border-color: #9147ff;
-		background: #171717;
+		background: var(--settings-surface);
 		color: #9147ff;
 	}
 `;
@@ -122,7 +167,7 @@ const SearchInput = styled.input`
 	min-width: 0;
 	background: none;
 	border: none;
-	color: white;
+	color: var(--settings-text-primary);
 	font-family: ${FONT};
 	font-size: 12px;
 	padding: 0;
@@ -130,7 +175,7 @@ const SearchInput = styled.input`
 	height: 100%;
 
 	&::placeholder {
-		color: #565656;
+		color: var(--settings-input-placeholder);
 	}
 `;
 
@@ -138,7 +183,7 @@ const IconButton = styled.button`
 	background: none;
 	border: none;
 	cursor: pointer;
-	color: #6a6a6a;
+	color: var(--settings-text-dim);
 	padding: 0;
 	width: 22px;
 	height: 22px;
@@ -150,7 +195,7 @@ const IconButton = styled.button`
 	transition: color 0.15s ease, background 0.15s ease;
 
 	&:hover {
-		color: white;
+		color: var(--settings-text-primary);
 	}
 `;
 
@@ -159,8 +204,8 @@ const CloseButton = styled(IconButton)`
 	height: 30px;
 
 	&:hover {
-		background: #1e1e1e;
-		color: white;
+		background: var(--settings-control-hover);
+		color: var(--settings-text-primary);
 	}
 `;
 
@@ -175,7 +220,7 @@ const Body = styled.div`
 const Sidebar = styled.nav`
 	width: 194px;
 	flex-shrink: 0;
-	border-right: 1px solid #1c1c1c;
+	border-right: 1px solid var(--settings-divider);
 	display: flex;
 	flex-direction: column;
 	padding: 12px 10px;
@@ -197,7 +242,12 @@ const NavItem = styled.button<{ active: boolean; dimmed: boolean }>`
 	border-radius: 8px;
 	transition: background 0.15s ease, color 0.15s ease;
 	background: ${(props) => (props.active ? "rgba(145, 71, 255, 0.14)" : "transparent")};
-	color: ${(props) => (props.active ? "#ffffff" : props.dimmed ? "#4a4a4a" : "#a5a5a5")};
+	color: ${(props) =>
+		props.active
+			? "var(--settings-text-primary)"
+			: props.dimmed
+				? "var(--settings-text-dim)"
+				: "var(--settings-text-secondary)"};
 
 	svg {
 		flex-shrink: 0;
@@ -205,8 +255,8 @@ const NavItem = styled.button<{ active: boolean; dimmed: boolean }>`
 	}
 
 	&:hover {
-		background: ${(props) => (props.active ? "rgba(145, 71, 255, 0.18)" : "#161616")};
-		color: ${(props) => (props.active ? "#ffffff" : "#e5e5e5")};
+		background: ${(props) => (props.active ? "rgba(145, 71, 255, 0.18)" : "var(--settings-control-hover)")};
+		color: ${(props) => (props.active ? "var(--settings-text-primary)" : "var(--settings-text)")};
 	}
 `;
 
@@ -230,9 +280,9 @@ const NavCount = styled.span`
 const SidebarFooter = styled.div`
 	margin-top: auto;
 	padding: 12px 10px 2px;
-	border-top: 1px solid #1c1c1c;
+	border-top: 1px solid var(--settings-divider);
 	font-size: 10px;
-	color: #4a4a4a;
+	color: var(--settings-text-dim);
 	display: flex;
 	justify-content: space-between;
 	gap: 6px;
@@ -253,24 +303,24 @@ const Content = styled.div`
 	}
 
 	&::-webkit-scrollbar-thumb {
-		background: #232323;
+		background: var(--settings-border);
 		border-radius: 10px;
-		border: 3px solid #0d0d0d;
+		border: 3px solid var(--settings-background);
 	}
 
 	&::-webkit-scrollbar-thumb:hover {
-		background: #2f2f2f;
+		background: var(--settings-control-border);
 	}
 
 	scrollbar-width: thin;
-	scrollbar-color: #232323 transparent;
+	scrollbar-color: var(--settings-border) transparent;
 `;
 
 const SectionTitle = styled.h2`
 	margin: 0 0 14px;
 	font-size: 16px;
 	font-weight: 600;
-	color: #ffffff;
+	color: var(--settings-text-primary);
 	display: flex;
 	align-items: center;
 	gap: 8px;
@@ -279,7 +329,7 @@ const SectionTitle = styled.h2`
 		content: "";
 		flex: 1;
 		height: 1px;
-		background: #1c1c1c;
+		background: var(--settings-divider);
 	}
 `;
 
@@ -290,8 +340,8 @@ const Section = styled.section`
 `;
 
 const Card = styled.div`
-	background: #111111;
-	border: 1px solid #1e1e1e;
+	background: var(--settings-surface);
+	border: 1px solid var(--settings-border);
 	border-radius: 12px;
 	overflow: hidden;
 
@@ -320,7 +370,7 @@ const Row = styled.div<{ disabled: boolean; nested: boolean }>`
 	transition: opacity 0.15s ease;
 
 	& + & {
-		border-top: 1px solid #1a1a1a;
+		border-top: 1px solid var(--settings-divider-subtle);
 	}
 
 	${(props) =>
@@ -334,7 +384,7 @@ const Row = styled.div<{ disabled: boolean; nested: boolean }>`
 			bottom: 14px;
 			width: 2px;
 			border-radius: 2px;
-			background: #262626;
+			background: var(--settings-control-border);
 		}
 	`
 			: ""}
@@ -348,7 +398,7 @@ const RowInfo = styled.div`
 const RowTitle = styled.div`
 	font-size: 13px;
 	font-weight: 500;
-	color: #f0f0f0;
+	color: var(--settings-text-strong);
 	margin-bottom: 3px;
 	display: flex;
 	align-items: center;
@@ -356,7 +406,7 @@ const RowTitle = styled.div`
 `;
 
 const RowDescription = styled.div`
-	color: #7c7c7c;
+	color: var(--settings-text-muted);
 	font-size: 11.5px;
 	line-height: 1.5;
 `;
@@ -387,11 +437,11 @@ const ToggleTrack = styled.label<{ checked: boolean }>`
 	flex-shrink: 0;
 	cursor: pointer;
 	border-radius: 24px;
-	background-color: ${(props) => (props.checked ? "#9147ff" : "#2a2a2a")};
+	background-color: ${(props) => (props.checked ? "#9147ff" : "var(--settings-toggle-background)")};
 	transition: background-color 0.2s ease;
 
 	&:hover {
-		background-color: ${(props) => (props.checked ? "#a06bff" : "#333333")};
+		background-color: ${(props) => (props.checked ? "#a06bff" : "var(--settings-toggle-hover)")};
 	}
 
 	&:has(input:focus-visible) {
@@ -422,9 +472,9 @@ const ToggleCircle = styled.span<{ checked: boolean }>`
 `;
 
 const TextInput = styled.input`
-	background: #0d0d0d;
-	border: 1px solid #262626;
-	color: white;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-control-border);
+	color: var(--settings-text-primary);
 	font-family: ${FONT};
 	font-size: 12px;
 	border-radius: 8px;
@@ -434,7 +484,7 @@ const TextInput = styled.input`
 	transition: border-color 0.15s ease;
 
 	&::placeholder {
-		color: #4f4f4f;
+		color: var(--settings-input-placeholder);
 	}
 
 	&:focus {
@@ -462,7 +512,7 @@ const NumberInput = styled(TextInput)`
 
 const Unit = styled.span`
 	font-size: 11px;
-	color: #6a6a6a;
+	color: var(--settings-text-dim);
 	min-width: 18px;
 `;
 
@@ -478,7 +528,7 @@ const Slider = styled.input`
 	appearance: none;
 	height: 4px;
 	border-radius: 4px;
-	background: #262626;
+	background: var(--settings-control-border);
 	outline: none;
 	cursor: pointer;
 
@@ -508,15 +558,15 @@ const Slider = styled.input`
 
 const SliderValue = styled.span`
 	font-size: 11px;
-	color: #a5a5a5;
+	color: var(--settings-text-secondary);
 	min-width: 42px;
 	text-align: right;
 	font-variant-numeric: tabular-nums;
 `;
 
 const FileInputContainer = styled.div`
-	background: #0d0d0d;
-	border: 1px solid #262626;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-control-border);
 	border-radius: 8px;
 	padding: 4px;
 	min-width: 220px;
@@ -526,7 +576,7 @@ const FileInputContainer = styled.div`
 	transition: border-color 0.15s ease;
 
 	&:hover {
-		border-color: #333333;
+		border-color: var(--settings-control-border);
 	}
 `;
 
@@ -536,7 +586,7 @@ const UploadTriggerLabel = styled.label`
 	justify-content: center;
 	gap: 8px;
 	width: 100%;
-	color: #e5e5e5;
+	color: var(--settings-text);
 	font-size: 12px;
 	font-weight: 500;
 	cursor: pointer;
@@ -549,7 +599,7 @@ const UploadTriggerLabel = styled.label`
 	}
 
 	&:hover {
-		background: #1c1c1c;
+		background: var(--settings-control-hover);
 	}
 `;
 
@@ -560,7 +610,7 @@ const FileStatus = styled.div`
 	flex: 1;
 	min-width: 0;
 	padding-left: 8px;
-	color: #ccc;
+	color: var(--settings-text);
 	font-size: 11px;
 
 	svg {
@@ -582,7 +632,7 @@ const HiddenFileInput = styled.input`
 const RemoveFileButton = styled.button`
 	background: transparent;
 	border: none;
-	color: #565656;
+	color: var(--settings-text-faint);
 	cursor: pointer;
 	height: 28px;
 	width: 28px;
@@ -610,11 +660,11 @@ const FileUploadError = styled.div`
 `;
 
 const Select = styled.select`
-	background: #0d0d0d;
+	background: var(--settings-control-background);
 	padding: 9px 11px;
 	border-radius: 8px;
-	color: #e5e5e5;
-	border: 1px solid #262626;
+	color: var(--settings-text);
+	border: 1px solid var(--settings-control-border);
 	font-family: ${FONT};
 	font-size: 12px;
 	cursor: pointer;
@@ -630,8 +680,8 @@ const RadioContainer = styled.div`
 	display: flex;
 	gap: 6px;
 	flex-wrap: wrap;
-	background: #0d0d0d;
-	border: 1px solid #262626;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-control-border);
 	border-radius: 8px;
 	padding: 3px;
 `;
@@ -647,12 +697,12 @@ const RadioLabel = styled.label<{ checked: boolean }>`
 	padding: 7px 12px;
 	border-radius: 6px;
 	font-size: 12px;
-	color: ${(props) => (props.checked ? "white" : "#8a8a8a")};
+	color: ${(props) => (props.checked ? "var(--settings-text-primary)" : "var(--settings-text-muted)")};
 	cursor: pointer;
 	transition: background 0.15s ease, color 0.15s ease;
 
 	&:hover {
-		color: ${(props) => (props.checked ? "white" : "#e5e5e5")};
+		color: ${(props) => (props.checked ? "var(--settings-text-primary)" : "var(--settings-text)")};
 	}
 `;
 
@@ -676,7 +726,7 @@ const ArrayInput = styled(TextInput)`
 
 const ArrayEmpty = styled.div`
 	font-size: 11.5px;
-	color: #565656;
+	color: var(--settings-text-faint);
 	padding: 4px 0;
 `;
 
@@ -686,8 +736,8 @@ const GhostButton = styled.button`
 	justify-content: center;
 	gap: 6px;
 	background: transparent;
-	border: 1px dashed #2e2e2e;
-	color: #a5a5a5;
+	border: 1px dashed var(--settings-control-border);
+	color: var(--settings-text-secondary);
 	padding: 8px 12px;
 	border-radius: 8px;
 	cursor: pointer;
@@ -703,8 +753,8 @@ const GhostButton = styled.button`
 
 const RemoveButton = styled.button`
 	background: transparent;
-	border: 1px solid #262626;
-	color: #6a6a6a;
+	border: 1px solid var(--settings-control-border);
+	color: var(--settings-text-dim);
 	width: 32px;
 	height: 34px;
 	flex-shrink: 0;
@@ -728,9 +778,9 @@ const RefreshBar = styled.div`
 	gap: 10px;
 	flex-shrink: 0;
 	padding: 10px 16px;
-	border-top: 1px solid #1c1c1c;
+	border-top: 1px solid var(--settings-divider);
 	background: rgba(145, 71, 255, 0.06);
-	color: #cfc2e6;
+	color: var(--settings-text);
 	font-size: 12px;
 	position: relative;
 	z-index: 2;
@@ -763,18 +813,18 @@ const PrimaryButton = styled.button`
 `;
 
 const SecondaryButton = styled(PrimaryButton)`
-	background: #232323;
-	color: #ccc;
+	background: var(--settings-border);
+	color: var(--settings-text);
 
 	&:hover {
-		background: #2f2f2f;
+		background: var(--settings-control-border);
 	}
 `;
 
 const NoResults = styled.div`
 	padding: 60px 20px;
 	text-align: center;
-	color: #565656;
+	color: var(--settings-text-faint);
 	font-size: 13px;
 	display: flex;
 	flex-direction: column;
@@ -782,7 +832,7 @@ const NoResults = styled.div`
 	gap: 10px;
 
 	svg {
-		color: #2e2e2e;
+		color: var(--settings-control-border);
 	}
 `;
 
@@ -799,9 +849,9 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-	background-color: #121212;
+	background-color: var(--settings-surface-raised);
 	border-radius: 14px;
-	border: 1px solid #262626;
+	border: 1px solid var(--settings-control-border);
 	font-family: ${FONT} !important;
 	padding: 22px;
 	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
@@ -810,14 +860,14 @@ const ModalContent = styled.div`
 `;
 
 const ModalHeader = styled.h3`
-	color: white;
+	color: var(--settings-text-primary);
 	margin: 0 0 10px;
 	font-size: 15px;
 	font-weight: 600;
 `;
 
 const ModalMessage = styled.p`
-	color: #a5a5a5;
+	color: var(--settings-text-secondary);
 	font-size: 12.5px;
 	margin: 0;
 	line-height: 1.6;
@@ -1331,7 +1381,7 @@ const Settings = <T,>({
 					const Component = setting.content;
 					return <Component />;
 				} catch (e) {
-					console.error("Enhancer Error when rendering component", e);
+					logger.error("Enhancer Error when rendering component", e);
 				}
 				return null;
 			}

@@ -1,4 +1,5 @@
 import { Logger } from "$shared/logger/logger.ts";
+import type { LogEntry } from "$types/shared/logger.types.ts";
 import type {
 	CachedAggregateSeed,
 	EnhancerApiSeedRequestPayload,
@@ -164,6 +165,42 @@ export default class WorkerService {
 					resolve(null);
 				}
 			}, 10000);
+		});
+	}
+
+	getBridgeLogs(): Promise<LogEntry[]> {
+		return new Promise((resolve) => {
+			const requestId = crypto.randomUUID();
+			const timeout = { id: 0 };
+			const cleanup = () => {
+				clearTimeout(timeout.id);
+				this.element.removeEventListener("enhancer-bridge-logs-response", handleResponse);
+			};
+			const handleResponse = (event: Event) => {
+				try {
+					const detail = JSON.parse((event as CustomEvent<string>).detail) as {
+						requestId: string;
+						logs?: LogEntry[];
+					};
+					if (detail.requestId !== requestId) return;
+					cleanup();
+					resolve(Array.isArray(detail.logs) ? detail.logs : []);
+				} catch {
+					cleanup();
+					resolve([]);
+				}
+			};
+
+			this.element.addEventListener("enhancer-bridge-logs-response", handleResponse);
+			timeout.id = window.setTimeout(() => {
+				cleanup();
+				resolve([]);
+			}, 1000);
+			this.element.dispatchEvent(
+				new CustomEvent<string>("enhancer-bridge-logs-request", {
+					detail: JSON.stringify({ requestId }),
+				}),
+			);
 		});
 	}
 }

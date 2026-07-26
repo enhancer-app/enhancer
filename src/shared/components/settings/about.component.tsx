@@ -1,9 +1,12 @@
+import { DiagnosticLogsComponent } from "$shared/components/diagnostic-logs/diagnostic-logs.component.tsx";
+import type WorkerService from "$shared/worker/worker.service.ts";
+import type { PlatformType } from "$types/shared/platform.types.ts";
 import styled from "styled-components";
 
 const Container = styled.div`
 	padding: 0;
 	line-height: 1.6;
-	color: #ccc;
+	color: var(--settings-text);
 	width: 100%;
 	max-width: none;
 	display: flex;
@@ -14,9 +17,9 @@ const Container = styled.div`
 const Header = styled.div`
 	text-align: center;
 	padding: 28px 32px;
-	background: #111111;
+	background: var(--settings-surface);
 	border-radius: 12px;
-	border: 1px solid #1e1e1e;
+	border: 1px solid var(--settings-border);
 	position: relative;
 	overflow: hidden;
 
@@ -33,7 +36,7 @@ const Header = styled.div`
 `;
 
 const Title = styled.h1`
-	color: #ffffff;
+	color: var(--settings-text-primary);
 	margin: 0 0 8px 0;
 	font-size: 24px;
 	font-weight: 700;
@@ -43,7 +46,7 @@ const Title = styled.h1`
 const Subtitle = styled.p`
 	font-size: 12px;
 	margin: 0 0 16px 0;
-	color: #a5a5a5;
+	color: var(--settings-text-secondary);
 	position: relative;
 `;
 
@@ -60,15 +63,15 @@ const VersionBadge = styled.div`
 `;
 
 const Card = styled.div`
-	background: #111111;
-	border: 1px solid #1e1e1e;
+	background: var(--settings-surface);
+	border: 1px solid var(--settings-border);
 	border-radius: 12px;
 	padding: 20px;
 `;
 
 const Disclosure = styled.details`
-	background: #111111;
-	border: 1px solid #1e1e1e;
+	background: var(--settings-surface);
+	border: 1px solid var(--settings-border);
 	border-radius: 12px;
 	overflow: hidden;
 `;
@@ -95,7 +98,7 @@ const DisclosureTitle = styled.span`
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	color: #ffffff;
+	color: var(--settings-text-primary);
 	font-size: 15px;
 	font-weight: 600;
 	line-height: 1;
@@ -113,7 +116,7 @@ const DisclosureTitle = styled.span`
 const DisclosureHint = styled.span`
 	display: flex;
 	align-items: center;
-	color: #7c7c7c;
+	color: var(--settings-text-muted);
 	font-size: 11px;
 	line-height: 1;
 	flex-shrink: 0;
@@ -131,9 +134,9 @@ const DisclosureHint = styled.span`
 `;
 
 const DisclosureContent = styled.div`
-	border-top: 1px solid #1e1e1e;
+	border-top: 1px solid var(--settings-border);
 	padding: 16px 20px 20px;
-	color: #7c7c7c;
+	color: var(--settings-text-muted);
 	font-size: 11.5px;
 	line-height: 1.6;
 
@@ -151,7 +154,7 @@ const DisclosureContent = styled.div`
 `;
 
 const SectionTitle = styled.h2`
-	color: #ffffff;
+	color: var(--settings-text-primary);
 	margin: 0 0 6px 0;
 	font-size: 15px;
 	font-weight: 600;
@@ -170,14 +173,14 @@ const SectionTitle = styled.h2`
 
 const SubSectionTitle = styled.h3`
 	margin: 22px 0 12px 0;
-	color: #f0f0f0;
+	color: var(--settings-text-strong);
 	font-size: 12.5px;
 	font-weight: 600;
 `;
 
 const Description = styled.p`
 	margin: 0 0 18px;
-	color: #7c7c7c;
+	color: var(--settings-text-muted);
 	font-size: 11.5px;
 `;
 
@@ -192,13 +195,13 @@ const ServiceList = styled.ul`
 
 const ServiceItem = styled.li`
 	padding: 14px;
-	background: #0d0d0d;
-	border: 1px solid #1e1e1e;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-border);
 	border-radius: 8px;
 	transition: border-color 0.15s ease;
 
 	&:hover {
-		border-color: #2a2a2a;
+		border-color: var(--settings-control-border);
 	}
 
 	a {
@@ -210,7 +213,7 @@ const ServiceItem = styled.li`
 
 	p {
 		margin: 6px 0 0;
-		color: #7c7c7c;
+		color: var(--settings-text-muted);
 		font-size: 10px;
 	}
 `;
@@ -222,18 +225,18 @@ const ContributorGrid = styled.div`
 `;
 
 const ContributorTag = styled.div`
-	background: #0d0d0d;
-	border: 1px solid #1e1e1e;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-border);
 	padding: 10px 14px;
 	border-radius: 8px;
 	font-size: 10.5px;
-	color: #cfcfcf;
+	color: var(--settings-text);
 	text-align: center;
 	transition: border-color 0.15s ease, color 0.15s ease;
 
 	&:hover {
 		border-color: rgba(145, 71, 255, 0.4);
-		color: #fff;
+		color: #9147ff;
 	}
 `;
 
@@ -245,21 +248,21 @@ const SocialLinksContainer = styled.div`
 `;
 
 const SocialLink = styled.a`
-	color: #e5e5e5;
+	color: var(--settings-text);
 	text-decoration: none;
 	display: flex;
 	align-items: center;
 	font-size: 11px;
 	font-weight: 500;
 	padding: 13px 16px;
-	background: #0d0d0d;
-	border: 1px solid #1e1e1e;
+	background: var(--settings-control-background);
+	border: 1px solid var(--settings-border);
 	border-radius: 8px;
 	transition: border-color 0.15s ease, color 0.15s ease;
 
 	&:hover {
 		border-color: rgba(145, 71, 255, 0.4);
-		color: #fff;
+		color: #9147ff;
 		text-decoration: none;
 	}
 `;
@@ -274,11 +277,29 @@ const IconImage = styled.img`
 
 const BugReportText = styled.p`
 	margin: 0;
-	color: #7c7c7c;
+	color: var(--settings-text-muted);
 	font-size: 11.5px;
 `;
 
+const DiagnosticsRow = styled.div`
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 20px;
+`;
+
+const DiagnosticsInfo = styled.div`
+	flex: 1;
+	min-width: 0;
+`;
+
+const DiagnosticsDescription = styled(Description)`
+	margin-bottom: 0;
+`;
+
 interface EnhancerAboutComponentProps {
+	platform: PlatformType;
+	workerService: WorkerService;
 	icons: {
 		website: string;
 		github: string;
@@ -287,7 +308,7 @@ interface EnhancerAboutComponentProps {
 	};
 }
 
-export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
+export function EnhancerAboutComponent({ platform, workerService, icons }: EnhancerAboutComponentProps) {
 	const externalServices = [
 		{
 			name: "api.enhancer.at",
@@ -377,6 +398,16 @@ export function EnhancerAboutComponent({ icons }: EnhancerAboutComponentProps) {
 						Discord
 					</SocialLink>
 				</SocialLinksContainer>
+			</Card>
+
+			<Card>
+				<DiagnosticsRow>
+					<DiagnosticsInfo>
+						<SectionTitle>Diagnostics</SectionTitle>
+						<DiagnosticsDescription>Export recent logs when reporting a problem with Enhancer.</DiagnosticsDescription>
+					</DiagnosticsInfo>
+					<DiagnosticLogsComponent platform={platform} workerService={workerService} />
+				</DiagnosticsRow>
 			</Card>
 
 			<Card>
