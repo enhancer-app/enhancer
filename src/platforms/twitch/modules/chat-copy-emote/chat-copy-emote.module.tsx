@@ -18,24 +18,28 @@ export default class ChatCopyEmoteModule extends TwitchModule {
 	};
 
 	private handleMessage({ element }: TwitchChatMessageEvent) {
-		const emotes = element.querySelectorAll(".seventv-emote, .seventv-chat-emote, .chat-line__message--emote");
-		if (emotes.length < 1) return;
-		emotes.forEach((emote) => {
-			this.listenerControllers.get(emote)?.abort();
-			const controller = new AbortController();
-			this.listenerControllers.set(emote, controller);
-			emote.addEventListener(
-				"contextmenu",
-				(event) => {
-					event.preventDefault();
-					const altValue = emote.getAttribute("alt");
-					if (altValue) {
-						const name = altValue.replace(/ /g, "");
-						this.twitchUtils().addTextToChatInput(name);
-					}
-				},
-				{ signal: controller.signal },
-			);
-		});
+		this.listenerControllers.get(element)?.abort();
+		const controller = new AbortController();
+		this.listenerControllers.set(element, controller);
+		const emoteSelector = ".seventv-emote, .seventv-chat-emote, .chat-line__message--emote, .ffz-emote";
+		element.addEventListener(
+			"contextmenu",
+			(event) => {
+				if (!(event.target instanceof Element)) return;
+
+				const directEmote = event.target.closest(emoteSelector);
+				const wrapper = event.target.closest(".seventv-emote-box");
+				const emote = directEmote ?? wrapper?.querySelector(emoteSelector);
+				if (!(emote instanceof Element) || !element.contains(emote)) return;
+
+				const name = emote.getAttribute("alt")?.trim();
+				if (!name) return;
+
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				this.twitchUtils().addTextToChatInput(name);
+			},
+			{ capture: true, signal: controller.signal },
+		);
 	}
 }
