@@ -218,9 +218,14 @@ export default class ChattersModule extends TwitchModule {
 	}
 
 	private getLoginsOrIsAllowedPage() {
-		if (this.twitchUtils().isDirectTwitchPlayer() || this.twitchUtils().isModeratorView()) return true;
+		if (this.twitchUtils().isDirectTwitchPlayer() || this.twitchUtils().isModeratorView() || this.isStreamManagerPage())
+			return true;
 		const logins = this.getLogins();
 		return logins?.length ? logins : undefined;
+	}
+
+	private isStreamManagerPage() {
+		return window.location.pathname.includes("/stream-manager");
 	}
 
 	private getLogins(): string[] | undefined {

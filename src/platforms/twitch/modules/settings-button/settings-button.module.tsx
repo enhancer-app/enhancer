@@ -13,6 +13,15 @@ export default class SettingsButtonModule extends TwitchModule {
 				selectors: [".top-nav__menu"],
 				callback: this.run.bind(this),
 				key: "settings-button-main",
+				validateUrl: (url) => !url.includes("/stream-manager"),
+				once: true,
+			},
+			{
+				type: "selector",
+				selectors: ["nav.sunlight-top-nav"],
+				callback: this.runStreamManager.bind(this),
+				key: "settings-button-stream-manager",
+				validateUrl: (url) => url.includes("/stream-manager"),
 				once: true,
 			},
 		],
@@ -31,6 +40,23 @@ export default class SettingsButtonModule extends TwitchModule {
 					<SettingsButtonComponent onClick={this.openSettings.bind(this)} logoUrl={logo} />
 				</TooltipComponent>,
 				element,
+			);
+		});
+	}
+
+	private async runStreamManager(elements: Element[]) {
+		const logo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo-gray.svg");
+		elements.forEach((element) => {
+			const target = element.querySelector(".tw-col:last-child > div");
+			if (!target || target.querySelector(`.${this.getId()}`)) return;
+			const wrapper = document.createElement("span");
+			wrapper.classList.add(this.getId());
+			target.prepend(wrapper);
+			render(
+				<TooltipComponent content={<p>Open Enhancer Settings</p>} position="bottom">
+					<SettingsButtonComponent onClick={this.openSettings.bind(this)} logoUrl={logo} />
+				</TooltipComponent>,
+				wrapper,
 			);
 		});
 	}
