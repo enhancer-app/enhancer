@@ -40,7 +40,10 @@ export default class StreamLatencyModule extends KickModule {
 
 		for (const chatRoom of elements) {
 			if (chatRoom.className.includes("--chat-clip")) continue;
-			const span = chatRoom.firstElementChild?.querySelector<HTMLSpanElement>("span");
+			const chatHeader = chatRoom.firstElementChild?.firstElementChild;
+			const span = [...(chatHeader?.children ?? [])].find(
+				(child): child is HTMLSpanElement => child.tagName === "SPAN" && child.textContent?.trim() === "Chat",
+			);
 			if (!span) continue;
 			span.textContent = "";
 			render(
