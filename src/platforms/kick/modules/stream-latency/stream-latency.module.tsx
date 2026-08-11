@@ -40,12 +40,9 @@ export default class StreamLatencyModule extends KickModule {
 
 		for (const chatRoom of elements) {
 			if (chatRoom.className.includes("--chat-clip")) continue;
-			const chatHeader = chatRoom.firstElementChild?.firstElementChild;
-			const span = [...(chatHeader?.children ?? [])].find(
-				(child): child is HTMLSpanElement => child.tagName === "SPAN" && child.textContent?.trim() === "Chat",
-			);
-			if (!span) continue;
-			span.textContent = "";
+			const chatTitle = chatRoom.querySelector<HTMLElement>(":is(span, h2).absolute.left-1\\/2.-translate-x-1\\/2");
+			if (!chatTitle) continue;
+			chatTitle.textContent = "";
 			render(
 				<LatencyComponent
 					isLive={this.isLiveState}
@@ -53,7 +50,7 @@ export default class StreamLatencyModule extends KickModule {
 					playbackRate={this.playbackRate}
 					click={this.resetPlayer.bind(this)}
 				/>,
-				span,
+				chatTitle,
 			);
 		}
 	}
