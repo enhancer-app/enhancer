@@ -6,7 +6,7 @@ const STORAGE_KEY_PREFIX = "enhancer.settings";
 
 export class SettingsDatabase extends Database {
 	protected readonly dbName = "enhancer_settings";
-	protected readonly dbVersion = 2;
+	protected readonly dbVersion = 1;
 	private readonly storeName = "settings";
 
 	private cache = new Map<PlatformType, PlatformSettings>();
