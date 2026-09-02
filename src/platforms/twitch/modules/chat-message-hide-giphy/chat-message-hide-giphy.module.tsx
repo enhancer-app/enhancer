@@ -24,12 +24,13 @@ export default class ChatMessageHideGiphy extends TwitchModule {
 
 	private isGiphyMessage(message: TwitchChatMessageEvent) {
 		const { element } = message;
-		const giphyNode = element.querySelector(".gifImage--HAD5E");
-		if (!giphyNode || giphyNode.tagName !== "IMG") return false;
-		const src = giphyNode.getAttribute("src");
-		if (!src) return false;
-		const isGiphyUrl = this.isGiphyUrl(src);
-		return isGiphyUrl;
+		const giphyNode = element.querySelectorAll("img");
+		for (const node of giphyNode) {
+			const src = node.getAttribute("src");
+			if (!src) continue;
+			const isGiphyUrl = this.isGiphyUrl(src);
+			if (isGiphyUrl) return true;
+		}
 	}
 
 	private isGiphyUrl(url: string) {
