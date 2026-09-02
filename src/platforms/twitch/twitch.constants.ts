@@ -4,6 +4,7 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	chatImagesEnabled: false,
 	chatImagesOnHover: false,
 	chatImagesSize: 15,
+	chatHideGiphyMessages: false,
 	chatBadgesEnabled: true,
 	chatNicknameCustomizationEnabled: true,
 	loadAdditionalFonts: true,
