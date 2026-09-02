@@ -17,6 +17,7 @@ export default class ChatMessageHideGiphy extends TwitchModule {
 	};
 
 	private hideGiphyMessage(message: TwitchChatMessageEvent) {
+		if (!this.isModuleEnabled()) return;
 		const shouldHide = this.isGiphyMessage(message);
 		if (!shouldHide) return;
 		this.hideMessage(message);
