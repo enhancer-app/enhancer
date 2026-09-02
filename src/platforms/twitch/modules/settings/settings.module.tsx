@@ -209,14 +209,6 @@ export default class SettingsModule extends TwitchModule {
 				dependsOn: { key: "chatMentionSoundEnabled" },
 			},
 			{
-				id: "chatHideGiphyMessages",
-				title: "Hide Giphy Messages",
-				description: "Hide large Giphy messages from the chat. This will not remove them from the chat history.",
-				type: "toggle",
-				categoryId: CATEGORY.CHAT,
-				hideInfo: false,
-			},
-			{
 				id: "chatMentionSoundVolume",
 				title: "Mention Sound Volume",
 				description: "Adjust the volume level for your mention notification sound.",
@@ -228,6 +220,14 @@ export default class SettingsModule extends TwitchModule {
 				slider: true,
 				categoryId: CATEGORY.CHAT,
 				dependsOn: { key: "chatMentionSoundEnabled" },
+			},
+			{
+				id: "chatHideGiphyMessages",
+				title: "Hide Giphy Messages",
+				description: "Hide large Giphy messages from the chat. This will not remove them from the chat history.",
+				type: "toggle",
+				categoryId: CATEGORY.CHAT,
+				hideInfo: false,
 			},
 			{
 				id: "quickAccessLinks",
