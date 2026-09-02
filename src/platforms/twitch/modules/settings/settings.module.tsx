@@ -209,7 +209,7 @@ export default class SettingsModule extends TwitchModule {
 				dependsOn: { key: "chatMentionSoundEnabled" },
 			},
 			{
-				id: "chat-message-hide-giphy",
+				id: "chatHideGiphyMessages",
 				title: "Hide Giphy Messages",
 				description: "Hide large Giphy messages from the chat. This will not remove them from the chat history.",
 				type: "toggle",
