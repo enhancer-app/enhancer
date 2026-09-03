@@ -1,3 +1,4 @@
+import type { XayoWatchtimePeriod } from "$types/apis/enhancer.apis.ts";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 
 export type TwitchSettings = {
@@ -28,6 +29,7 @@ export type TwitchSettings = {
 	realVideoTimeFormat12h: boolean;
 	pinnedStreamersEnabled: boolean;
 	xayoWatchtimeEnabled: boolean;
+	xayoWatchtimePeriod: XayoWatchtimePeriod;
 	channelSection: boolean;
 	chattersEnabled: boolean;
 };

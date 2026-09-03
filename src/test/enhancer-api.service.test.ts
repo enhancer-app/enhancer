@@ -107,6 +107,22 @@ afterEach(() => {
 	FakeWebSocket.reset();
 });
 
+test("requests watchtime for the selected period", async () => {
+	setupChrome();
+	const requests: URL[] = [];
+	globalThis.fetch = (async (input) => {
+		requests.push(new URL(input.toString()));
+		return Response.json([]);
+	}) as typeof fetch;
+
+	const service = new EnhancerApiService(logger);
+	for (const period of ["30d", "365d", "all"] as const) {
+		await service.getWatchTime("viewer", period);
+	}
+
+	expect(requests.map((request) => request.searchParams.get("period"))).toEqual(["30d", "365d", "all"]);
+});
+
 test("uses one HTTP snapshot and applies final patches without refetching", async () => {
 	const { broadcasts } = setupChrome();
 	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;

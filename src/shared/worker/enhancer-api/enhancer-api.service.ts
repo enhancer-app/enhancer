@@ -13,6 +13,7 @@ import type {
 	EnhancerStreamerWatchTimeData,
 	EnhancerSubscription,
 	EnhancerWebSocketMessage,
+	XayoWatchtimePeriod,
 } from "$types/apis/enhancer.apis.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type {
@@ -85,9 +86,11 @@ export class EnhancerApiService {
 		return this.bootstrap(state, seed);
 	}
 
-	async getWatchTime(username: string): Promise<EnhancerStreamerWatchTimeData[]> {
+	async getWatchTime(username: string, period: XayoWatchtimePeriod): Promise<EnhancerStreamerWatchTimeData[]> {
 		if (!username) throw new Error("Username is required");
-		const response = await fetch(`https://xayo.pl/api/chatters/${encodeURIComponent(username)}/watchtime`, {
+		const url = new URL(`https://xayo.pl/api/chatters/${encodeURIComponent(username)}/watchtime`);
+		url.searchParams.set("period", period);
+		const response = await fetch(url, {
 			headers: { Accept: "application/json" },
 		});
 		if (!response.ok) throw new Error(`Watchtime request failed with status ${response.status}`);

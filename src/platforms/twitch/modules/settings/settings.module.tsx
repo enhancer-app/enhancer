@@ -117,6 +117,19 @@ export default class SettingsModule extends TwitchModule {
 				requiresRefreshToDisable: true,
 			},
 			{
+				id: "xayoWatchtimePeriod",
+				title: "Xayo Watchtime Period",
+				description: "Select the time range used for usercard watchtime and the /watchtime command.",
+				type: "select",
+				categoryId: CATEGORY.GENERAL,
+				dependsOn: { key: "xayoWatchtimeEnabled" },
+				options: [
+					{ value: "30d", label: "Last 30 days" },
+					{ value: "365d", label: "Last year" },
+					{ value: "all", label: "All time" },
+				],
+			},
+			{
 				id: "channelSection",
 				title: "Channel Section",
 				description: "Shows a section with watch time and quick access links.",

@@ -103,6 +103,8 @@ export type EnhancerApiError = {
 	};
 };
 
+export type XayoWatchtimePeriod = "30d" | "365d" | "all";
+
 export type EnhancerStreamerWatchTimeData = {
 	streamerName: string;
 	minutes: number;
