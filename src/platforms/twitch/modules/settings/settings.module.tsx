@@ -222,6 +222,14 @@ export default class SettingsModule extends TwitchModule {
 				dependsOn: { key: "chatMentionSoundEnabled" },
 			},
 			{
+				id: "chatHideGiphyMessages",
+				title: "Hide Giphy Messages",
+				description: "Hide large Giphy messages from the chat. This will not remove them from the chat history.",
+				type: "toggle",
+				categoryId: CATEGORY.CHAT,
+				hideInfo: false,
+			},
+			{
 				id: "quickAccessLinks",
 				title: "Quick Access Links",
 				description:

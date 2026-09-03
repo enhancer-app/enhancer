@@ -20,6 +20,7 @@ import type { TwitchStorage } from "$types/platforms/twitch/twitch.storage.types
 import ChannelSectionModule from "./modules/channel-section/channel-section.module.tsx";
 import ChatCopyEmoteModule from "./modules/chat-copy-emote/chat-copy-emote.module.tsx";
 import ChatHighlightUserModule from "./modules/chat-highlight-user/chat-highlight-user.module.tsx";
+import ChatMessageHideGiphy from "./modules/chat-message-hide-giphy/chat-message-hide-giphy.module.tsx";
 import ChatMessagePopupModule from "./modules/chat-message-popup/chat-message-popup.module.tsx";
 import ChatModule from "./modules/chat/chat.module.tsx";
 import ClipDownloadModule from "./modules/clip-download/clip-download.module.tsx";
@@ -53,6 +54,7 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			new ClipDownloadModule(...dependencies),
 			new ChatModule(...dependencies),
 			new ChatCopyEmoteModule(...dependencies),
+			new ChatMessageHideGiphy(...dependencies),
 			new ChatHighlightUserModule(...dependencies),
 			new ChannelSectionModule(...dependencies),
 			new ChatAttachmentsModule(...dependencies),
