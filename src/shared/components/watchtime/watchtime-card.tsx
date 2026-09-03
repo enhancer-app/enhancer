@@ -1,5 +1,6 @@
 import { LoadingComponent } from "$shared/components/loading/loading.component.tsx";
 import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
+import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { Signal } from "@preact/signals";
 import styled from "styled-components";
 
@@ -45,18 +46,20 @@ const formatWatchTime = (totalMinutes: number): string => {
 interface WatchTimeDisplayProps {
 	watchTime: EnhancerStreamerWatchTimeData[];
 	username: string;
+	platform: PlatformType;
 }
 
-const WatchTimeDisplay = ({ watchTime, username }: WatchTimeDisplayProps) => {
+const WatchTimeDisplay = ({ watchTime, username, platform }: WatchTimeDisplayProps) => {
 	const topFive = watchTime.slice(0, 5);
 	const totalCount = watchTime.reduce((acc, item) => acc + item.minutes, 0);
+	const streamerUrl = platform === "kick" ? "https://kick.com" : "https://twitch.tv";
 
 	return (
 		<>
 			{topFive.map((item) => (
 				<WatchTimeItem
 					key={item.streamerName}
-					href={`https://twitch.tv/${item.streamerName}`}
+					href={`${streamerUrl}/${item.streamerName}`}
 					target="_blank"
 					rel="noopener noreferrer"
 				>
@@ -104,13 +107,14 @@ const ActionButton = styled.button`
 
 interface UserCardProps {
 	username: string;
+	platform: PlatformType;
 	data: Signal<undefined | EnhancerStreamerWatchTimeData[]>;
 	isLoading: Signal<boolean>;
 	isError: Signal<boolean>;
 	onFetch?: () => void;
 }
 
-export const WatchTimeUserCard = ({ username, data, isLoading, isError, onFetch }: UserCardProps) => {
+export const WatchTimeUserCard = ({ username, platform, data, isLoading, isError, onFetch }: UserCardProps) => {
 	if (isLoading.value) {
 		return (
 			<UserCardWrapper>
@@ -149,7 +153,7 @@ export const WatchTimeUserCard = ({ username, data, isLoading, isError, onFetch 
 	return (
 		<UserCardWrapper>
 			<strong>Watchtime of {username}:</strong>
-			<WatchTimeDisplay watchTime={watchTime} username={username} />
+			<WatchTimeDisplay watchTime={watchTime} username={username} platform={platform} />
 		</UserCardWrapper>
 	);
 };
@@ -181,12 +185,13 @@ const PopupNoDataMessage = styled.div`
 interface WatchTimePopupProps {
 	watchTime: EnhancerStreamerWatchTimeData[];
 	username: string;
+	platform?: PlatformType;
 }
 
-export const WatchTimePopupMessage = ({ username, watchTime }: WatchTimePopupProps) => {
+export const WatchTimePopupMessage = ({ username, watchTime, platform = "twitch" }: WatchTimePopupProps) => {
 	if (!watchTime || watchTime.length === 0) {
 		return <PopupNoDataMessage>No watchtime data available</PopupNoDataMessage>;
 	}
 
-	return <WatchTimeDisplay watchTime={watchTime} username={username} />;
+	return <WatchTimeDisplay watchTime={watchTime} username={username} platform={platform} />;
 };

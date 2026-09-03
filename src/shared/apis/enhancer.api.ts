@@ -104,7 +104,7 @@ export default class EnhancerApi {
 	}
 
 	async getWatchTime(username: string, period: XayoWatchtimePeriod): Promise<EnhancerStreamerWatchTimeData[]> {
-		const watchtime = await this.worker.send("getEnhancerWatchTime", { username, period });
+		const watchtime = await this.worker.send("getEnhancerWatchTime", { username, period, platform: this.platform });
 		if (!watchtime) throw new Error("Enhancer watchtime request timed out");
 		return watchtime;
 	}

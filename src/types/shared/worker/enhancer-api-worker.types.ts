@@ -93,6 +93,7 @@ export interface JoinEnhancerChannelPayload {
 export interface GetEnhancerWatchTimePayload {
 	username: string;
 	period: XayoWatchtimePeriod;
+	platform: PlatformType;
 }
 
 export interface DisconnectEnhancerApiPayload {
