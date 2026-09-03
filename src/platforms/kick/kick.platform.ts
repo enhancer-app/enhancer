@@ -18,6 +18,7 @@ import SettingsButtonModule from "$kick/modules/settings-button/settings-button.
 import SettingsModule from "$kick/modules/settings/settings.module.tsx";
 import StreamLatencyReducerModule from "$kick/modules/stream-latency-reducer/stream-latency-reducer.module.tsx";
 import StreamLatencyModule from "$kick/modules/stream-latency/stream-latency.module.tsx";
+import WatchTimeModule from "$kick/modules/watchtime/watchtime.module.tsx";
 import Platform from "$shared/platform/platform.ts";
 import type { KickEvents } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickSettings } from "$types/platforms/kick/kick.settings.types.ts";
@@ -52,6 +53,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			new StreamLatencyModule(...dependencies),
 			new StreamLatencyReducerModule(...dependencies),
 			new RealVideoTimeModule(...dependencies),
+			new WatchTimeModule(...dependencies),
 			new ChannelSectionModule(...dependencies),
 			new LocalWatchtimeCounterModule(...dependencies),
 			new ChatHighlightUserModule(...dependencies),
