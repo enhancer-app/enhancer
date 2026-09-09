@@ -8,6 +8,10 @@ interface PlatformStyleProps {
 	$platform: PlatformType;
 }
 
+interface UserCardStyleProps extends PlatformStyleProps {
+	$collapsed: boolean;
+}
+
 const WatchTimeItem = styled.a<PlatformStyleProps>`
 	display: flex;
 	justify-content: space-between;
@@ -84,13 +88,44 @@ const WatchTimeDisplay = ({ watchTime, username, platform }: WatchTimeDisplayPro
 	);
 };
 
-const UserCardWrapper = styled.div<PlatformStyleProps>`
-	background-color: #18181b;
-	border: 1px solid ${({ $platform }) => ($platform === "kick" ? "#2b2b2b" : "transparent")};
+const UserCardWrapper = styled.div<UserCardStyleProps>`
+	position: relative;
+	background-color: ${({ $platform }) => ($platform === "kick" ? "transparent" : "#18181b")};
+	border: none;
 	border-radius: 4px;
-	padding: 12px 16px;
+	padding: ${({ $collapsed }) => ($collapsed ? "4px 32px 4px 8px" : "12px 32px 32px 16px")};
 	color: #efeff1;
 	--main-color: ${({ $platform }) => ($platform === "kick" ? "#53fc18" : "#bf94ff")};
+`;
+
+const CollapseButton = styled.button<PlatformStyleProps>`
+	position: absolute;
+	right: 6px;
+	bottom: 6px;
+	width: 22px;
+	height: 22px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	border: none;
+	border-radius: 4px;
+	background: transparent;
+	color: ${({ $platform }) => ($platform === "kick" ? "#53fc18" : "#bf94ff")};
+	cursor: pointer;
+
+	&:hover {
+		background: ${({ $platform }) => ($platform === "kick" ? "#1d2b1b" : "#232326")};
+	}
+`;
+
+const CollapseIcon = styled.span<{ $collapsed: boolean }>`
+	width: 7px;
+	height: 7px;
+	border-right: 2px solid currentColor;
+	border-bottom: 2px solid currentColor;
+	transform: ${({ $collapsed }) => ($collapsed ? "rotate(225deg)" : "rotate(45deg)")};
+	transition: transform 0.2s ease;
 `;
 
 const Actions = styled.div`
@@ -124,21 +159,53 @@ interface UserCardProps {
 	data: Signal<undefined | EnhancerStreamerWatchTimeData[]>;
 	isLoading: Signal<boolean>;
 	isError: Signal<boolean>;
+	isCollapsed: Signal<boolean>;
 	onFetch?: () => void;
+	onToggleCollapse: () => void;
 }
 
-export const WatchTimeUserCard = ({ username, platform, data, isLoading, isError, onFetch }: UserCardProps) => {
+export const WatchTimeUserCard = ({
+	username,
+	platform,
+	data,
+	isLoading,
+	isError,
+	isCollapsed,
+	onFetch,
+	onToggleCollapse,
+}: UserCardProps) => {
+	const collapseButton = (
+		<CollapseButton
+			$platform={platform}
+			type="button"
+			aria-label={isCollapsed.value ? "Expand watchtime" : "Collapse watchtime"}
+			aria-expanded={!isCollapsed.value}
+			onClick={onToggleCollapse}
+		>
+			<CollapseIcon $collapsed={isCollapsed.value} />
+		</CollapseButton>
+	);
+
+	if (isCollapsed.value) {
+		return (
+			<UserCardWrapper $platform={platform} $collapsed>
+				{collapseButton}
+			</UserCardWrapper>
+		);
+	}
+
 	if (isLoading.value) {
 		return (
-			<UserCardWrapper $platform={platform}>
+			<UserCardWrapper $platform={platform} $collapsed={false}>
 				<LoadingComponent text="Fetching data from xayo.pl..." />
+				{collapseButton}
 			</UserCardWrapper>
 		);
 	}
 
 	if (isError.value) {
 		return (
-			<UserCardWrapper $platform={platform}>
+			<UserCardWrapper $platform={platform} $collapsed={false}>
 				<p>An unexpected error occurred and we are sorry about that :(</p>
 				<p>Please try again later.</p>
 				{onFetch && (
@@ -148,6 +215,7 @@ export const WatchTimeUserCard = ({ username, platform, data, isLoading, isError
 						</ActionButton>
 					</Actions>
 				)}
+				{collapseButton}
 			</UserCardWrapper>
 		);
 	}
@@ -155,7 +223,7 @@ export const WatchTimeUserCard = ({ username, platform, data, isLoading, isError
 	const watchTime = data.value;
 	if (watchTime === undefined) {
 		return (
-			<UserCardWrapper $platform={platform}>
+			<UserCardWrapper $platform={platform} $collapsed={false}>
 				<Actions>
 					{onFetch && (
 						<ActionButton $platform={platform} onClick={onFetch}>
@@ -163,18 +231,25 @@ export const WatchTimeUserCard = ({ username, platform, data, isLoading, isError
 						</ActionButton>
 					)}
 				</Actions>
+				{collapseButton}
 			</UserCardWrapper>
 		);
 	}
 
 	if (watchTime.length === 0) {
-		return <UserCardWrapper $platform={platform}>No watchtime data available.</UserCardWrapper>;
+		return (
+			<UserCardWrapper $platform={platform} $collapsed={false}>
+				No watchtime data available.
+				{collapseButton}
+			</UserCardWrapper>
+		);
 	}
 
 	return (
-		<UserCardWrapper $platform={platform}>
+		<UserCardWrapper $platform={platform} $collapsed={false}>
 			<strong>Watchtime of {username}:</strong>
 			<WatchTimeDisplay watchTime={watchTime} username={username} platform={platform} />
+			{collapseButton}
 		</UserCardWrapper>
 	);
 };

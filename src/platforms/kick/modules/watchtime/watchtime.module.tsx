@@ -1,5 +1,6 @@
 import KickModule from "$kick/kick.module.ts";
 import { WatchTimeUserCard } from "$shared/components/watchtime/watchtime-card.tsx";
+import { getWatchtimeCollapsed, setWatchtimeCollapsed } from "$shared/utils/watchtime-collapse.ts";
 import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 import { signal } from "@preact/signals";
@@ -32,6 +33,7 @@ export default class KickWatchTimeModule extends KickModule {
 		const data = signal<undefined | EnhancerStreamerWatchTimeData[]>(undefined);
 		const isLoading = signal(false);
 		const isError = signal(false);
+		const isCollapsed = signal(getWatchtimeCollapsed("kick", username));
 
 		const fetchWatchtime = async () => {
 			if (isLoading.value) return;
@@ -47,6 +49,11 @@ export default class KickWatchTimeModule extends KickModule {
 			}
 		};
 
+		const toggleCollapsed = () => {
+			isCollapsed.value = !isCollapsed.value;
+			setWatchtimeCollapsed("kick", username, isCollapsed.value);
+		};
+
 		render(
 			<WatchTimeUserCard
 				username={username}
@@ -54,7 +61,9 @@ export default class KickWatchTimeModule extends KickModule {
 				data={data}
 				isLoading={isLoading}
 				isError={isError}
+				isCollapsed={isCollapsed}
 				onFetch={fetchWatchtime}
+				onToggleCollapse={toggleCollapsed}
 			/>,
 			wrapper,
 		);
