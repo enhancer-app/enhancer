@@ -4,7 +4,6 @@ import {
 	WatchTimePopupMessage,
 	WatchTimeUserCard,
 } from "$shared/components/watchtime/watchtime-card.tsx";
-import { getWatchtimeCollapsed, setWatchtimeCollapsed } from "$shared/utils/watchtime-collapse.ts";
 import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
 import type { UserCardComponent } from "$types/platforms/twitch/twitch.utils.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
@@ -55,7 +54,7 @@ export default class WatchTimeModule extends TwitchModule {
 		const data = signal<undefined | EnhancerStreamerWatchTimeData[]>(undefined);
 		const isLoading = signal(false);
 		const isError = signal(false);
-		const isCollapsed = signal(getWatchtimeCollapsed("twitch", username));
+		const isCollapsed = signal(false);
 
 		const fetchWatchtime = async () => {
 			if (isLoading.value) return;
@@ -73,7 +72,6 @@ export default class WatchTimeModule extends TwitchModule {
 
 		const toggleCollapsed = () => {
 			isCollapsed.value = !isCollapsed.value;
-			setWatchtimeCollapsed("twitch", username, isCollapsed.value);
 		};
 
 		wrappers.forEach((element) => {
