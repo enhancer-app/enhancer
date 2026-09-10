@@ -19,7 +19,13 @@ export default class KickWatchTimeModule extends KickModule {
 		enabled: () => this.settings().xayoWatchtimeEnabled,
 	};
 
-	private run([identity]: Element[]) {
+	private run(identities: Element[]) {
+		for (const identity of identities) {
+			this.enhanceIdentity(identity);
+		}
+	}
+
+	private enhanceIdentity(identity: Element) {
 		const username = this.getUsername(identity);
 		if (!username) return;
 
