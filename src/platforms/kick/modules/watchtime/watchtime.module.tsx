@@ -11,7 +11,7 @@ export default class KickWatchTimeModule extends KickModule {
 		appliers: [
 			{
 				type: "selector",
-				selectors: ["#user-identity"],
+				selectors: ["#user-identity", ".ntv__user-info-modal"],
 				callback: this.run.bind(this),
 				key: "watchtime-user-identity",
 			},
@@ -68,6 +68,10 @@ export default class KickWatchTimeModule extends KickModule {
 	}
 
 	private getUsername(identity: Element): string | undefined {
-		return identity.querySelector<HTMLAnchorElement>('a[href^="https://kick.com/"]')?.textContent?.trim().toLowerCase();
+		const profileLink = identity.querySelector<HTMLAnchorElement>('a[href^="https://kick.com/"], a[href^="/"]');
+		if (!profileLink) return;
+
+		const pathname = new URL(profileLink.href, window.location.href).pathname;
+		return pathname.split("/").filter(Boolean)[0]?.toLowerCase();
 	}
 }
