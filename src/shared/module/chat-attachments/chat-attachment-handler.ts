@@ -9,15 +9,15 @@ export default abstract class ChatAttachmentHandler {
 
 	abstract validate(baseData: BaseChatAttachmentData): boolean;
 
-	async applies(data: ChatAttachmentData): Promise<boolean> {
+	async applies(_data: ChatAttachmentData): Promise<boolean> {
 		throw new Error("Not implemented");
 	}
 
-	async handle(data: ChatAttachmentData) {
+	async handle(_data: ChatAttachmentData) {
 		throw new Error("Not implemented");
 	}
 
-	parseUrl(url: URL): URL {
+	parseUrl(_url: URL): URL {
 		throw new Error("Not implemented");
 	}
 }

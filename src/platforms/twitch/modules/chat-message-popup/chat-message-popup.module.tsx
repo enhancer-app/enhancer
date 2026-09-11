@@ -75,76 +75,76 @@ export default class ChatMessagePopupModule extends TwitchModule {
 }
 
 const PopupWrapper = styled.div`
-  --main-color: #bf94ff;
-  margin-bottom: 8px;
-  background: #18181b;
-  padding: 10px;
-  border-radius: 4px;
-  color: #efeff1;
-  font-size: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  position: relative;
+	--main-color: #bf94ff;
+	margin-bottom: 8px;
+	background: #18181b;
+	padding: 10px;
+	border-radius: 4px;
+	color: #efeff1;
+	font-size: 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	position: relative;
 `;
 
 const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 8px;
-  position: relative;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	padding-bottom: 8px;
+	position: relative;
 `;
 
 const HeaderProgress = styled.div<{ width: string }>`
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  height: 1px;
-  background-color: var(--main-color);
-  width: ${(props) => props.width};
-  transition: width 1s linear;
-  z-index: 1;
+	position: absolute;
+	bottom: -1px;
+	left: 0;
+	height: 1px;
+	background-color: var(--main-color);
+	width: ${(props) => props.width};
+	transition: width 1s linear;
+	z-index: 1;
 `;
 
 const TitleArea = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
 `;
 
 const Title = styled.strong`
-  flex-grow: 1;
+	flex-grow: 1;
 `;
 
 const AutocloseTimer = styled.span`
-  font-size: 12px;
-  color: #8e8e8e;
-  white-space: nowrap;
+	font-size: 12px;
+	color: #8e8e8e;
+	white-space: nowrap;
 `;
 
 const CloseButton = styled.button`
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  color: #8e8e8e;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  margin-left: 8px;
+	cursor: pointer;
+	background: transparent;
+	border: none;
+	color: #8e8e8e;
+	font-size: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	margin-left: 8px;
 
-  &:hover {
-    color: white;
-  }
+	&:hover {
+		color: white;
+	}
 `;
 
 const ContentArea = styled.div`
-  padding: 4px 0;
+	padding: 4px 0;
 `;
 
 export function MessagePopup({ title, content, autoclose, onClose }: ChatMessagePopupEvent) {

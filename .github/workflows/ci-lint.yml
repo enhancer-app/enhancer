@@ -17,5 +17,6 @@ jobs:
         with:
           bun-version-file: ".bun-version"
       - run: bun install
-      - run: bunx biome check --write ./src
+      - run: bunx oxlint --fix ./src
+      - run: bunx oxfmt ./src
       - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a

@@ -24,7 +24,10 @@ const Button = styled.button`
 	cursor: pointer;
 	min-width: 112px;
 	flex-shrink: 0;
-	transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+	transition:
+		border-color 0.15s ease,
+		color 0.15s ease,
+		background 0.15s ease;
 
 	&:hover:not(:disabled) {
 		background: #0d0d0d;
@@ -41,7 +44,6 @@ const Button = styled.button`
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
-
 `;
 
 const Status = styled.div<{ $error: boolean }>`
