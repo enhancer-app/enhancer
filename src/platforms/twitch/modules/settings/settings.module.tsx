@@ -223,11 +223,24 @@ export default class SettingsModule extends TwitchModule {
 			},
 			{
 				id: "chatHideGiphyMessages",
-				title: "Hide Giphy Messages",
-				description: "Hide large Giphy messages from the chat. This will not remove them from the chat history.",
+				title: "Filter Giphy Messages",
+				description:
+					"Hide Giphy messages or replace GIFs with text links. Changes apply to newly processed messages; refresh the page to update existing messages.",
 				type: "toggle",
 				categoryId: CATEGORY.CHAT,
 				hideInfo: false,
+			},
+			{
+				id: "chatGiphyMessageMode",
+				title: "Giphy Message Behavior",
+				description: "Choose whether to hide the entire message or display the GIF description as a clickable link.",
+				type: "radio",
+				categoryId: CATEGORY.CHAT,
+				dependsOn: { key: "chatHideGiphyMessages" },
+				options: [
+					{ value: "hide", label: "Hide entire message" },
+					{ value: "link", label: "Replace GIF with a text link" },
+				],
 			},
 			{
 				id: "quickAccessLinks",

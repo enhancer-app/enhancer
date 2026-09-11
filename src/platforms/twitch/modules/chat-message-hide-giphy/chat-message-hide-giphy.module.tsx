@@ -9,36 +9,48 @@ export default class ChatMessageHideGiphy extends TwitchModule {
 		appliers: [
 			{
 				event: "twitch:chatMessage",
-				callback: this.hideGiphyMessage.bind(this),
+				callback: this.handleMessage.bind(this),
 				key: "chat-message-hide-giphy",
 				type: "event",
 			},
 		],
 	};
 
-	private hideGiphyMessage(message: TwitchChatMessageEvent) {
+	private handleMessage(message: TwitchChatMessageEvent) {
 		if (!this.isModuleEnabled()) return;
-		const shouldHide = this.isGiphyMessage(message);
-		if (!shouldHide) return;
+		const image = this.getGiphyImage(message);
+		if (!image) return;
+		if (this.settings().chatGiphyMessageMode === "link") {
+			this.replaceGiphyWithLink(image);
+			return;
+		}
 		this.hideMessage(message);
 	}
 
-	private isGiphyMessage(message: TwitchChatMessageEvent) {
-		const { element } = message;
-		const giphyImage = element.querySelector(
-			'[data-a-target="chat-line-message-body"] img[src*="giphy"], .seventv-chat-message-body img[src*="giphy"]',
+	private getGiphyImage(message: TwitchChatMessageEvent) {
+		return message.element.querySelector<HTMLImageElement>(
+			[
+				'[data-a-target="chat-line-message-body"] img[class*="gifImage--"]',
+				".seventv-chat-message-body img.seventv-chat-gif",
+				".ffz--gif-embed img.ffz--gif-embed__image",
+			].join(", "),
 		);
-		const src = giphyImage?.getAttribute("src");
-		return src ? this.isGiphyUrl(src) : false;
 	}
 
-	private isGiphyUrl(url: string) {
-		try {
-			const { host } = new URL(url);
-			return host === "giphy.com" || host.endsWith(".giphy.com");
-		} catch {
-			return false;
+	private replaceGiphyWithLink(image: HTMLImageElement) {
+		const container =
+			image.closest(
+				'.ffz--gif-embed-wrapper, .seventv-chat-gif-container, [data-a-target="chat-line-message-body"] > [class*="container--"]',
+			) ?? image;
+		const link = document.createElement("a");
+		link.className = "enhancer-giphy-link";
+		link.textContent = image.alt.trim() || "GIF";
+		if (image.getAttribute("src")?.trim() && /^https?:\/\//i.test(image.src)) {
+			link.href = image.src;
+			link.target = "_blank";
+			link.rel = "noopener noreferrer";
 		}
+		container.replaceWith(link);
 	}
 
 	private hideMessage(message: TwitchChatMessageEvent) {
