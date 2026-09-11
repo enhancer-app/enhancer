@@ -112,6 +112,27 @@ export default class SettingsModule extends KickModule {
 				requiresRefreshToDisable: true,
 			},
 			{
+				id: "xayoWatchtimeEnabled",
+				title: "Enable Usercard Watchtime",
+				description: "Displays watchtime in Kick user popups from the xayo.pl service.",
+				type: "toggle",
+				categoryId: CATEGORY.GENERAL,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "xayoWatchtimePeriod",
+				title: "Xayo Watchtime Period",
+				description: "Select the time range used for Kick user popup watchtime.",
+				type: "select",
+				categoryId: CATEGORY.GENERAL,
+				dependsOn: { key: "xayoWatchtimeEnabled" },
+				options: [
+					{ value: "30d", label: "Last 30 days" },
+					{ value: "365d", label: "Last year" },
+					{ value: "all", label: "All time" },
+				],
+			},
+			{
 				id: "_disableExtensionOnDashboard",
 				title: "Disable Enhancer on Dashboard",
 				description: "Disables loading Enhancer on dashboard page (dashboard.kick.com).",

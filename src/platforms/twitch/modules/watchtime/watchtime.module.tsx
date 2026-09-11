@@ -1,15 +1,15 @@
+import {
+	WatchTimePopupErrorMessage,
+	WatchTimePopupLoadingMessage,
+	WatchTimePopupMessage,
+	WatchTimeUserCard,
+} from "$shared/components/watchtime/watchtime-card.tsx";
 import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
 import type { UserCardComponent } from "$types/platforms/twitch/twitch.utils.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { signal } from "@preact/signals";
 import { render } from "preact";
 import TwitchModule from "../../twitch.module.ts";
-import {
-	WatchTimePopupErrorMessage,
-	WatchTimePopupLoadingMessage,
-	WatchTimePopupMessage,
-	WatchTimeUserCard,
-} from "./watchtime-card.tsx";
 
 export default class WatchTimeModule extends TwitchModule {
 	private isLoadingPopupVisible = false;
@@ -54,6 +54,7 @@ export default class WatchTimeModule extends TwitchModule {
 		const data = signal<undefined | EnhancerStreamerWatchTimeData[]>(undefined);
 		const isLoading = signal(false);
 		const isError = signal(false);
+		const isCollapsed = signal(false);
 
 		const fetchWatchtime = async () => {
 			if (isLoading.value) return;
@@ -69,14 +70,21 @@ export default class WatchTimeModule extends TwitchModule {
 			}
 		};
 
+		const toggleCollapsed = () => {
+			isCollapsed.value = !isCollapsed.value;
+		};
+
 		wrappers.forEach((element) => {
 			render(
 				<WatchTimeUserCard
 					username={username}
+					platform="twitch"
 					data={data}
 					isLoading={isLoading}
 					isError={isError}
+					isCollapsed={isCollapsed}
 					onFetch={fetchWatchtime}
+					onToggleCollapse={toggleCollapsed}
 				/>,
 				element,
 			);

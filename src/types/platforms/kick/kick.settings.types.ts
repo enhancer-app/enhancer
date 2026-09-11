@@ -1,3 +1,4 @@
+import type { XayoWatchtimePeriod } from "$types/apis/enhancer.apis.ts";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 
 export type KickSettings = {
@@ -17,6 +18,8 @@ export type KickSettings = {
 	streamLatencyReducerMaxThreshold: number;
 	realVideoTimeEnabled: boolean;
 	realVideoTimeFormat12h: boolean;
+	xayoWatchtimeEnabled: boolean;
+	xayoWatchtimePeriod: XayoWatchtimePeriod;
 	channelSection: boolean;
 	_disableExtensionOnDashboard: boolean;
 };
