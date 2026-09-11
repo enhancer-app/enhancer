@@ -1,11 +1,5 @@
-import { VideoCreatedAtQuery } from "$twitch/apis/twitch-queries.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
-import type { VideoCreatedAtResponse } from "$types/platforms/twitch/twitch.api.types.ts";
-import type { MediaPlayerInstance } from "$types/platforms/twitch/twitch.utils.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
-import { render } from "preact";
-import styled from "styled-components";
 
 export default class LocalWatchtimeCounterModule extends TwitchModule {
 	config: TwitchModuleConfig = {

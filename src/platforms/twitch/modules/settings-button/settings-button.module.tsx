@@ -27,7 +27,7 @@ export default class SettingsButtonModule extends TwitchModule {
 		],
 	};
 
-	private async run(elements: Element[], key: string) {
+	private async run(elements: Element[], _key: string) {
 		const properElements = elements
 			.filter((element) => element.children.length > 0)
 			.map((element) => [...element.children].at(-1))
@@ -76,37 +76,37 @@ export default class SettingsButtonModule extends TwitchModule {
 }
 
 const StyledSettingsButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--border-radius-medium);
-  width: 30px;
-  height: 30px;
-  cursor: pointer;
-  position: relative;
-  margin-top: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--border-radius-medium);
+	width: 30px;
+	height: 30px;
+	cursor: pointer;
+	position: relative;
+	margin-top: 4px;
 
-  border: none;
-  background: transparent;
-  padding: 0;
-  color: inherit;
+	border: none;
+	background: transparent;
+	padding: 0;
+	color: inherit;
 
-  img {
-    filter: none;
-  }
+	img {
+		filter: none;
+	}
 
-  html.tw-root--theme-light & img {
-    filter: brightness(0);
-  }
+	html.tw-root--theme-light & img {
+		filter: brightness(0);
+	}
 
-  &:hover {
-    background: var(--color-background-button-text-hover);
-  }
+	&:hover {
+		background: var(--color-background-button-text-hover);
+	}
 
-  &:focus-visible {
-    outline: 2px solid var(--color-focus, #007bff);
-    outline-offset: 2px;
-  }
+	&:focus-visible {
+		outline: 2px solid var(--color-focus, #007bff);
+		outline-offset: 2px;
+	}
 `;
 
 interface SettingsButtonComponentProps {

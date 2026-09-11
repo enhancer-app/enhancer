@@ -7,8 +7,6 @@ import ChatAttachmentsModule from "$kick/modules/chat-attachments/chat-attachmen
 import ChatBadgesModule from "$kick/modules/chat-badges/chat-badges.module.tsx";
 import ChatFixAutoScrollModule from "$kick/modules/chat-fix-auto-scroll/chat-fix-auto-scroll.module.tsx";
 import ChatHighlightUserModule from "$kick/modules/chat-highlight-user/chat-highlight-user.module.tsx";
-import ChatMessageMenuModule from "$kick/modules/chat-message-menu/chat-message-menu.module.tsx";
-import MessageMenuModule from "$kick/modules/chat-message-menu/message-menu.module.tsx";
 import ChatMessagePopupModule from "$kick/modules/chat-message-popup/chat-message-popup.module.tsx";
 import ChatNicknameCustomizationModule from "$kick/modules/chat-nickname-customization/chat-nickname-customization.module.ts";
 import ChatModule from "$kick/modules/chat/chat.module.ts";

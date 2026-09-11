@@ -57,7 +57,9 @@ const Chevron = styled.span<{ $expanded: boolean }>`
 	color: var(--settings-text-muted);
 	flex-shrink: 0;
 	display: flex;
-	transition: transform 0.2s ease, color 0.15s ease;
+	transition:
+		transform 0.2s ease,
+		color 0.15s ease;
 	transform: rotate(${(props) => (props.$expanded ? "180deg" : "0deg")});
 
 	${TitleSection}:hover & {
@@ -81,7 +83,10 @@ const ExportButton = styled.button`
 	font-size: 11px;
 	font-weight: 500;
 	cursor: pointer;
-	transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+	transition:
+		border-color 0.15s ease,
+		color 0.15s ease,
+		background 0.15s ease;
 
 	&:hover:not(:disabled) {
 		border-color: #9147ff;
@@ -195,7 +200,10 @@ const PageButton = styled.button`
 	font-size: 11px;
 	font-weight: 500;
 	cursor: pointer;
-	transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+	transition:
+		border-color 0.15s ease,
+		color 0.15s ease,
+		background 0.15s ease;
 
 	&:hover:not(:disabled) {
 		border-color: #9147ff;
@@ -355,10 +363,6 @@ export function WatchtimeListComponent({
 		const minutes = Math.floor((seconds % 3600) / 60);
 		const secs = seconds % 60;
 		return `${hours}h ${minutes}m ${secs}s`;
-	};
-
-	const formatDate = (timestamp: number): string => {
-		return new Date(timestamp).toLocaleDateString();
 	};
 
 	const getPlatformUrl = (username: string): string => {
