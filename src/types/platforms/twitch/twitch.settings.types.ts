@@ -4,6 +4,8 @@ export type TwitchSettings = {
 	chatImagesEnabled: boolean;
 	chatImagesOnHover: boolean;
 	chatImagesSize: number;
+	chatHideGiphyMessages: boolean;
+	chatGiphyMessageMode: "hide" | "link";
 	chatBadgesEnabled: boolean;
 	chatNicknameCustomizationEnabled: boolean;
 	loadAdditionalFonts: boolean;

@@ -93,10 +93,10 @@ export default class ChatAttachmentsModule extends TwitchModule {
 		const lastWord = args.at(-1);
 		const lastElement = links.at(-1);
 
-		if (this.commonUtils().isValidUrl(firstWord) && firstElement) {
+		if (this.commonUtils().isValidUrl(firstWord) && firstElement && !firstElement.matches(".enhancer-giphy-link")) {
 			return { messageType: ChatAttachmentMessageType.FIRST, url: new URL(firstWord), messageElement: firstElement };
 		}
-		if (this.commonUtils().isValidUrl(lastWord) && lastElement) {
+		if (this.commonUtils().isValidUrl(lastWord) && lastElement && !lastElement.matches(".enhancer-giphy-link")) {
 			return { messageType: ChatAttachmentMessageType.LAST, url: new URL(lastWord), messageElement: lastElement };
 		}
 	}
