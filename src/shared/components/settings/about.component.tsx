@@ -163,7 +163,7 @@ const SectionTitle = styled.h2`
 	gap: 8px;
 
 	&::before {
-		content: '';
+		content: "";
 		width: 3px;
 		height: 16px;
 		background: #9147ff;
@@ -232,7 +232,9 @@ const ContributorTag = styled.div`
 	font-size: 10.5px;
 	color: var(--settings-text);
 	text-align: center;
-	transition: border-color 0.15s ease, color 0.15s ease;
+	transition:
+		border-color 0.15s ease,
+		color 0.15s ease;
 
 	&:hover {
 		border-color: rgba(145, 71, 255, 0.4);
@@ -258,7 +260,9 @@ const SocialLink = styled.a`
 	background: var(--settings-control-background);
 	border: 1px solid var(--settings-border);
 	border-radius: 8px;
-	transition: border-color 0.15s ease, color 0.15s ease;
+	transition:
+		border-color 0.15s ease,
+		color 0.15s ease;
 
 	&:hover {
 		border-color: rgba(145, 71, 255, 0.4);
@@ -272,7 +276,7 @@ const IconImage = styled.img`
 	height: 20px;
 	margin-right: 12px;
 	filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(4577%) hue-rotate(252deg) brightness(101%)
-	contrast(101%);
+		contrast(101%);
 `;
 
 const BugReportText = styled.p`

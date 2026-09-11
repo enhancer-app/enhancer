@@ -278,42 +278,42 @@ interface PinStreamerComponentProps {
 }
 
 const ButtonWrapper = styled.div`
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    z-index: 999;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	z-index: 999;
 `;
 
 const PinButton = styled.button<{ $isPinned: boolean }>`
-    background-color: ${(props) => (props.$isPinned ? "rgba(145, 71, 255, 0.5)" : "rgba(0, 0, 0, 0.4)")};
-    border: none;
-    border-radius: 3px;
-    width: 16px;
-    height: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    color: ${(props) => (props.$isPinned ? "white" : "#ffffff")};
-    padding: 0;
+	background-color: ${(props) => (props.$isPinned ? "rgba(145, 71, 255, 0.5)" : "rgba(0, 0, 0, 0.4)")};
+	border: none;
+	border-radius: 3px;
+	width: 16px;
+	height: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	color: ${(props) => (props.$isPinned ? "white" : "#ffffff")};
+	padding: 0;
 
-    &:hover {
-        background-color: ${(props) => (props.$isPinned ? "rgba(145, 71, 255, 0.7)" : "rgba(0, 0, 0, 0.6)")};
-        transform: scale(1.05);
-    }
+	&:hover {
+		background-color: ${(props) => (props.$isPinned ? "rgba(145, 71, 255, 0.7)" : "rgba(0, 0, 0, 0.6)")};
+		transform: scale(1.05);
+	}
 
-    &:active {
-        transform: scale(0.95);
-    }
+	&:active {
+		transform: scale(0.95);
+	}
 `;
 
 const StarIcon = styled.div<{ $isPinned: boolean }>`
-    font-size: 12px;
-    line-height: 1;
-    font-weight: ${(props) => (props.$isPinned ? "bold" : "normal")};
-    text-shadow: ${(props) => (props.$isPinned ? "0 0 3px rgba(145, 71, 255, 0.5)" : "none")};
+	font-size: 12px;
+	line-height: 1;
+	font-weight: ${(props) => (props.$isPinned ? "bold" : "normal")};
+	text-shadow: ${(props) => (props.$isPinned ? "0 0 3px rgba(145, 71, 255, 0.5)" : "none")};
 `;
 
 function PinStreamerComponent({ isPinned }: PinStreamerComponentProps) {

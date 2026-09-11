@@ -185,12 +185,12 @@ export class EnhancerApiService {
 	private unregisterClient(clientId: string): void {
 		const client = this.clients.get(clientId);
 		if (!client) return;
-		for (const topic of [...client.topics]) this.unsubscribeClient(client, topic);
+		for (const topic of Array.from(client.topics)) this.unsubscribeClient(client, topic);
 		this.clients.delete(clientId);
 	}
 
 	private removeTabClients(tabId: number): void {
-		for (const client of [...this.clients.values()]) {
+		for (const client of Array.from(this.clients.values())) {
 			if (client.tabId === tabId) this.unregisterClient(client.clientId);
 		}
 	}

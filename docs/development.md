@@ -67,7 +67,7 @@ bun run build
 
 This runs:
 
-1. Biome linting
+1. Oxlint linting and oxfmt format check
 2. TypeScript type checking
 3. Vite production build
 
@@ -97,7 +97,11 @@ This command:
 | `bun run pack`            | Create distribution packages     |
 | `bun run typecheck`       | Run TypeScript type checking     |
 | `bun run typecheck:watch` | Type checking in watch mode      |
-| `bun run biome:ci`        | Run linting                      |
+| `bun run lint`            | Run oxlint                       |
+| `bun run lint:fix`        | Run oxlint with autofixes        |
+| `bun run format`          | Format sources with oxfmt        |
+| `bun run format:check`    | Check formatting with oxfmt      |
+| `bun run check`           | Run lint + format check          |
 
 ## Tech Stack
 
@@ -105,12 +109,15 @@ This command:
 - **Language:** TypeScript
 - **Framework:** Preact (React alternative)
 - **Build Tool:** Vite
-- **Linting:** Biome
+- **Linting:** Oxlint
+- **Formatting:** oxfmt
 - **Styling:** styled-components
 
 ## Code Style
 
-The project uses [Biome](https://biomejs.dev) for linting and formatting. Configuration is in `biome.json`.
+The project uses [Oxlint](https://oxc.rs/docs/guide/usage/linter) for linting and
+[oxfmt](https://oxc.rs/docs/guide/usage/formatter) for formatting. Configuration is in `.oxlintrc.json` and
+`.oxfmtrc.json`.
 
 Pre-commit hooks (via Husky) automatically run linting on staged files.
 

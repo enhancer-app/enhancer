@@ -78,7 +78,7 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 			try {
 				// Needed to remove setter, which is then inherited
 				// @ts-ignore - playbackRate's existence is implied by the check above
-				// biome-ignore lint/performance/noDelete: setting to undefined does not reset it completely
+				// setting to undefined does not reset it completely
 				delete video.playbackRate;
 			} catch (error) {
 				this.logger.error(error);

@@ -1,9 +1,5 @@
 import type { LogEntry } from "$types/shared/logger.types.ts";
-import type {
-	ExtensionMessageDetail,
-	ExtensionResponseDetail,
-	WorkerBroadcast,
-} from "$types/shared/worker/worker.types.ts";
+import type { ExtensionMessageDetail, WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
 
 class BridgeLogger {
 	private static readonly MAX_ENTRIES = 500;
@@ -156,13 +152,13 @@ export default class WorkerBridge {
 				const responseEvent = new CustomEvent<string>("enhancer-response", {
 					detail: JSON.stringify({ messageId, data: response }),
 				});
-				// biome-ignore lint/style/noNonNullAssertion: we are checking it above, it cannot be null
+				// we are checking it above, it cannot be null
 				this.bridgeElement!.dispatchEvent(responseEvent);
 			} catch (error) {
 				const errorEvent = new CustomEvent<string>("enhancer-response", {
 					detail: JSON.stringify({ messageId, error: (error as Error).message }),
 				});
-				// biome-ignore lint/style/noNonNullAssertion: we are checking it above, it cannot be null
+				// we are checking it above, it cannot be null
 				this.bridgeElement!.dispatchEvent(errorEvent);
 			}
 		}) as unknown as EventListener);
