@@ -10,15 +10,15 @@ export const ImagePreview = (src: string) => {
 };
 
 const Wrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
 `;
 
 const Image = styled.img`
-  max-height: 200px;
-  object-fit: contain;
-  width: auto;
-  border-radius: 4px;
+	max-height: 200px;
+	object-fit: contain;
+	width: auto;
+	border-radius: 4px;
 `;

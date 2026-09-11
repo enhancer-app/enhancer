@@ -153,7 +153,9 @@ const SearchContainer = styled.div`
 	padding: 0 10px;
 	height: 34px;
 	color: var(--settings-text-faint);
-	transition: border-color 0.15s ease, background 0.15s ease;
+	transition:
+		border-color 0.15s ease,
+		background 0.15s ease;
 
 	&:focus-within {
 		border-color: #9147ff;
@@ -192,7 +194,9 @@ const IconButton = styled.button`
 	justify-content: center;
 	border-radius: 5px;
 	flex-shrink: 0;
-	transition: color 0.15s ease, background 0.15s ease;
+	transition:
+		color 0.15s ease,
+		background 0.15s ease;
 
 	&:hover {
 		color: var(--settings-text-primary);
@@ -240,7 +244,9 @@ const NavItem = styled.button<{ active: boolean; dimmed: boolean }>`
 	font-size: 13px;
 	padding: 9px 10px;
 	border-radius: 8px;
-	transition: background 0.15s ease, color 0.15s ease;
+	transition:
+		background 0.15s ease,
+		color 0.15s ease;
 	background: ${(props) => (props.active ? "rgba(145, 71, 255, 0.14)" : "transparent")};
 	color: ${(props) =>
 		props.active
@@ -699,7 +705,9 @@ const RadioLabel = styled.label<{ checked: boolean }>`
 	font-size: 12px;
 	color: ${(props) => (props.checked ? "var(--settings-text-primary)" : "var(--settings-text-muted)")};
 	cursor: pointer;
-	transition: background 0.15s ease, color 0.15s ease;
+	transition:
+		background 0.15s ease,
+		color 0.15s ease;
 
 	&:hover {
 		color: ${(props) => (props.checked ? "var(--settings-text-primary)" : "var(--settings-text)")};
@@ -1437,7 +1445,7 @@ const Settings = <T,>({
 	return (
 		<>
 			<SettingsOverlayBackground onClick={onClose} />
-			{/* biome-ignore lint/a11y/useSemanticElements: native <dialog> renders in the top layer and breaks styling inside the injected overlay */}
+			{/* native <dialog> renders in the top layer and breaks styling inside the injected overlay */}
 			<SettingsContainer role="dialog" aria-modal="true" aria-label="Enhancer settings">
 				<Gradient />
 				<Header>

@@ -1,8 +1,7 @@
 import KickModule from "$kick/kick.module.ts";
-import TwitchModule from "$twitch/twitch.module.ts";
 import type { EnhancerMessageEvent } from "$types/apis/enhancer.apis.ts";
 import type { ChatMessagePopupEvent } from "$types/platforms/twitch/twitch.events.types.ts";
-import type { KickModuleConfig, TwitchModuleConfig } from "$types/shared/module/module.types.ts";
+import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 import { h, render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
@@ -68,72 +67,72 @@ export default class ChatMessagePopupModule extends KickModule {
 }
 
 const PopupWrapper = styled.div`
-  --main-color: #53fc18;
-  padding: 0 1.25rem;
-  color: #efeff1;
-  font-size: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  position: relative;
+	--main-color: #53fc18;
+	padding: 0 1.25rem;
+	color: #efeff1;
+	font-size: 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	position: relative;
 `;
 
 const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 8px;
-  position: relative;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	padding-bottom: 8px;
+	position: relative;
 `;
 
 const HeaderProgress = styled.div<{ width: string }>`
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  height: 1px;
-  background-color: var(--main-color);
-  width: ${(props) => props.width};
-  transition: width 1s linear;
-  z-index: 1;
+	position: absolute;
+	bottom: -1px;
+	left: 0;
+	height: 1px;
+	background-color: var(--main-color);
+	width: ${(props) => props.width};
+	transition: width 1s linear;
+	z-index: 1;
 `;
 
 const TitleArea = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
 `;
 
 const Title = styled.strong`
-  flex-grow: 1;
+	flex-grow: 1;
 `;
 
 const AutocloseTimer = styled.span`
-  font-size: 12px;
-  color: #8e8e8e;
-  white-space: nowrap;
+	font-size: 12px;
+	color: #8e8e8e;
+	white-space: nowrap;
 `;
 
 const CloseButton = styled.button`
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  color: #8e8e8e;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  margin-left: 8px;
+	cursor: pointer;
+	background: transparent;
+	border: none;
+	color: #8e8e8e;
+	font-size: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	margin-left: 8px;
 
-  &:hover {
-    color: white;
-  }
+	&:hover {
+		color: white;
+	}
 `;
 
 const ContentArea = styled.div`
-  padding: 4px 0;
+	padding: 4px 0;
 `;
 
 export function MessagePopup({ title, content, autoclose, onClose }: ChatMessagePopupEvent) {

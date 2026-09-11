@@ -63,7 +63,10 @@ const ActionButton = styled.button`
 	font-size: 12px;
 	font-weight: 500;
 	cursor: pointer;
-	transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+	transition:
+		border-color 0.15s ease,
+		color 0.15s ease,
+		background 0.15s ease;
 	min-width: 104px;
 	display: flex;
 	align-items: center;
@@ -105,8 +108,14 @@ const StatusOverlay = styled.div<{ type: "success" | "error" }>`
 	border: 1px solid ${(props) => (props.type === "success" ? "rgba(102, 187, 106, 0.3)" : "rgba(255, 82, 82, 0.3)")};
 
 	@keyframes slideIn {
-		from { opacity: 0; transform: translateY(10px); }
-		to { opacity: 1; transform: translateY(0); }
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 `;
 
@@ -219,7 +228,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			let data: ExportImportData;
 			try {
 				data = JSON.parse(text);
-			} catch (parseError) {
+			} catch {
 				showStatus("Invalid JSON format in backup file", "error");
 				return;
 			}

@@ -63,12 +63,12 @@ export class HttpClient {
 			};
 		} catch (error) {
 			if (error instanceof DOMException && error.name === "AbortError") {
-				throw new Error(`Request timed out after ${timeout}ms`);
+				throw new Error(`Request timed out after ${timeout}ms`, { cause: error });
 			}
 			if (error instanceof Error) {
 				throw error;
 			}
-			throw new Error(`Request failed: ${error}`);
+			throw new Error(`Request failed: ${error}`, { cause: error });
 		} finally {
 			if (timeoutId) {
 				clearTimeout(timeoutId);

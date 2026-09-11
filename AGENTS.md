@@ -9,11 +9,14 @@ Enhancer is a Manifest V3 browser extension that adds features to Twitch and Kic
 | Command | Description |
 |---------|-------------|
 | `bun run dev` | Concurrent typecheck:watch + vite build --watch + dev server (port 3360) |
-| `bun run build` | Production: biome lint + typecheck + vite build (minified) |
+| `bun run build` | Production: oxlint + oxfmt check + typecheck + vite build (minified) |
 | `bun run typecheck` | `tsc --noEmit` |
 | `bun run typecheck:watch` | `tsc --noEmit --watch` |
+| `bun run lint` | `oxlint ./src` |
+| `bun run format` | `oxfmt ./src` |
+| `bun run check` | `oxlint ./src` + `oxfmt --check ./src` |
 
-Always run `bun run typecheck` and `npx @biomejs/biome check src/` after making changes.
+Always run `bun run typecheck` and `bun run check` after making changes.
 
 ## Browser Compatibility Testing
 
@@ -283,12 +286,15 @@ Modules targeting Twitch can use Twitch's CSS custom properties (`--border-radiu
 
 ## Lint & Formatting
 
-- **Tool:** Biome 1.9.4 (unified linter + formatter)
-- **Line width:** 120
-- **Pre-commit:** Husky + lint-staged runs `biome check --write` on staged files
-- **CI:** `bun run build` runs `biome ci ./src` before typecheck
+- **Linter:** Oxlint 1.x (`.oxlintrc.json`)
+- **Formatter:** oxfmt (`.oxfmtrc.json`)
+- **Line width:** 120, tabs, LF
+- **Pre-commit:** Husky + lint-staged runs `oxlint --fix` then `oxfmt` on staged files
+- **CI:** `bun run build` runs `bun run check` before typecheck; `ci-lint.yml` autofixes PRs
 
-Key rules: `noForEach` off, `noExplicitAny` off, `noSvgWithoutTitle` off.
+Categories: `correctness` errors, `suspicious` warnings. Key rules off: `typescript/no-explicit-any`,
+`react/react-in-jsx-scope`, `react-hooks/exhaustive-deps`, `eslint/no-underscore-dangle`,
+`unicorn/consistent-function-scoping`. `eslint/no-unused-vars` ignores `_`-prefixed identifiers.
 
 ## Critical Rules
 

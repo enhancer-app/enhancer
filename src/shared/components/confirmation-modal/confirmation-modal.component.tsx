@@ -53,7 +53,9 @@ const ModalButton = styled.button<{ primary?: boolean }>`
 	font-size: 12px;
 	cursor: pointer;
 	border: none;
-	transition: background-color 0.2s ease, color 0.2s ease;
+	transition:
+		background-color 0.2s ease,
+		color 0.2s ease;
 	${(props) =>
 		props.primary
 			? `

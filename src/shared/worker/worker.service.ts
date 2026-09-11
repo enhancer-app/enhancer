@@ -5,7 +5,6 @@ import type {
 	EnhancerApiSeedRequestPayload,
 } from "$types/shared/worker/enhancer-api-worker.types.ts";
 import type {
-	ExtensionMessageDetail,
 	ExtensionResponseDetail,
 	WorkerAction,
 	WorkerApiActions,
