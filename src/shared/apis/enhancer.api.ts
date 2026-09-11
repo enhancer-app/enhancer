@@ -6,6 +6,7 @@ import type {
 	EnhancerBadge,
 	EnhancerChannelDto,
 	EnhancerStreamerWatchTimeData,
+	XayoWatchtimePeriod,
 } from "$types/apis/enhancer.apis.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
@@ -102,8 +103,8 @@ export default class EnhancerApi {
 		return this.currentSeed?.aggregate ?? null;
 	}
 
-	async getWatchTime(username: string): Promise<EnhancerStreamerWatchTimeData[]> {
-		const watchtime = await this.worker.send("getEnhancerWatchTime", { username });
+	async getWatchTime(username: string, period: XayoWatchtimePeriod): Promise<EnhancerStreamerWatchTimeData[]> {
+		const watchtime = await this.worker.send("getEnhancerWatchTime", { username, period });
 		if (!watchtime) throw new Error("Enhancer watchtime request timed out");
 		return watchtime;
 	}

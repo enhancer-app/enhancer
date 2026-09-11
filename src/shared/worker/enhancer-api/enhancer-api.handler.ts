@@ -28,7 +28,8 @@ export class EnhancerApiHandler extends MessageHandler {
 		sender?: chrome.runtime.MessageSender,
 	): Promise<WorkerApiActions[EnhancerApiAction]["response"]> {
 		if (this.action === "getEnhancerWatchTime") {
-			return this.service.getWatchTime((payload as GetEnhancerWatchTimePayload).username);
+			const { username, period } = payload as GetEnhancerWatchTimePayload;
+			return this.service.getWatchTime(username, period);
 		}
 		if (sender?.tab?.id == null) throw new Error("Enhancer API requests require a browser tab");
 		if (this.action === "disconnectEnhancerApi") {

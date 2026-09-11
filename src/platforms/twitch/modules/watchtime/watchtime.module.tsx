@@ -60,7 +60,7 @@ export default class WatchTimeModule extends TwitchModule {
 			isError.value = false;
 			isLoading.value = true;
 			try {
-				data.value = await this.enhancerApi().getWatchTime(username);
+				data.value = await this.enhancerApi().getWatchTime(username, this.settings().xayoWatchtimePeriod);
 			} catch (error) {
 				this.logger.error(`Failed to fetch usercard watchtime ${username}`, error);
 				isError.value = true;
@@ -120,7 +120,7 @@ export default class WatchTimeModule extends TwitchModule {
 	}
 
 	private async fetchWatchTimeByUserName(username: string): Promise<EnhancerStreamerWatchTimeData[]> {
-		return await this.enhancerApi().getWatchTime(username);
+		return await this.enhancerApi().getWatchTime(username, this.settings().xayoWatchtimePeriod);
 	}
 
 	private renderLoading(username: string) {
