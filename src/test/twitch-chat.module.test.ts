@@ -49,10 +49,15 @@ test("finalizes a queued 7TV message id", () => {
 	});
 
 	const message = { ...MESSAGE, id: "", nonce: "message-nonce" };
+	const nonceLinkMessage = {
+		id: "final-id",
+		nonce: message.nonce,
+		type: 50,
+	} as TwitchChatMessage;
 
 	try {
 		(chatModule as any).bufferSevenTvMessage(message);
-		(chatModule as any).bufferSevenTvMessage({ ...message, id: "final-id", type: 51 });
+		(chatModule as any).bufferSevenTvMessage(nonceLinkMessage);
 		const element = { getAttribute: () => "final-id" } as unknown as Element;
 
 		expect((chatModule as any).getSevenTvMessage(element).id).toBe("final-id");
