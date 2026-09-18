@@ -80,6 +80,8 @@ export type MediaPlayerInstanceBase = {
 	};
 	seekTo: (time: number) => void;
 	getPosition(): number;
+	getSyncTime?(): number;
+	isSeeking?(): boolean;
 };
 
 export type MediaPlayerInstanceWrapper = {

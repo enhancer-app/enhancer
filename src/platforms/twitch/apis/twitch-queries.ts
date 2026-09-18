@@ -5,9 +5,3 @@ export const ChattersQuery = `query GetChannelChattersCount($name: String!) {
             }
         }
     }`;
-
-export const VideoCreatedAtQuery = `query GetVideoCreatedAt($id: ID!) {
-    video(id: $id) {
-        createdAt
-    }
-}`;

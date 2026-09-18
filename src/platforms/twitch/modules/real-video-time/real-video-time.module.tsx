@@ -1,17 +1,12 @@
-import { VideoCreatedAtQuery } from "$twitch/apis/twitch-queries.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
-import type { VideoCreatedAtResponse } from "$types/platforms/twitch/twitch.api.types.ts";
+import type { RealVideoTimeComponentProps } from "$types/platforms/twitch/real-video-time.types.ts";
 import type { MediaPlayerInstanceBase } from "$types/platforms/twitch/twitch.utils.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
+import { signal } from "@preact/signals";
 import { render } from "preact";
 import styled from "styled-components";
 
 export default class RealVideoTimeModule extends TwitchModule {
-	private static URL_CONFIG = (url: string) => {
-		return url.includes("/videos/") || url.includes("/video/");
-	};
-
 	config: TwitchModuleConfig = {
 		name: "real-video-time",
 		appliers: [
@@ -20,7 +15,6 @@ export default class RealVideoTimeModule extends TwitchModule {
 				selectors: [".player-controls__left-control-group"],
 				callback: this.run.bind(this),
 				key: "real-video-time",
-				validateUrl: RealVideoTimeModule.URL_CONFIG,
 				once: true,
 			},
 			{
@@ -29,32 +23,19 @@ export default class RealVideoTimeModule extends TwitchModule {
 				event: "twitch:settings:realVideoTimeFormat12h",
 				callback: (enabled) => this.updateTimeFormat(enabled),
 			},
-			{
-				type: "event",
-				event: "twitch:chatInitialized",
-				callback: () => {
-					if (!RealVideoTimeModule.URL_CONFIG(window.location.href)) {
-						const elements = document.querySelectorAll(".enhancer-real-video-time");
-						elements.forEach((element) => element.remove());
-					}
-				},
-				key: "real-video-time-url-validator",
-			},
 		],
 		enabled: () => this.settings().realVideoTimeEnabled,
 	};
 
-	private timeCounter = {} as Signal<number>;
-	private lastFailedVideoId: string | null = null;
-	private currentVideoId: string | undefined;
+	private timeCounter = signal<number | null>(null);
 	private timeInterval: NodeJS.Timeout | undefined;
-	private videoCreatedAt = new Date(0);
-	private mediaPlayer: MediaPlayerInstanceBase | undefined;
 	private use12HourFormat = signal<boolean>(false);
+	private mediaPlayer: MediaPlayerInstanceBase | undefined;
+	private videoId: string | undefined;
+	private syncTime: number | undefined;
+	private timeOffset: number | undefined;
 
-	private async run(elements: Element[]) {
-		this.createTimeCounter();
-		await this.updateCurrentVideo();
+	private run(elements: Element[]) {
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), elements, "span");
 		wrappers.forEach((element) => {
 			render(<RealTimeComponent formatTime={this.formatTime.bind(this)} time={this.timeCounter} />, element);
@@ -63,10 +44,7 @@ export default class RealVideoTimeModule extends TwitchModule {
 		if (this.timeInterval) {
 			clearInterval(this.timeInterval);
 		}
-		this.timeInterval = setInterval(async () => {
-			await this.updateCurrentVideo();
-			this.updateTime();
-		}, 1000);
+		this.timeInterval = setInterval(() => this.updateTime(), 1000);
 	}
 
 	private updateTimeFormat(enabled: boolean) {
@@ -78,72 +56,37 @@ export default class RealVideoTimeModule extends TwitchModule {
 		return this.commonUtils().timeInMsToTimestamp(timeInMs, this.use12HourFormat.value ? "12" : "24");
 	}
 
-	private async getVideoCreatedAt(videoId: string) {
-		try {
-			const { data } = await this.getVideoTime(videoId);
-			const createdAt = data?.video?.createdAt;
-			if (!createdAt) return;
-			const date = new Date(createdAt);
-			if (Number.isNaN(date.getTime())) return;
-			return date;
-		} catch (error) {
-			this.logger.warn("Failed to fetch video createdAt", error);
-		}
-	}
-
-	private createTimeCounter() {
-		if ("value" in this.timeCounter) return;
-		this.timeCounter = signal<number>(-1);
-	}
-
-	private async updateCurrentVideo() {
-		const videoId = this.twitchUtils().getVideoIdFromLink(window.location.href);
-		if (!videoId) {
-			this.lastFailedVideoId = null;
-			return this.logger.warn("Failed to find video id");
-		}
-		if (this.currentVideoId === videoId) {
-			return;
-		}
-		if (this.lastFailedVideoId === videoId) {
-			return;
-		}
-		const createdAt = await this.getVideoCreatedAt(videoId);
-		if (!createdAt) {
-			this.logger.error(`Failed to get creation date for video ${videoId}. Aborting update.`);
-			this.lastFailedVideoId = videoId;
-			return;
-		}
-		this.logger.debug(`Creating real video time counter for ${videoId}`, this.videoCreatedAt);
-		this.currentVideoId = videoId;
-		this.videoCreatedAt = createdAt;
-		this.lastFailedVideoId = null;
-	}
-
 	private updateTime() {
-		const mediaPlayerInstance = this.mediaPlayer ?? this.twitchUtils().getMediaPlayerInstance();
-		if (!mediaPlayerInstance) {
-			this.logger.error("Failed to find media player instance");
+		const component = this.twitchUtils().getMediaPlayerComponent();
+		if (component?.content?.type !== "vod" || !this.settings().realVideoTimeEnabled) {
+			this.timeCounter.value = null;
+			this.videoId = undefined;
+			this.timeOffset = undefined;
 			return;
 		}
-		this.mediaPlayer = mediaPlayerInstance;
-		this.timeCounter.value = this.videoCreatedAt.getTime() + mediaPlayerInstance.getPosition() * 1000;
-	}
-
-	private async getVideoTime(videoId: string) {
-		return this.twitchApi().gql<VideoCreatedAtResponse>(VideoCreatedAtQuery, {
-			id: videoId,
-		});
+		const player = component.mediaPlayerInstance;
+		if (this.mediaPlayer !== player || this.videoId !== component.content.vodID) {
+			this.mediaPlayer = player;
+			this.videoId = component.content.vodID;
+			this.syncTime = undefined;
+			this.timeOffset = undefined;
+		}
+		const position = player.getPosition();
+		if (player.isSeeking?.() || !Number.isFinite(position)) {
+			this.timeCounter.value = null;
+			return;
+		}
+		const time = player.getSyncTime?.();
+		if (typeof time === "number" && Number.isFinite(time) && time > 0 && time !== this.syncTime) {
+			this.syncTime = time;
+			this.timeOffset = time - position * 1000;
+		}
+		this.timeCounter.value = this.timeOffset === undefined ? null : this.timeOffset + position * 1000;
 	}
 
 	initialize() {
 		this.use12HourFormat.value = this.settings().realVideoTimeFormat12h;
 	}
-}
-
-interface RealVideoTimeComponentProps {
-	time: Signal<number>;
-	formatTime: (timeInSeconds: number) => string;
 }
 
 const Wrapper = styled.span`
@@ -160,5 +103,5 @@ const Wrapper = styled.span`
 `;
 
 function RealTimeComponent({ time, formatTime }: RealVideoTimeComponentProps) {
-	return <Wrapper>{formatTime(time.value)}</Wrapper>;
+	return time.value === null ? null : <Wrapper>{formatTime(time.value)}</Wrapper>;
 }
