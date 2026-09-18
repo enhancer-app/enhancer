@@ -16,7 +16,7 @@ export default class KickUtils {
 	getMessageData(messageElement: Element): KickChatMessageData | null {
 		const props = this.reactUtils.findReactChildren<KickChatMessageData>(
 			this.reactUtils.getReactInstance(messageElement),
-			(n) => n.pendingProps?.message,
+			(n) => n?.pendingProps?.message,
 			100,
 		)?.pendingProps;
 
@@ -30,7 +30,7 @@ export default class KickUtils {
 	getChannelInfo() {
 		return this.reactUtils.findReactParents<never, ChannelInfo>(
 			this.reactUtils.getReactInstance(document.querySelector("main")),
-			(n) => !!n?.memoizedProps.channelId && !!n?.memoizedProps.slug,
+			(n) => !!n?.memoizedProps?.channelId && !!n?.memoizedProps?.slug,
 		)?.memoizedProps;
 	}
 
@@ -69,14 +69,14 @@ export default class KickUtils {
 	getChannelChatRoomInfo() {
 		return this.reactUtils.findReactParents<never, ChannelChatRoomInfo>(
 			this.reactUtils.getReactInstance(document.querySelector("#channel-chatroom")),
-			(n) => !!n.memoizedProps.slug,
+			(n) => !!n?.memoizedProps?.slug,
 		)?.memoizedProps;
 	}
 
 	getChannelChatRoom() {
 		return this.reactUtils.findReactChildren<never, ChannelChatRoom>(
 			this.reactUtils.getReactInstance(document.querySelector("#channel-chatroom")),
-			(n) => !!n.memoizedProps.messages && !!n.memoizedProps.setIsPaused,
+			(n) => !!n?.memoizedProps?.messages && !!n?.memoizedProps?.setIsPaused,
 		)?.memoizedProps;
 	}
 

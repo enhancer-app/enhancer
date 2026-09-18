@@ -110,10 +110,9 @@ export default class EnhancerApi {
 	}
 
 	findUserBadgesForCurrentChannel(externalUserId: string): EnhancerBadge[] {
-		const globalAccount = this.globalSeed?.aggregate.accounts.find((account) => account.externalId === externalUserId);
-		const channelAccount = this.currentSeed?.aggregate.accounts.find(
-			(account) => account.externalId === externalUserId,
-		);
+		const globalAccount = this.findAccount(this.globalSeed, externalUserId);
+		const channelAccount = this.findAccount(this.currentSeed, externalUserId);
+		if (!globalAccount && !channelAccount) return [];
 		const badgeIds = new Set([...(globalAccount?.badgesIds ?? []), ...(channelAccount?.badgesIds ?? [])]);
 		const badges = [...(this.globalSeed?.aggregate.badges ?? []), ...(this.currentSeed?.aggregate.badges ?? [])].filter(
 			(badge) => badgeIds.has(badge.badgeId),
@@ -125,10 +124,22 @@ export default class EnhancerApi {
 
 	findUserForCurrentChannel(externalUserId: string): EnhancerAccount | null {
 		return (
-			this.currentSeed?.aggregate.accounts.find((account) => account.externalId === externalUserId) ??
-			this.globalSeed?.aggregate.accounts.find((account) => account.externalId === externalUserId) ??
-			null
+			this.findAccount(this.currentSeed, externalUserId) ?? this.findAccount(this.globalSeed, externalUserId) ?? null
 		);
+	}
+
+	// Keyed by aggregate identity so a replaced seed drops its stale index automatically.
+	private readonly accountIndexes = new WeakMap<EnhancerChannelDto, Map<string, EnhancerAccount>>();
+
+	private findAccount(seed: CachedAggregateSeed | null, externalUserId: string): EnhancerAccount | undefined {
+		const aggregate = seed?.aggregate;
+		if (!aggregate) return undefined;
+		let index = this.accountIndexes.get(aggregate);
+		if (!index) {
+			index = new Map(aggregate.accounts.map((account) => [account.externalId, account]));
+			this.accountIndexes.set(aggregate, index);
+		}
+		return index.get(externalUserId);
 	}
 
 	private readonly handleUpdate = (payload: EnhancerApiUpdatedPayload): void => {

@@ -125,7 +125,7 @@ export default class ChatModule extends TwitchModule {
 		const message = type === "7TV" ? this.getSevenTvMessage(element) : this.twitchUtils().getChatMessage(element);
 		if (!message?.id) return;
 		if (!ChatModule.VALID_MESSAGE_TYPES_IDS.includes(message.type ?? 0)) return;
-		if (type === "TWITCH" && document.querySelector(ChatModule.SEVENTV_CHAT_SELECTOR)) {
+		if (type === "TWITCH" && this.getSevenTvChatElement()) {
 			const sevenTvElement = this.findSevenTvMessageElement(message.id);
 			if (sevenTvElement) this.handleMessage(sevenTvElement, "7TV", isReplay);
 			return;
@@ -144,10 +144,18 @@ export default class ChatModule extends TwitchModule {
 		});
 	}
 
+	private sevenTvChatElement: Element | null = null;
+
+	private getSevenTvChatElement(): Element | null {
+		if (this.sevenTvChatElement?.isConnected) return this.sevenTvChatElement;
+		this.sevenTvChatElement = document.querySelector(ChatModule.SEVENTV_CHAT_SELECTOR);
+		return this.sevenTvChatElement;
+	}
+
 	private subscribeToSevenTvMessages(
 		messageHandlerApi = this.twitchUtils().getChatController()?.props.messageHandlerAPI,
 	) {
-		if (!document.querySelector(ChatModule.SEVENTV_CHAT_SELECTOR)) return;
+		if (!this.getSevenTvChatElement()) return;
 		if (!messageHandlerApi) return;
 		const descriptor = Object.getOwnPropertyDescriptor(messageHandlerApi, "handleMessage");
 		if (
@@ -243,9 +251,10 @@ export default class ChatModule extends TwitchModule {
 			return queuedMessage;
 		}
 
+		// Newest lines are appended last, so scanning backwards matches on the first few instead of the whole chat.
 		const nativeElements = document.querySelectorAll(ChatModule.TWITCHTV_MESSAGE_SELECTOR);
-		for (const nativeElement of nativeElements) {
-			const message = this.twitchUtils().getChatMessage(nativeElement);
+		for (let index = nativeElements.length - 1; index >= 0; index--) {
+			const message = this.twitchUtils().getChatMessage(nativeElements[index]);
 			if (message?.id === id) return message;
 		}
 	}
