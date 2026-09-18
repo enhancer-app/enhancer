@@ -98,7 +98,7 @@ export default class WatchTimeModule extends TwitchModule {
 	private getUsernameFromUserCard(element: Element): string | undefined {
 		const userCardComponent = this.reactUtils().findReactParents<UserCardComponent>(
 			this.reactUtils().getReactInstance(element),
-			(n) => !!n.pendingProps?.targetLogin,
+			(n) => !!n?.pendingProps?.targetLogin,
 			20,
 		);
 		return userCardComponent?.pendingProps?.targetLogin?.toLowerCase();
