@@ -1618,5 +1618,4 @@ export const SettingsOverlay = styled.div`
 	align-items: center;
 	justify-content: center;
 	z-index: 10000;
-	backdrop-filter: blur(4px);
 `;
