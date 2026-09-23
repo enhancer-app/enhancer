@@ -86,7 +86,7 @@ export default class WatchTimeModule extends TwitchModule {
 
 		const fetchWatchtime = async () => {
 			isCollapsed.value = false;
-			if (data.value !== undefined || isLoading.value) return;
+			if (isLoading.value || (data.value !== undefined && !isError.value)) return;
 			await loadWatchtime(period.value);
 		};
 

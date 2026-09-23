@@ -236,11 +236,9 @@ export const WatchTimeUserCard = ({
 					</option>
 				))}
 			</PeriodSelect>
-			{data.value !== undefined && (
-				<CollapseButton $platform={platform} type="button" aria-label="Hide watchtime" onClick={onToggleCollapse}>
-					×
-				</CollapseButton>
-			)}
+			<CollapseButton $platform={platform} type="button" aria-label="Hide watchtime" onClick={onToggleCollapse}>
+				×
+			</CollapseButton>
 		</HeaderControlsWrapper>
 	);
 
