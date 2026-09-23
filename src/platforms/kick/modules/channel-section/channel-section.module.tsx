@@ -48,12 +48,13 @@ export default class ChannelSectionModule extends KickModule {
 			(element as HTMLElement).style.flexDirection = "column";
 		});
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), elements, "div");
+		// The applier can win the race against Kick's React tree, and `once` means there is no second attempt.
+		const channelName = await this.resolveChannelName();
+		if (!channelName) {
+			this.logger.warn("Channel name not found");
+			return;
+		}
 		for (const wrapper of wrappers) {
-			const channelName = this.kickUtils().getChannelInfo()?.slug;
-			if (!channelName) {
-				this.logger.warn("Channel name not found");
-				continue;
-			}
 			this.currentUsername.value = channelName;
 			await this.startWatchtimeUpdates();
 			const logo = await this.commonUtils().getAssetFile(
@@ -73,6 +74,19 @@ export default class ChannelSectionModule extends KickModule {
 				wrapper,
 			);
 		}
+	}
+
+	private async resolveChannelName(): Promise<string | undefined> {
+		let channelName: string | undefined;
+		await this.commonUtils().waitFor(
+			() => this.kickUtils().getChannelInfo()?.slug,
+			(slug) => {
+				channelName = slug;
+				return true;
+			},
+			{ maxRetries: 10, delay: 200 },
+		);
+		return channelName;
 	}
 
 	private getHeaderActions(): ChannelSectionAction[] {
@@ -105,9 +119,10 @@ export default class ChannelSectionModule extends KickModule {
 			clearInterval(this.watchtimeInterval);
 		}
 		await this.updateWatchtime();
+		// Background accumulator persists watchtime every 5s, so polling faster returns identical values.
 		this.watchtimeInterval = setInterval(async () => {
 			await this.updateWatchtime();
-		}, 1000);
+		}, 5000);
 	}
 
 	private async getWatchTime(channelName: string): Promise<number> {

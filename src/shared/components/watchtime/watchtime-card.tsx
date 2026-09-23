@@ -1,5 +1,5 @@
 import { LoadingComponent } from "$shared/components/loading/loading.component.tsx";
-import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
+import type { EnhancerStreamerWatchTimeData, XayoWatchtimePeriod } from "$types/apis/enhancer.apis.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { Signal } from "@preact/signals";
 import styled from "styled-components";
@@ -7,6 +7,12 @@ import styled from "styled-components";
 interface PlatformStyleProps {
 	$platform: PlatformType;
 }
+
+const PERIOD_OPTIONS: { value: XayoWatchtimePeriod; label: string }[] = [
+	{ value: "30d", label: "30d" },
+	{ value: "365d", label: "1y" },
+	{ value: "all", label: "All time" },
+];
 
 const WatchTimeItem = styled.a<PlatformStyleProps>`
 	display: flex;
@@ -98,6 +104,49 @@ const WatchTimeHeader = styled.div`
 	gap: 8px;
 `;
 
+const HeaderTitle = styled.strong`
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+`;
+
+const NoDataMessage = styled.div`
+	color: #8e8e8e;
+	padding: 10px 0;
+`;
+
+const HeaderControlsWrapper = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
+	flex-shrink: 0;
+`;
+
+const PeriodSelect = styled.select<PlatformStyleProps>`
+	height: 22px;
+	padding: 0 4px;
+	border-radius: 4px;
+	border: 1px solid ${({ $platform }) => ($platform === "kick" ? "#2b2b2b" : "var(--color-border-base, #303032)")};
+	background: transparent;
+	color: ${({ $platform }) => ($platform === "kick" ? "#53fc18" : "#bf94ff")};
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1;
+	cursor: pointer;
+	outline: none;
+
+	&:focus {
+		border-color: ${({ $platform }) => ($platform === "kick" ? "#53fc18" : "#bf94ff")};
+	}
+
+	option {
+		background: ${({ $platform }) => ($platform === "kick" ? "#0d0d0d" : "var(--color-background-base, #18181b)")};
+		color: ${({ $platform }) => ($platform === "kick" ? "#efeff1" : "var(--color-text-base, #efeff1)")};
+	}
+`;
+
 const CollapseButton = styled.button<PlatformStyleProps>`
 	width: 22px;
 	height: 22px;
@@ -153,6 +202,8 @@ interface UserCardProps {
 	isLoading: Signal<boolean>;
 	isError: Signal<boolean>;
 	isCollapsed: Signal<boolean>;
+	period: Signal<XayoWatchtimePeriod>;
+	onPeriodChange: (period: XayoWatchtimePeriod) => void;
 	onFetch?: () => void;
 	onToggleCollapse: () => void;
 }
@@ -164,15 +215,32 @@ export const WatchTimeUserCard = ({
 	isLoading,
 	isError,
 	isCollapsed,
+	period,
+	onPeriodChange,
 	onFetch,
 	onToggleCollapse,
 }: UserCardProps) => {
-	const collapseButton =
-		data.value !== undefined ? (
+	const headerControls = (
+		<HeaderControlsWrapper>
+			<PeriodSelect
+				$platform={platform}
+				value={period.value}
+				disabled={isLoading.value}
+				aria-label="Watchtime period"
+				onMouseDown={(event) => event.stopPropagation()}
+				onChange={(event) => onPeriodChange((event.target as HTMLSelectElement).value as XayoWatchtimePeriod)}
+			>
+				{PERIOD_OPTIONS.map((option) => (
+					<option key={option.value} value={option.value}>
+						{option.label}
+					</option>
+				))}
+			</PeriodSelect>
 			<CollapseButton $platform={platform} type="button" aria-label="Hide watchtime" onClick={onToggleCollapse}>
 				×
 			</CollapseButton>
-		) : null;
+		</HeaderControlsWrapper>
+	);
 
 	if (isCollapsed.value) {
 		return (
@@ -191,8 +259,11 @@ export const WatchTimeUserCard = ({
 	if (isLoading.value) {
 		return (
 			<UserCardWrapper $platform={platform}>
+				<WatchTimeHeader>
+					<HeaderTitle>Watchtime of {username}:</HeaderTitle>
+					{headerControls}
+				</WatchTimeHeader>
 				<LoadingComponent text="Fetching data from xayo.pl..." />
-				{collapseButton}
 			</UserCardWrapper>
 		);
 	}
@@ -200,6 +271,10 @@ export const WatchTimeUserCard = ({
 	if (isError.value) {
 		return (
 			<UserCardWrapper $platform={platform}>
+				<WatchTimeHeader>
+					<HeaderTitle>Watchtime of {username}:</HeaderTitle>
+					{headerControls}
+				</WatchTimeHeader>
 				<p>An unexpected error occurred and we are sorry about that :(</p>
 				<p>Please try again later.</p>
 				{onFetch && (
@@ -209,7 +284,6 @@ export const WatchTimeUserCard = ({
 						</ActionButton>
 					</Actions>
 				)}
-				{collapseButton}
 			</UserCardWrapper>
 		);
 	}
@@ -225,16 +299,6 @@ export const WatchTimeUserCard = ({
 						</ActionButton>
 					)}
 				</Actions>
-				{collapseButton}
-			</UserCardWrapper>
-		);
-	}
-
-	if (watchTime.length === 0) {
-		return (
-			<UserCardWrapper $platform={platform}>
-				No watchtime data available.
-				{collapseButton}
 			</UserCardWrapper>
 		);
 	}
@@ -242,10 +306,14 @@ export const WatchTimeUserCard = ({
 	return (
 		<UserCardWrapper $platform={platform}>
 			<WatchTimeHeader>
-				<strong>Watchtime of {username}:</strong>
-				{collapseButton}
+				<HeaderTitle>Watchtime of {username}:</HeaderTitle>
+				{headerControls}
 			</WatchTimeHeader>
-			<WatchTimeDisplay watchTime={watchTime} username={username} platform={platform} />
+			{watchTime.length === 0 ? (
+				<NoDataMessage>No watchtime data available.</NoDataMessage>
+			) : (
+				<WatchTimeDisplay watchTime={watchTime} username={username} platform={platform} />
+			)}
 		</UserCardWrapper>
 	);
 };

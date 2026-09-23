@@ -37,7 +37,10 @@ export default class HideStoriesModule extends TwitchModule {
 	}
 
 	private hideElement(element: HTMLElement) {
-		element.style.setProperty("display", "none", "important");
+		const isHidden =
+			element.style.getPropertyValue("display") === "none" &&
+			element.style.getPropertyPriority("display") === "important";
+		if (!isHidden) element.style.setProperty("display", "none", "important");
 		this.hiddenElements.add(element);
 	}
 
