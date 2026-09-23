@@ -53,6 +53,7 @@
     "dev": "ENVIRONMENT=development concurrently \"bun run typecheck:watch\" \"vite build --watch\" \"vite\"",
     "build": "ENVIRONMENT=production bun run check && bun run typecheck && vite build",
     "pack": "ENVIRONMENT=production bun run scripts/pack.ts",
+    "chrome:refresh-token": "bun run scripts/refresh-chrome-token.ts",
     "prepare": "husky"
   },
   "lint-staged": {
