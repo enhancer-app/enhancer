@@ -7,12 +7,13 @@ export default class ReactUtils {
 		maxDepth = 15,
 		depth = 0,
 	): ReactComponent<StateNode, MemoizedProps, PendingProps> | null {
+		if (!node) return null;
 		let success = false;
 		try {
 			success = predicate(node);
 		} catch (_) {}
 		if (success) return node;
-		if (!node || depth > maxDepth) return null;
+		if (depth > maxDepth) return null;
 
 		const { return: parent } = node;
 		if (parent) {
@@ -28,12 +29,13 @@ export default class ReactUtils {
 		maxDepth = 15,
 		depth = 0,
 	): ReactComponent<StateNode, MemoizedProps, PendingProps> | null {
+		if (!node) return null;
 		let success = false;
 		try {
 			success = predicate(node);
 		} catch (_) {}
 		if (success) return node;
-		if (!node || depth > maxDepth) return null;
+		if (depth > maxDepth) return null;
 
 		const { child, sibling } = node;
 		if (child || sibling) {

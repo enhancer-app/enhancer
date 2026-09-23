@@ -59,8 +59,9 @@ export default class SelectorModuleApplier<
 				let element: Element | null = _element;
 				if (element && config.useParent) element = element.parentElement;
 				if (!element) return;
-				if (this.isElementAlreadyUsed(element, config.key) && config.once) return;
-				this.markElementAsUsed(element, config.key);
+				const isAlreadyUsed = this.isElementAlreadyUsed(element, config.key);
+				if (isAlreadyUsed && config.once) return;
+				if (!isAlreadyUsed) this.markElementAsUsed(element, config.key);
 				return element;
 			})
 			.filter((element): element is Element => element !== undefined);
