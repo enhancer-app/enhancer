@@ -12,7 +12,6 @@ export default class ChatModule extends TwitchModule {
 	static readonly TWITCHTV_MESSAGE_SELECTOR = ".chat-line__message";
 	static readonly SEVENTV_MESSAGE_SELECTOR = ".seventv-message[msg-id]";
 	static readonly VALID_MESSAGE_TYPES_IDS = [0];
-	static readonly LINK_MESSAGE_ID = 51;
 
 	private observer: MutationObserver | undefined;
 	private messageHandlerApi: ChatControllerComponent["props"]["messageHandlerAPI"] | undefined;
@@ -226,11 +225,16 @@ export default class ChatModule extends TwitchModule {
 			return;
 		}
 
-		if (message.type !== ChatModule.LINK_MESSAGE_ID || (!message.nonce && !message.id)) return;
+		if (!this.isNonceLinkMessage(message)) return;
 		const queuedMessage = this.sevenTvMessageQueue.getAndRemove(message.nonce);
 		if (!queuedMessage || !message.id) return;
 		this.sevenTvMessageQueue.addByValue({ ...queuedMessage, id: message.id, queueKey: message.id });
 		this.processSevenTvMessage(message.id);
+	}
+
+	private isNonceLinkMessage(message: TwitchChatMessage) {
+		if (!message.nonce || !message.id) return false;
+		return !message.user && typeof message.messageBody !== "string";
 	}
 
 	private processSevenTvMessage(id: string) {
