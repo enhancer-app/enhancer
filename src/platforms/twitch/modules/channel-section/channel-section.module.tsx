@@ -17,6 +17,9 @@ export default class ChannelSectionModule extends TwitchModule {
 	private currentChannelId = signal("");
 	private readonly settingsActionIcon = "⚙";
 	private watchtimeInterval: NodeJS.Timeout | undefined;
+	private watchtimeLogin = "";
+	private watchtimeFetchedAt = 0;
+	private static readonly WATCHTIME_REFRESH_MS = 5000;
 	private pinnedStreamers = signal<string[]>([]);
 	private pinnedStreamersEnabled = signal(false);
 	private pinStreamerIcon = computed(() => (this.isPinnedStreamer(this.currentChannelId.value) ? "★" : "☆"));
@@ -159,9 +162,16 @@ export default class ChannelSectionModule extends TwitchModule {
 
 	private async updateWatchtime() {
 		if (this.updateNames()) return;
-		if (this.currentLogin.value.length < 1) return;
+		const login = this.currentLogin.value;
+		if (login.length < 1) return;
+		const now = Date.now();
+		if (login === this.watchtimeLogin && now - this.watchtimeFetchedAt < ChannelSectionModule.WATCHTIME_REFRESH_MS) {
+			return;
+		}
+		this.watchtimeLogin = login;
+		this.watchtimeFetchedAt = now;
 		try {
-			this.watchtimeCounter.value = await this.getWatchTime(this.currentLogin.value);
+			this.watchtimeCounter.value = await this.getWatchTime(login);
 		} catch (error) {
 			this.logger.error("Failed to fetch watch time:", error);
 		}
