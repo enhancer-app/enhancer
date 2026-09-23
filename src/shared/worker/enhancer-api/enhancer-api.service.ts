@@ -304,7 +304,7 @@ export class EnhancerApiService {
 					this.logger.warn("Invalid Enhancer WebSocket message:", error);
 					return;
 				}
-				this.logger.debug("Received WebSocket message", message);
+				this.logger.debug("Received WebSocket message", "type" in message ? message.type : "error");
 				if ("type" in message && message.type === "connection.ready") {
 					this.serverReady = true;
 					this.reconnectAttempt = 0;
