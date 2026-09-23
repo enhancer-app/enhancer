@@ -26,3 +26,18 @@ export type ChannelChatRoom = {
 	isPaused: boolean;
 	setIsPaused: (paused: boolean) => void;
 };
+
+export type KickQualityVariantSource = "auto" | "source" | "transcode";
+
+export type KickPlayerQuality = {
+	name: string;
+	width: number;
+	height: number;
+	bitrate: number;
+	variantSource: KickQualityVariantSource;
+};
+
+export type KickQualityController = {
+	qualities: KickPlayerQuality[];
+	setQuality: (quality: KickPlayerQuality, adaptive: boolean) => void;
+};

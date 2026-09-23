@@ -13,6 +13,7 @@ const CATEGORY = {
 	GENERAL: "general",
 	CHAT: "chat",
 	CHANNEL: "channel",
+	PLAYER: "player",
 	LATENCY: "latency",
 	ABOUT: "about",
 } as const;
@@ -75,8 +76,9 @@ export default class SettingsModule extends KickModule {
 			{ id: CATEGORY.GENERAL, title: "General", order: 0 },
 			{ id: CATEGORY.CHAT, title: "Chat", order: 1 },
 			{ id: CATEGORY.CHANNEL, title: "Channel", order: 2 },
-			{ id: CATEGORY.LATENCY, title: "Latency", order: 3 },
-			{ id: CATEGORY.ABOUT, title: "About", order: 4 },
+			{ id: CATEGORY.PLAYER, title: "Player", order: 3 },
+			{ id: CATEGORY.LATENCY, title: "Latency", order: 4 },
+			{ id: CATEGORY.ABOUT, title: "About", order: 5 },
 		];
 
 		const brandIcons = {
@@ -217,6 +219,32 @@ export default class SettingsModule extends KickModule {
 					return <ExportImportComponent platform="kick" workerService={workerService} emitter={this.emitter} />;
 				},
 				hideInfo: true,
+			},
+			{
+				id: "forceQualityEnabled",
+				title: "Force Stream Quality",
+				description:
+					"Stops the player from starting on Auto and picks a fixed quality instead. Higher quality means more latency and more buffering on a weak connection.",
+				type: "toggle",
+				categoryId: CATEGORY.PLAYER,
+				requiresRefreshToDisable: true,
+			},
+			{
+				id: "forceQualityPreferred",
+				title: "Preferred Quality",
+				description:
+					"The quality to select on every stream. Falls back to the closest lower one when it is unavailable. Source quality is skipped while you are logged out, because Kick reserves it for logged-in viewers.",
+				type: "select",
+				categoryId: CATEGORY.PLAYER,
+				dependsOn: { key: "forceQualityEnabled" },
+				options: [
+					{ value: "highest", label: "Highest available" },
+					{ value: "1080", label: "1080p" },
+					{ value: "720", label: "720p" },
+					{ value: "480", label: "480p" },
+					{ value: "360", label: "360p" },
+					{ value: "160", label: "160p" },
+				],
 			},
 			{
 				id: "streamLatencyEnabled",
