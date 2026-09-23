@@ -124,14 +124,15 @@ jobs:
           path: dist
 
       - name: Publish to Chrome Web Store
-        uses: mobilefirstllc/cws-publish@569e87bc9a54ad7712ba6dc154a110d88af63b85
+        uses: wdzeng/chrome-extension@37f4f9cdc664959bafef36b1f4da03dec5141620
         with:
           action: 'publish'
-          client_id: ${{ secrets.CHROME_CLIENT_ID }}
-          client_secret: ${{ secrets.CHROME_CLIENT_SECRET }}
-          refresh_token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          extension_id: ${{ secrets.CHROME_EXTENSION_ID }}
-          zip_file: 'dist/build-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          publisher-id: ${{ secrets.CHROME_PUBLISHER_ID }}
+          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          zip-path: 'dist/build-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
 
   publish-firefox:
     name: Publish Firefox
