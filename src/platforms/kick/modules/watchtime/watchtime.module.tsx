@@ -1,6 +1,6 @@
 import KickModule from "$kick/kick.module.ts";
 import { WatchTimeUserCard } from "$shared/components/watchtime/watchtime-card.tsx";
-import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
+import type { EnhancerStreamerWatchTimeData, XayoWatchtimePeriod } from "$types/apis/enhancer.apis.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 import { signal } from "@preact/signals";
 import { render } from "preact";
@@ -39,23 +39,45 @@ export default class KickWatchTimeModule extends KickModule {
 		const isLoading = signal(false);
 		const isError = signal(false);
 		const isCollapsed = signal(false);
+		const period = signal<XayoWatchtimePeriod>(this.settings().xayoWatchtimePeriod);
+		const cache = new Map<XayoWatchtimePeriod, EnhancerStreamerWatchTimeData[]>();
+		let generation = 0;
 
-		const fetchWatchtime = async () => {
-			if (data.value !== undefined) {
-				isCollapsed.value = false;
+		const loadWatchtime = async (target: XayoWatchtimePeriod) => {
+			const cached = cache.get(target);
+			if (cached) {
+				data.value = cached;
+				isError.value = false;
+				isLoading.value = false;
 				return;
 			}
-			if (isLoading.value) return;
+			const current = ++generation;
 			isError.value = false;
 			isLoading.value = true;
 			try {
-				data.value = await this.enhancerApi().getWatchTime(username, this.settings().xayoWatchtimePeriod);
+				const result = await this.enhancerApi().getWatchTime(username, target);
+				if (current !== generation) return;
+				cache.set(target, result);
+				data.value = result;
 			} catch (error) {
 				this.logger.error(`Failed to fetch user popup watchtime ${username}`, error);
+				if (current !== generation) return;
 				isError.value = true;
 			} finally {
-				isLoading.value = false;
+				if (current === generation) isLoading.value = false;
 			}
+		};
+
+		const fetchWatchtime = async () => {
+			isCollapsed.value = false;
+			if (isLoading.value || (data.value !== undefined && !isError.value)) return;
+			await loadWatchtime(period.value);
+		};
+
+		const changePeriod = (next: XayoWatchtimePeriod) => {
+			if (next === period.value) return;
+			period.value = next;
+			void loadWatchtime(next);
 		};
 
 		const toggleCollapsed = () => {
@@ -70,6 +92,8 @@ export default class KickWatchTimeModule extends KickModule {
 				isLoading={isLoading}
 				isError={isError}
 				isCollapsed={isCollapsed}
+				period={period}
+				onPeriodChange={changePeriod}
 				onFetch={fetchWatchtime}
 				onToggleCollapse={toggleCollapsed}
 			/>,
