@@ -31,13 +31,12 @@ export default class RealVideoTimeModule extends KickModule {
 	private timeInterval: NodeJS.Timeout | undefined;
 	private use12HourFormat = signal<boolean>(false);
 	private elementCheckInterval: NodeJS.Timeout | undefined;
+	private currentVideoId: string | undefined;
 
 	private async run(elements: Element[]) {
-		const video = document.querySelector<HTMLVideoElement>("video");
-		if (!video) return;
-		this.tryGetVideoCreatedAt();
-		this.updateTime(video);
-		this.createTimeInterval(video);
+		const video = this.getActiveVideo();
+		if (video) this.updateTime(video);
+		this.createTimeInterval();
 		elements.forEach((element) => {
 			const htmlElement = element as HTMLElement;
 			htmlElement.addEventListener("mouseenter", async () => {
@@ -48,8 +47,8 @@ export default class RealVideoTimeModule extends KickModule {
 			htmlElement.addEventListener("click", async () => {
 				await this.commonUtils().delay(25);
 				this.updateVisibility();
-				const video = document.querySelector("video");
-				if (video) this.updateTime(video);
+				const activeVideo = this.getActiveVideo();
+				if (activeVideo) this.updateTime(activeVideo);
 			});
 		});
 
@@ -64,8 +63,12 @@ export default class RealVideoTimeModule extends KickModule {
 		this.use12HourFormat.value = enabled;
 	}
 
-	private formatTime(timeInMs: number): string {
-		return this.commonUtils().timeInMsToTimestamp(timeInMs, this.use12HourFormat.value ? "12" : "24");
+	private formatTime(timeInMs: number, showDate = false): string {
+		return this.commonUtils().timeInMsToTimestamp(timeInMs, this.use12HourFormat.value ? "12" : "24", showDate);
+	}
+
+	private getActiveVideo() {
+		return document.querySelector<HTMLVideoElement>("#injected-embedded-channel-player-video video");
 	}
 
 	private createElement(player: Element): boolean {
@@ -87,9 +90,12 @@ export default class RealVideoTimeModule extends KickModule {
 		return true;
 	}
 
-	private createTimeInterval(video: HTMLVideoElement) {
+	private createTimeInterval() {
 		if (this.timeInterval) clearInterval(this.timeInterval);
-		this.timeInterval = setInterval(() => this.updateTime(video), 1000);
+		this.timeInterval = setInterval(() => {
+			const video = this.getActiveVideo();
+			if (video) this.updateTime(video);
+		}, 1000);
 	}
 
 	private updateVisibility() {
@@ -105,13 +111,22 @@ export default class RealVideoTimeModule extends KickModule {
 	}
 
 	private tryGetVideoCreatedAt() {
-		const videoCreatedAt = this.kickUtils().getIsoDateProps();
-		if (videoCreatedAt) this.videoCreatedAt = new Date(videoCreatedAt.isoDate);
+		const videoCreatedAt = this.kickUtils().getIsoDateProps()?.isoDate;
+		if (!videoCreatedAt) return;
+		const date = new Date(videoCreatedAt);
+		if (Number.isFinite(date.getTime())) this.videoCreatedAt = date;
 	}
 
 	private getCurrentRealVideoTime(video: HTMLVideoElement) {
+		const videoId = window.location.pathname.match(/\/videos\/([^/]+)/)?.[1];
+		if (videoId !== this.currentVideoId) {
+			this.currentVideoId = videoId;
+			this.videoCreatedAt = undefined;
+			this.timeCounter.value = -1;
+		}
 		if (!this.videoCreatedAt) this.tryGetVideoCreatedAt();
 		if (this.videoCreatedAt) return this.videoCreatedAt.getTime() + video.currentTime * 1000;
+		if (videoId) return;
 
 		const videoProgress = this.kickUtils().getVideoProgressProps();
 		if (!videoProgress) return;
@@ -135,11 +150,12 @@ export default class RealVideoTimeModule extends KickModule {
 interface RealVideoTimeComponentProps {
 	time: Signal<number>;
 	visibility: Signal<boolean>;
-	formatTime: (timeInSeconds: number) => string;
+	formatTime: (timeInMs: number, showDate?: boolean) => string;
 }
 
 const Wrapper = styled.span<{ isVisible: boolean }>`
 	display: ${(props) => (props.isVisible ? "inline-flex" : "none")};
+	white-space: nowrap;
 	align-items: center;
 	justify-content: flex-start;
 	color: #efeff1;
@@ -149,5 +165,9 @@ const Wrapper = styled.span<{ isVisible: boolean }>`
 `;
 
 function RealTimeComponent({ time, visibility, formatTime }: RealVideoTimeComponentProps) {
-	return <Wrapper isVisible={visibility.value}>{formatTime(time.value)}</Wrapper>;
+	return (
+		<Wrapper isVisible={visibility.value} title={time.value >= 0 ? formatTime(time.value, true) : undefined}>
+			{formatTime(time.value)}
+		</Wrapper>
+	);
 }
