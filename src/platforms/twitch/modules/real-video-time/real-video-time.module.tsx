@@ -57,7 +57,14 @@ export default class RealVideoTimeModule extends TwitchModule {
 		await this.updateCurrentVideo();
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), elements, "span");
 		wrappers.forEach((element) => {
-			render(<RealTimeComponent formatTime={this.formatTime.bind(this)} time={this.timeCounter} />, element);
+			render(
+				<RealTimeComponent
+					formatTime={this.formatTime.bind(this)}
+					formatDate={(timeInMs) => this.commonUtils().timeInMsToDate(timeInMs)}
+					time={this.timeCounter}
+				/>,
+				element,
+			);
 		});
 		this.updateTime();
 		if (this.timeInterval) {
@@ -74,8 +81,8 @@ export default class RealVideoTimeModule extends TwitchModule {
 		this.updateTime();
 	}
 
-	private formatTime(timeInMs: number, showDate = false): string {
-		return this.commonUtils().timeInMsToTimestamp(timeInMs, this.use12HourFormat.value ? "12" : "24", showDate);
+	private formatTime(timeInMs: number): string {
+		return this.commonUtils().timeInMsToTimestamp(timeInMs, this.use12HourFormat.value ? "12" : "24");
 	}
 
 	private async getVideoCreatedAt(videoId: string) {
@@ -143,14 +150,20 @@ export default class RealVideoTimeModule extends TwitchModule {
 
 interface RealVideoTimeComponentProps {
 	time: Signal<number>;
-	formatTime: (timeInMs: number, showDate?: boolean) => string;
+	formatTime: (timeInMs: number) => string;
+	formatDate: (timeInMs: number) => string;
 }
+
+const HoverDate = styled.span`
+	display: none;
+	margin-left: 4px;
+`;
 
 const Wrapper = styled.span`
 	display: inline-flex;
 	white-space: nowrap;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
 	color: #efeff1;
 	margin: 0 8px;
 	height: 100%;
@@ -158,8 +171,16 @@ const Wrapper = styled.span`
 	font-weight: normal;
 	position: relative;
 	vertical-align: middle;
+	&:hover ${HoverDate} {
+		display: inline;
+	}
 `;
 
-function RealTimeComponent({ time, formatTime }: RealVideoTimeComponentProps) {
-	return <Wrapper title={time.value >= 0 ? formatTime(time.value, true) : undefined}>{formatTime(time.value)}</Wrapper>;
+function RealTimeComponent({ time, formatTime, formatDate }: RealVideoTimeComponentProps) {
+	return (
+		<Wrapper>
+			{formatTime(time.value)}
+			{time.value >= 0 && <HoverDate>({formatDate(time.value)})</HoverDate>}
+		</Wrapper>
+	);
 }

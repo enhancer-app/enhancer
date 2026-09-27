@@ -67,7 +67,7 @@ export default class CommonUtils {
 		return response?.url || defaultValue;
 	}
 
-	timeInMsToTimestamp(timeInMs: number, type: "24" | "12" = "24", showDate = false): string {
+	timeInMsToTimestamp(timeInMs: number, type: "24" | "12" = "24"): string {
 		if (!Number.isFinite(timeInMs) || timeInMs < 0) {
 			return "--:--:--";
 		}
@@ -75,18 +75,20 @@ export default class CommonUtils {
 		const hours = date.getHours();
 		const minutes = date.getMinutes().toString().padStart(2, "0");
 		const seconds = date.getSeconds().toString().padStart(2, "0");
-		let time: string;
 		if (type === "12") {
 			const ampm = hours >= 12 ? "PM" : "AM";
 			const twelveHour = (hours % 12 || 12).toString().padStart(2, "0");
-			time = `${twelveHour}:${minutes}:${seconds} ${ampm}`;
-		} else {
-			time = `${hours.toString().padStart(2, "0")}:${minutes}:${seconds}`;
+			return `${twelveHour}:${minutes}:${seconds} ${ampm}`;
 		}
-		if (!showDate) return time;
+		return `${hours.toString().padStart(2, "0")}:${minutes}:${seconds}`;
+	}
+
+	timeInMsToDate(timeInMs: number): string {
+		if (!Number.isFinite(timeInMs) || timeInMs < 0) return "";
+		const date = new Date(timeInMs);
 		const day = date.getDate().toString().padStart(2, "0");
 		const month = (date.getMonth() + 1).toString().padStart(2, "0");
-		return `${time} (${day}.${month}.${date.getFullYear()})`;
+		return `${day}.${month}.${date.getFullYear()}`;
 	}
 
 	getLowestBadgeSourceUrl(sources: Record<string, string>): string | null {
