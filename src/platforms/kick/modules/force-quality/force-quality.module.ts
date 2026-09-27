@@ -4,6 +4,8 @@ import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class ForceQualityModule extends KickModule {
 	private appliedPath: string | null = null;
+	private player: Element | null = null;
+	private seekTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	readonly config: KickModuleConfig = {
 		name: "force-quality",
@@ -22,6 +24,16 @@ export default class ForceQualityModule extends KickModule {
 	};
 
 	private run(): void {
+		const player = document.querySelector("#injected-embedded-channel-player-video");
+		if (this.player !== player) {
+			this.player?.removeEventListener("pointerup", this.onSeekbarPointerUp, true);
+			this.player = player;
+			this.player?.addEventListener("pointerup", this.onSeekbarPointerUp, true);
+			if (this.seekTimeout) clearTimeout(this.seekTimeout);
+			this.seekTimeout = null;
+			this.appliedPath = null;
+		}
+
 		const path = window.location.pathname;
 		if (this.appliedPath === path) return;
 
@@ -34,6 +46,23 @@ export default class ForceQualityModule extends KickModule {
 		controller.setQuality(quality, false);
 		this.appliedPath = path;
 		this.logger.debug(`Forced stream quality to ${quality.name}`);
+	}
+
+	private onSeekbarPointerUp = (event: Event): void => {
+		const target = event.target;
+		if (target instanceof Element && target.closest('[class*="group/seekbar"]')) this.restoreQuality();
+	};
+
+	private restoreQuality(): void {
+		if (this.appliedPath !== window.location.pathname || !this.settings().forceQualityEnabled) return;
+		if (this.seekTimeout) clearTimeout(this.seekTimeout);
+		const path = window.location.pathname;
+		this.seekTimeout = setTimeout(() => {
+			this.seekTimeout = null;
+			if (window.location.pathname !== path || !this.settings().forceQualityEnabled) return;
+			this.appliedPath = null;
+			this.run();
+		}, 1000);
 	}
 
 	private selectQuality(qualities: KickPlayerQuality[]): KickPlayerQuality | null {
