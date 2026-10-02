@@ -3,9 +3,10 @@ import type { KickPlayerQuality } from "$types/platforms/kick/kick.utils.types.t
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class ForceQualityModule extends KickModule {
+	private static readonly QUALITY_PREFERENCE_KEY = "stream_quality";
+	private static readonly LOGIN_GATED_HEIGHT = 1080;
+
 	private appliedPath: string | null = null;
-	private player: Element | null = null;
-	private seekTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	readonly config: KickModuleConfig = {
 		name: "force-quality",
@@ -24,18 +25,8 @@ export default class ForceQualityModule extends KickModule {
 	};
 
 	private run(): void {
-		const player = document.querySelector("#injected-embedded-channel-player-video");
-		if (this.player !== player) {
-			this.player?.removeEventListener("pointerup", this.onSeekbarPointerUp, true);
-			this.player = player;
-			this.player?.addEventListener("pointerup", this.onSeekbarPointerUp, true);
-			if (this.seekTimeout) clearTimeout(this.seekTimeout);
-			this.seekTimeout = null;
-			this.appliedPath = null;
-		}
-
 		const path = window.location.pathname;
-		if (this.appliedPath === path) return;
+		if (this.appliedPath === path && !this.isPreferenceCleared()) return;
 
 		const controller = this.kickUtils().getQualityController();
 		if (!controller) return;
@@ -43,26 +34,15 @@ export default class ForceQualityModule extends KickModule {
 		const quality = this.selectQuality(controller.qualities);
 		if (!quality) return;
 
+		window.sessionStorage.setItem(ForceQualityModule.QUALITY_PREFERENCE_KEY, JSON.stringify(quality.height));
 		controller.setQuality(quality, false);
 		this.appliedPath = path;
 		this.logger.debug(`Forced stream quality to ${quality.name}`);
 	}
 
-	private onSeekbarPointerUp = (event: Event): void => {
-		const target = event.target;
-		if (target instanceof Element && target.closest('[class*="group/seekbar"]')) this.restoreQuality();
-	};
-
-	private restoreQuality(): void {
-		if (this.appliedPath !== window.location.pathname || !this.settings().forceQualityEnabled) return;
-		if (this.seekTimeout) clearTimeout(this.seekTimeout);
-		const path = window.location.pathname;
-		this.seekTimeout = setTimeout(() => {
-			this.seekTimeout = null;
-			if (window.location.pathname !== path || !this.settings().forceQualityEnabled) return;
-			this.appliedPath = null;
-			this.run();
-		}, 1000);
+	// Kick restores this preference after every reload but clears heights of 1080 and above when switching live and DVR.
+	private isPreferenceCleared(): boolean {
+		return window.sessionStorage.getItem(ForceQualityModule.QUALITY_PREFERENCE_KEY) === "";
 	}
 
 	private selectQuality(qualities: KickPlayerQuality[]): KickPlayerQuality | null {
@@ -80,9 +60,9 @@ export default class ForceQualityModule extends KickModule {
 		return selectable.find((quality) => quality.height <= maxHeight) ?? selectable[selectable.length - 1];
 	}
 
-	// Kick gates the source rendition behind login and answers a forced switch with the login modal.
+	// Kick gates 1080p and above behind login and reverts a forced switch to Auto.
 	private isQualityUnlocked(quality: KickPlayerQuality): boolean {
-		if (quality.variantSource !== "source") return true;
+		if (Math.min(quality.width, quality.height) < ForceQualityModule.LOGIN_GATED_HEIGHT) return true;
 		return this.kickUtils().isViewerAuthenticated() === true;
 	}
 }
