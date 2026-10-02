@@ -7,6 +7,8 @@ import { version } from "./package.json";
 
 const isDevelopment = process.env.ENVIRONMENT === "development";
 
+const CONTENT_SCRIPT_ENTRIES = new Set(["inject", "worker.bridge"]);
+
 export default defineConfig({
 	server: {
 		port: 3360,
@@ -38,6 +40,8 @@ export default defineConfig({
 				entryFileNames: "[name].js",
 				chunkFileNames: "[name].js",
 				assetFileNames: "[name].[ext]",
+				intro: (chunk) => (CONTENT_SCRIPT_ENTRIES.has(chunk.name) ? "(() => {" : ""),
+				outro: (chunk) => (CONTENT_SCRIPT_ENTRIES.has(chunk.name) ? "})();" : ""),
 			},
 			input: {
 				index: "src/index.ts",
