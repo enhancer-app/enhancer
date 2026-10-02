@@ -29,6 +29,41 @@ For browser-visible changes, keep Enhancer enabled and test each third-party ext
 
 Disable the other third-party extensions for each test run so compatibility issues can be attributed correctly.
 
+### Multi-CDP Browser Setup
+
+If you use the Multi-CDP MCP for browser testing, follow its skill instructions and prepare the environment with the required extensions before testing. The environment and extension management tools below are specific to Multi-CDP.
+
+#### Prepare the environment
+
+1. Run `bun run pack` in the current worktree.
+2. Check `cdp_environment_list` and reuse the environment bound to the current session when possible.
+3. For a new environment, use a visible window and the configured template profile. Load the current worktree's build through `devExtensionPaths`:
+
+   ```js
+   cdp_environment_create({
+       name: "<unique name for this task>",
+       headless: false,
+       fresh: false,
+       devExtensionPaths: ["<absolute path to the current worktree's dist>"]
+   })
+   ```
+
+   `fresh: false` uses the template profile, which is expected to contain the compatibility extensions. `fresh: true` starts without that template state and requires the extensions to be installed separately.
+
+4. Call `cdp_extension_list` to confirm the installed extensions. Check for current 7TV (3.x), legacy 7TV (1.x), BetterTTV, FrankerFaceZ, and NipahTV as required by the test matrix above. Resolve IDs by name and version; do not hardcode IDs or assume an extension is present because it exists in another environment.
+5. If a required extension is missing, load an available unpacked build with `install_extension({ path: "<absolute extension directory>" })`. Additional unpacked builds can also be supplied through `devExtensionPaths` when creating the environment. Use existing, verified paths; if no build is available, report the missing setup requirement.
+
+#### Select and verify the test configuration
+
+1. Keep the current worktree's Enhancer build enabled. Disable any other Enhancer installation inherited from the template so only one build is active.
+2. Use `cdp_extension_set_enabled` to enable exactly one third-party extension and disable the others. For native testing, disable all third-party extensions. Never enable current and legacy 7TV together.
+3. Fully reload the Twitch or Kick page after every extension configuration change. Existing tabs may retain injected code from disabled extensions.
+4. After rebuilding Enhancer, call `cdp_extension_reload` for the tested build and reload the target page.
+5. Confirm runtime activation through the extension's own UI, injected scripts, or modified chat. Check browser site access and the extension's per-site settings if initialization fails. Use a working live channel with active chat to verify chat integrations, then test the relevant VOD when needed.
+6. Bring the target page to the foreground and use real pointer input for hover tests. JavaScript `dispatchEvent()` alone does not activate CSS `:hover`. If an element is missing from the accessibility snapshot, check the DOM and computed styles; `aria-hidden` or auto-hiding controls can prevent tool interaction even when the feature is visible.
+
+An installed/enabled extension alone is not evidence of runtime activation. Report PASS only after confirming activation and testing the Enhancer feature. Report FAIL only for a reproduced feature regression with a verified setup. A missing extension, rejected build path, or failed browser setup is a BLOCKED test; describe the blocker and the checks already attempted.
+
 ## Directory Structure
 
 ```
