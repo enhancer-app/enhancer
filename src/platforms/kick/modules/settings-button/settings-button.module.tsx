@@ -26,9 +26,11 @@ export default class SettingsButtonModule extends KickModule {
 	};
 
 	private async run(elements: Element[]) {
-		const menus = elements
-			.map((element) => (element.tagName === "NAV" ? element.lastElementChild : element))
-			.filter((menu): menu is Element => menu !== null && !menu.querySelector(`.${this.getId()}`));
+		const menus = elements.flatMap((element) => {
+			const menu = element.tagName === "NAV" ? element.lastElementChild : element;
+
+			return menu !== null && !menu.querySelector(`.${this.getId()}`) ? [menu] : [];
+		});
 
 		if (menus.length < 1) return;
 

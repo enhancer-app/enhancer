@@ -78,9 +78,7 @@ export default class ChatAttachmentsModule extends TwitchModule {
 	}
 
 	private async resolveChatAttachmentHandler(baseData: BaseChatAttachmentData) {
-		const chatAttachmentHandler = this.chatAttachmentHandlers.find((chatAttachmentHandler) =>
-			chatAttachmentHandler.validate(baseData),
-		);
+		const chatAttachmentHandler = this.chatAttachmentHandlers.find((handler) => handler.validate(baseData));
 
 		if (!chatAttachmentHandler) return;
 		baseData.url = chatAttachmentHandler.parseUrl(baseData.url);
@@ -94,7 +92,7 @@ export default class ChatAttachmentsModule extends TwitchModule {
 
 		if (!messageText) return;
 		const args = messageText.split(" ");
-		const links = [...message.element.querySelectorAll("a")] as Element[];
+		const links = [...message.element.querySelectorAll("a")];
 		const firstWord = args.at(0);
 		const firstElement = links.at(0);
 		const lastWord = args.at(-1);
@@ -174,7 +172,7 @@ export default class ChatAttachmentsModule extends TwitchModule {
 			return {
 				messageType: ChatAttachmentMessageType.FIRST,
 				url: new URL(word),
-			} as BaseChatAttachmentData;
+			};
 		}
 
 		return undefined;

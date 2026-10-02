@@ -5,7 +5,7 @@ import TwitchModule from "../../twitch.module.ts";
 
 export default class ChatMessageMenuModule extends TwitchModule {
 	private useAddActionInsteadOfSet = false;
-	private readonly listenerControllers = new WeakMap<HTMLElement, AbortController>();
+	private readonly listenerControllers = new WeakMap<Element, AbortController>();
 
 	readonly config: TwitchModuleConfig = {
 		name: "chat-chat-message-menu",
@@ -36,15 +36,18 @@ export default class ChatMessageMenuModule extends TwitchModule {
 
 	private async handleMessage({ message, element: _element }: TwitchChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
-		const element = _element as HTMLElement;
+		const element = _element;
 		this.listenerControllers.get(element)?.abort();
 		const controller = new AbortController();
 		this.listenerControllers.set(element, controller);
 		element.addEventListener(
 			"contextmenu",
 			async (event) => {
+				// SAFETY: browser contextmenu events inherit MouseEvent, including PointerEvent.
+				const mouseEvent = event as MouseEvent;
+
 				if (window.getSelection()?.toString()) return;
-				const tag = (event.target as HTMLElement | null)?.tagName.toLowerCase();
+				const tag = event.target instanceof Element ? event.target.tagName.toLowerCase() : undefined;
 
 				if (ChatMessageMenuModule.BLOCKED_TAGS.includes(tag || "")) return;
 				event.preventDefault();
@@ -53,8 +56,8 @@ export default class ChatMessageMenuModule extends TwitchModule {
 				if (options.length < 1) return;
 				this.emitter.emit("twitch:messageMenu", {
 					options,
-					x: event.x,
-					y: event.y,
+					x: mouseEvent.x,
+					y: mouseEvent.y,
 				});
 			},
 			{ signal: controller.signal },

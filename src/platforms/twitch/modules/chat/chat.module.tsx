@@ -1,9 +1,26 @@
 import QueueFactory from "$shared/queue/queue-factory.ts";
-import type { ChatType, TwitchChatMessage } from "$types/platforms/twitch/twitch.events.types.ts";
-import type { ChatControllerComponent } from "$types/platforms/twitch/twitch.utils.types.ts";
+import { isObject, isString } from "$shared/utils/type-guards.ts";
+import type {
+	ChatType,
+	TwitchChatMessage,
+	WrappedTwitchChatMessage,
+} from "$types/platforms/twitch/twitch.events.types.ts";
+import type { ChatControllerComponent, ChatMessageHandler } from "$types/platforms/twitch/twitch.utils.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import type { QueueValue } from "$types/shared/queue.types.ts";
 import TwitchModule from "../../twitch.module.ts";
+
+function isMessageHandler(value: unknown): value is ChatMessageHandler {
+	return typeof value === "function";
+}
+
+function isWrappedChatMessage(
+	message: TwitchChatMessage | WrappedTwitchChatMessage,
+): message is WrappedTwitchChatMessage {
+	const wrapped = message.message;
+
+	return isObject(wrapped) && "id" in wrapped && "user" in wrapped;
+}
 
 export default class ChatModule extends TwitchModule {
 	static readonly TWITCHTV_CHAT_SELECTOR = ".chat-scrollable-area__message-container";
@@ -202,7 +219,7 @@ export default class ChatModule extends TwitchModule {
 			const messageHandlerGetter = function (this: ChatControllerComponent["props"]["messageHandlerAPI"]) {
 				const originalHandler = originalGetter.call(this);
 
-				return typeof originalHandler === "function" ? wrapHandler(originalHandler) : originalHandler;
+				return isMessageHandler(originalHandler) ? wrapHandler(originalHandler) : originalHandler;
 			};
 
 			Object.defineProperty(messageHandlerApi, "handleMessage", {
@@ -218,7 +235,7 @@ export default class ChatModule extends TwitchModule {
 
 		const originalHandler = messageHandlerApi.handleMessage;
 
-		if (typeof originalHandler !== "function") return;
+		if (!isMessageHandler(originalHandler)) return;
 		const messageHandler = wrapHandler(originalHandler);
 		Object.defineProperty(messageHandlerApi, "handleMessage", {
 			configurable: true,
@@ -231,13 +248,9 @@ export default class ChatModule extends TwitchModule {
 		this.messageHandlerGetter = undefined;
 	}
 
-	private bufferSevenTvMessage(rawMessage: TwitchChatMessage) {
-		const wrappedMessage = (rawMessage as any).message;
-
-		const isWrappedMessage =
-			wrappedMessage && typeof wrappedMessage === "object" && "id" in wrappedMessage && "user" in wrappedMessage;
-
-		const message = isWrappedMessage ? (wrappedMessage as TwitchChatMessage) : rawMessage;
+	private bufferSevenTvMessage(rawMessage: TwitchChatMessage | WrappedTwitchChatMessage) {
+		const isWrappedMessage = isWrappedChatMessage(rawMessage);
+		const message = isWrappedMessage ? rawMessage.message : rawMessage;
 		const createdAt = Date.now();
 
 		if (ChatModule.VALID_MESSAGE_TYPES_IDS.includes(message.type) || isWrappedMessage) {
@@ -264,7 +277,7 @@ export default class ChatModule extends TwitchModule {
 	private isNonceLinkMessage(message: TwitchChatMessage) {
 		if (!message.nonce || !message.id) return false;
 
-		return !message.user && typeof message.messageBody !== "string";
+		return !message.user && !isString(message.messageBody);
 	}
 
 	private processSevenTvMessage(id: string) {

@@ -70,9 +70,9 @@ export default class PinStreamerModule extends TwitchModule {
 	}
 
 	private hideSortDescription(elements: Element[]): void {
-		const firstElement = elements[0] as HTMLElement | undefined;
+		const firstElement = elements[0];
 
-		if (firstElement) firstElement.style.display = "none";
+		if (firstElement instanceof HTMLElement) firstElement.style.display = "none";
 	}
 
 	private createObserver(element: Element) {
@@ -82,7 +82,7 @@ export default class PinStreamerModule extends TwitchModule {
 				if (mutation.type === "childList" && mutation.addedNodes) {
 					for (const node of mutation.addedNodes) {
 						try {
-							this.createPin(node as Element);
+							if (node instanceof Element) this.createPin(node);
 						} catch (error) {
 							this.logger.error(`Failed to create pin for node: ${error}`);
 						}
@@ -262,8 +262,8 @@ export default class PinStreamerModule extends TwitchModule {
 	}
 
 	private prunePinButtons(channelId?: string): PinStreamerButtonState[] {
-		const entries = channelId
-			? ([[channelId, this.pinButtonsByChannelId.get(channelId) ?? []]] as [string, PinStreamerButtonState[]][])
+		const entries: Iterable<[string, PinStreamerButtonState[]]> = channelId
+			? [[channelId, this.pinButtonsByChannelId.get(channelId) ?? []]]
 			: this.pinButtonsByChannelId.entries();
 
 		let activeStates: PinStreamerButtonState[] = [];

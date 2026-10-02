@@ -33,6 +33,10 @@ export type TwitchChatMessage = {
 	createdAt: number;
 };
 
+export type WrappedTwitchChatMessage = {
+	message: TwitchChatMessage;
+};
+
 export type TwitchChatMessageUser = {
 	userID: string;
 	userDisplayName: string;

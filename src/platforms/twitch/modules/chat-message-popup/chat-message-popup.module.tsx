@@ -1,4 +1,5 @@
 import TwitchModule from "$twitch/twitch.module.ts";
+import { isObject, isString } from "$shared/utils/type-guards.ts";
 import type { EnhancerMessageEvent } from "$types/apis/enhancer.apis.ts";
 import type { ChatMessagePopupEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
@@ -30,12 +31,7 @@ export default class ChatMessagePopupModule extends TwitchModule {
 
 	private renderEnhancerMessage(message: EnhancerMessageEvent) {
 		const text =
-			typeof message.data === "object" &&
-			message.data !== null &&
-			"text" in message.data &&
-			typeof message.data.text === "string"
-				? message.data.text
-				: null;
+			isObject(message.data) && "text" in message.data && isString(message.data.text) ? message.data.text : null;
 
 		if (!text?.trim()) return;
 		this.render({ title: "Enhancer", content: text, autoclose: text.length > 120 ? 30 : 10 });
@@ -51,9 +47,9 @@ export default class ChatMessagePopupModule extends TwitchModule {
 		}
 
 		if (contentElement) {
-			const wrapper = contentElement.querySelector(`.${this.getId()}`);
+			const previousWrapper = contentElement.querySelector(`.${this.getId()}`);
 
-			if (wrapper) wrapper.remove();
+			if (previousWrapper) previousWrapper.remove();
 
 			const wrappers = this.commonUtils().createEmptyElements(this.getId(), [contentElement], "span");
 			wrappers.forEach((wrapper) => {

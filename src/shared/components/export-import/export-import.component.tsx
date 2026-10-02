@@ -127,7 +127,7 @@ export interface ExportImportMetadata {
 
 export interface ExportImportData {
 	meta: ExportImportMetadata;
-	settings: Record<string, unknown>;
+	settings: PlatformSettings;
 	watchtime: WatchtimeRecord[];
 }
 
@@ -155,7 +155,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 		setStatus({ message, type });
 	};
 
-	const fetchAllWatchtime = async (platform: PlatformType): Promise<WatchtimeRecord[]> => {
+	const fetchAllWatchtime = async (watchtimePlatform: PlatformType): Promise<WatchtimeRecord[]> => {
 		const allData: WatchtimeRecord[] = [];
 		let currentPageNum = 1;
 		let hasMore = true;
@@ -164,7 +164,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 		try {
 			while (hasMore) {
 				const response = await workerService.send("getPaginatedWatchtime", {
-					platform,
+					platform: watchtimePlatform,
 					page: currentPageNum,
 					pageSize,
 				});
@@ -194,7 +194,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			const settings = await workerService.send("getSettings", { platform });
 			const watchtime = await fetchAllWatchtime(platform);
 
-			const exportData: ExportImportData = {
+			const backup = {
 				meta: {
 					version: window.enhancer.version,
 					platform,
@@ -204,7 +204,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 				watchtime,
 			};
 
-			const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+			const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement("a");
 			a.href = url;
@@ -269,7 +269,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			// Import settings
 			if (data.settings) {
 				try {
-					await workerService.send("updateSettings", { platform, settings: data.settings as PlatformSettings });
+					await workerService.send("updateSettings", { platform, settings: data.settings });
 					importedSettings = Object.keys(data.settings).length;
 					emitter.emit("extension:settings-refresh");
 				} catch (error) {
@@ -339,7 +339,9 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 	};
 
 	const handleFileSelect = (event: Event) => {
-		const input = event.target as HTMLInputElement;
+		const input = event.target;
+
+		if (!(input instanceof HTMLInputElement)) return;
 		const file = input.files?.[0];
 
 		if (file) {

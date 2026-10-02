@@ -32,7 +32,7 @@ export default class HideStoriesModule extends TwitchModule {
 
 	private hideElements(elements: Element[]) {
 		for (const element of elements) {
-			this.hideElement(element as HTMLElement);
+			if (element instanceof HTMLElement) this.hideElement(element);
 		}
 	}
 

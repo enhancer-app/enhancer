@@ -91,7 +91,9 @@ export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 	}
 
 	async handle(data: ChatAttachmentData) {
-		const element = data.messageElement as HTMLLinkElement;
+		const element = data.messageElement;
+
+		if (!(element instanceof HTMLAnchorElement)) return;
 		const image = new Image();
 		const imageSource = this.parseUrl(data.url).href;
 		image.classList.add("enhancer-chat-image");

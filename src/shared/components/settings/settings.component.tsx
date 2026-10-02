@@ -1,4 +1,6 @@
 import { Logger } from "$shared/logger/logger.ts";
+import { isObject, isString, isNumber } from "$shared/utils/type-guards.ts";
+import type { SettingsArrayItem, SettingsControlValue } from "$types/shared/components/settings-control-value.types.ts";
 import type {
 	SettingCategory,
 	SettingDefinition,
@@ -937,34 +939,36 @@ const PlusIcon = icon(
 	14,
 );
 
-const CATEGORY_ICONS: Record<string, JSX.Element> = {
-	general: icon(
-		<>
-			<circle cx="12" cy="12" r="3" />
-			<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-		</>,
-	),
-	chat: icon(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />),
-	channel: icon(
-		<>
-			<rect x="2" y="7" width="20" height="15" rx="2" />
-			<path d="M17 2l-5 5-5-5" />
-		</>,
-	),
-	latency: icon(
-		<>
-			<circle cx="12" cy="12" r="9" />
-			<path d="M12 7v5l3 3" />
-		</>,
-	),
-	about: icon(
-		<>
-			<circle cx="12" cy="12" r="9" />
-			<path d="M12 16v-5" />
-			<path d="M12 8h.01" />
-		</>,
-	),
-};
+const CATEGORY_ICONS = new Map<string, JSX.Element>(
+	Object.entries({
+		general: icon(
+			<>
+				<circle cx="12" cy="12" r="3" />
+				<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+			</>,
+		),
+		chat: icon(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />),
+		channel: icon(
+			<>
+				<rect x="2" y="7" width="20" height="15" rx="2" />
+				<path d="M17 2l-5 5-5-5" />
+			</>,
+		),
+		latency: icon(
+			<>
+				<circle cx="12" cy="12" r="9" />
+				<path d="M12 7v5l3 3" />
+			</>,
+		),
+		about: icon(
+			<>
+				<circle cx="12" cy="12" r="9" />
+				<path d="M12 16v-5" />
+				<path d="M12 8h.01" />
+			</>,
+		),
+	}),
+);
 
 const FALLBACK_CATEGORY_ICON = icon(
 	<>
@@ -978,6 +982,14 @@ function normalize(text: string): string {
 		.toLowerCase()
 		.normalize("NFD")
 		.replace(/\p{Diacritic}/gu, "");
+}
+
+function getArrayField(item: SettingsArrayItem, field: string) {
+	return isObject(item) ? item[field] || "" : String(item);
+}
+
+function isSettingKey<T extends object>(settings: T, key: PropertyKey): key is keyof T {
+	return key in settings;
 }
 
 function matchesQuery(text: string, query: string): boolean {
@@ -1011,7 +1023,7 @@ function groupSettings<T>(settings: SettingDefinition<T>[]): RenderGroup<T>[] {
 	return groups;
 }
 
-const Settings = <T,>({
+const Settings = <T extends object>({
 	logoSrc = "Logo.svg",
 	platform,
 	isOpen = true,
@@ -1025,13 +1037,13 @@ const Settings = <T,>({
 	const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
 	const [pendingToggle, setPendingToggle] = useState<{
-		key: keyof T;
+		key: keyof T | string;
 		value: boolean;
 		confirmationMessage?: string;
 	} | null>(null);
 
 	const [pendingArrayRemove, setPendingArrayRemove] = useState<{
-		key: keyof T;
+		key: keyof T | string;
 		index: number;
 		itemTitle?: string;
 		confirmationMessage?: string;
@@ -1126,20 +1138,33 @@ const Settings = <T,>({
 		return () => document.removeEventListener("keydown", handleKeyDown, true);
 	}, [isOpen, pendingToggle, pendingArrayRemove, searchQuery, onClose]);
 
-	const updateSetting = (key: keyof T, value: unknown) => {
+	const updateSetting = (key: keyof T | string, value: SettingsControlValue) => {
 		const newSettings = { ...settings, [key]: value };
-		onSettingsChange(newSettings, key);
+		// SAFETY: editable setting ids name settings properties; text-only ids never call updateSetting.
+		onSettingsChange(newSettings, key as keyof T);
 	};
 
-	const updateArraySetting = (key: keyof T, index: number, value: unknown, action: "update" | "add" | "remove") => {
-		const currentArray = (settings[key] as unknown[]) || [];
-		let newArray: unknown[];
+	const getSetting = (key: keyof T | string) => {
+		return isSettingKey(settings, key) ? settings[key] : undefined;
+	};
+
+	const updateArraySetting = (
+		key: keyof T | string,
+		index: number,
+		value: SettingsArrayItem | null,
+		action: "update" | "add" | "remove",
+	) => {
+		const storedValue = getSetting(key);
+		const currentArray = Array.isArray(storedValue) ? storedValue : [];
+		let newArray: SettingsArrayItem[];
 
 		switch (action) {
 			case "update":
+				if (value === null) return;
 				newArray = currentArray.map((item, i) => (i === index ? value : item));
 				break;
 			case "add":
+				if (value === null) return;
 				newArray = [...currentArray, value];
 				break;
 			case "remove":
@@ -1153,7 +1178,9 @@ const Settings = <T,>({
 	};
 
 	const handleFileChange = (event: Event, setting: SettingDefinition<T>) => {
-		const target = event.target as HTMLInputElement;
+		const target = event.target;
+
+		if (!(target instanceof HTMLInputElement)) return;
 		const file = target.files?.[0];
 
 		if (!file) return;
@@ -1181,8 +1208,8 @@ const Settings = <T,>({
 		}
 
 		const reader = new FileReader();
-		reader.onload = (e) => {
-			updateSetting(setting.id as keyof T, e.target?.result as string);
+		reader.onload = () => {
+			if (isString(reader.result)) updateSetting(setting.id, reader.result);
 		};
 
 		reader.onerror = () => {
@@ -1193,7 +1220,7 @@ const Settings = <T,>({
 		target.value = "";
 	};
 
-	const clearFile = (settingId: keyof T) => {
+	const clearFile = (settingId: keyof T | string) => {
 		updateSetting(settingId, "");
 		setFileUploadError(null);
 	};
@@ -1203,7 +1230,7 @@ const Settings = <T,>({
 
 		if (setting.type === "toggle" && setting.confirmOnEnable && checked) {
 			setPendingToggle({
-				key: setting.id as keyof T,
+				key: setting.id,
 				value: checked,
 				confirmationMessage: setting.confirmationMessage ?? "Are you sure you want to enable this setting?",
 			});
@@ -1211,12 +1238,12 @@ const Settings = <T,>({
 			return;
 		}
 
-		const wasEnabled = settings[setting.id as keyof T] === true;
-		updateSetting(setting.id as keyof T, checked);
+		const wasEnabled = getSetting(setting.id) === true;
+		updateSetting(setting.id, checked);
 
 		if (setting.requiresRefreshToDisable && wasEnabled && !checked) {
 			setRefreshPending((current) =>
-				current.includes(setting.id as string) ? current : [...current, setting.id as string],
+				current.includes(String(setting.id)) ? current : [...current, String(setting.id)],
 			);
 		} else if (checked) {
 			setRefreshPending((current) => current.filter((id) => id !== setting.id));
@@ -1229,15 +1256,12 @@ const Settings = <T,>({
 		setPendingToggle(null);
 	};
 
-	const handleArrayRemove = (setting: SettingDefinition<T>, index: number, item: unknown) => {
+	const handleArrayRemove = (setting: SettingDefinition<T>, index: number, item: SettingsArrayItem) => {
 		if (setting.type === "array" && setting.confirmOnRemove) {
-			const itemTitle =
-				typeof item === "object" && item !== null && "title" in item && typeof item.title === "string"
-					? item.title
-					: "";
+			const itemTitle = isObject(item) && "title" in item && isString(item.title) ? item.title : "";
 
 			setPendingArrayRemove({
-				key: setting.id as keyof T,
+				key: setting.id,
 				index,
 				itemTitle,
 				confirmationMessage: setting.confirmationMessage,
@@ -1246,7 +1270,7 @@ const Settings = <T,>({
 			return;
 		}
 
-		updateArraySetting(setting.id as keyof T, index, null, "remove");
+		updateArraySetting(setting.id, index, null, "remove");
 	};
 
 	const confirmArrayRemove = () => {
@@ -1259,7 +1283,7 @@ const Settings = <T,>({
 		if (!setting.dependsOn) return false;
 		const expected = setting.dependsOn.value ?? true;
 
-		return settings[setting.dependsOn.key as keyof T] !== expected;
+		return getSetting(setting.dependsOn.key) !== expected;
 	};
 
 	const selectCategory = (categoryId: string) => {
@@ -1268,19 +1292,19 @@ const Settings = <T,>({
 	};
 
 	const renderSettingControl = (setting: SettingDefinition<T>) => {
-		const value = settings[setting.id as keyof T];
+		const value = getSetting(setting.id);
 
 		switch (setting.type) {
 			case "toggle": {
 				return (
-					<ToggleTrack checked={value as boolean}>
+					<ToggleTrack checked={Boolean(value)}>
 						<ToggleInput
 							type="checkbox"
-							id={setting.id as string}
-							checked={value as boolean}
-							onChange={(e) => handleToggleChange(e, setting, (e.target as HTMLInputElement).checked)}
+							id={String(setting.id)}
+							checked={Boolean(value)}
+							onChange={(e) => handleToggleChange(e, setting, e.currentTarget.checked)}
 						/>
-						<ToggleCircle checked={value as boolean} />
+						<ToggleCircle checked={Boolean(value)} />
 					</ToggleTrack>
 				);
 			}
@@ -1288,9 +1312,9 @@ const Settings = <T,>({
 			case "input": {
 				return (
 					<TextInput
-						value={(value as string) || ""}
+						value={isString(value) ? value : ""}
 						placeholder={setting.placeholder}
-						onChange={(e) => updateSetting(setting.id as keyof T, (e.target as HTMLInputElement).value)}
+						onChange={(e) => updateSetting(setting.id, e.currentTarget.value)}
 					/>
 				);
 			}
@@ -1301,14 +1325,14 @@ const Settings = <T,>({
 						<SliderField>
 							<Slider
 								type="range"
-								value={(value as number) ?? 0}
+								value={isNumber(value) ? value : 0}
 								min={setting.min ?? 0}
 								max={setting.max ?? 100}
 								step={setting.step ?? 1}
-								onInput={(e) => updateSetting(setting.id as keyof T, Number((e.target as HTMLInputElement).value))}
+								onInput={(e) => updateSetting(setting.id, Number(e.currentTarget.value))}
 							/>
 							<SliderValue>
-								{(value as number) ?? 0}
+								{isNumber(value) ? value : 0}
 								{setting.unit ?? ""}
 							</SliderValue>
 						</SliderField>
@@ -1319,11 +1343,11 @@ const Settings = <T,>({
 					<NumberField>
 						<NumberInput
 							type="number"
-							value={(value as number) ?? 0}
+							value={isNumber(value) ? value : 0}
 							min={setting.min}
 							max={setting.max}
 							step={setting.step}
-							onChange={(e) => updateSetting(setting.id as keyof T, Number((e.target as HTMLInputElement).value))}
+							onChange={(e) => updateSetting(setting.id, Number(e.currentTarget.value))}
 						/>
 						{setting.unit ? <Unit>{setting.unit}</Unit> : null}
 					</NumberField>
@@ -1333,8 +1357,8 @@ const Settings = <T,>({
 			case "select": {
 				return (
 					<Select
-						value={value as string}
-						onChange={(e) => updateSetting(setting.id as keyof T, (e.target as HTMLSelectElement).value)}
+						value={isString(value) || isNumber(value) ? value : ""}
+						onChange={(e) => updateSetting(setting.id, e.currentTarget.value)}
 					>
 						{setting.options?.map((option) => (
 							<option key={option.value} value={option.value}>
@@ -1352,12 +1376,12 @@ const Settings = <T,>({
 							<div key={option.value}>
 								<RadioInput
 									type="radio"
-									name={setting.id as string}
-									id={`${setting.id as string}-${option.value}`}
+									name={String(setting.id)}
+									id={`${String(setting.id)}-${option.value}`}
 									checked={value === option.value}
-									onChange={() => updateSetting(setting.id as keyof T, option.value)}
+									onChange={() => updateSetting(setting.id, option.value)}
 								/>
-								<RadioLabel htmlFor={`${setting.id as string}-${option.value}`} checked={value === option.value}>
+								<RadioLabel htmlFor={`${String(setting.id)}-${option.value}`} checked={value === option.value}>
 									{option.label}
 								</RadioLabel>
 							</div>
@@ -1367,33 +1391,28 @@ const Settings = <T,>({
 			}
 
 			case "array": {
-				const arrayValue = (value as unknown[]) || [];
+				const arrayValue = Array.isArray(value) ? value : [];
 				const fields = setting.arrayItemFields || [{ name: "page", placeholder: "Enter value..." }];
 
 				return (
 					<ArrayContainer>
 						{arrayValue.length === 0 ? <ArrayEmpty>No items yet.</ArrayEmpty> : null}
 						{arrayValue.map((item, index) => (
-							<ArrayItem key={`array-item-${setting.id as string}-${index}`}>
+							<ArrayItem key={`array-item-${String(setting.id)}-${index}`}>
 								{fields.map((field: { name: string; placeholder: string }) => (
 									<ArrayInput
-										key={`${setting.id as string}-${index}-${field.name}`}
-										value={
-											typeof item === "object" && item !== null
-												? (item as Record<string, string>)[field.name] || ""
-												: String(item)
-										}
+										key={`${String(setting.id)}-${index}-${field.name}`}
+										value={getArrayField(item, field.name)}
 										placeholder={field.placeholder}
 										onChange={(e) => {
-											const newValue =
-												typeof item === "object" && item !== null
-													? {
-															...(item as Record<string, unknown>),
-															[field.name]: (e.target as HTMLInputElement).value,
-														}
-													: { [field.name]: (e.target as HTMLInputElement).value };
+											const newValue = isObject(item)
+												? {
+														...item,
+														[field.name]: e.currentTarget.value,
+													}
+												: { [field.name]: e.currentTarget.value };
 
-											updateArraySetting(setting.id as keyof T, index, newValue, "update");
+											updateArraySetting(setting.id, index, newValue, "update");
 										}}
 									/>
 								))}
@@ -1417,7 +1436,7 @@ const Settings = <T,>({
 									{},
 								);
 
-								updateArraySetting(setting.id as keyof T, arrayValue.length, newValue, "add");
+								updateArraySetting(setting.id, arrayValue.length, newValue, "add");
 							}}
 						>
 							{PlusIcon}
@@ -1440,7 +1459,7 @@ const Settings = <T,>({
 			}
 
 			case "file": {
-				const fileValue = value as string;
+				const fileValue = isString(value) ? value : "";
 				const hasFile = fileValue && fileValue.length > 0;
 
 				return (
@@ -1454,12 +1473,12 @@ const Settings = <T,>({
 										)}
 										<FileName>File uploaded</FileName>
 									</FileStatus>
-									<RemoveFileButton onClick={() => clearFile(setting.id as keyof T)} title="Remove file">
+									<RemoveFileButton onClick={() => clearFile(setting.id)} title="Remove file">
 										{CloseIcon(14)}
 									</RemoveFileButton>
 								</>
 							) : (
-								<UploadTriggerLabel htmlFor={`file-${setting.id as string}`}>
+								<UploadTriggerLabel htmlFor={`file-${String(setting.id)}`}>
 									{icon(
 										<>
 											<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -1469,7 +1488,7 @@ const Settings = <T,>({
 									)}
 									Upload file
 									<HiddenFileInput
-										id={`file-${setting.id as string}`}
+										id={`file-${String(setting.id)}`}
 										type="file"
 										accept={setting.accept || "audio/*"}
 										onChange={(e) => handleFileChange(e, setting)}
@@ -1513,7 +1532,7 @@ const Settings = <T,>({
 							type="text"
 							placeholder="Search settings..."
 							value={searchQuery}
-							onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
+							onInput={(e) => setSearchQuery(e.currentTarget.value)}
 						/>
 						{searchQuery && (
 							<IconButton onClick={() => setSearchQuery("")} title="Clear search" aria-label="Clear search">
@@ -1537,7 +1556,7 @@ const Settings = <T,>({
 									dimmed={isSearching && count === 0}
 									onClick={() => selectCategory(category.id)}
 								>
-									{CATEGORY_ICONS[category.id] ?? FALLBACK_CATEGORY_ICON}
+									{CATEGORY_ICONS.get(category.id) ?? FALLBACK_CATEGORY_ICON}
 									<NavLabel>{category.title}</NavLabel>
 									{isSearching && count > 0 ? <NavCount>{count}</NavCount> : null}
 								</NavItem>
@@ -1566,7 +1585,7 @@ const Settings = <T,>({
 									<SectionTitle>{section.category.title}</SectionTitle>
 									{groupSettings(section.settings).map((group, groupIndex) =>
 										group.kind === "panel" ? (
-											<Panel key={`panel-${group.item.id as string}`}>{renderSettingControl(group.item)}</Panel>
+											<Panel key={`panel-${String(group.item.id)}`}>{renderSettingControl(group.item)}</Panel>
 										) : (
 											<Card key={`card-${section.category.id}-${groupIndex}`}>
 												{group.items.map((setting) => {
@@ -1574,7 +1593,7 @@ const Settings = <T,>({
 
 													return (
 														<Row
-															key={`setting-${setting.id as string}`}
+															key={`setting-${String(setting.id)}`}
 															disabled={disabled}
 															nested={Boolean(setting.dependsOn)}
 														>

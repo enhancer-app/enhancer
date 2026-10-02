@@ -1,13 +1,15 @@
 import { LatencyComponent } from "$shared/components/latency/latency.component.tsx";
+import { isNumber } from "$shared/utils/type-guards.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
+import { signal } from "@preact/signals";
 import { render } from "preact";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class StreamLatencyModule extends TwitchModule {
-	private latencyCounter = {} as Signal<number>;
-	private isLiveState = {} as Signal<boolean>;
-	private playbackRate = {} as Signal<number>;
+	private latencyCounter = signal(-1);
+	private isLiveState = signal(true);
+	private playbackRate = signal(1);
+	private playbackRateInitialized = false;
 	private updateInterval: NodeJS.Timeout | undefined;
 
 	readonly config: TwitchModuleConfig = {
@@ -36,7 +38,6 @@ export default class StreamLatencyModule extends TwitchModule {
 			return wrapper;
 		});
 
-		this.createLatencyCounter();
 		this.updateLatency();
 
 		this.createPlaybackRateSignal();
@@ -46,7 +47,7 @@ export default class StreamLatencyModule extends TwitchModule {
 		this.updateInterval = setInterval(async () => this.updateLatency(), 1000);
 
 		wrappers.forEach((element: HTMLElement) => {
-			const header = document.querySelector("#chat-room-header-label") as HTMLElement | null;
+			const header = document.querySelector<HTMLElement>("#chat-room-header-label");
 
 			if (header) header.style.display = "none";
 			render(
@@ -76,7 +77,7 @@ export default class StreamLatencyModule extends TwitchModule {
 
 		if (isLive) {
 			const latency = this.getLatency();
-			this.latencyCounter.value = typeof latency === "number" && latency > 0 ? latency : -1;
+			this.latencyCounter.value = isNumber(latency) && latency > 0 ? latency : -1;
 		}
 	}
 
@@ -100,7 +101,7 @@ export default class StreamLatencyModule extends TwitchModule {
 
 		const latency = this.getLatency();
 
-		if (typeof latency !== "number" || latency <= 0) return;
+		if (!isNumber(latency) || latency <= 0) return;
 		mediaPlayer.seekTo(mediaPlayer.getPosition() + latency);
 	}
 
@@ -117,7 +118,8 @@ export default class StreamLatencyModule extends TwitchModule {
 	}
 
 	private createPlaybackRateSignal() {
-		if ("value" in this.playbackRate) return;
+		if (this.playbackRateInitialized) return;
+		this.playbackRateInitialized = true;
 		const video = this.twitchUtils().getMediaPlayerInstance()?.core.renderSurface.video.element();
 
 		if (!video) {
@@ -127,11 +129,5 @@ export default class StreamLatencyModule extends TwitchModule {
 		}
 
 		this.playbackRate = signal(video.playbackRate);
-	}
-
-	private createLatencyCounter() {
-		if ("value" in this.latencyCounter) return;
-		this.latencyCounter = signal(-1);
-		this.isLiveState = signal(true);
 	}
 }

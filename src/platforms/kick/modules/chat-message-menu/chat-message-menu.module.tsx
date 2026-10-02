@@ -4,7 +4,7 @@ import type { KickChatMessageData, KickChatMessageEvent } from "$types/platforms
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class ChatMessageMenuModule extends KickModule {
-	private readonly listenerControllers = new WeakMap<HTMLElement, AbortController>();
+	private readonly listenerControllers = new WeakMap<Element, AbortController>();
 
 	readonly config: KickModuleConfig = {
 		name: "chat-chat-message-menu",
@@ -21,18 +21,20 @@ export default class ChatMessageMenuModule extends KickModule {
 
 	private async handleMessage({ message, element }: KickChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
-		const messageElement = element as HTMLElement;
+		const messageElement = element;
 		this.listenerControllers.get(messageElement)?.abort();
 		const controller = new AbortController();
 		this.listenerControllers.set(messageElement, controller);
 		messageElement.addEventListener(
 			"contextmenu",
 			(e) => {
+				// SAFETY: browser contextmenu events inherit MouseEvent, including PointerEvent.
+				const mouseEvent = e as MouseEvent;
 				e.preventDefault();
 				this.emitter.emit("kick:messageMenu", {
 					options: this.getOptions(message),
-					x: e.x,
-					y: e.y,
+					x: mouseEvent.x,
+					y: mouseEvent.y,
 				});
 			},
 			{ signal: controller.signal },

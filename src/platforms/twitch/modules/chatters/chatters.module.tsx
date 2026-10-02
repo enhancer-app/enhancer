@@ -98,7 +98,7 @@ export default class ChattersModule extends TwitchModule {
 					this.twitchUtils().getCurrentChannelByUrl(),
 					this.twitchUtils().getCurrentChannelFromDirectTwitchPlayer(),
 					...(channelList ?? []),
-				].filter(Boolean) as string[],
+				].filter((login): login is string => !!login),
 			),
 		];
 	}
@@ -240,9 +240,9 @@ export default class ChattersModule extends TwitchModule {
 	private getLogins(): string[] | undefined {
 		const streamInfo = this.twitchUtils().getStreamInfo();
 
-		const sharedChatLogins = [...(this.twitchUtils().getChatInfo()?.props.sharedChatDataByChannelID.values() ?? [])]
-			.filter((channel) => channel.status === "ACTIVE")
-			.map((channel) => channel.login);
+		const sharedChatLogins = [
+			...(this.twitchUtils().getChatInfo()?.props.sharedChatDataByChannelID.values() ?? []),
+		].flatMap((channel) => (channel.status === "ACTIVE" ? [channel.login] : []));
 
 		const streamLogins = streamInfo
 			? [

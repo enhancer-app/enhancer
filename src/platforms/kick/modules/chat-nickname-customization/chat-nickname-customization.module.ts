@@ -57,9 +57,11 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 	}
 
 	private applyGlowEffect(usernameElement: HTMLElement, messageData: KickChatMessageData) {
+		const nestedElement = usernameElement.firstChild?.firstChild;
+
 		const color =
 			usernameElement.style.color ||
-			(usernameElement.firstChild?.firstChild && (usernameElement.firstChild.firstChild as HTMLElement).style.color) ||
+			(nestedElement instanceof HTMLElement && nestedElement.style.color) ||
 			messageData.sender.identity.color ||
 			"white";
 

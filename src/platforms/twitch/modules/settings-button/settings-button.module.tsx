@@ -28,10 +28,11 @@ export default class SettingsButtonModule extends TwitchModule {
 	};
 
 	private async run(elements: Element[], _key: string) {
-		const properElements = elements
-			.filter((element) => element.children.length > 0)
-			.map((element) => [...element.children].at(-1))
-			.filter((element) => element !== undefined) as Element[];
+		const properElements = elements.flatMap((element) => {
+			const lastChild = element.lastElementChild;
+
+			return lastChild ? [lastChild] : [];
+		});
 
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), properElements, "span");
 		const logo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo-gray.svg");

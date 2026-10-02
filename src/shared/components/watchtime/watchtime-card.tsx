@@ -229,7 +229,11 @@ export const WatchTimeUserCard = ({
 				disabled={isLoading.value}
 				aria-label="Watchtime period"
 				onMouseDown={(event) => event.stopPropagation()}
-				onChange={(event) => onPeriodChange((event.target as HTMLSelectElement).value as XayoWatchtimePeriod)}
+				onChange={(event) => {
+					const selected = PERIOD_OPTIONS.find((option) => option.value === event.currentTarget.value);
+
+					if (selected) onPeriodChange(selected.value);
+				}}
 			>
 				{PERIOD_OPTIONS.map((option) => (
 					<option key={option.value} value={option.value}>

@@ -5,12 +5,12 @@ import {
 } from "$shared/components/channel-section/channel-section.component.tsx";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
+import { signal } from "@preact/signals";
 import { render } from "preact";
 
 export default class ChannelSectionModule extends KickModule {
-	private quickAccessLinks = {} as Signal<QuickAccessLink[]>;
-	private watchtimeCounter = {} as Signal<number>;
+	private quickAccessLinks = signal<QuickAccessLink[]>([]);
+	private watchtimeCounter = signal(0);
 	private currentUsername = signal("");
 	private readonly settingsActionIcon = "⚙";
 	private watchtimeInterval: NodeJS.Timeout | undefined;
@@ -45,7 +45,7 @@ export default class ChannelSectionModule extends KickModule {
 
 	private async run(elements: Element[]) {
 		elements.forEach((element) => {
-			(element as HTMLElement).style.flexDirection = "column";
+			if (element instanceof HTMLElement) element.style.flexDirection = "column";
 		});
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), elements, "div");
 		// The applier can win the race against Kick's React tree, and `once` means there is no second attempt.
@@ -120,10 +120,6 @@ export default class ChannelSectionModule extends KickModule {
 	}
 
 	public async startWatchtimeUpdates() {
-		if (!("value" in this.watchtimeCounter)) {
-			this.watchtimeCounter = signal(0);
-		}
-
 		if (this.watchtimeInterval) {
 			clearInterval(this.watchtimeInterval);
 		}

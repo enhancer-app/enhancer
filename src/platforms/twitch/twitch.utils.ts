@@ -102,13 +102,16 @@ export default class TwitchUtils {
 
 		if (!props) return undefined;
 
-		if ("playerInstance" in props.mediaPlayerInstance) {
+		const { mediaPlayerInstance } = props;
+
+		if ("playerInstance" in mediaPlayerInstance) {
 			return {
 				...props,
-				mediaPlayerInstance: props.mediaPlayerInstance.playerInstance,
+				mediaPlayerInstance: mediaPlayerInstance.playerInstance,
 			};
 		}
 
+		// SAFETY: the playerInstance branch above excludes wrappers, leaving the original base-player props.
 		return props as MediaPlayerComponentNormalized;
 	}
 
@@ -167,9 +170,7 @@ export default class TwitchUtils {
 	}
 
 	getChatInputContent(): string | null {
-		const chatInputElement = document.querySelector(
-			'span[data-a-target="chat-input-text"]',
-		) as HTMLTextAreaElement | null;
+		const chatInputElement = document.querySelector('span[data-a-target="chat-input-text"]');
 
 		if (chatInputElement) {
 			return chatInputElement.textContent;

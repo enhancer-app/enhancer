@@ -1,5 +1,6 @@
 import type CommonUtils from "$shared/utils/common.utils.ts";
 import type ReactUtils from "$shared/utils/react.utils.ts";
+import { isBoolean, isObject, isString } from "$shared/utils/type-guards.ts";
 import type { KickChatMessageData } from "$types/platforms/kick/kick.events.types.ts";
 import type { IsoDateProps, StreamStatusProps, VideoProgressProps } from "$types/platforms/kick/kick.utils.types.ts";
 import type { ChannelChatRoom, ChannelChatRoomInfo, ChannelInfo } from "$types/platforms/kick/kick.utils.types.ts";
@@ -87,7 +88,7 @@ export default class KickUtils {
 	getChannelChatRoom(container = this.getChatMessagesContainer()) {
 		return this.reactUtils.findReactParents<never, ChannelChatRoom>(
 			this.reactUtils.getReactInstance(container),
-			(n) => typeof n?.memoizedProps?.isPaused === "boolean" && !!n?.memoizedProps?.setIsPaused,
+			(n) => isBoolean(n?.memoizedProps?.isPaused) && !!n?.memoizedProps?.setIsPaused,
 			KickUtils.CHAT_ROOM_FIBER_CLIMB,
 		)?.memoizedProps;
 	}
@@ -111,9 +112,9 @@ export default class KickUtils {
 	}
 
 	setChatInputContent(text: string, focus?: boolean) {
-		const chatInput = this.getChatInput() as HTMLElement | null;
+		const chatInput = this.getChatInput();
 
-		if (!chatInput) return;
+		if (!(chatInput instanceof HTMLElement)) return;
 		chatInput.innerText = text;
 		chatInput.dispatchEvent(new Event("input", { bubbles: true }));
 
@@ -227,9 +228,7 @@ export default class KickUtils {
 
 	private isQualityList(state: unknown): state is KickPlayerQuality[] {
 		return (
-			Array.isArray(state) &&
-			state.length > 1 &&
-			state.every((entry) => !!entry && typeof entry === "object" && "variantSource" in entry)
+			Array.isArray(state) && state.length > 1 && state.every((entry) => isObject(entry) && "variantSource" in entry)
 		);
 	}
 
@@ -247,7 +246,7 @@ export default class KickUtils {
 		while (hook && visits < KickUtils.MAX_HOOK_VISITS) {
 			const tag = hook.memoizedState?.tag;
 
-			if (tag?.type === "session" && typeof tag.authStatus === "string") return tag.authStatus;
+			if (tag?.type === "session" && isString(tag.authStatus)) return tag.authStatus;
 			hook = hook.next;
 			visits++;
 		}

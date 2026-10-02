@@ -5,13 +5,13 @@ import {
 import type { TwitchPinnedStreamerSyncEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, computed, signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import { render } from "preact";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class ChannelSectionModule extends TwitchModule {
-	private quickAccessLinks = {} as Signal<QuickAccessLink[]>;
-	private watchtimeCounter = {} as Signal<number>;
+	private quickAccessLinks = signal<QuickAccessLink[]>([]);
+	private watchtimeCounter = signal(0);
 	private currentDisplayName = signal("");
 	private currentLogin = signal("");
 	private currentChannelId = signal("");
@@ -194,10 +194,6 @@ export default class ChannelSectionModule extends TwitchModule {
 	}
 
 	public async startWatchtimeUpdates() {
-		if (!("value" in this.watchtimeCounter)) {
-			this.watchtimeCounter = signal(0);
-		}
-
 		if (this.watchtimeInterval) {
 			clearInterval(this.watchtimeInterval);
 		}

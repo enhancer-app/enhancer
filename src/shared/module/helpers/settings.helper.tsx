@@ -67,8 +67,7 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 		closeSettings: () => void;
 	}> {
 		this.settingsSignal = signal(props.defaults);
-		const wrapper = this.commonUtils.createElementByParent("enhancer-settings", "div", document.body);
-		this.settingsContainer = wrapper as HTMLDivElement;
+		this.settingsContainer = this.commonUtils.createElementByParent("enhancer-settings", "div", document.body);
 
 		const logo = await this.commonUtils.getAssetFile(
 			this.workerService,

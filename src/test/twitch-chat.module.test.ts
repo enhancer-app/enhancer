@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 import ChatModule from "$twitch/modules/chat/chat.module.tsx";
-import type { TwitchChatMessage } from "$types/platforms/twitch/twitch.events.types.ts";
+import type { TwitchChatMessage, TwitchEvents } from "$types/platforms/twitch/twitch.events.types.ts";
+import type { TestMessageHandlerApi } from "$types/test/fakes-b-chat.types.ts";
+import { createNanoEvents } from "nanoevents";
+import { createMessageElement, createTwitchDependencies } from "./fakes-b-modules.ts";
 
 const MESSAGE = {
 	badges: {},
@@ -22,17 +25,8 @@ const MESSAGE = {
 	createdAt: 1,
 } satisfies TwitchChatMessage;
 
-function createChatModule(emitter: ConstructorParameters<typeof ChatModule>[0] = {} as never) {
-	return new ChatModule(
-		emitter,
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-	);
+function createChatModule(emitter = createNanoEvents<TwitchEvents>()) {
+	return new ChatModule(...createTwitchDependencies(emitter));
 }
 
 test("finalizes a queued 7TV message id", () => {
@@ -50,6 +44,7 @@ test("finalizes a queued 7TV message id", () => {
 
 	const message = { ...MESSAGE, id: "", nonce: "message-nonce" };
 
+	// SAFETY: Twitch nonce-link events omit the user and body; buffering only reads their id, nonce, and type.
 	const nonceLinkMessage = {
 		id: "final-id",
 		nonce: message.nonce,
@@ -57,12 +52,13 @@ test("finalizes a queued 7TV message id", () => {
 	} as TwitchChatMessage;
 
 	try {
-		(chatModule as any).bufferSevenTvMessage(message);
-		(chatModule as any).bufferSevenTvMessage(nonceLinkMessage);
-		const element = { getAttribute: () => "final-id" } as unknown as Element;
+		chatModule["bufferSevenTvMessage"](message);
+		chatModule["bufferSevenTvMessage"](nonceLinkMessage);
+		const element = createMessageElement();
+		element.setAttribute("msg-id", "final-id");
 
-		expect((chatModule as any).getSevenTvMessage(element).id).toBe("final-id");
-		expect((chatModule as any).getSevenTvMessage(element).id).toBe("final-id");
+		expect(chatModule["getSevenTvMessage"](element)?.id).toBe("final-id");
+		expect(chatModule["getSevenTvMessage"](element)?.id).toBe("final-id");
 	} finally {
 		if (originalDocument) {
 			Object.defineProperty(globalThis, "document", originalDocument);
@@ -97,10 +93,10 @@ test("intercepts messages before 7TV suppresses the Twitch handler", () => {
 	const secondMessage = { ...message, id: "second-message-id" };
 	const thirdMessage = { ...message, id: "third-message-id" };
 	let calls = 0;
-	let context: unknown;
+	let context: TestMessageHandlerApi | undefined;
 	let receivedMessages: TwitchChatMessage[] = [];
 
-	let originalHandler = function (this: unknown, ...messages: TwitchChatMessage[]) {
+	let originalHandler = function (this: TestMessageHandlerApi, ...messages: TwitchChatMessage[]) {
 		calls++;
 		context = this;
 		receivedMessages = messages;
@@ -108,7 +104,7 @@ test("intercepts messages before 7TV suppresses the Twitch handler", () => {
 		return "";
 	};
 
-	const messageHandlerApi = {
+	const messageHandlerApi: TestMessageHandlerApi = {
 		addMessageHandler: () => {},
 		get handleMessage() {
 			return originalHandler;
@@ -121,9 +117,9 @@ test("intercepts messages before 7TV suppresses the Twitch handler", () => {
 	const originalDescriptor = Object.getOwnPropertyDescriptor(messageHandlerApi, "handleMessage");
 
 	try {
-		(chatModule as any).subscribeToSevenTvMessages(messageHandlerApi);
+		chatModule["subscribeToSevenTvMessages"](messageHandlerApi);
 		const interceptedDescriptor = Object.getOwnPropertyDescriptor(messageHandlerApi, "handleMessage");
-		(chatModule as any).subscribeToSevenTvMessages(messageHandlerApi);
+		chatModule["subscribeToSevenTvMessages"](messageHandlerApi);
 		expect(Object.getOwnPropertyDescriptor(messageHandlerApi, "handleMessage")?.get).toBe(interceptedDescriptor?.get);
 		expect(interceptedDescriptor?.set).toBe(originalDescriptor?.set);
 		expect(messageHandlerApi.handleMessage(message, secondMessage)).toBe("");
@@ -131,10 +127,10 @@ test("intercepts messages before 7TV suppresses the Twitch handler", () => {
 		expect(calls).toBe(1);
 		expect(context).toBe(messageHandlerApi);
 		expect(receivedMessages).toEqual([message, secondMessage]);
-		expect((chatModule as any).sevenTvMessageQueue.get("message-id").id).toBe("message-id");
-		expect((chatModule as any).sevenTvMessageQueue.get("second-message-id").id).toBe("second-message-id");
+		expect(chatModule["sevenTvMessageQueue"].get("message-id")?.id).toBe("message-id");
+		expect(chatModule["sevenTvMessageQueue"].get("second-message-id")?.id).toBe("second-message-id");
 
-		messageHandlerApi.handleMessage = function (this: unknown, ...messages: TwitchChatMessage[]) {
+		messageHandlerApi.handleMessage = function (this: TestMessageHandlerApi, ...messages: TwitchChatMessage[]) {
 			context = this;
 			receivedMessages = messages;
 
@@ -144,7 +140,7 @@ test("intercepts messages before 7TV suppresses the Twitch handler", () => {
 		expect(messageHandlerApi.handleMessage(thirdMessage)).toBe("replacement");
 		expect(context).toBe(messageHandlerApi);
 		expect(receivedMessages).toEqual([thirdMessage]);
-		expect((chatModule as any).sevenTvMessageQueue.get("third-message-id").id).toBe("third-message-id");
+		expect(chatModule["sevenTvMessageQueue"].get("third-message-id")?.id).toBe("third-message-id");
 	} finally {
 		if (originalDocument) {
 			Object.defineProperty(globalThis, "document", originalDocument);
@@ -163,25 +159,15 @@ test("intercepts messages before 7TV suppresses the Twitch handler", () => {
 test("marks a cached 7TV message rerender as replay", () => {
 	const replayValues: boolean[] = [];
 
-	const chatModule = createChatModule({
-		emit: (_event: string, payload: { isReplay: boolean }) => replayValues.push(payload.isReplay),
-	} as never);
+	const emitter = createNanoEvents<TwitchEvents>();
+	emitter.on("twitch:chatMessage", (payload) => {
+		replayValues.push(payload.isReplay);
+	});
+	const chatModule = createChatModule(emitter);
 
-	(chatModule as any).getSevenTvMessage = () => MESSAGE;
-
-	const createElement = () => {
-		let marker: string | null = null;
-
-		return {
-			getAttribute: () => marker,
-			setAttribute: (_name: string, value: string) => {
-				marker = value;
-			},
-		} as unknown as Element;
-	};
-
-	(chatModule as any).handleMessage(createElement(), "7TV", false);
-	(chatModule as any).handleMessage(createElement(), "7TV", false);
+	chatModule["getSevenTvMessage"] = () => MESSAGE;
+	chatModule["handleMessage"](createMessageElement(), "7TV", false);
+	chatModule["handleMessage"](createMessageElement(), "7TV", false);
 
 	expect(replayValues).toEqual([false, true]);
 });

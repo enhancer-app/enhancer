@@ -75,9 +75,7 @@ export default class ChatAttachmentsModule extends KickModule {
 	}
 
 	private async resolveChatAttachmentHandler(baseData: BaseChatAttachmentData) {
-		const chatAttachmentHandler = this.chatAttachmentHandlers.find((chatAttachmentHandler) =>
-			chatAttachmentHandler.validate(baseData),
-		);
+		const chatAttachmentHandler = this.chatAttachmentHandlers.find((handler) => handler.validate(baseData));
 
 		if (!chatAttachmentHandler) return;
 		baseData.url = chatAttachmentHandler.parseUrl(baseData.url);
@@ -180,7 +178,7 @@ export default class ChatAttachmentsModule extends KickModule {
 			return {
 				messageType: ChatAttachmentMessageType.FIRST,
 				url: new URL(word),
-			} as BaseChatAttachmentData;
+			};
 		}
 
 		return undefined;

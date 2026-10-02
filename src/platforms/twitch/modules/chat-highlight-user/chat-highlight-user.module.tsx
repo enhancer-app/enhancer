@@ -29,7 +29,7 @@ export default class ChatHighlightUserModule extends TwitchModule {
 		if (mentions.length < 1) return;
 
 		for (const mention of mentions) {
-			const mentionElement = mention as HTMLElement;
+			const mentionElement = mention;
 			const username = mentionElement.textContent?.replace("@", "").toLowerCase() || "";
 			mentionElement.setAttribute("enhancer-mention-user", username);
 			mentionElement.addEventListener("mouseover", this.highlightUserMentions.bind(this));
@@ -37,9 +37,11 @@ export default class ChatHighlightUserModule extends TwitchModule {
 		}
 	}
 
-	private highlightUserMentions(event: MouseEvent): void {
+	private highlightUserMentions(event: Event): void {
 		// todo change color to red of mention is not 7tv
-		const target = event.currentTarget as HTMLElement;
+		const target = event.currentTarget;
+
+		if (!(target instanceof Element)) return;
 		const username = target.getAttribute("enhancer-mention-user");
 
 		if (!username) return;

@@ -16,7 +16,7 @@ export default class ChatHighlightUserModule extends KickModule {
 		"rgba(255, 159, 67, 0.1)",
 	];
 	private currentColorIndex = 0;
-	private readonly listenerControllers = new WeakMap<HTMLElement, AbortController>();
+	private readonly listenerControllers = new WeakMap<Element, AbortController>();
 
 	readonly config: KickModuleConfig = {
 		name: "chat-highlight-user",
@@ -31,7 +31,7 @@ export default class ChatHighlightUserModule extends KickModule {
 	};
 
 	private handleMessage({ message, element }: KickChatMessageEvent) {
-		const messageElement = element as HTMLElement;
+		const messageElement = element;
 		const isHovered = messageElement.matches(":hover");
 
 		if (isHovered) this.removeHighlightedUserMentions();
@@ -70,31 +70,33 @@ export default class ChatHighlightUserModule extends KickModule {
 			}
 		});
 
-		const chatMessages = document.querySelectorAll("#channel-chatroom .ntv__chat-message, div[data-index]");
+		const chatMessages = document.querySelectorAll<HTMLElement>(
+			"#channel-chatroom .ntv__chat-message, div[data-index]",
+		);
+
 		chatMessages.forEach((messageElement) => {
 			const authorElement =
-				messageElement.querySelector(".ntv__chat-message__username") ||
-				messageElement.querySelector('button[data-prevent-expand="true"]');
+				messageElement.querySelector<HTMLElement>(".ntv__chat-message__username") ||
+				messageElement.querySelector<HTMLElement>('button[data-prevent-expand="true"]');
 
 			if (!authorElement) return;
 
-			const username =
-				(authorElement as HTMLElement).dataset.enhancerUsername || authorElement.textContent?.toLowerCase() || "";
+			const username = authorElement.dataset.enhancerUsername || authorElement.textContent?.toLowerCase() || "";
 
 			if (!usernames.includes(username)) return;
 			const color = highlightedUsers.get(username);
 
 			if (!color) return;
-			(messageElement as HTMLElement).style.backgroundColor = color;
+			messageElement.style.backgroundColor = color;
 			messageElement.classList.add("enhancer-highlighted-user");
 		});
 	}
 
 	private removeHighlightedUserMentions(): void {
 		this.logger.debug("Removing highlighted messages");
-		[...document.querySelectorAll(".enhancer-highlighted-user")].forEach((element) => {
+		[...document.querySelectorAll<HTMLElement>(".enhancer-highlighted-user")].forEach((element) => {
 			element.classList.remove("enhancer-highlighted-user");
-			(element as HTMLElement).style.backgroundColor = "";
+			element.style.backgroundColor = "";
 		});
 		this.currentColorIndex = 0;
 	}

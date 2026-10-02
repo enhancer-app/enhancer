@@ -1,5 +1,19 @@
 import type gql from "graphql-tag";
 
+declare global {
+	interface HTMLVideoElement {
+		_enhancerAllowRateChange?: boolean;
+	}
+
+	interface Window {
+		ffz?: {
+			settings: {
+				get(key: "player.allow-catchup"): boolean | undefined;
+			};
+		};
+	}
+}
+
 export type PersistentPlayerComponent = {
 	props: { content: { type: "live"; channelLogin: string } };
 };
@@ -18,12 +32,14 @@ export type ChatControllerComponent = {
 		channelLogin: string;
 		channelID: string;
 		messageHandlerAPI: {
-			handleMessage: (...messages: TwitchChatMessage[]) => unknown;
+			handleMessage: ChatMessageHandler;
 			addMessageHandler: (callback: (message: TwitchChatMessage) => void) => void;
 			removeMessageHandler?: (callback: (message: TwitchChatMessage) => void) => void;
 		};
 	};
 };
+
+export type ChatMessageHandler<TResult = unknown> = (...messages: TwitchChatMessage[]) => TResult;
 
 export type TwitchChatMessage = {
 	badges: Record<string, string>;
@@ -300,11 +316,11 @@ export type ChatCommandStore = {
 export type ApolloClientFetchPolicy = "cache-first" | "network-only" | "no-cache" | "cache-only";
 
 export type ApolloClient = {
-	query: (params: {
+	query: <TResult, TVariables extends Record<string, unknown> = Record<string, never>>(params: {
 		query: ReturnType<typeof gql>;
-		variables?: Record<string, any>;
+		variables?: TVariables;
 		fetchPolicy?: ApolloClientFetchPolicy;
-	}) => Promise<Record<string, any>>;
+	}) => Promise<TResult>;
 };
 
 interface StreamInfoGame {

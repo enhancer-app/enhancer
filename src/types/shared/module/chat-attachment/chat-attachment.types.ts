@@ -6,7 +6,7 @@ export enum ChatAttachmentMessageType {
 export type ChatAttachmentData = {
 	url: URL;
 	messageType: ChatAttachmentMessageType;
-	messageElement: Element;
+	messageElement?: Element;
 	attachmentType: string;
 	attachmentSize: number;
 };

@@ -1,4 +1,5 @@
 import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
+import { isString } from "$shared/utils/type-guards.ts";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 import type { Signal } from "@preact/signals";
 import styled from "styled-components";
@@ -89,7 +90,7 @@ export function ChannelSectionComponent({
 }
 
 function getActionText(value: Signal<string> | string) {
-	if (typeof value === "string") return value;
+	if (isString(value)) return value;
 
 	return value.value;
 }

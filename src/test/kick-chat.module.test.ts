@@ -1,17 +1,9 @@
 import { expect, test } from "bun:test";
 import ChatModule from "$kick/modules/chat/chat.module.ts";
+import { createKickDependencies, createMessageElement } from "./fakes-b-modules.ts";
 
 test("keeps messages scheduled while processing the current frame", () => {
-	const chatModule = new ChatModule(
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-	);
+	const chatModule = new ChatModule(...createKickDependencies());
 
 	const originalRequestAnimationFrame = Object.getOwnPropertyDescriptor(globalThis, "requestAnimationFrame");
 	const callbacks: FrameRequestCallback[] = [];
@@ -19,16 +11,16 @@ test("keeps messages scheduled while processing the current frame", () => {
 		configurable: true,
 		value: (callback: FrameRequestCallback) => callbacks.push(callback),
 	});
-	const message = {} as Element;
+	const message = createMessageElement();
 	let calls = 0;
-	(chatModule as any).handleMessage = (element: Element) => {
+	chatModule["handleMessage"] = (element: Element) => {
 		calls++;
 
-		if (calls === 1) (chatModule as any).scheduleMessage(element);
+		if (calls === 1) chatModule["scheduleMessage"](element);
 	};
 
 	try {
-		(chatModule as any).scheduleMessage(message);
+		chatModule["scheduleMessage"](message);
 		callbacks.shift()?.(0);
 		expect(calls).toBe(1);
 		callbacks.shift()?.(0);
@@ -43,31 +35,11 @@ test("keeps messages scheduled while processing the current frame", () => {
 });
 
 test("preserves legacy and colon-containing message markers while pending", () => {
-	const chatModule = new ChatModule(
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-		{} as never,
-	);
-
-	let marker = "true";
-
-	const element = {
-		isConnected: true,
-		classList: { contains: () => true },
-		getAttribute: () => marker,
-		setAttribute: (_name: string, value: string) => {
-			marker = value;
-		},
-	} as unknown as Element;
-
-	(chatModule as any).handleMessage(element);
-	expect(marker).toBe("true:PENDING");
-	marker = "message:id:NTV";
-	(chatModule as any).handleMessage(element);
-	expect(marker).toBe("message:id:PENDING");
+	const chatModule = new ChatModule(...createKickDependencies());
+	const element = createMessageElement("true", true);
+	chatModule["handleMessage"](element);
+	expect(element.getAttribute("enhancer-message-handled")).toBe("true:PENDING");
+	element.setAttribute("enhancer-message-handled", "message:id:NTV");
+	chatModule["handleMessage"](element);
+	expect(element.getAttribute("enhancer-message-handled")).toBe("message:id:PENDING");
 });

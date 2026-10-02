@@ -55,10 +55,10 @@ export default class ChatNicknameCustomizationModule extends TwitchModule {
 		let color: string;
 
 		try {
+			const nestedElement = usernameElement.firstChild?.firstChild;
 			color =
 				usernameElement.style.color ||
-				(usernameElement.firstChild?.firstChild &&
-					(usernameElement.firstChild.firstChild as HTMLElement).style.color) ||
+				(nestedElement instanceof HTMLElement && nestedElement.style.color) ||
 				userMessageColor ||
 				"white";
 		} catch {

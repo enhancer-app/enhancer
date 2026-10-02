@@ -47,16 +47,16 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 				pathname.includes("/clip/") ||
 				window.location.hostname === "clips.twitch.tv";
 
-			const isAllowed = (this as any)._enhancerAllowRateChange || isVodOrClipRoute || !self.isLiveCache;
+			const isAllowed = this._enhancerAllowRateChange || isVodOrClipRoute || !self.isLiveCache;
 
-			if (isAllowed) {
+			if (isAllowed && orig_playbackRate_set) {
 				return orig_playbackRate_set.call(this, rate);
 			}
 
 			return rate;
 		}
 
-		let orig_playbackRate_set: any;
+		let orig_playbackRate_set: PropertyDescriptor["set"];
 
 		try {
 			orig_playbackRate_set = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "playbackRate")?.set;
@@ -94,9 +94,9 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 			}
 		}
 
-		(video as any)._enhancerAllowRateChange = true;
+		video._enhancerAllowRateChange = true;
 		video.playbackRate = rate;
-		(video as any)._enhancerAllowRateChange = false;
+		video._enhancerAllowRateChange = false;
 	}
 
 	private setPlaybackRateMode(mode: "catchUpMin" | "catchUpMax" | "reset") {
@@ -160,10 +160,10 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 	}
 
 	private getFFZAllowCatchup() {
-		const ffz = (window as any).ffz;
+		const ffz = window.ffz;
 
 		if (ffz) {
-			return ffz.settings.get("player.allow-catchup") as boolean;
+			return ffz.settings.get("player.allow-catchup");
 		}
 	}
 

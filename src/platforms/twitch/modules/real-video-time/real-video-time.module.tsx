@@ -7,7 +7,7 @@ import type {
 	RealVideoTimeDateMode,
 } from "$types/shared/components/real-video-time.component.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
+import { signal } from "@preact/signals";
 import { render } from "preact";
 import styled from "styled-components";
 
@@ -60,7 +60,7 @@ export default class RealVideoTimeModule extends TwitchModule {
 		enabled: () => this.settings().realVideoTimeEnabled,
 	};
 
-	private timeCounter = {} as Signal<number>;
+	private timeCounter = signal(-1);
 	private lastFailedVideoId: string | null = null;
 	private currentVideoId: string | undefined;
 	private timeInterval: NodeJS.Timeout | undefined;
@@ -70,7 +70,6 @@ export default class RealVideoTimeModule extends TwitchModule {
 	private dateMode = signal<RealVideoTimeDateMode>("hover");
 
 	private async run(elements: Element[]) {
-		this.createTimeCounter();
 		await this.updateCurrentVideo();
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), elements, "span");
 		wrappers.forEach((element) => {
@@ -123,11 +122,6 @@ export default class RealVideoTimeModule extends TwitchModule {
 		} catch (error) {
 			this.logger.warn("Failed to fetch video createdAt", error);
 		}
-	}
-
-	private createTimeCounter() {
-		if ("value" in this.timeCounter) return;
-		this.timeCounter = signal<number>(-1);
 	}
 
 	private async updateCurrentVideo() {

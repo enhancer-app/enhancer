@@ -56,7 +56,7 @@ export default class RealVideoTimeModule extends KickModule {
 		if (video) this.updateTime(video);
 		this.createTimeInterval();
 		elements.forEach((element) => {
-			const htmlElement = element as HTMLElement;
+			const htmlElement = element;
 			htmlElement.addEventListener("mouseenter", async () => {
 				await this.commonUtils().delay(25);
 				this.updateVisibility();

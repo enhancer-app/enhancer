@@ -1,4 +1,5 @@
 import KickModule from "$kick/kick.module.ts";
+import { isObject, isString } from "$shared/utils/type-guards.ts";
 import type { EnhancerMessageEvent } from "$types/apis/enhancer.apis.ts";
 import type { ChatMessagePopupEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
@@ -27,12 +28,7 @@ export default class ChatMessagePopupModule extends KickModule {
 
 	private renderEnhancerMessage(message: EnhancerMessageEvent) {
 		const text =
-			typeof message.data === "object" &&
-			message.data !== null &&
-			"text" in message.data &&
-			typeof message.data.text === "string"
-				? message.data.text
-				: null;
+			isObject(message.data) && "text" in message.data && isString(message.data.text) ? message.data.text : null;
 
 		if (!text?.trim()) return;
 		this.render({ title: "Enhancer", content: text, autoclose: text.length > 120 ? 30 : 10 });
