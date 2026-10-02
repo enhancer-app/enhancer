@@ -1,6 +1,10 @@
 import KickModule from "$kick/kick.module.ts";
+import type {
+	RealVideoTimeDateMode,
+	VisibleRealVideoTimeComponentProps,
+} from "$types/shared/components/real-video-time.component.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
+import { signal } from "@preact/signals";
 import { render } from "preact";
 import styled from "styled-components";
 
@@ -21,6 +25,18 @@ export default class RealVideoTimeModule extends KickModule {
 				event: "kick:settings:realVideoTimeFormat12h",
 				callback: (enabled) => this.updateTimeFormat(enabled),
 			},
+			{
+				type: "event",
+				key: "settings-real-video-time-date-mode",
+				event: "kick:settings:realVideoTimeDateMode",
+				callback: (mode) => this.updateDateMode(mode),
+			},
+			{
+				type: "event",
+				key: "settings-real-video-time-date-refresh",
+				event: "extension:settings-refresh",
+				callback: () => this.updateDateMode(this.settings().realVideoTimeDateMode ?? "hover"),
+			},
 		],
 		enabled: () => this.settings().realVideoTimeEnabled,
 	};
@@ -30,14 +46,14 @@ export default class RealVideoTimeModule extends KickModule {
 	private videoCreatedAt: Date | undefined;
 	private timeInterval: NodeJS.Timeout | undefined;
 	private use12HourFormat = signal<boolean>(false);
+	private dateMode = signal<RealVideoTimeDateMode>("hover");
 	private elementCheckInterval: NodeJS.Timeout | undefined;
+	private currentVideoId: string | undefined;
 
 	private async run(elements: Element[]) {
-		const video = document.querySelector<HTMLVideoElement>("video");
-		if (!video) return;
-		this.tryGetVideoCreatedAt();
-		this.updateTime(video);
-		this.createTimeInterval(video);
+		const video = this.getActiveVideo();
+		if (video) this.updateTime(video);
+		this.createTimeInterval();
 		elements.forEach((element) => {
 			const htmlElement = element as HTMLElement;
 			htmlElement.addEventListener("mouseenter", async () => {
@@ -48,8 +64,8 @@ export default class RealVideoTimeModule extends KickModule {
 			htmlElement.addEventListener("click", async () => {
 				await this.commonUtils().delay(25);
 				this.updateVisibility();
-				const video = document.querySelector("video");
-				if (video) this.updateTime(video);
+				const activeVideo = this.getActiveVideo();
+				if (activeVideo) this.updateTime(activeVideo);
 			});
 		});
 
@@ -64,8 +80,16 @@ export default class RealVideoTimeModule extends KickModule {
 		this.use12HourFormat.value = enabled;
 	}
 
+	private updateDateMode(mode: RealVideoTimeDateMode) {
+		this.dateMode.value = mode;
+	}
+
 	private formatTime(timeInMs: number): string {
 		return this.commonUtils().timeInMsToTimestamp(timeInMs, this.use12HourFormat.value ? "12" : "24");
+	}
+
+	private getActiveVideo() {
+		return document.querySelector<HTMLVideoElement>("#injected-embedded-channel-player-video video");
 	}
 
 	private createElement(player: Element): boolean {
@@ -78,6 +102,8 @@ export default class RealVideoTimeModule extends KickModule {
 		render(
 			<RealTimeComponent
 				formatTime={this.formatTime.bind(this)}
+				formatDate={(timeInMs) => this.commonUtils().timeInMsToDate(timeInMs)}
+				dateMode={this.dateMode}
 				visibility={this.visibilitySignal}
 				time={this.timeCounter}
 			/>,
@@ -87,9 +113,12 @@ export default class RealVideoTimeModule extends KickModule {
 		return true;
 	}
 
-	private createTimeInterval(video: HTMLVideoElement) {
+	private createTimeInterval() {
 		if (this.timeInterval) clearInterval(this.timeInterval);
-		this.timeInterval = setInterval(() => this.updateTime(video), 1000);
+		this.timeInterval = setInterval(() => {
+			const video = this.getActiveVideo();
+			if (video) this.updateTime(video);
+		}, 1000);
 	}
 
 	private updateVisibility() {
@@ -105,13 +134,22 @@ export default class RealVideoTimeModule extends KickModule {
 	}
 
 	private tryGetVideoCreatedAt() {
-		const videoCreatedAt = this.kickUtils().getIsoDateProps();
-		if (videoCreatedAt) this.videoCreatedAt = new Date(videoCreatedAt.isoDate);
+		const videoCreatedAt = this.kickUtils().getIsoDateProps()?.isoDate;
+		if (!videoCreatedAt) return;
+		const date = new Date(videoCreatedAt);
+		if (Number.isFinite(date.getTime())) this.videoCreatedAt = date;
 	}
 
 	private getCurrentRealVideoTime(video: HTMLVideoElement) {
+		const videoId = window.location.pathname.match(/\/videos\/([^/]+)/)?.[1];
+		if (videoId !== this.currentVideoId) {
+			this.currentVideoId = videoId;
+			this.videoCreatedAt = undefined;
+			this.timeCounter.value = -1;
+		}
 		if (!this.videoCreatedAt) this.tryGetVideoCreatedAt();
 		if (this.videoCreatedAt) return this.videoCreatedAt.getTime() + video.currentTime * 1000;
+		if (videoId) return;
 
 		const videoProgress = this.kickUtils().getVideoProgressProps();
 		if (!videoProgress) return;
@@ -122,6 +160,7 @@ export default class RealVideoTimeModule extends KickModule {
 
 	initialize() {
 		this.use12HourFormat.value = this.settings().realVideoTimeFormat12h;
+		this.updateDateMode(this.settings().realVideoTimeDateMode ?? "hover");
 		this.commonUtils().createGlobalStyle(`
 			.enhancer-video-real-time-wrapper {
 				flex-grow: 1;
@@ -132,22 +171,32 @@ export default class RealVideoTimeModule extends KickModule {
 	}
 }
 
-interface RealVideoTimeComponentProps {
-	time: Signal<number>;
-	visibility: Signal<boolean>;
-	formatTime: (timeInSeconds: number) => string;
-}
+const DateDisplay = styled.span<{ $mode: RealVideoTimeDateMode }>`
+	display: ${(props) => (props.$mode === "always" ? "inline" : "none")};
+	margin-left: 4px;
+`;
 
 const Wrapper = styled.span<{ isVisible: boolean }>`
 	display: ${(props) => (props.isVisible ? "inline-flex" : "none")};
+	white-space: nowrap;
 	align-items: center;
 	justify-content: flex-start;
 	color: #efeff1;
 	margin: 8px 0 8px 16px;
 	font-size: 14px;
 	font-weight: bold;
+	&:hover ${DateDisplay} {
+		display: inline;
+	}
 `;
 
-function RealTimeComponent({ time, visibility, formatTime }: RealVideoTimeComponentProps) {
-	return <Wrapper isVisible={visibility.value}>{formatTime(time.value)}</Wrapper>;
+function RealTimeComponent({ time, dateMode, visibility, formatTime, formatDate }: VisibleRealVideoTimeComponentProps) {
+	return (
+		<Wrapper isVisible={visibility.value}>
+			{formatTime(time.value)}
+			{time.value >= 0 && dateMode.value !== "never" && (
+				<DateDisplay $mode={dateMode.value}>({formatDate(time.value)})</DateDisplay>
+			)}
+		</Wrapper>
+	);
 }

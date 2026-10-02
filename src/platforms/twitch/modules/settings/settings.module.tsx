@@ -100,6 +100,19 @@ export default class SettingsModule extends TwitchModule {
 				dependsOn: { key: "realVideoTimeEnabled" },
 			},
 			{
+				id: "realVideoTimeDateMode",
+				title: "Real Video Time Date Display",
+				description: "Choose when to show the date next to the real video time.",
+				type: "select",
+				categoryId: CATEGORY.GENERAL,
+				dependsOn: { key: "realVideoTimeEnabled" },
+				options: [
+					{ value: "hover", label: "Show date on hover (default)" },
+					{ value: "always", label: "Always show" },
+					{ value: "never", label: "Never show" },
+				],
+			},
+			{
 				id: "pinnedStreamersEnabled",
 				title: "Enable Pinning Streamers",
 				description: "Allows you to pin your favorite streamers for easy access.",

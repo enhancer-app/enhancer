@@ -83,6 +83,14 @@ export default class CommonUtils {
 		return `${hours.toString().padStart(2, "0")}:${minutes}:${seconds}`;
 	}
 
+	timeInMsToDate(timeInMs: number): string {
+		if (!Number.isFinite(timeInMs) || timeInMs < 0) return "";
+		const date = new Date(timeInMs);
+		const day = date.getDate().toString().padStart(2, "0");
+		const month = (date.getMonth() + 1).toString().padStart(2, "0");
+		return `${day}.${month}.${date.getFullYear()}`;
+	}
+
 	getLowestBadgeSourceUrl(sources: Record<string, string>): string | null {
 		const entries = Object.entries(sources);
 		entries.sort(([left], [right]) => Number.parseInt(left, 10) - Number.parseInt(right, 10));

@@ -2,6 +2,10 @@ import { VideoCreatedAtQuery } from "$twitch/apis/twitch-queries.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { VideoCreatedAtResponse } from "$types/platforms/twitch/twitch.api.types.ts";
 import type { MediaPlayerInstanceBase } from "$types/platforms/twitch/twitch.utils.types.ts";
+import type {
+	RealVideoTimeComponentProps,
+	RealVideoTimeDateMode,
+} from "$types/shared/components/real-video-time.component.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import { render } from "preact";
@@ -31,6 +35,18 @@ export default class RealVideoTimeModule extends TwitchModule {
 			},
 			{
 				type: "event",
+				key: "settings-real-video-time-date-mode",
+				event: "twitch:settings:realVideoTimeDateMode",
+				callback: (mode) => this.updateDateMode(mode),
+			},
+			{
+				type: "event",
+				key: "settings-real-video-time-date-refresh",
+				event: "extension:settings-refresh",
+				callback: () => this.updateDateMode(this.settings().realVideoTimeDateMode ?? "hover"),
+			},
+			{
+				type: "event",
 				event: "twitch:chatInitialized",
 				callback: () => {
 					if (!RealVideoTimeModule.URL_CONFIG(window.location.href)) {
@@ -51,13 +67,22 @@ export default class RealVideoTimeModule extends TwitchModule {
 	private videoCreatedAt = new Date(0);
 	private mediaPlayer: MediaPlayerInstanceBase | undefined;
 	private use12HourFormat = signal<boolean>(false);
+	private dateMode = signal<RealVideoTimeDateMode>("hover");
 
 	private async run(elements: Element[]) {
 		this.createTimeCounter();
 		await this.updateCurrentVideo();
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), elements, "span");
 		wrappers.forEach((element) => {
-			render(<RealTimeComponent formatTime={this.formatTime.bind(this)} time={this.timeCounter} />, element);
+			render(
+				<RealTimeComponent
+					formatTime={this.formatTime.bind(this)}
+					formatDate={(timeInMs) => this.commonUtils().timeInMsToDate(timeInMs)}
+					dateMode={this.dateMode}
+					time={this.timeCounter}
+				/>,
+				element,
+			);
 		});
 		this.updateTime();
 		if (this.timeInterval) {
@@ -72,6 +97,10 @@ export default class RealVideoTimeModule extends TwitchModule {
 	private updateTimeFormat(enabled: boolean) {
 		this.use12HourFormat.value = enabled;
 		this.updateTime();
+	}
+
+	private updateDateMode(mode: RealVideoTimeDateMode) {
+		this.dateMode.value = mode;
 	}
 
 	private formatTime(timeInMs: number): string {
@@ -138,18 +167,20 @@ export default class RealVideoTimeModule extends TwitchModule {
 
 	initialize() {
 		this.use12HourFormat.value = this.settings().realVideoTimeFormat12h;
+		this.updateDateMode(this.settings().realVideoTimeDateMode ?? "hover");
 	}
 }
 
-interface RealVideoTimeComponentProps {
-	time: Signal<number>;
-	formatTime: (timeInSeconds: number) => string;
-}
+const DateDisplay = styled.span<{ $mode: RealVideoTimeDateMode }>`
+	display: ${(props) => (props.$mode === "always" ? "inline" : "none")};
+	margin-left: 4px;
+`;
 
 const Wrapper = styled.span`
 	display: inline-flex;
+	white-space: nowrap;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
 	color: #efeff1;
 	margin: 0 8px;
 	height: 100%;
@@ -157,8 +188,18 @@ const Wrapper = styled.span`
 	font-weight: normal;
 	position: relative;
 	vertical-align: middle;
+	&:hover ${DateDisplay} {
+		display: inline;
+	}
 `;
 
-function RealTimeComponent({ time, formatTime }: RealVideoTimeComponentProps) {
-	return <Wrapper>{formatTime(time.value)}</Wrapper>;
+function RealTimeComponent({ time, dateMode, formatTime, formatDate }: RealVideoTimeComponentProps) {
+	return (
+		<Wrapper>
+			{formatTime(time.value)}
+			{time.value >= 0 && dateMode.value !== "never" && (
+				<DateDisplay $mode={dateMode.value}>({formatDate(time.value)})</DateDisplay>
+			)}
+		</Wrapper>
+	);
 }
