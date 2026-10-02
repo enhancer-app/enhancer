@@ -19,7 +19,8 @@ export default class KickUtils {
 	private static readonly SET_QUALITY_MARKERS = ["ivsLivestreamPlayer", "setQuality"];
 	private static readonly AUTHENTICATED_STATUS = "authenticated";
 	private static readonly UNAUTHENTICATED_STATUS = "unauthenticated";
-	private static readonly CHAT_STICKY_THRESHOLD = 40;
+	private static readonly CHAT_MESSAGES_SELECTOR = "#chatroom-messages";
+	private static readonly CHAT_ROOM_FIBER_CLIMB = 3;
 
 	getMessageData(messageElement: Element): KickChatMessageData | null {
 		const props = this.reactUtils.findReactChildren<KickChatMessageData>(
@@ -81,11 +82,16 @@ export default class KickUtils {
 		)?.memoizedProps;
 	}
 
-	getChannelChatRoom() {
-		return this.reactUtils.findReactChildren<never, ChannelChatRoom>(
-			this.reactUtils.getReactInstance(document.querySelector("#channel-chatroom")),
-			(n) => !!n?.memoizedProps?.messages && !!n?.memoizedProps?.setIsPaused,
+	getChannelChatRoom(container = this.getChatMessagesContainer()) {
+		return this.reactUtils.findReactParents<never, ChannelChatRoom>(
+			this.reactUtils.getReactInstance(container),
+			(n) => typeof n?.memoizedProps?.isPaused === "boolean" && !!n?.memoizedProps?.setIsPaused,
+			KickUtils.CHAT_ROOM_FIBER_CLIMB,
 		)?.memoizedProps;
+	}
+
+	private getChatMessagesContainer() {
+		return document.querySelector<HTMLElement>(KickUtils.CHAT_MESSAGES_SELECTOR);
 	}
 
 	isUsingNTV(element?: Element): boolean {
@@ -131,51 +137,12 @@ export default class KickUtils {
 		return bufferEnd - currentTime;
 	}
 
-	private chatScroller: { container: HTMLElement; sticky: boolean } | undefined;
-
 	scrollToBottomOnChat() {
-		const scroller = this.resolveChatScroller();
-		if (!scroller?.sticky) return;
-		scroller.container.scrollTop = scroller.container.scrollHeight;
-	}
-
-	private resolveChatScroller() {
-		if (this.chatScroller?.container.isConnected) return this.chatScroller;
-		const container = this.findChatScrollContainer();
-		if (!container) return undefined;
-		const scroller = { container, sticky: KickUtils.isAtBottom(container) };
-		container.addEventListener(
-			"scroll",
-			() => {
-				scroller.sticky = KickUtils.isAtBottom(container);
-			},
-			{ passive: true },
-		);
-		this.chatScroller = scroller;
-		return scroller;
-	}
-
-	private static isAtBottom(container: HTMLElement) {
-		return container.scrollHeight - container.scrollTop - container.clientHeight <= KickUtils.CHAT_STICKY_THRESHOLD;
-	}
-
-	private findChatScrollContainer(): HTMLElement | undefined {
-		const message = document.querySelector("#channel-chatroom div[data-index]");
-		let node: HTMLElement | null = message?.parentElement ?? null;
-		while (node && node !== document.body) {
-			const overflowY = getComputedStyle(node).overflowY;
-			if (overflowY === "auto" || overflowY === "scroll") return node;
-			node = node.parentElement;
-		}
-		const chatRoom = document.querySelector("#channel-chatroom");
-		if (!chatRoom) return undefined;
-		for (const candidate of chatRoom.querySelectorAll<HTMLElement>("*")) {
-			const overflowY = getComputedStyle(candidate).overflowY;
-			if ((overflowY === "auto" || overflowY === "scroll") && candidate.scrollHeight > candidate.clientHeight) {
-				return candidate;
-			}
-		}
-		return undefined;
+		const container = this.getChatMessagesContainer();
+		if (!container) return;
+		const chatRoom = this.getChannelChatRoom(container);
+		if (!chatRoom || chatRoom.isPaused) return;
+		container.scrollTop = container.scrollHeight;
 	}
 
 	getQualityController(): KickQualityController | null {
