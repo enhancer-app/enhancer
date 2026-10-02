@@ -15,6 +15,7 @@ export abstract class Database {
 
 	async initialize(): Promise<void> {
 		if (this.database) return;
+
 		return new Promise((resolve, reject) => {
 			const request = indexedDB.open(this.dbName, this.dbVersion);
 
@@ -39,6 +40,7 @@ export abstract class Database {
 		if (!this.database) {
 			throw new Error("Database not initialized");
 		}
+
 		return this.database;
 	}
 
@@ -48,6 +50,7 @@ export abstract class Database {
 		fn: (store: IDBObjectStore) => IDBRequest,
 	): Promise<T> {
 		const db = this.requireDatabase();
+
 		return new Promise((resolve, reject) => {
 			const tx = db.transaction(storeName, mode);
 			const store = tx.objectStore(storeName);
@@ -68,6 +71,7 @@ export abstract class Database {
 		callback: (value: T) => boolean | undefined,
 	): Promise<void> {
 		const db = this.requireDatabase();
+
 		return new Promise((resolve, reject) => {
 			const tx = db.transaction(storeName, "readonly");
 			const store = tx.objectStore(storeName);
@@ -75,17 +79,22 @@ export abstract class Database {
 			const request = index.openCursor(range, direction);
 			request.onsuccess = (event) => {
 				const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+
 				if (!cursor) {
 					resolve();
+
 					return;
 				}
+
 				const shouldContinue = callback(cursor.value as T);
+
 				if (shouldContinue === false) {
 					resolve();
 				} else {
 					cursor.continue();
 				}
 			};
+
 			request.onerror = () => {
 				this.logger.error("Database cursor failed:", request.error);
 				reject(request.error);

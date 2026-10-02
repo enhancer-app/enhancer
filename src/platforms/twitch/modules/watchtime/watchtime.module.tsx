@@ -37,17 +37,24 @@ export default class WatchTimeModule extends TwitchModule {
 
 	private async run(elements: Element[]) {
 		const isViewerCardPage = window.location.href.includes("/viewercard/");
+
 		const wrappers = elements.map((parent) => {
 			const element = this.commonUtils().createElementByParent(this.getId(), "div", parent);
+
 			if (isViewerCardPage) {
 				const prev = element.previousElementSibling;
+
 				if (prev) prev.before(element);
 			}
+
 			return element;
 		});
+
 		const username = this.getUsernameFromUserCard(elements[0]);
+
 		if (!username) {
 			this.logger.error("Failed to found username from usercard");
+
 			return;
 		}
 
@@ -61,22 +68,28 @@ export default class WatchTimeModule extends TwitchModule {
 
 		const loadWatchtime = async (target: XayoWatchtimePeriod) => {
 			const cached = cache.get(target);
+
 			if (cached) {
 				data.value = cached;
 				isError.value = false;
 				isLoading.value = false;
+
 				return;
 			}
+
 			const current = ++generation;
 			isError.value = false;
 			isLoading.value = true;
+
 			try {
 				const result = await this.enhancerApi().getWatchTime(username, target);
+
 				if (current !== generation) return;
 				cache.set(target, result);
 				data.value = result;
 			} catch (error) {
 				this.logger.error(`Failed to fetch usercard watchtime ${username}`, error);
+
 				if (current !== generation) return;
 				isError.value = true;
 			} finally {
@@ -86,6 +99,7 @@ export default class WatchTimeModule extends TwitchModule {
 
 		const fetchWatchtime = async () => {
 			isCollapsed.value = false;
+
 			if (isLoading.value || (data.value !== undefined && !isError.value)) return;
 			await loadWatchtime(period.value);
 		};
@@ -125,6 +139,7 @@ export default class WatchTimeModule extends TwitchModule {
 			(n) => !!n?.pendingProps?.targetLogin,
 			20,
 		);
+
 		return userCardComponent?.pendingProps?.targetLogin?.toLowerCase();
 	}
 
@@ -138,6 +153,7 @@ export default class WatchTimeModule extends TwitchModule {
 			handler: async (username) => {
 				const name = username.replace(/^@/, "");
 				this.renderLoading(name);
+
 				try {
 					const data = await this.fetchWatchTimeByUserName(name.toLowerCase());
 					this.renderWatchTime(name, data);
@@ -173,6 +189,7 @@ export default class WatchTimeModule extends TwitchModule {
 		if (!this.isLoadingPopupVisible) {
 			return;
 		}
+
 		this.isLoadingPopupVisible = false;
 		this.emitter.emit("twitch:chatPopupMessage", {
 			title: `Watchtime for ${username}`,
@@ -185,6 +202,7 @@ export default class WatchTimeModule extends TwitchModule {
 		if (!this.isLoadingPopupVisible) {
 			return;
 		}
+
 		this.isLoadingPopupVisible = false;
 		this.emitter.emit("twitch:chatPopupMessage", {
 			title: `Failed to fetch watchtime for ${username}`,

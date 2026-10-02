@@ -10,8 +10,11 @@ const source: Record<ExtensionEnvironment, string> = {
 const head = document.head || document.getElementsByTagName("head")[0] || document.documentElement;
 
 const script = document.createElement("script");
+
 script.type = "module";
+
 script.id = "enhancer-script";
+
 script.src = source[isFirefox ? "production" : (__environment__ ?? "production")];
 // Firefox blocks injecting external scripts (e.g., from localhost), so we fall back to the production bundle.
 

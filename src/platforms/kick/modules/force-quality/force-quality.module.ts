@@ -26,12 +26,15 @@ export default class ForceQualityModule extends KickModule {
 
 	private run(): void {
 		const path = window.location.pathname;
+
 		if (this.appliedPath === path && !this.isPreferenceCleared()) return;
 
 		const controller = this.kickUtils().getQualityController();
+
 		if (!controller) return;
 
 		const quality = this.selectQuality(controller.qualities);
+
 		if (!quality) return;
 
 		window.sessionStorage.setItem(ForceQualityModule.QUALITY_PREFERENCE_KEY, JSON.stringify(quality.height));
@@ -49,12 +52,15 @@ export default class ForceQualityModule extends KickModule {
 		const selectable = qualities
 			.filter((quality) => quality.variantSource !== "auto" && this.isQualityUnlocked(quality))
 			.sort((a, b) => b.height - a.height || b.bitrate - a.bitrate);
+
 		if (selectable.length < 1) return null;
 
 		const preferred = this.settings().forceQualityPreferred;
+
 		if (preferred === "highest") return selectable[0];
 
 		const maxHeight = Number.parseInt(preferred, 10);
+
 		if (Number.isNaN(maxHeight)) return selectable[0];
 
 		return selectable.find((quality) => quality.height <= maxHeight) ?? selectable[selectable.length - 1];
@@ -63,6 +69,7 @@ export default class ForceQualityModule extends KickModule {
 	// Kick gates 1080p and above behind login and reverts a forced switch to Auto.
 	private isQualityUnlocked(quality: KickPlayerQuality): boolean {
 		if (Math.min(quality.width, quality.height) < ForceQualityModule.LOGIN_GATED_HEIGHT) return true;
+
 		return this.kickUtils().isViewerAuthenticated() === true;
 	}
 }

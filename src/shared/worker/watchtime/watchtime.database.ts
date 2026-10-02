@@ -21,9 +21,11 @@ export class WatchtimeDatabase extends Database {
 
 	async getWatchtime(platform: PlatformType, username: string): Promise<WatchtimeRecord | null> {
 		const id = createWatchtimeId(platform, username);
+
 		const result = await this.request<WatchtimeRecord | undefined>(this.storeName, "readonly", (store) =>
 			store.get(id),
 		);
+
 		return result ?? null;
 	}
 
@@ -32,6 +34,7 @@ export class WatchtimeDatabase extends Database {
 		const normalizedUsername = username.toLowerCase();
 		const id = createWatchtimeId(platform, normalizedUsername);
 		let watchtime = await this.getWatchtime(platform, normalizedUsername);
+
 		if (watchtime) {
 			watchtime.time += timeToAdd;
 			watchtime.lastUpdate = now;
@@ -45,6 +48,7 @@ export class WatchtimeDatabase extends Database {
 				lastUpdate: now,
 			};
 		}
+
 		await this.request<void>(this.storeName, "readwrite", (store) => store.put(watchtime));
 	}
 
@@ -63,7 +67,9 @@ export class WatchtimeDatabase extends Database {
 			if (skipped >= start && results.length < pageSize) {
 				results.push(value);
 			}
+
 			skipped++;
+
 			return results.length < pageSize;
 		});
 

@@ -21,9 +21,11 @@ export class ImportWatchtimeHandler extends MessageHandler {
 		if (!payload || !payload.username || !payload.platform || payload.time === undefined) {
 			throw new Error("Invalid payload for importWatchtime action. 'platform', 'username', and 'time' are required.");
 		}
+
 		if (!["kick", "twitch"].includes(payload.platform)) {
 			throw new Error("Invalid platform. Must be 'kick' or 'twitch'.");
 		}
+
 		if (payload.time < 0) {
 			throw new Error("Time must be a non-negative number.");
 		}
@@ -46,6 +48,7 @@ export class ImportWatchtimeHandler extends MessageHandler {
 		};
 
 		await this.database.setWatchtime(watchtimeRecord);
+
 		return watchtimeRecord;
 	}
 }

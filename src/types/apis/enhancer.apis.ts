@@ -28,7 +28,9 @@ export type EnhancerAggregateResponse = EnhancerChannelDto & {
 };
 
 export type EnhancerGlobalTopic = `global:${Uppercase<PlatformType>}`;
+
 export type EnhancerChannelTopic = `channel:${Uppercase<PlatformType>}:${string}`;
+
 export type EnhancerAggregateTopic = EnhancerGlobalTopic | EnhancerChannelTopic;
 
 export type EnhancerSubscription =
@@ -84,6 +86,7 @@ export type EnhancerStateEvent =
 	| EnhancerChannelUnavailableEvent;
 
 export type EnhancerDataEvent = EnhancerMessageEvent | EnhancerAggregateUpdatedEvent;
+
 export type EnhancerBufferedEvent = EnhancerDataEvent | EnhancerChannelAvailableEvent | EnhancerChannelUnavailableEvent;
 
 export type EnhancerWebSocketMessage =

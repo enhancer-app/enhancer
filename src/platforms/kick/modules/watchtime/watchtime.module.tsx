@@ -27,9 +27,11 @@ export default class KickWatchTimeModule extends KickModule {
 
 	private enhanceIdentity(identity: Element) {
 		const username = this.getUsername(identity);
+
 		if (!username) return;
 
 		const existing = identity.querySelector<HTMLElement>(`.${this.getId()}`);
+
 		if (existing?.dataset.username === username) return;
 		existing?.remove();
 
@@ -45,22 +47,28 @@ export default class KickWatchTimeModule extends KickModule {
 
 		const loadWatchtime = async (target: XayoWatchtimePeriod) => {
 			const cached = cache.get(target);
+
 			if (cached) {
 				data.value = cached;
 				isError.value = false;
 				isLoading.value = false;
+
 				return;
 			}
+
 			const current = ++generation;
 			isError.value = false;
 			isLoading.value = true;
+
 			try {
 				const result = await this.enhancerApi().getWatchTime(username, target);
+
 				if (current !== generation) return;
 				cache.set(target, result);
 				data.value = result;
 			} catch (error) {
 				this.logger.error(`Failed to fetch user popup watchtime ${username}`, error);
+
 				if (current !== generation) return;
 				isError.value = true;
 			} finally {
@@ -70,6 +78,7 @@ export default class KickWatchTimeModule extends KickModule {
 
 		const fetchWatchtime = async () => {
 			isCollapsed.value = false;
+
 			if (isLoading.value || (data.value !== undefined && !isError.value)) return;
 			await loadWatchtime(period.value);
 		};
@@ -103,9 +112,11 @@ export default class KickWatchTimeModule extends KickModule {
 
 	private getUsername(identity: Element): string | undefined {
 		const profileLink = identity.querySelector<HTMLAnchorElement>('a[href^="https://kick.com/"], a[href^="/"]');
+
 		if (!profileLink) return;
 
 		const pathname = new URL(profileLink.href, window.location.href).pathname;
+
 		return pathname.split("/").filter(Boolean)[0]?.toLowerCase();
 	}
 }

@@ -31,13 +31,17 @@ export function MessageMenuComponent({ options, x, y, onClose }: MessageMenuProp
 		let left = x;
 		let top = y;
 		const spacing = 8;
+
 		if (left + menu.width > window.innerWidth - spacing) {
 			left = window.innerWidth - menu.width - spacing;
 		}
+
 		if (top + menu.height > window.innerHeight - spacing) {
 			top = window.innerHeight - menu.height - spacing;
 		}
+
 		if (left < spacing) left = spacing;
+
 		if (top < spacing) top = spacing;
 		setPos({ left, top });
 	}, [x, y, options.length]);
@@ -48,11 +52,14 @@ export function MessageMenuComponent({ options, x, y, onClose }: MessageMenuProp
 				onClose();
 			}
 		};
+
 		const handleEsc = (e: KeyboardEvent) => {
 			if (e.key === "Escape") onClose();
 		};
+
 		window.addEventListener("mousedown", handle);
 		window.addEventListener("keydown", handleEsc);
+
 		return () => {
 			window.removeEventListener("mousedown", handle);
 			window.removeEventListener("keydown", handleEsc);

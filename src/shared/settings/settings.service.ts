@@ -20,11 +20,13 @@ export default class SettingsCache<T extends PlatformSettings> {
 		const settings = await this.workerService.send("getSettings", {
 			platform: this.platformType,
 		});
+
 		this.cache = settings as T;
 	}
 
 	get(): T {
 		if (!this.cache) throw new Error("Settings not initialized");
+
 		return this.cache;
 	}
 

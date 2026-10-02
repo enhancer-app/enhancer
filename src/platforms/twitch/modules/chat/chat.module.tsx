@@ -46,6 +46,7 @@ export default class ChatModule extends TwitchModule {
 	private async initializeChannel(channelId: string) {
 		try {
 			const joined = await this.enhancerApi().joinChannel(channelId);
+
 			if (joined) {
 				this.emitter.emit("extension:joined-channel");
 				this.logger.info(`Joined channel ${channelId}`);
@@ -73,12 +74,14 @@ export default class ChatModule extends TwitchModule {
 			.waitFor<ChatControllerComponent>(
 				() => {
 					const controller = this.twitchUtils().getChatController();
+
 					return controller?.props.channelID && controller.props.messageHandlerAPI ? controller : undefined;
 				},
 				(controller, attempt) => {
 					this.subscribeToSevenTvMessages(controller.props.messageHandlerAPI);
 					this.emitter.emit("twitch:chatInitialized", controller.props.channelID);
 					this.logger.info(`Initialized chat (attempt: ${attempt})`);
+
 					return true;
 				},
 				{ delay: 100, maxRetries: 20, initialDelay: 30 },
@@ -91,6 +94,7 @@ export default class ChatModule extends TwitchModule {
 		this.observer = new MutationObserver((list) => {
 			for (const mutation of list) {
 				if (mutation.type === "attributes") this.handleAddedNode(mutation.target);
+
 				for (const node of mutation.addedNodes) this.handleAddedNode(node);
 			}
 		});
@@ -113,24 +117,33 @@ export default class ChatModule extends TwitchModule {
 
 	private handleMessages(node: Element, selector: string, type: ChatType, isReplay: boolean) {
 		const parentMessage = node.closest(selector);
+
 		if (parentMessage) {
 			this.handleMessage(parentMessage, type, isReplay);
+
 			return;
 		}
+
 		node.querySelectorAll(selector).forEach((element) => this.handleMessage(element, type, isReplay));
 	}
 
 	private handleMessage(element: Element, type: ChatType, isReplay: boolean) {
 		const message = type === "7TV" ? this.getSevenTvMessage(element) : this.twitchUtils().getChatMessage(element);
+
 		if (!message?.id) return;
+
 		if (!ChatModule.VALID_MESSAGE_TYPES_IDS.includes(message.type ?? 0)) return;
+
 		if (type === "TWITCH" && this.getSevenTvChatElement()) {
 			const sevenTvElement = this.findSevenTvMessageElement(message.id);
+
 			if (sevenTvElement) this.handleMessage(sevenTvElement, "7TV", isReplay);
+
 			return;
 		}
 
 		const marker = `${type}:${message.nonce || message.id}`;
+
 		if (element.getAttribute("enhancer-message-handled") === marker) return;
 		element.setAttribute("enhancer-message-handled", marker);
 		const wasEmitted = this.emittedMessages.has(message);
@@ -148,6 +161,7 @@ export default class ChatModule extends TwitchModule {
 	private getSevenTvChatElement(): Element | null {
 		if (this.sevenTvChatElement?.isConnected) return this.sevenTvChatElement;
 		this.sevenTvChatElement = document.querySelector(ChatModule.SEVENTV_CHAT_SELECTOR);
+
 		return this.sevenTvChatElement;
 	}
 
@@ -155,8 +169,10 @@ export default class ChatModule extends TwitchModule {
 		messageHandlerApi = this.twitchUtils().getChatController()?.props.messageHandlerAPI,
 	) {
 		if (!this.getSevenTvChatElement()) return;
+
 		if (!messageHandlerApi) return;
 		const descriptor = Object.getOwnPropertyDescriptor(messageHandlerApi, "handleMessage");
+
 		if (
 			messageHandlerApi === this.messageHandlerApi &&
 			((this.messageHandlerGetter && descriptor?.get === this.messageHandlerGetter) ||
@@ -164,25 +180,31 @@ export default class ChatModule extends TwitchModule {
 		) {
 			return;
 		}
+
 		if (descriptor && !descriptor.configurable) return;
 
 		const chatModule = this;
+
 		const wrapHandler = (originalHandler: ChatControllerComponent["props"]["messageHandlerAPI"]["handleMessage"]) => {
 			return function (
 				this: ChatControllerComponent["props"]["messageHandlerAPI"],
 				...messages: Parameters<typeof originalHandler>
 			) {
 				for (const message of messages) chatModule.bufferSevenTvMessage(message);
+
 				return originalHandler.apply(this, messages);
 			};
 		};
 
 		if (descriptor?.get) {
 			const originalGetter = descriptor.get;
+
 			const messageHandlerGetter = function (this: ChatControllerComponent["props"]["messageHandlerAPI"]) {
 				const originalHandler = originalGetter.call(this);
+
 				return typeof originalHandler === "function" ? wrapHandler(originalHandler) : originalHandler;
 			};
+
 			Object.defineProperty(messageHandlerApi, "handleMessage", {
 				...descriptor,
 				get: messageHandlerGetter,
@@ -190,10 +212,12 @@ export default class ChatModule extends TwitchModule {
 			this.messageHandlerApi = messageHandlerApi;
 			this.messageHandler = undefined;
 			this.messageHandlerGetter = messageHandlerGetter;
+
 			return;
 		}
 
 		const originalHandler = messageHandlerApi.handleMessage;
+
 		if (typeof originalHandler !== "function") return;
 		const messageHandler = wrapHandler(originalHandler);
 		Object.defineProperty(messageHandlerApi, "handleMessage", {
@@ -209,8 +233,10 @@ export default class ChatModule extends TwitchModule {
 
 	private bufferSevenTvMessage(rawMessage: TwitchChatMessage) {
 		const wrappedMessage = (rawMessage as any).message;
+
 		const isWrappedMessage =
 			wrappedMessage && typeof wrappedMessage === "object" && "id" in wrappedMessage && "user" in wrappedMessage;
+
 		const message = isWrappedMessage ? (wrappedMessage as TwitchChatMessage) : rawMessage;
 		const createdAt = Date.now();
 
@@ -218,15 +244,18 @@ export default class ChatModule extends TwitchModule {
 			if (message.nonce) {
 				this.sevenTvMessageQueue.addByValue({ ...message, createdAt, queueKey: message.nonce });
 			}
+
 			if (message.id) {
 				this.sevenTvMessageQueue.addByValue({ ...message, createdAt, queueKey: message.id });
 				this.processSevenTvMessage(message.id);
 			}
+
 			return;
 		}
 
 		if (!this.isNonceLinkMessage(message)) return;
 		const queuedMessage = this.sevenTvMessageQueue.getAndRemove(message.nonce);
+
 		if (!queuedMessage || !message.id) return;
 		this.sevenTvMessageQueue.addByValue({ ...queuedMessage, id: message.id, queueKey: message.id });
 		this.processSevenTvMessage(message.id);
@@ -234,11 +263,13 @@ export default class ChatModule extends TwitchModule {
 
 	private isNonceLinkMessage(message: TwitchChatMessage) {
 		if (!message.nonce || !message.id) return false;
+
 		return !message.user && typeof message.messageBody !== "string";
 	}
 
 	private processSevenTvMessage(id: string) {
 		const element = this.findSevenTvMessageElement(id);
+
 		if (element) this.handleMessage(element, "7TV", false);
 	}
 
@@ -248,17 +279,22 @@ export default class ChatModule extends TwitchModule {
 
 	private getSevenTvMessage(element: Element) {
 		const id = element.getAttribute("msg-id");
+
 		if (!id) return;
 		const queuedMessage = this.sevenTvMessageQueue.get(id);
+
 		if (queuedMessage) {
 			if (queuedMessage.nonce) this.sevenTvMessageQueue.remove(queuedMessage.nonce);
+
 			return queuedMessage;
 		}
 
 		// Newest lines are appended last, so scanning backwards matches on the first few instead of the whole chat.
 		const nativeElements = document.querySelectorAll(ChatModule.TWITCHTV_MESSAGE_SELECTOR);
+
 		for (let index = nativeElements.length - 1; index >= 0; index--) {
 			const message = this.twitchUtils().getChatMessage(nativeElements[index]);
+
 			if (message?.id === id) return message;
 		}
 	}

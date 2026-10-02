@@ -52,6 +52,7 @@ export default class RealVideoTimeModule extends KickModule {
 
 	private async run(elements: Element[]) {
 		const video = this.getActiveVideo();
+
 		if (video) this.updateTime(video);
 		this.createTimeInterval();
 		elements.forEach((element) => {
@@ -65,6 +66,7 @@ export default class RealVideoTimeModule extends KickModule {
 				await this.commonUtils().delay(25);
 				this.updateVisibility();
 				const activeVideo = this.getActiveVideo();
+
 				if (activeVideo) this.updateTime(activeVideo);
 			});
 		});
@@ -72,6 +74,7 @@ export default class RealVideoTimeModule extends KickModule {
 		if (this.elementCheckInterval) clearInterval(this.elementCheckInterval);
 		this.elementCheckInterval = setInterval(() => {
 			const created = elements.some((element) => this.createElement(element));
+
 			if (created) this.updateVisibility();
 		}, 1000);
 	}
@@ -95,6 +98,7 @@ export default class RealVideoTimeModule extends KickModule {
 	private createElement(player: Element): boolean {
 		if (player.querySelector(`#${this.getId()}`)) return false;
 		const element = player.querySelector(".z-controls.absolute");
+
 		if (!element || !element.firstElementChild) return false;
 		const wrapper = document.createElement("div");
 		wrapper.id = this.getId();
@@ -110,6 +114,7 @@ export default class RealVideoTimeModule extends KickModule {
 			wrapper,
 		);
 		element.firstElementChild.after(wrapper);
+
 		return true;
 	}
 
@@ -117,6 +122,7 @@ export default class RealVideoTimeModule extends KickModule {
 		if (this.timeInterval) clearInterval(this.timeInterval);
 		this.timeInterval = setInterval(() => {
 			const video = this.getActiveVideo();
+
 			if (video) this.updateTime(video);
 		}, 1000);
 	}
@@ -129,32 +135,41 @@ export default class RealVideoTimeModule extends KickModule {
 	private updateTime(video: HTMLVideoElement) {
 		this.updateVisibility();
 		const time = this.getCurrentRealVideoTime(video);
+
 		if (!time) return;
 		this.timeCounter.value = time;
 	}
 
 	private tryGetVideoCreatedAt() {
 		const videoCreatedAt = this.kickUtils().getIsoDateProps()?.isoDate;
+
 		if (!videoCreatedAt) return;
 		const date = new Date(videoCreatedAt);
+
 		if (Number.isFinite(date.getTime())) this.videoCreatedAt = date;
 	}
 
 	private getCurrentRealVideoTime(video: HTMLVideoElement) {
 		const videoId = window.location.pathname.match(/\/videos\/([^/]+)/)?.[1];
+
 		if (videoId !== this.currentVideoId) {
 			this.currentVideoId = videoId;
 			this.videoCreatedAt = undefined;
 			this.timeCounter.value = -1;
 		}
+
 		if (!this.videoCreatedAt) this.tryGetVideoCreatedAt();
+
 		if (this.videoCreatedAt) return this.videoCreatedAt.getTime() + video.currentTime * 1000;
+
 		if (videoId) return;
 
 		const videoProgress = this.kickUtils().getVideoProgressProps();
+
 		if (!videoProgress) return;
 		const currentTime = Date.now();
 		const timeOffset = videoProgress.durationInMs - videoProgress.currentProgressInMs;
+
 		return currentTime - timeOffset;
 	}
 

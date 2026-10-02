@@ -50,6 +50,7 @@ export default abstract class Platform<
 			await this.enhancerApi.initialize();
 		} catch (error) {
 			this.logger.error(`EnhancerApi init attempt ${attempt} failed:`, error);
+
 			if (attempt < 5) {
 				setTimeout(() => void this.initializeEnhancerApi(attempt + 1), 5000);
 			}
@@ -74,14 +75,17 @@ export default abstract class Platform<
 			try {
 				await module.setup();
 				await module.initialize();
+
 				for (const moduleAppliers of this.appliers) {
 					await moduleAppliers.apply(module);
 				}
+
 				this.logger.debug(`${module.config.name} module has been loaded`);
 			} catch (error) {
 				this.logger.error(`Failed to load ${module.config.name} module: ${error}`);
 			}
 		}
+
 		this.appliers.forEach((applier) => applier.start());
 	}
 

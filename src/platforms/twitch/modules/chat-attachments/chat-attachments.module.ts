@@ -61,12 +61,16 @@ export default class ChatAttachmentsModule extends TwitchModule {
 		if (message.isReplay || !(await this.isModuleEnabled())) return;
 
 		await this.commonUtils().delay(1); // Doing this for FFZ Rich Embed Check
+
 		if (message.element.querySelector(ChatAttachmentsModule.FFZ_RICH_EMBED_CLASS)) return;
 
 		const baseData = this.getBaseData(message);
+
 		if (!baseData) return;
+
 		try {
 			const result = await this.resolveChatAttachmentHandler(baseData);
+
 			if (result?.applies) await result.chatAttachmentHandler.handle(result.data);
 		} catch (error) {
 			this.logger.error("Failed to handle chat attachment:", error);
@@ -77,14 +81,17 @@ export default class ChatAttachmentsModule extends TwitchModule {
 		const chatAttachmentHandler = this.chatAttachmentHandlers.find((chatAttachmentHandler) =>
 			chatAttachmentHandler.validate(baseData),
 		);
+
 		if (!chatAttachmentHandler) return;
 		baseData.url = chatAttachmentHandler.parseUrl(baseData.url);
 		const data = await this.getData(baseData);
+
 		return { applies: await chatAttachmentHandler.applies(data), chatAttachmentHandler, data };
 	}
 
 	private getBaseData(message: TwitchChatMessageEvent): BaseChatAttachmentData | undefined {
 		const messageText = message.message.message ?? message.message.messageBody;
+
 		if (!messageText) return;
 		const args = messageText.split(" ");
 		const links = [...message.element.querySelectorAll("a")] as Element[];
@@ -96,6 +103,7 @@ export default class ChatAttachmentsModule extends TwitchModule {
 		if (this.commonUtils().isValidUrl(firstWord) && firstElement && !firstElement.matches(".enhancer-giphy-link")) {
 			return { messageType: ChatAttachmentMessageType.FIRST, url: new URL(firstWord), messageElement: firstElement };
 		}
+
 		if (this.commonUtils().isValidUrl(lastWord) && lastElement && !lastElement.matches(".enhancer-giphy-link")) {
 			return { messageType: ChatAttachmentMessageType.LAST, url: new URL(lastWord), messageElement: lastElement };
 		}
@@ -103,8 +111,10 @@ export default class ChatAttachmentsModule extends TwitchModule {
 
 	private async getData(baseData: BaseChatAttachmentData): Promise<ChatAttachmentData> {
 		const attachmentData = await this.getAttachmentData(baseData.url);
+
 		if (!attachmentData || !attachmentData.type || !attachmentData.size)
 			throw new Error("Couldn't get attachment data");
+
 		return { ...baseData, attachmentType: attachmentData.type, attachmentSize: Number.parseInt(attachmentData.size) };
 	}
 
@@ -114,6 +124,7 @@ export default class ChatAttachmentsModule extends TwitchModule {
 				method: "HEAD",
 				responseType: "text",
 			});
+
 			return { type: response.headers.get("Content-Type"), size: response.headers.get("Content-Length") };
 		} catch (error) {
 			this.logger.warn("Couldn't get attachment data", error);
@@ -124,6 +135,7 @@ export default class ChatAttachmentsModule extends TwitchModule {
 		if (this.inputMonitoringInterval) return;
 		this.inputMonitoringInterval = setInterval(async () => {
 			const chatInputContent = this.twitchUtils().getChatInputContent();
+
 			if (!chatInputContent) return;
 
 			const words = chatInputContent.split(" ");
@@ -137,6 +149,7 @@ export default class ChatAttachmentsModule extends TwitchModule {
 				(lastWordData && (await this.resolveChatAttachmentHandler(lastWordData))?.applies);
 
 			const url = firstWordData?.url?.toString() || lastWordData?.url?.toString();
+
 			if (attachmentResolved && url) {
 				if (this.previousInputContent === url) return;
 				this.previousInputContent = url;
@@ -163,11 +176,13 @@ export default class ChatAttachmentsModule extends TwitchModule {
 				url: new URL(word),
 			} as BaseChatAttachmentData;
 		}
+
 		return undefined;
 	}
 
 	async initialize() {
 		await this.imageAttachmentConfig.initialize();
+
 		if (await this.isModuleEnabled()) this.startInputMonitoring();
 
 		this.commonUtils().createGlobalStyle(`

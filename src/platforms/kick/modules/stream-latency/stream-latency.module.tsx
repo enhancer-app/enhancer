@@ -42,6 +42,7 @@ export default class StreamLatencyModule extends KickModule {
 		for (const chatRoom of elements) {
 			if (chatRoom.className.includes("--chat-clip")) continue;
 			const chatTitle = chatRoom.querySelector<HTMLElement>(":is(span, h2).absolute.left-1\\/2.-translate-x-1\\/2");
+
 			if (!chatTitle) continue;
 			chatTitle.textContent = "";
 			render(
@@ -60,17 +61,21 @@ export default class StreamLatencyModule extends KickModule {
 		const video = this.getVideoElement();
 		const isLive = !!video && this.kickUtils().isLiveVideo(video);
 		this.setLive(isLive);
+
 		if (!video || !isLive || video.paused) {
 			this.latencySampler.clear();
 			this.latencyCounter.value = -1;
+
 			return;
 		}
+
 		const latency = this.latencySampler.add(this.kickUtils().getLatency(video));
 		this.latencyCounter.value = latency ?? -1;
 	}
 
 	private watchPlaybackRate() {
 		const video = this.getVideoElement();
+
 		if (!video) return;
 		video.addEventListener("ratechange", () => {
 			this.playbackRate.value = video.playbackRate;
@@ -79,15 +84,21 @@ export default class StreamLatencyModule extends KickModule {
 
 	private resetPlayer(): void {
 		const video = this.getVideoElement();
+
 		if (!video) {
 			this.logger.warn("Failed to find video element");
+
 			return;
 		}
+
 		if (!this.kickUtils().isLiveVideo(video)) {
 			video.currentTime = video.duration;
+
 			return;
 		}
+
 		const latency = this.kickUtils().getLatency(video);
+
 		if (latency !== undefined && latency > 0) {
 			video.currentTime += latency;
 			this.latencySampler.clear();

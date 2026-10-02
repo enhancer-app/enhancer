@@ -32,26 +32,34 @@ export default class ChatModule extends KickModule {
 			() => this.kickUtils().getChannelInfo(),
 			async (channelInfo) => {
 				channelId = channelInfo.channelId.toString();
+
 				return true;
 			},
 			{ maxRetries: 5, delay: 100 },
 		);
+
 		if (!channelId) {
 			try {
 				const chatRoom = this.kickUtils().getChannelChatRoomInfo();
+
 				if (!chatRoom) {
 					this.logger.error("Failed to find chat room component");
+
 					return;
 				}
+
 				const { data } = await this.kickApi().getChannel(chatRoom.slug);
 				channelId = data.id.toString();
 			} catch (error) {
 				this.logger.error("Failed to get channel data", error);
 			}
 		}
+
 		if (!channelId) return;
+
 		try {
 			const joined = await this.enhancerApi().joinChannel(channelId);
+
 			if (joined) {
 				this.emitter.emit("extension:joined-channel");
 				this.logger.info(`Joined channel ${channelId}`);
@@ -63,7 +71,9 @@ export default class ChatModule extends KickModule {
 
 	private getMessageData(element: Element): Omit<KickChatMessageEvent, "isUsingNTV" | "isRerender"> | null {
 		const messageData = this.kickUtils().getMessageData(element);
+
 		if (!messageData) return null;
+
 		return {
 			message: messageData,
 			element,
@@ -73,20 +83,26 @@ export default class ChatModule extends KickModule {
 	private handleMessage(element: Element) {
 		try {
 			if (!element.isConnected) return;
+
 			if (element.classList.contains("ntv__chat-message--unrendered")) {
 				const marker = element.getAttribute("enhancer-message-handled");
+
 				if (marker && !marker.endsWith(":PENDING")) {
 					const colonIndex = marker.lastIndexOf(":");
 					const baseMarker = colonIndex === -1 ? marker : marker.slice(0, colonIndex);
 					element.setAttribute("enhancer-message-handled", `${baseMarker}:PENDING`);
 				}
+
 				return;
 			}
+
 			const messageData = this.getMessageData(element);
+
 			if (!messageData) return;
 			const isUsingNTV = this.kickUtils().isUsingNTV(element);
 			const marker = `${messageData.message.id}:${isUsingNTV ? "NTV" : "KICK"}`;
 			const previousMarker = element.getAttribute("enhancer-message-handled");
+
 			if (previousMarker === marker) return;
 			element.setAttribute("enhancer-message-handled", marker);
 			this.emitter.emit("kick:chatMessage", {
@@ -101,11 +117,13 @@ export default class ChatModule extends KickModule {
 
 	private scheduleMessage(element: Element) {
 		this.pendingMessages.add(element);
+
 		if (this.animationFrame !== undefined) return;
 		this.animationFrame = requestAnimationFrame(() => {
 			this.animationFrame = undefined;
 			const messages = Array.from(this.pendingMessages);
 			this.pendingMessages.clear();
+
 			for (const message of messages) this.handleMessage(message);
 		});
 	}
@@ -113,10 +131,13 @@ export default class ChatModule extends KickModule {
 	private scheduleMessagesFromNode(node: Node) {
 		if (!(node instanceof Element)) return;
 		const parentMessage = node.closest("div[data-index]");
+
 		if (parentMessage) {
 			this.scheduleMessage(parentMessage);
+
 			return;
 		}
+
 		node.querySelectorAll("div[data-index]").forEach((message) => this.scheduleMessage(message));
 	}
 
@@ -125,6 +146,7 @@ export default class ChatModule extends KickModule {
 		this.observer = new MutationObserver((mutations) => {
 			for (const mutation of mutations) {
 				if (mutation.type === "attributes") this.scheduleMessagesFromNode(mutation.target);
+
 				for (const node of mutation.addedNodes) this.scheduleMessagesFromNode(node);
 			}
 		});

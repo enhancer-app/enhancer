@@ -32,6 +32,7 @@ export default class SettingsButtonModule extends TwitchModule {
 			.filter((element) => element.children.length > 0)
 			.map((element) => [...element.children].at(-1))
 			.filter((element) => element !== undefined) as Element[];
+
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), properElements, "span");
 		const logo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo-gray.svg");
 		wrappers.forEach((element) => {
@@ -48,6 +49,7 @@ export default class SettingsButtonModule extends TwitchModule {
 		const logo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo-gray.svg");
 		elements.forEach((element) => {
 			const target = element.querySelector(".tw-col:last-child > div");
+
 			if (!target || target.querySelector(`.${this.getId()}`)) return;
 			const wrapper = document.createElement("span");
 			wrapper.classList.add(this.getId());

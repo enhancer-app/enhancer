@@ -65,6 +65,7 @@ export default class ChatMentionSoundModule extends TwitchModule {
 		} else {
 			this.audio.src = this.defaultSound;
 		}
+
 		this.audio.load();
 	}
 
@@ -87,6 +88,7 @@ export default class ChatMentionSoundModule extends TwitchModule {
 			this.audio.load();
 
 			const currentUrlSource = this.settings().chatMentionSoundSource;
+
 			if (currentUrlSource && currentUrlSource.length > 0) {
 				this.logger.debug("Removing deprecated url", currentUrlSource);
 				await this.updateSetting("chatMentionSoundSource", "");
@@ -98,6 +100,7 @@ export default class ChatMentionSoundModule extends TwitchModule {
 
 	private updateAudioSource(sourceUrl: string) {
 		const fileData = this.settings().chatMentionSoundFile;
+
 		if (!this.isValidFileData(fileData)) {
 			const isCustomSound = sourceUrl.length > 3 && this.commonUtils().isValidUrl(sourceUrl);
 			this.audio.src = isCustomSound ? sourceUrl : this.defaultSound;
@@ -107,6 +110,7 @@ export default class ChatMentionSoundModule extends TwitchModule {
 
 	private setCurrentUsername() {
 		const scrollableChat = this.twitchUtils().getScrollableChat()?.props;
+
 		if (!scrollableChat) return;
 		this.currentUsername = scrollableChat.currentUserLogin?.toLowerCase();
 		this.logger.debug(`Joined chat as ${this.currentUsername}`);
@@ -114,9 +118,11 @@ export default class ChatMentionSoundModule extends TwitchModule {
 
 	private async handleMessage({ message, isReplay }: TwitchChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
+
 		if (isReplay || !this.currentUsername) return;
 
 		const content = message.message ?? message.messageBody;
+
 		if (!content) return;
 
 		if (content.toLowerCase().includes(this.currentUsername)) {
@@ -126,6 +132,7 @@ export default class ChatMentionSoundModule extends TwitchModule {
 
 	playSound() {
 		this.audio.load();
+
 		if (!this.audio.paused) {
 			this.audio.currentTime = 0;
 		} else {

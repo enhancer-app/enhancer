@@ -49,6 +49,7 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			this.twitchUtils,
 			this.twitchApi,
 		] as const;
+
 		return [
 			new StreamLatencyModule(...dependencies),
 			new StreamLatencyReducerModule(...dependencies),

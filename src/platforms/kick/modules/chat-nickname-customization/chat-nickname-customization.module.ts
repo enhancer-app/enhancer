@@ -23,10 +23,12 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 
 	private async handleMessage({ message, element }: KickChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
+
 		const usernameElements = [
 			...element.querySelectorAll<HTMLElement>(".ntv__chat-message__username"),
 			...element.querySelectorAll<HTMLElement>('button[data-prevent-expand="true"]'),
 		];
+
 		if (usernameElements.length < 1) return;
 
 		const userCustomization = this.enhancerApi().findUserForCurrentChannel(message.sender.id.toString());
@@ -35,12 +37,15 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 
 		usernameElements.forEach((usernameElement) => {
 			usernameElement.dataset.enhancerUsername = message.sender.slug.toLowerCase();
+
 			if (userCustomization.customNickname) {
 				usernameElement.innerText = userCustomization.customNickname;
 			}
+
 			if (userCustomization.hasGlow) {
 				this.applyGlowEffect(usernameElement, message);
 			}
+
 			if (userCustomization.customFont) {
 				this.chatNicknameCustomizationHelper.applyCustomFont(
 					usernameElement,
@@ -57,6 +62,7 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 			(usernameElement.firstChild?.firstChild && (usernameElement.firstChild.firstChild as HTMLElement).style.color) ||
 			messageData.sender.identity.color ||
 			"white";
+
 		this.chatNicknameCustomizationHelper.applyGlowEffect(usernameElement, color);
 	}
 }

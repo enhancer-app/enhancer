@@ -177,9 +177,11 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 					hasMore = false;
 				}
 			}
+
 			return allData;
 		} catch (error) {
 			logger.error("Error fetching all watchtime data:", error);
+
 			return allData;
 		}
 	};
@@ -187,6 +189,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 	const exportData = async () => {
 		setLoading(true);
 		setStatus(null);
+
 		try {
 			const settings = await workerService.send("getSettings", { platform });
 			const watchtime = await fetchAllWatchtime(platform);
@@ -221,21 +224,25 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 	const importData = async (file: File) => {
 		setLoading(true);
 		setStatus(null);
+
 		try {
 			const text = await file.text();
 
 			// Parse JSON with specific error handling
 			let data: ExportImportData;
+
 			try {
 				data = JSON.parse(text);
 			} catch {
 				showStatus("Invalid JSON format in backup file", "error");
+
 				return;
 			}
 
 			// Validate metadata
 			if (!data.meta) {
 				showStatus("Invalid backup file: missing metadata", "error");
+
 				return;
 			}
 
@@ -244,12 +251,14 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 					`Platform mismatch: This backup is for ${data.meta.platform}, but you're trying to import to ${platform}`,
 					"error",
 				);
+
 				return;
 			}
 
 			// Validate structure
 			if (!data.settings && !data.watchtime) {
 				showStatus("Invalid backup file: no data found", "error");
+
 				return;
 			}
 
@@ -266,6 +275,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 				} catch (error) {
 					logger.error("Failed to import settings:", error);
 					showStatus("Failed to import settings", "error");
+
 					return;
 				}
 			}
@@ -304,12 +314,15 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 
 			// Show detailed status
 			const parts = [];
+
 			if (importedSettings > 0) {
 				parts.push(`${importedSettings} settings`);
 			}
+
 			if (importedWatchtime > 0) {
 				parts.push(`${importedWatchtime} watchtime records`);
 			}
+
 			if (failedWatchtime > 0) {
 				parts.push(`${failedWatchtime} failed`);
 			}
@@ -328,9 +341,11 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 	const handleFileSelect = (event: Event) => {
 		const input = event.target as HTMLInputElement;
 		const file = input.files?.[0];
+
 		if (file) {
 			importData(file);
 		}
+
 		input.value = "";
 	};
 

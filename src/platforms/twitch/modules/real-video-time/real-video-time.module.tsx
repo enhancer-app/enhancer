@@ -85,9 +85,11 @@ export default class RealVideoTimeModule extends TwitchModule {
 			);
 		});
 		this.updateTime();
+
 		if (this.timeInterval) {
 			clearInterval(this.timeInterval);
 		}
+
 		this.timeInterval = setInterval(async () => {
 			await this.updateCurrentVideo();
 			this.updateTime();
@@ -111,9 +113,12 @@ export default class RealVideoTimeModule extends TwitchModule {
 		try {
 			const { data } = await this.getVideoTime(videoId);
 			const createdAt = data?.video?.createdAt;
+
 			if (!createdAt) return;
 			const date = new Date(createdAt);
+
 			if (Number.isNaN(date.getTime())) return;
+
 			return date;
 		} catch (error) {
 			this.logger.warn("Failed to fetch video createdAt", error);
@@ -127,22 +132,30 @@ export default class RealVideoTimeModule extends TwitchModule {
 
 	private async updateCurrentVideo() {
 		const videoId = this.twitchUtils().getVideoIdFromLink(window.location.href);
+
 		if (!videoId) {
 			this.lastFailedVideoId = null;
+
 			return this.logger.warn("Failed to find video id");
 		}
+
 		if (this.currentVideoId === videoId) {
 			return;
 		}
+
 		if (this.lastFailedVideoId === videoId) {
 			return;
 		}
+
 		const createdAt = await this.getVideoCreatedAt(videoId);
+
 		if (!createdAt) {
 			this.logger.error(`Failed to get creation date for video ${videoId}. Aborting update.`);
 			this.lastFailedVideoId = videoId;
+
 			return;
 		}
+
 		this.logger.debug(`Creating real video time counter for ${videoId}`, this.videoCreatedAt);
 		this.currentVideoId = videoId;
 		this.videoCreatedAt = createdAt;
@@ -151,10 +164,13 @@ export default class RealVideoTimeModule extends TwitchModule {
 
 	private updateTime() {
 		const mediaPlayerInstance = this.mediaPlayer ?? this.twitchUtils().getMediaPlayerInstance();
+
 		if (!mediaPlayerInstance) {
 			this.logger.error("Failed to find media player instance");
+
 			return;
 		}
+
 		this.mediaPlayer = mediaPlayerInstance;
 		this.timeCounter.value = this.videoCreatedAt.getTime() + mediaPlayerInstance.getPosition() * 1000;
 	}

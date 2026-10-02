@@ -29,6 +29,7 @@ export default class SettingsButtonModule extends KickModule {
 		const menus = elements
 			.map((element) => (element.tagName === "NAV" ? element.lastElementChild : element))
 			.filter((menu): menu is Element => menu !== null && !menu.querySelector(`.${this.getId()}`));
+
 		if (menus.length < 1) return;
 
 		const logo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo-gray.svg");

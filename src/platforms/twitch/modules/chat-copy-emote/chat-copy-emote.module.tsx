@@ -30,9 +30,11 @@ export default class ChatCopyEmoteModule extends TwitchModule {
 				const directEmote = event.target.closest(emoteSelector);
 				const wrapper = event.target.closest(".seventv-emote-box");
 				const emote = directEmote ?? wrapper?.querySelector(emoteSelector);
+
 				if (!(emote instanceof Element) || !element.contains(emote)) return;
 
 				const name = emote.getAttribute("alt")?.trim();
+
 				if (!name) return;
 
 				event.preventDefault();

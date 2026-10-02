@@ -53,21 +53,27 @@ export class Logger {
 	private sendLog(logType: LogType, ...data: any[]): void {
 		const normalizedData: string[] = [];
 		let entryLength = 0;
+
 		for (const value of data) {
 			const serialized = Logger.serialize(value);
 			const remaining = Logger.MAX_ENTRY_LENGTH - entryLength;
+
 			if (serialized.length > remaining) {
 				const suffix = "...[TRUNCATED]";
+
 				if (remaining > suffix.length) {
 					normalizedData.push(`${serialized.slice(0, remaining - suffix.length)}${suffix}`);
 				} else if (remaining > 0) {
 					normalizedData.push(suffix.slice(0, remaining));
 				}
+
 				break;
 			}
+
 			normalizedData.push(serialized);
 			entryLength += serialized.length;
 		}
+
 		Logger.entries.push({
 			timestamp: Date.now(),
 			level: logType,
@@ -75,7 +81,9 @@ export class Logger {
 			source: this.source,
 			data: normalizedData,
 		});
+
 		if (Logger.entries.length > Logger.MAX_ENTRIES) Logger.entries.shift();
+
 		if (logType !== "debug" || this.IS_DEVELOPMENT) {
 			console[logType](`${this.prefix} ${Logger.LOG_TYPE_PREFIX[logType]}`, ...normalizedData);
 		}
@@ -93,25 +101,35 @@ export class Logger {
 		if (value instanceof Error) {
 			return Logger.sanitize(`${value.name}: ${value.message}${value.stack ? `\n${value.stack}` : ""}`);
 		}
+
 		if (typeof value === "string") return Logger.sanitize(value);
+
 		if (value === undefined) return "undefined";
+
 		if (value === null) return "null";
+
 		if (typeof value === "bigint") return `${value.toString()}n`;
+
 		if (typeof value !== "object") return Logger.sanitize(String(value));
 
 		const seen = new WeakSet<object>();
+
 		try {
 			const serialized = JSON.stringify(value, (key, nestedValue) => {
 				if (Logger.SENSITIVE_KEY.test(key)) return "[REDACTED]";
+
 				if (nestedValue instanceof Error) {
 					return { name: nestedValue.name, message: nestedValue.message, stack: nestedValue.stack };
 				}
+
 				if (nestedValue && typeof nestedValue === "object") {
 					if (seen.has(nestedValue)) return "[Circular]";
 					seen.add(nestedValue);
 				}
+
 				return nestedValue;
 			});
+
 			return Logger.sanitize(serialized ?? String(value));
 		} catch {
 			return Logger.sanitize(String(value));

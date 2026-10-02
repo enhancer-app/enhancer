@@ -59,9 +59,11 @@ export class HandlerRegistry {
 
 	getHandler(action: WorkerAction): MessageHandler {
 		const handler = this.handlers.get(action);
+
 		if (!handler) {
 			throw new Error(`Unknown action: ${action}`);
 		}
+
 		return handler;
 	}
 

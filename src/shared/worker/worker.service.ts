@@ -43,6 +43,7 @@ export default class WorkerService {
 				this.element.removeEventListener("enhancer-bridge-ready", handler);
 				resolve();
 			};
+
 			this.element.addEventListener("enhancer-bridge-ready", handler);
 		});
 	}
@@ -61,6 +62,7 @@ export default class WorkerService {
 		if (!this.broadcastHandlers.has(type)) {
 			this.broadcastHandlers.set(type, new Set());
 		}
+
 		this.broadcastHandlers.get(type)?.add(handler);
 	}
 
@@ -88,10 +90,13 @@ export default class WorkerService {
 	private async ping(): Promise<void> {
 		try {
 			const response = await this.send("ping", undefined);
+
 			if (!response) return;
+
 			if (this.workerInstanceId && this.workerInstanceId !== response.instanceId) {
 				for (const handler of this.restartHandlers) handler();
 			}
+
 			this.workerInstanceId = response.instanceId;
 		} catch (error) {
 			this.logger.error("Ping failed:", error);
@@ -103,12 +108,16 @@ export default class WorkerService {
 			const detail = JSON.parse(event.detail) as ExtensionResponseDetail;
 			const { messageId, data, error } = detail;
 			const pending = this.pendingMessages.get(messageId);
+
 			if (pending) {
 				this.pendingMessages.delete(messageId);
+
 				if (error) {
 					pending.reject(new Error(error));
+
 					return;
 				}
+
 				pending.resolve(data);
 			}
 		}) as unknown as EventListener);
@@ -118,10 +127,13 @@ export default class WorkerService {
 		this.element.addEventListener("enhancer-api-seed-request", ((event: CustomEvent<string>) => {
 			const request = JSON.parse(event.detail) as EnhancerApiSeedRequestPayload;
 			let seed: CachedAggregateSeed | null = null;
+
 			for (const handler of this.enhancerApiSeedHandlers) {
 				seed = handler(request.topic);
+
 				if (seed) break;
 			}
+
 			this.element.dispatchEvent(
 				new CustomEvent<string>("enhancer-api-seed-response", {
 					detail: JSON.stringify({ requestId: request.requestId, seed }),
@@ -132,6 +144,7 @@ export default class WorkerService {
 			try {
 				const broadcast = JSON.parse(event.detail) as WorkerBroadcast;
 				const handlers = this.broadcastHandlers.get(broadcast.type);
+
 				if (handlers) {
 					for (const handler of handlers) {
 						handler(broadcast.payload);
@@ -152,6 +165,7 @@ export default class WorkerService {
 			this.pendingMessages.set(messageId, { resolve, reject });
 
 			const payload = args.length > 0 ? args[0] : undefined;
+
 			const event = new CustomEvent<string>("enhancer-message", {
 				detail: JSON.stringify({ messageId, action, payload }),
 			});
@@ -171,16 +185,19 @@ export default class WorkerService {
 		return new Promise((resolve) => {
 			const requestId = crypto.randomUUID();
 			const timeout = { id: 0 };
+
 			const cleanup = () => {
 				clearTimeout(timeout.id);
 				this.element.removeEventListener("enhancer-bridge-logs-response", handleResponse);
 			};
+
 			const handleResponse = (event: Event) => {
 				try {
 					const detail = JSON.parse((event as CustomEvent<string>).detail) as {
 						requestId: string;
 						logs?: LogEntry[];
 					};
+
 					if (detail.requestId !== requestId) return;
 					cleanup();
 					resolve(Array.isArray(detail.logs) ? detail.logs : []);

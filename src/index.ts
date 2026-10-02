@@ -10,12 +10,15 @@ import TwitchPlatform from "./platforms/twitch/twitch.platform.ts";
 		environment: __environment__,
 		platform: platform.getPlatformType(),
 	};
+
 	if (platform.shouldStart(window.location)) await platform.start();
 })();
 
 function getPlatform() {
 	const hostname = window.location.hostname.toLowerCase();
+
 	if (hostname.endsWith("twitch.tv")) return new TwitchPlatform();
+
 	if (hostname.endsWith("kick.com")) return new KickPlatform();
 	throw Error(`Unsupported host name ${hostname} (${window.location.href})`);
 }

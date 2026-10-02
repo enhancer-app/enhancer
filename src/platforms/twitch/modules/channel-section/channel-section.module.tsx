@@ -73,14 +73,17 @@ export default class ChannelSectionModule extends TwitchModule {
 
 	private async run(elements: Element[]) {
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), elements, "div");
+
 		for (const wrapper of wrappers) {
 			if (this.updateNames()) continue;
 			await this.startWatchtimeUpdates();
+
 			const logo = await this.commonUtils().getAssetFile(
 				this.workerService(),
 				"enhancer/logo.svg",
 				"https://enhancer.at/assets/brand/logo.png",
 			);
+
 			render(
 				<ChannelSectionComponent
 					displayName={this.currentDisplayName}
@@ -98,6 +101,7 @@ export default class ChannelSectionModule extends TwitchModule {
 	private getHeaderActions(): ChannelSectionAction[] {
 		const actions: ChannelSectionAction[] = [];
 		const channelId = this.currentChannelId.value;
+
 		if (this.pinnedStreamersEnabled.value && channelId) {
 			actions.push({
 				key: "pin-streamer",
@@ -105,6 +109,7 @@ export default class ChannelSectionModule extends TwitchModule {
 				tooltip: this.pinStreamerTooltip,
 				onClick: () => {
 					const currentChannelId = this.currentChannelId.value;
+
 					if (!currentChannelId) return;
 					this.emitter.emit("twitch:pinnedStreamer:sync", {
 						channelId: currentChannelId,
@@ -123,11 +128,13 @@ export default class ChannelSectionModule extends TwitchModule {
 				this.emitter.emit("extension:settings-open");
 			},
 		});
+
 		return actions;
 	}
 
 	private getCurrentChannelByUrl() {
 		const name = this.twitchUtils().getCurrentChannelByUrl();
+
 		return { displayName: name, channelLogin: name, channelId: undefined };
 	}
 
@@ -136,19 +143,24 @@ export default class ChannelSectionModule extends TwitchModule {
 			this.twitchUtils().getChannelInfo() ||
 			this.twitchUtils().getChannelInfoFromHomeLowerContent() ||
 			this.getCurrentChannelByUrl();
+
 		if (!channelInfo) {
 			this.logger.warn("Channel name not found");
+
 			return true;
 		}
+
 		this.currentDisplayName.value = channelInfo.displayName;
 		this.currentLogin.value = channelInfo.channelLogin;
 		this.currentChannelId.value =
 			channelInfo.channelId ?? this.twitchUtils().getStreamInfo()?.channelID ?? this.twitchUtils().getChannelId() ?? "";
+
 		return false;
 	}
 
 	private syncPinnedStreamerAction({ channelId, isPinned }: TwitchPinnedStreamerSyncEvent) {
 		if (this.isPinnedStreamer(channelId) === isPinned) return;
+
 		if (isPinned) {
 			this.pinnedStreamers.value = [...this.pinnedStreamers.value, channelId];
 		} else {
@@ -163,13 +175,17 @@ export default class ChannelSectionModule extends TwitchModule {
 	private async updateWatchtime() {
 		if (this.updateNames()) return;
 		const login = this.currentLogin.value;
+
 		if (login.length < 1) return;
 		const now = Date.now();
+
 		if (login === this.watchtimeLogin && now - this.watchtimeFetchedAt < ChannelSectionModule.WATCHTIME_REFRESH_MS) {
 			return;
 		}
+
 		this.watchtimeLogin = login;
 		this.watchtimeFetchedAt = now;
+
 		try {
 			this.watchtimeCounter.value = await this.getWatchTime(login);
 		} catch (error) {
@@ -181,9 +197,11 @@ export default class ChannelSectionModule extends TwitchModule {
 		if (!("value" in this.watchtimeCounter)) {
 			this.watchtimeCounter = signal(0);
 		}
+
 		if (this.watchtimeInterval) {
 			clearInterval(this.watchtimeInterval);
 		}
+
 		await this.updateWatchtime();
 		this.watchtimeInterval = setInterval(async () => {
 			await this.updateWatchtime();
@@ -195,6 +213,7 @@ export default class ChannelSectionModule extends TwitchModule {
 			platform: "twitch",
 			channel: channelName.toLowerCase(),
 		});
+
 		return watchtime?.time ?? 0;
 	}
 }

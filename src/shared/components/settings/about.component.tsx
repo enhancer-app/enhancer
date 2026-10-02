@@ -210,6 +210,7 @@ interface EnhancerAboutComponentProps {
 
 export function EnhancerAboutComponent({ platform, workerService, icons }: EnhancerAboutComponentProps) {
 	const contributors = ["igorovh", "czestereq", "d33zor", "kawre", "usermacieg", "kaedriz", "esteeming"];
+
 	const testers = [
 		"piotrgamerpl",
 		"m0rtak_",
@@ -227,6 +228,7 @@ export function EnhancerAboutComponent({ platform, workerService, icons }: Enhan
 		"x3te",
 		"nyloniarz",
 	];
+
 	const specialThanks = ["lewus", "b3akers", "xyves"];
 
 	return (

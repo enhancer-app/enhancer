@@ -61,6 +61,7 @@ export function LatencyComponent({ click, latencyCounter, isLive, playbackRate }
 		if (latencyCounter.value === undefined || latencyCounter.value < 0 || Number.isNaN(latencyCounter.value)) {
 			return "—";
 		}
+
 		return `${latencyCounter.value.toFixed(2)}s`;
 	};
 

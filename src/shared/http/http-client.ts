@@ -23,17 +23,20 @@ export class HttpClient {
 
 		try {
 			const requestHeaders: HeadersInit = { ...headers };
+
 			if (body) {
 				requestHeaders["Content-Type"] = "application/json";
 			}
 
 			this.logger?.debug(`${method.toUpperCase()} ${url}`);
+
 			const response = await fetch(url, {
 				method,
 				body,
 				headers: requestHeaders,
 				signal: controller.signal,
 			});
+
 			this.logger?.debug(`${method.toUpperCase()} ${url} ${response.status}`);
 
 			if (!validateStatus(response.status)) {
@@ -41,6 +44,7 @@ export class HttpClient {
 			}
 
 			let data: T;
+
 			switch (responseType) {
 				case "text":
 					data = (await response.text()) as T;
@@ -65,9 +69,11 @@ export class HttpClient {
 			if (error instanceof DOMException && error.name === "AbortError") {
 				throw new Error(`Request timed out after ${timeout}ms`, { cause: error });
 			}
+
 			if (error instanceof Error) {
 				throw error;
 			}
+
 			throw new Error(`Request failed: ${error}`, { cause: error });
 		} finally {
 			if (timeoutId) {

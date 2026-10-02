@@ -45,9 +45,11 @@ export default class ChatMessageMenuModule extends TwitchModule {
 			async (event) => {
 				if (window.getSelection()?.toString()) return;
 				const tag = (event.target as HTMLElement | null)?.tagName.toLowerCase();
+
 				if (ChatMessageMenuModule.BLOCKED_TAGS.includes(tag || "")) return;
 				event.preventDefault();
 				const options = this.getOptions(message);
+
 				if (options.length < 1) return;
 				this.emitter.emit("twitch:messageMenu", {
 					options,
@@ -65,6 +67,7 @@ export default class ChatMessageMenuModule extends TwitchModule {
 
 		const action = this.useAddActionInsteadOfSet ? "addChatText" : "setChatText";
 		const actionPrefix = this.useAddActionInsteadOfSet ? "Add" : "Copy";
+
 		const createChatOption = (keySuffix: string, labelPrefix: string, value: string): MessageMenuOption => ({
 			key: `${this.useAddActionInsteadOfSet ? "add" : "copy"}-${keySuffix}-to-text-area`,
 			label: `${labelPrefix} to text area`,

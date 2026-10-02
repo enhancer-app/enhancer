@@ -95,6 +95,7 @@ export interface UpdateSettingsPayload {
 }
 
 export type GetSettingsResponse = PlatformSettings;
+
 export type UpdateSettingsResponse = { success: true };
 
 export interface WorkerApiActions {

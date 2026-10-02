@@ -28,14 +28,17 @@ export default class StreamLatencyReducerModule extends KickModule {
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(() => {
 			const video = document.querySelector<HTMLVideoElement>("video#video-player");
+
 			if (!video) {
 				this.latencySampler.clear();
+
 				return;
 			}
 
 			if (!this.kickUtils().isLiveVideo(video) || video.paused) {
 				this.latencySampler.clear();
 				this.resetPlaybackSpeed(video);
+
 				return;
 			}
 
@@ -59,6 +62,7 @@ export default class StreamLatencyReducerModule extends KickModule {
 		const { minRate, maxRate, minThreshold, maxThreshold } = this.getSettings();
 
 		if (latency === undefined || latency <= minThreshold) return 1;
+
 		if (latency >= maxThreshold) return maxRate;
 
 		return minRate + ((maxRate - minRate) * (latency - minThreshold)) / (maxThreshold - minThreshold);
@@ -66,6 +70,7 @@ export default class StreamLatencyReducerModule extends KickModule {
 
 	private getSettings() {
 		const settings = this.settings();
+
 		return {
 			minRate: settings.streamLatencyReducerMinRate,
 			maxRate: settings.streamLatencyReducerMaxRate,

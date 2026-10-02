@@ -87,6 +87,7 @@ export default class ChattersModule extends TwitchModule {
 
 	private findUsernameFromStatusIndicator(el?: Element | null): string | null {
 		const container = el?.parentElement?.parentElement?.parentElement;
+
 		return container?.querySelector("p")?.textContent ?? null;
 	}
 
@@ -113,6 +114,7 @@ export default class ChattersModule extends TwitchModule {
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), elements, "span");
 
 		this.requestUpdate();
+
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(() => this.requestUpdate(), ChattersModule.UPDATE_INTERVAL_TIME);
 		this.startChannelDiscovery();
@@ -144,18 +146,22 @@ export default class ChattersModule extends TwitchModule {
 
 			indicators.forEach((indicator) => {
 				const username = this.findUsernameFromStatusIndicator(indicator)?.toLowerCase();
+
 				if (!username) return;
 
 				const counter = this.getOrCreateCounter(username, ChattersModule.LOADING_VALUE);
+
 				if (counter !== undefined && indicator.parentElement) {
 					let existing = indicator.parentElement.querySelector(
 						`.${ChattersModule.INDIVIDUAL_CHATTERS_COMPONENT_WRAPPER_CLASS}`,
 					);
+
 					if (!existing) {
 						existing = document.createElement("span");
 						existing.className = ChattersModule.INDIVIDUAL_CHATTERS_COMPONENT_WRAPPER_CLASS;
 						indicator.parentElement.appendChild(existing);
 					}
+
 					render(<ChattersComponent click={this.refreshChatters.bind(this)} counter={counter} />, existing);
 				}
 			});
@@ -190,6 +196,7 @@ export default class ChattersModule extends TwitchModule {
 								const { data } = await this.twitchApi().gql<ChattersResponse>(ChattersQuery, {
 									name: login.toLowerCase(),
 								});
+
 								const counter = this.getOrCreateCounter(login, data.channel.chatters.count);
 								counter.value = data.channel.chatters.count;
 								this.logger.info(`Refreshed chatters for ${login}`, counter.value);
@@ -208,6 +215,7 @@ export default class ChattersModule extends TwitchModule {
 					this.updateTotalChattersCounter();
 					this.lastKnownLogins = new Set(uniqueLogins);
 					this.lastUpdatedAt = Date.now();
+
 					return true;
 				},
 				{ delay: 1000, maxRetries: 5, initialDelay: 30 },
@@ -221,6 +229,7 @@ export default class ChattersModule extends TwitchModule {
 		if (this.twitchUtils().isDirectTwitchPlayer() || this.twitchUtils().isModeratorView() || this.isStreamManagerPage())
 			return true;
 		const logins = this.getLogins();
+
 		return logins?.length ? logins : undefined;
 	}
 
@@ -230,9 +239,11 @@ export default class ChattersModule extends TwitchModule {
 
 	private getLogins(): string[] | undefined {
 		const streamInfo = this.twitchUtils().getStreamInfo();
+
 		const sharedChatLogins = [...(this.twitchUtils().getChatInfo()?.props.sharedChatDataByChannelID.values() ?? [])]
 			.filter((channel) => channel.status === "ACTIVE")
 			.map((channel) => channel.login);
+
 		const streamLogins = streamInfo
 			? [
 					streamInfo.channelLogin,
@@ -241,9 +252,11 @@ export default class ChattersModule extends TwitchModule {
 					...(streamInfo.guestList ?? []).map((guest) => guest.user.login),
 				]
 			: [];
+
 		const allLoginsWithDuplicates = [...streamLogins, ...sharedChatLogins];
 		const validLogins = allLoginsWithDuplicates.filter((login): login is string => login != null);
 		const uniqueLogins = Array.from(new Set(validLogins));
+
 		return uniqueLogins.length > 0 ? uniqueLogins : undefined;
 	}
 
@@ -251,6 +264,7 @@ export default class ChattersModule extends TwitchModule {
 		if (this.channelDiscoveryTimer) return;
 
 		let burstChecksLeft = 4;
+
 		const check = async () => {
 			await this.refreshIfChannelsChanged();
 			const isBurst = burstChecksLeft > 0;
@@ -263,9 +277,11 @@ export default class ChattersModule extends TwitchModule {
 
 	private async refreshIfChannelsChanged() {
 		const channelList = this.getLoginsOrIsAllowedPage();
+
 		if (channelList === undefined) return;
 
 		const uniqueLogins = this.getUniqueLogins(channelList === true ? undefined : channelList);
+
 		if (
 			uniqueLogins.length === this.lastKnownLogins.size &&
 			uniqueLogins.every((login) => this.lastKnownLogins.has(login))
@@ -278,6 +294,7 @@ export default class ChattersModule extends TwitchModule {
 
 	private updateTotalChattersCounter() {
 		const chatterSignals = Object.values(this.chattersCounters);
+
 		if (chatterSignals.length === 0) return ChattersModule.LOADING_VALUE;
 		this.totalChattersCounter.value = chatterSignals.reduce((sum, chatterSignal) => {
 			return chatterSignal.value === ChattersModule.LOADING_VALUE ? sum : sum + chatterSignal.value;
@@ -286,18 +303,22 @@ export default class ChattersModule extends TwitchModule {
 
 	private getOrCreateCounter(login: string, value: number) {
 		let counter = this.chattersCounters[login];
+
 		if (!counter) {
 			counter = signal(value);
 			this.chattersCounters[login] = counter;
 		}
+
 		return counter;
 	}
 
 	private async requestUpdate() {
 		if (this.lastUpdatedAt + ChattersModule.UPDATE_INTERVAL_TIME * 0.75 >= Date.now()) {
 			await this.updateAllEmptyCounters();
+
 			return;
 		}
+
 		await this.refreshChatters();
 	}
 
@@ -309,6 +330,7 @@ export default class ChattersModule extends TwitchModule {
 			.map(([login]) => {
 				return login;
 			});
+
 		if (emptyLogins.length < 1) return;
 		await this.refreshChatters(emptyLogins);
 	}

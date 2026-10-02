@@ -44,11 +44,13 @@ export default class EnhancerApi {
 
 	async initialize(): Promise<void> {
 		if (this.isInitialized) return;
+
 		const seed = await this.worker.send("initializeEnhancerApi", {
 			platform: this.platform,
 			clientId: this.clientId,
 			...(this.globalSeed ? { seed: this.globalSeed } : {}),
 		});
+
 		if (!seed) throw new Error("Enhancer API initialization timed out");
 		this.globalSeed = seed;
 		this.isInitialized = true;
@@ -58,17 +60,21 @@ export default class EnhancerApi {
 
 	async joinChannel(channelId: string, restoreToken?: number): Promise<boolean> {
 		const restoring = restoreToken !== undefined;
+
 		if (!restoring) this.restoreToken++;
 		else if (restoreToken !== this.restoreToken) return false;
+
 		if (!channelId || channelId === this.currentChannelId) return false;
 		const seed = restoring ? this.currentSeed : null;
 		this.desiredChannelId = channelId;
 		const generation = ++this.joinGeneration;
 		this.currentChannelId = channelId;
+
 		if (!restoring) {
 			this.currentSeed = null;
 			this.currentTopic = this.getChannelTopic(channelId);
 		}
+
 		try {
 			const response = await this.worker.send("joinEnhancerChannel", {
 				platform: this.platform,
@@ -76,17 +82,22 @@ export default class EnhancerApi {
 				clientId: this.clientId,
 				...(seed ? { seed } : {}),
 			});
+
 			if (!response) throw new Error("Enhancer channel request timed out");
+
 			if (generation !== this.joinGeneration) return false;
 			this.currentSeed = response.seed;
+
 			if (response.seed) {
 				this.currentTopic = response.seed.topic;
 				const externalId = this.getChannelExternalId(response.seed.topic);
 				this.currentChannelId = externalId;
 				this.desiredChannelId = externalId;
 			}
+
 			if (this.currentSeed) this.logger.info(`Successfully joined channel: ${channelId}`);
 			else this.logger.info(`Channel ${channelId} not found`);
+
 			return true;
 		} catch (error) {
 			if (generation === this.joinGeneration) this.currentChannelId = "";
@@ -105,18 +116,23 @@ export default class EnhancerApi {
 
 	async getWatchTime(username: string, period: XayoWatchtimePeriod): Promise<EnhancerStreamerWatchTimeData[]> {
 		const watchtime = await this.worker.send("getEnhancerWatchTime", { username, period, platform: this.platform });
+
 		if (!watchtime) throw new Error("Enhancer watchtime request timed out");
+
 		return watchtime;
 	}
 
 	findUserBadgesForCurrentChannel(externalUserId: string): EnhancerBadge[] {
 		const globalAccount = this.findAccount(this.globalSeed, externalUserId);
 		const channelAccount = this.findAccount(this.currentSeed, externalUserId);
+
 		if (!globalAccount && !channelAccount) return [];
 		const badgeIds = new Set([...(globalAccount?.badgesIds ?? []), ...(channelAccount?.badgesIds ?? [])]);
+
 		const badges = [...(this.globalSeed?.aggregate.badges ?? []), ...(this.currentSeed?.aggregate.badges ?? [])].filter(
 			(badge) => badgeIds.has(badge.badgeId),
 		);
+
 		return [...new Map(badges.map((badge) => [badge.badgeId, badge])).values()].sort(
 			(left, right) => left.priority - right.priority,
 		);
@@ -133,17 +149,21 @@ export default class EnhancerApi {
 
 	private findAccount(seed: CachedAggregateSeed | null, externalUserId: string): EnhancerAccount | undefined {
 		const aggregate = seed?.aggregate;
+
 		if (!aggregate) return undefined;
 		let index = this.accountIndexes.get(aggregate);
+
 		if (!index) {
 			index = new Map(aggregate.accounts.map((account) => [account.externalId, account]));
 			this.accountIndexes.set(aggregate, index);
 		}
+
 		return index.get(externalUserId);
 	}
 
 	private readonly handleUpdate = (payload: EnhancerApiUpdatedPayload): void => {
 		if (payload.platform !== this.platform || payload.clientId !== this.clientId) return;
+
 		if (payload.scope === "GLOBAL") {
 			this.globalSeed = payload.aggregate
 				? { topic: payload.topic, aggregate: payload.aggregate, cursor: payload.cursor }
@@ -153,6 +173,7 @@ export default class EnhancerApi {
 				? { topic: payload.replacementTopic ?? payload.topic, aggregate: payload.aggregate, cursor: payload.cursor }
 				: null;
 			this.currentTopic = payload.replacementTopic ?? payload.topic;
+
 			if (payload.replacementTopic) {
 				const externalId = this.getChannelExternalId(payload.replacementTopic);
 				this.currentChannelId = externalId;
@@ -161,22 +182,29 @@ export default class EnhancerApi {
 		} else {
 			return;
 		}
+
 		this.emitter.emit("extension:enhancer-api-refresh");
 	};
 
 	private readonly handleMessage = (payload: EnhancerApiMessagePayload): void => {
 		if (payload.platform !== this.platform || payload.clientId !== this.clientId) return;
+
 		if (payload.message.target.scope === "CHANNEL" && payload.topic !== this.currentTopic) return;
+
 		if (payload.topic === this.globalSeed?.topic) this.globalSeed.cursor = payload.message.cursor;
+
 		if (payload.topic === this.currentSeed?.topic) {
 			this.currentSeed.cursor = payload.message.cursor;
 		}
+
 		this.emitter.emit("extension:enhancer-api-message", payload.message);
 	};
 
 	private readonly getSeed = (topic: EnhancerAggregateTopic): CachedAggregateSeed | null => {
 		if (this.globalSeed?.topic === topic) return this.globalSeed;
+
 		if (this.currentSeed?.topic === topic) return this.currentSeed;
+
 		return null;
 	};
 
@@ -190,12 +218,16 @@ export default class EnhancerApi {
 
 	private async restoreAfterWorkerRestart(channelId: string, restoreToken: number, attempt = 1): Promise<void> {
 		if (restoreToken !== this.restoreToken) return;
+
 		try {
 			await this.initialize();
+
 			if (restoreToken !== this.restoreToken) return;
+
 			if (channelId) await this.joinChannel(channelId, restoreToken);
 		} catch (error) {
 			this.logger.error(`Enhancer API restore attempt ${attempt} failed:`, error);
+
 			if (attempt < 5) {
 				setTimeout(() => void this.restoreAfterWorkerRestart(channelId, restoreToken, attempt + 1), 5000);
 			}

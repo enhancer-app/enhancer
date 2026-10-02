@@ -33,10 +33,12 @@ export default class ChatHighlightUserModule extends KickModule {
 	private handleMessage({ message, element }: KickChatMessageEvent) {
 		const messageElement = element as HTMLElement;
 		const isHovered = messageElement.matches(":hover");
+
 		if (isHovered) this.removeHighlightedUserMentions();
 		this.listenerControllers.get(messageElement)?.abort();
 		const mentionRegex = /@(\w+)/g;
 		const mentions = [...message.content.matchAll(mentionRegex)];
+
 		if (mentions.length === 0) return;
 
 		const mentionedUsernames = mentions.map((match) => match[1].toLowerCase());
@@ -50,6 +52,7 @@ export default class ChatHighlightUserModule extends KickModule {
 		messageElement.addEventListener("mouseleave", this.removeHighlightedUserMentions.bind(this), {
 			signal: controller.signal,
 		});
+
 		if (isHovered) this.highlightUserMentions(mentionedUsernames);
 	}
 
@@ -61,6 +64,7 @@ export default class ChatHighlightUserModule extends KickModule {
 					ChatHighlightUserModule.HIGHLIGHT_COLORS[
 						this.currentColorIndex % ChatHighlightUserModule.HIGHLIGHT_COLORS.length
 					];
+
 				highlightedUsers.set(username, color);
 				this.currentColorIndex++;
 			}
@@ -71,6 +75,7 @@ export default class ChatHighlightUserModule extends KickModule {
 			const authorElement =
 				messageElement.querySelector(".ntv__chat-message__username") ||
 				messageElement.querySelector('button[data-prevent-expand="true"]');
+
 			if (!authorElement) return;
 
 			const username =
@@ -78,6 +83,7 @@ export default class ChatHighlightUserModule extends KickModule {
 
 			if (!usernames.includes(username)) return;
 			const color = highlightedUsers.get(username);
+
 			if (!color) return;
 			(messageElement as HTMLElement).style.backgroundColor = color;
 			messageElement.classList.add("enhancer-highlighted-user");

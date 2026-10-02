@@ -6,6 +6,7 @@ export class PingHandler extends MessageHandler {
 
 	async handle(): Promise<PingResponse> {
 		this.logger.debug("Received ping, sending pong.");
+
 		return {
 			status: "alive",
 			timestamp: Date.now(),

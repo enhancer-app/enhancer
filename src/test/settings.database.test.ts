@@ -7,6 +7,7 @@ import type { PlatformSettings } from "$types/shared/worker/settings-worker.type
 import type { PlatformType } from "$types/shared/worker/worker.types.ts";
 
 const originalChrome = globalThis.chrome;
+
 const originalEnvironment = (globalThis as typeof globalThis & { __environment__?: string }).__environment__;
 
 afterEach(() => {
@@ -36,6 +37,7 @@ test("keeps settings in extension storage after a worker restart", async () => {
 		["twitch", TWITCH_DEFAULT_SETTINGS],
 		["kick", KICK_DEFAULT_SETTINGS],
 	]);
+
 	const firstDatabase = new SettingsDatabase(defaults);
 	await firstDatabase.initialize();
 	const initialSettings = await firstDatabase.getSettings<TwitchSettings>("twitch");

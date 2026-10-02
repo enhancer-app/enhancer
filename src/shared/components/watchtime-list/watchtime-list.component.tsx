@@ -286,6 +286,7 @@ export function WatchtimeListComponent({
 			page,
 			pageSize,
 		});
+
 		return response || null;
 	};
 
@@ -297,6 +298,7 @@ export function WatchtimeListComponent({
 		try {
 			while (hasMore) {
 				const response = await fetchPage(currentPageNum);
+
 				if (response && response.data.length > 0) {
 					allData.push(...response.data);
 					hasMore = response.data.length === pageSize;
@@ -305,9 +307,11 @@ export function WatchtimeListComponent({
 					hasMore = false;
 				}
 			}
+
 			return allData;
 		} catch (error) {
 			logger.error("Error fetching all watchtime data:", error);
+
 			return allData;
 		}
 	};
@@ -315,9 +319,11 @@ export function WatchtimeListComponent({
 	const loadData = async (page: number) => {
 		setLoading(true);
 		const response = await fetchPage(page);
+
 		if (response) {
 			setData(response);
 		}
+
 		setLoading(false);
 	};
 
@@ -362,6 +368,7 @@ export function WatchtimeListComponent({
 		const hours = Math.floor(seconds / 3600);
 		const minutes = Math.floor((seconds % 3600) / 60);
 		const secs = seconds % 60;
+
 		return `${hours}h ${minutes}m ${secs}s`;
 	};
 
@@ -375,6 +382,7 @@ export function WatchtimeListComponent({
 
 	const exportToTxt = async () => {
 		setExporting(true);
+
 		try {
 			const allData = await fetchAllData();
 			const content = allData.map((record) => `${record.username},${record.time}`).join("\n");
@@ -392,15 +400,18 @@ export function WatchtimeListComponent({
 
 	const exportToExcel = async () => {
 		setExporting(true);
+
 		try {
 			const allData = await fetchAllData();
 			const headers = "Position,Username,Seconds,First Watched,Last Watched\n";
+
 			const content = allData
 				.map((record, index) => {
 					const position = index + 1;
 					const seconds = record.time;
 					const firstUpdate = new Date(record.firstUpdate).toLocaleString();
 					const lastUpdate = new Date(record.lastUpdate).toLocaleString();
+
 					return `${position},${record.username},${seconds},"${firstUpdate}","${lastUpdate}"`;
 				})
 				.join("\n");

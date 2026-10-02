@@ -15,6 +15,7 @@ export default class SelectorModuleApplier<
 		const selectorAppliers = module.config.appliers.filter(
 			(applier) => applier.type === "selector",
 		) as SelectorModuleApplierConfig[];
+
 		this.appliers.push(
 			...selectorAppliers.map((selectorApplier) => ({
 				config: selectorApplier,
@@ -28,6 +29,7 @@ export default class SelectorModuleApplier<
 
 	async start() {
 		await this.run();
+
 		if (this.selectorInterval) clearInterval(this.selectorInterval);
 		this.selectorInterval = setInterval(async () => this.run(), 1000);
 		this.logger.debug("Started selector interval");
@@ -36,15 +38,20 @@ export default class SelectorModuleApplier<
 	private async run() {
 		for (const applier of this.appliers) {
 			if (applier.enabled && !applier.enabled()) continue;
+
 			if (this.isApplierOnCooldown(applier)) continue;
 			applier.lastCheckedAt = Date.now();
 			const { config } = applier;
+
 			if (config.validateUrl && !config.validateUrl(window.location.href)) continue;
+
 			const elements = this.processElements(
 				config.selectors.flatMap((selector) => [...document.querySelectorAll(selector)]),
 				config,
 			);
+
 			if (elements.length < 1) continue;
+
 			try {
 				config.callback(elements, config.key);
 			} catch (error) {
@@ -57,11 +64,16 @@ export default class SelectorModuleApplier<
 		return elements
 			.map((_element) => {
 				let element: Element | null = _element;
+
 				if (element && config.useParent) element = element.parentElement;
+
 				if (!element) return;
 				const isAlreadyUsed = this.isElementAlreadyUsed(element, config.key);
+
 				if (isAlreadyUsed && config.once) return;
+
 				if (!isAlreadyUsed) this.markElementAsUsed(element, config.key);
+
 				return element;
 			})
 			.filter((element): element is Element => element !== undefined);
@@ -69,7 +81,9 @@ export default class SelectorModuleApplier<
 
 	private isApplierOnCooldown(applier: SelectorModuleApplierRunner) {
 		const cooldown = applier.config.cooldown;
+
 		if (cooldown === undefined) return false;
+
 		return Date.now() - applier.lastCheckedAt < cooldown;
 	}
 
@@ -83,6 +97,7 @@ export default class SelectorModuleApplier<
 
 	private isElementAlreadyUsed(element: Element, id: string) {
 		const modules = element.getAttribute("enhanced-modules")?.split(";") ?? [];
+
 		return element.hasAttribute("enhanced") && modules.includes(id);
 	}
 }

@@ -8,6 +8,7 @@ export class ChatNicknameCustomizationHelper {
 	applyCustomFont(usernameElement: HTMLElement, customFont: string, defaultFont: string): void {
 		if (!customFont || customFont.trim() === "") {
 			usernameElement.style.fontFamily = defaultFont;
+
 			return;
 		}
 

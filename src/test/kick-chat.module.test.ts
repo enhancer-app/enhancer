@@ -12,6 +12,7 @@ test("keeps messages scheduled while processing the current frame", () => {
 		{} as never,
 		{} as never,
 	);
+
 	const originalRequestAnimationFrame = Object.getOwnPropertyDescriptor(globalThis, "requestAnimationFrame");
 	const callbacks: FrameRequestCallback[] = [];
 	Object.defineProperty(globalThis, "requestAnimationFrame", {
@@ -22,6 +23,7 @@ test("keeps messages scheduled while processing the current frame", () => {
 	let calls = 0;
 	(chatModule as any).handleMessage = (element: Element) => {
 		calls++;
+
 		if (calls === 1) (chatModule as any).scheduleMessage(element);
 	};
 
@@ -51,7 +53,9 @@ test("preserves legacy and colon-containing message markers while pending", () =
 		{} as never,
 		{} as never,
 	);
+
 	let marker = "true";
+
 	const element = {
 		isConnected: true,
 		classList: { contains: () => true },

@@ -23,8 +23,10 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(() => {
 			this.isLiveCache = this.isLive();
+
 			if (!this.isLiveCache) return;
 			const status = this.getPlaybackRateStatus();
+
 			if (status === "catchingUpMax") {
 				this.setPlaybackRateMode("catchUpMax");
 			} else if (status === "catchingUpMin") {
@@ -35,26 +37,33 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		}, 1000);
 
 		const self = this;
+
 		function playbackRateSetHook(this: HTMLVideoElement, rate: number) {
 			const pathname = window.location.pathname;
+
 			const isVodOrClipRoute =
 				pathname.includes("/videos/") ||
 				pathname.includes("/video/") ||
 				pathname.includes("/clip/") ||
 				window.location.hostname === "clips.twitch.tv";
+
 			const isAllowed = (this as any)._enhancerAllowRateChange || isVodOrClipRoute || !self.isLiveCache;
+
 			if (isAllowed) {
 				return orig_playbackRate_set.call(this, rate);
 			}
+
 			return rate;
 		}
 
 		let orig_playbackRate_set: any;
+
 		try {
 			orig_playbackRate_set = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "playbackRate")?.set;
 		} catch (error) {
 			this.logger.error(error);
 		}
+
 		if (orig_playbackRate_set !== undefined && orig_playbackRate_set !== playbackRateSetHook) {
 			try {
 				this.logger.info("Applying patch for playbackRate.");
@@ -92,13 +101,16 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 
 	private setPlaybackRateMode(mode: "catchUpMin" | "catchUpMax" | "reset") {
 		const video = this.twitchUtils().getMediaPlayerInstance()?.core.renderSurface.video.element();
+
 		if (!video) return;
 
 		let targetRate = 1;
 		const latency = this.getLatency();
+
 		if (!latency) {
 			// When latency is invalid or zero, ensure playback is reset to normal speed.
 			this.changePlaybackSpeed(video, 1);
+
 			return;
 		}
 
@@ -116,18 +128,25 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 
 	private getPlaybackRateStatus() {
 		const mediaPlayer = this.getPlayer();
+
 		if (!mediaPlayer) return;
 		const latency = this.getLatency();
+
 		if (!latency) return "invalid";
 
 		// Disable reducer without Low Latency mode
 		const isLowLatencyDisabled = !mediaPlayer.core.state.liveLowLatency;
+
 		if (isLowLatencyDisabled) return "caughtUp";
 
 		const { maxThreshold, minThreshold } = this.getSettings();
+
 		if (latency >= maxThreshold) return "catchingUpMax";
+
 		if (latency > minThreshold) return "catchingUpMin";
+
 		if (latency <= minThreshold) return "caughtUp";
+
 		return "invalid";
 	}
 
@@ -136,11 +155,13 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 		const maxRate = this.settings().streamLatencyReducerMaxRate;
 		const minThreshold = this.settings().streamLatencyReducerMinThreshold;
 		const maxThreshold = this.settings().streamLatencyReducerMaxThreshold;
+
 		return { minRate, maxRate, minThreshold, maxThreshold };
 	}
 
 	private getFFZAllowCatchup() {
 		const ffz = (window as any).ffz;
+
 		if (ffz) {
 			return ffz.settings.get("player.allow-catchup") as boolean;
 		}
@@ -148,7 +169,9 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 
 	private getLatency() {
 		const mediaPlayer = this.getPlayer();
+
 		if (!mediaPlayer) return;
+
 		return mediaPlayer.core.state.liveLatency;
 	}
 
@@ -158,10 +181,13 @@ export default class StreamLatencyReducerModule extends TwitchModule {
 
 	private getPlayer() {
 		const mediaPlayer = this.twitchUtils().getMediaPlayerInstance();
+
 		if (!mediaPlayer) {
 			this.logger.warn("Failed to find media player");
+
 			return;
 		}
+
 		return mediaPlayer;
 	}
 }

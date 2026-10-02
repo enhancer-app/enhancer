@@ -18,6 +18,7 @@ function createTree(): TestFiber {
 	leaf.return = bare;
 	leaf.sibling = target;
 	target.return = bare;
+
 	return root;
 }
 
@@ -30,6 +31,7 @@ test("never calls the predicate with a nullish node", () => {
 		createTree(),
 		(node) => {
 			seen.push(node);
+
 			return false;
 		},
 		50,
@@ -48,6 +50,7 @@ test("findReactParents never calls the predicate with a nullish node", () => {
 		leaf,
 		(node) => {
 			seen.push(node);
+
 			return false;
 		},
 		50,

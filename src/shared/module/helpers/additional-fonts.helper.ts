@@ -20,6 +20,7 @@ export class AdditionalFontsHelper {
 
 		if (fontList.length === 0) {
 			AdditionalFontsHelper.cleanupAdditionalFontLinks(elements);
+
 			return;
 		}
 
@@ -50,13 +51,16 @@ export class AdditionalFontsHelper {
 		];
 
 		const uniqueFonts = new Map<string, string>();
+
 		for (const account of allAccounts) {
 			const font = account.customFont;
+
 			if (!font) {
 				continue;
 			}
 
 			const normalized = font.toLowerCase().trim();
+
 			if (!uniqueFonts.has(normalized)) {
 				uniqueFonts.set(normalized, font);
 			}
@@ -67,10 +71,12 @@ export class AdditionalFontsHelper {
 
 	loadFontsWithTruncation(elements: Element[], logger: Logger): void {
 		let fonts = this.getUsedFonts();
+
 		if (fonts.length > AdditionalFontsHelper.MAX_FONTS) {
 			logger.warn(`Too many fonts to load (${fonts.length}), truncating to ${AdditionalFontsHelper.MAX_FONTS}`);
 			fonts = fonts.slice(0, AdditionalFontsHelper.MAX_FONTS);
 		}
+
 		this.loadFonts(elements, fonts);
 	}
 }

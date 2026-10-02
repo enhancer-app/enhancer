@@ -20,6 +20,7 @@ const qualities = [
 function setup(authenticated: boolean) {
 	const storage = new Map<string, string>();
 	const applied: string[] = [];
+
 	const module = new ForceQualityModule(
 		{} as never,
 		{} as never,
@@ -36,6 +37,7 @@ function setup(authenticated: boolean) {
 		} as never,
 		{} as never,
 	);
+
 	(module as any).logger = { debug: () => {} };
 	Object.defineProperty(globalThis, "window", {
 		configurable: true,
@@ -47,11 +49,13 @@ function setup(authenticated: boolean) {
 			},
 		},
 	});
+
 	return { module, storage, applied };
 }
 
 function withWindow(run: () => void) {
 	const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+
 	try {
 		run();
 	} finally {

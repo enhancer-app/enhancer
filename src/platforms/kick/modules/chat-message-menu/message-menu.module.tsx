@@ -21,14 +21,17 @@ export default class MessageMenuModule extends KickModule {
 
 	private render(message: MessageMenuEvent) {
 		let wrapper = document.querySelector(`#${this.getId()}`);
+
 		if (wrapper) wrapper.remove();
 		wrapper = document.createElement("div");
 		wrapper.id = this.getId();
 		const originalClose = message.onClose;
+
 		const onClose = () => {
 			if (originalClose) originalClose();
 			wrapper.remove();
 		};
+
 		render(<MessageMenuComponent {...message} onClose={onClose} />, wrapper);
 		document.body.append(wrapper);
 	}

@@ -28,10 +28,14 @@ export function ChannelSectionComponent({
 	actions = [],
 }: ChannelSectionComponentProps) {
 	const actionList = Array.isArray(actions) ? actions : actions.value;
+
 	const formatWatchTime = (time: number) => {
 		const hours = time === 0 ? 0 : time / 3600;
+
 		if (hours < 1) return `${Math.round(hours * 60)} minutes`;
+
 		if (hours < 10) return `${hours.toFixed(1)} hours`;
+
 		return `${Math.round(hours)} hours`;
 	};
 
@@ -55,6 +59,7 @@ export function ChannelSectionComponent({
 						{actionList.map((action) => {
 							const iconText = getActionText(action.icon);
 							const tooltipText = getActionText(action.tooltip);
+
 							return (
 								<TooltipComponent key={action.key} content={<span>{tooltipText}</span>} position="right">
 									<ActionButton type="button" onClick={action.onClick} aria-label={tooltipText}>
@@ -70,6 +75,7 @@ export function ChannelSectionComponent({
 				<LinkGrid>
 					{sites.value.map((site) => {
 						const fullUrl = site.url.replace("%username%", login.value);
+
 						return (
 							<LinkItem key={site.title} href={fullUrl} target="_blank" rel="noopener noreferrer">
 								<LinkName>{site.title}</LinkName>
@@ -84,6 +90,7 @@ export function ChannelSectionComponent({
 
 function getActionText(value: Signal<string> | string) {
 	if (typeof value === "string") return value;
+
 	return value.value;
 }
 

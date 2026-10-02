@@ -22,6 +22,7 @@ export class ImageChatAttachmentConfig {
 
 	async initialize() {
 		const response = await this.workerService.send("getAssetsFile", { path: "modules/chat-image-hover.png" });
+
 		if (response) this.imageOnHoverSource = response.url;
 	}
 

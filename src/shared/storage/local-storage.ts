@@ -13,15 +13,19 @@ export default class LocalStorage<T extends Record<string, any>> extends Storage
 
 	async get<K extends keyof T>(key: K): Promise<T[K] | undefined> {
 		const storage = this.getImmutableStorage();
+
 		return storage[key];
 	}
 
 	async getOrDefault<K extends keyof T>(key: K, defaultValue: T[K]): Promise<T[K]> {
 		const existingValue = await this.get(key);
+
 		if (existingValue !== undefined) {
 			return existingValue;
 		}
+
 		await this.save(key, defaultValue);
+
 		return defaultValue;
 	}
 
@@ -29,18 +33,24 @@ export default class LocalStorage<T extends Record<string, any>> extends Storage
 		if (this.cache) {
 			return JSON.parse(JSON.stringify(this.cache)) as T;
 		}
+
 		const rawStorage = localStorage.getItem(this.storageId);
+
 		if (rawStorage) {
 			try {
 				this.cache = JSON.parse(rawStorage) as T;
+
 				return JSON.parse(JSON.stringify(this.cache)) as T;
 			} catch (error) {
 				this.logger.error("Failed to parse storage data:", error);
 				this.cache = {} as T;
+
 				return {} as T;
 			}
 		}
+
 		this.cache = {} as T;
+
 		return {} as T;
 	}
 
@@ -48,18 +58,24 @@ export default class LocalStorage<T extends Record<string, any>> extends Storage
 		if (this.cache) {
 			return this.cache;
 		}
+
 		const rawStorage = localStorage.getItem(this.storageId);
+
 		if (rawStorage) {
 			try {
 				this.cache = JSON.parse(rawStorage) as T;
+
 				return this.cache;
 			} catch (error) {
 				this.logger.error("Failed to parse storage data:", error);
 				this.cache = {} as T;
+
 				return {} as T;
 			}
 		}
+
 		this.cache = {} as T;
+
 		return this.cache;
 	}
 

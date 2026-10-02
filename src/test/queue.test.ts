@@ -5,10 +5,12 @@ import type { QueueValue } from "$types/shared/queue.types.ts";
 type TestValue = QueueValue & { id: string };
 
 const originalNow = Date.now;
+
 let now = 0;
 
 function createQueue(expire = 10) {
 	Date.now = () => now;
+
 	return new Queue<TestValue>({ expire });
 }
 
@@ -49,12 +51,15 @@ test("removes expired entries from listings", () => {
 test("sweeps expired entries at most once per second while adding", () => {
 	const queue = createQueue(1);
 	let reads = 0;
+
 	const tracked = new Proxy(value("tracked"), {
 		get(target, property, receiver) {
 			if (property === "createdAt") reads++;
+
 			return Reflect.get(target, property, receiver);
 		},
 	});
+
 	now = 1_000;
 	queue.addByValue(tracked);
 	reads = 0;

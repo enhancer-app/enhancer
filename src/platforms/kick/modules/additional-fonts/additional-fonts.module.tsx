@@ -37,6 +37,7 @@ export default class AdditionalFontsModule extends KickModule {
 
 	public async updateFonts() {
 		const head = document.querySelector("head");
+
 		if (!head) return;
 		this.additionalFontsHelper.loadFontsWithTruncation([head], this.logger);
 	}

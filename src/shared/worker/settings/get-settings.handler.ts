@@ -21,6 +21,7 @@ export class GetSettingsHandler extends MessageHandler {
 		}
 
 		this.logger.debug(`Getting settings for platform: ${payload.platform}`);
+
 		return await this.database.getSettings(payload.platform);
 	}
 }

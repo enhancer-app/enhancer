@@ -41,25 +41,31 @@ export class SettingsDatabase extends Database {
 
 		const defaultSettings = this.getDefaultSettings(platform);
 		const storedSettings = await this.getExtensionSettings(platform);
+
 		if (storedSettings) {
 			const settings: PlatformSettings = { ...defaultSettings, ...storedSettings };
 			this.cache.set(platform, settings);
 			await this.saveIndexedDbSettings(platform, settings);
+
 			return settings as T;
 		}
 
 		const indexedDbResult = await this.getIndexedDbSettings(platform);
+
 		const settings: PlatformSettings = indexedDbResult.record
 			? { ...defaultSettings, ...indexedDbResult.record.settings }
 			: defaultSettings;
 
 		this.cache.set(platform, settings);
+
 		if (indexedDbResult.available) await this.saveExtensionSettings(platform, settings);
+
 		return settings as T;
 	}
 
 	async updateSettings(platform: PlatformType, settings: PlatformSettings): Promise<void> {
 		const now = Date.now();
+
 		const settingsRecord: SettingsRecord = {
 			id: platform,
 			platform,
@@ -69,6 +75,7 @@ export class SettingsDatabase extends Database {
 
 		const extensionStorageUpdated = await this.saveExtensionSettings(platform, settings);
 		const indexedDbUpdated = await this.saveIndexedDbSettings(platform, settingsRecord.settings);
+
 		if (!extensionStorageUpdated && !indexedDbUpdated) {
 			throw new Error(`Failed to persist settings for platform: ${platform}`);
 		}
@@ -82,9 +89,11 @@ export class SettingsDatabase extends Database {
 			const key = this.getStorageKey(platform);
 			const result = await chrome.storage.local.get(key);
 			const settings = result[key];
+
 			return isRecord(settings) ? (settings as PlatformSettings) : undefined;
 		} catch (error) {
 			this.logger.warn("Failed to read extension storage:", error);
+
 			return undefined;
 		}
 	}
@@ -92,9 +101,11 @@ export class SettingsDatabase extends Database {
 	private async saveExtensionSettings(platform: PlatformType, settings: PlatformSettings): Promise<boolean> {
 		try {
 			await chrome.storage.local.set({ [this.getStorageKey(platform)]: settings });
+
 			return true;
 		} catch (error) {
 			this.logger.warn("Failed to write extension storage:", error);
+
 			return false;
 		}
 	}
@@ -106,9 +117,11 @@ export class SettingsDatabase extends Database {
 			const record = await this.request<SettingsRecord | undefined>(this.storeName, "readonly", (store) =>
 				store.get(platform),
 			);
+
 			return { available: true, record };
 		} catch (error) {
 			this.logger.warn("Failed to read IndexedDB settings:", error);
+
 			return { available: false };
 		}
 	}
@@ -123,10 +136,13 @@ export class SettingsDatabase extends Database {
 				settings,
 				lastUpdate: Date.now(),
 			};
+
 			await this.request<void>(this.storeName, "readwrite", (store) => store.put(settingsRecord));
+
 			return true;
 		} catch (error) {
 			this.logger.warn("Failed to write IndexedDB settings:", error);
+
 			return false;
 		}
 	}
@@ -137,9 +153,11 @@ export class SettingsDatabase extends Database {
 
 	private getDefaultSettings(platform: PlatformType): PlatformSettings {
 		const defaults = this.defaults.get(platform);
+
 		if (!defaults) {
 			throw new Error(`Unknown platform: ${platform}`);
 		}
+
 		return defaults;
 	}
 }

@@ -58,6 +58,7 @@ export default class KickUtils {
 			this.reactUtils.getReactInstance(document.querySelector("#injected-embedded-channel-player-video")),
 			(n) => {
 				const props = n?.memoizedProps;
+
 				return props?.durationInMs && props?.currentProgressInMs && props?.loadedInMs;
 			},
 			1000,
@@ -69,6 +70,7 @@ export default class KickUtils {
 			this.reactUtils.getReactInstance(document.querySelector("#injected-embedded-channel-player-video")),
 			(n) => {
 				const props = n?.memoizedProps;
+
 				return props?.isLive !== undefined && props?.isPlaying !== undefined;
 			},
 			1000,
@@ -96,6 +98,7 @@ export default class KickUtils {
 
 	isUsingNTV(element?: Element): boolean {
 		const elementToSerach = element ?? document;
+
 		return !!elementToSerach.querySelector(".ntv__chat-message__inner");
 	}
 
@@ -109,15 +112,18 @@ export default class KickUtils {
 
 	setChatInputContent(text: string, focus?: boolean) {
 		const chatInput = this.getChatInput() as HTMLElement | null;
+
 		if (!chatInput) return;
 		chatInput.innerText = text;
 		chatInput.dispatchEvent(new Event("input", { bubbles: true }));
+
 		if (focus) {
 			chatInput.focus();
 			const range = document.createRange();
 			range.selectNodeContents(chatInput);
 			range.collapse(false);
 			const sel = window.getSelection();
+
 			if (sel) {
 				sel.removeAllRanges();
 				sel.addRange(range);
@@ -131,6 +137,7 @@ export default class KickUtils {
 
 	getLatency(video: HTMLVideoElement): number | undefined {
 		const { currentTime, buffered } = video;
+
 		if (buffered.length === 0) return undefined;
 		const bufferEnd = buffered.end(buffered.length - 1);
 
@@ -139,8 +146,10 @@ export default class KickUtils {
 
 	scrollToBottomOnChat() {
 		const container = this.getChatMessagesContainer();
+
 		if (!container) return;
 		const chatRoom = this.getChannelChatRoom(container);
+
 		if (!chatRoom || chatRoom.isPaused) return;
 		container.scrollTop = container.scrollHeight;
 	}
@@ -151,33 +160,44 @@ export default class KickUtils {
 
 	isViewerAuthenticated(): boolean | null {
 		const authStatus = this.searchPlayerFibers((fiber) => this.readSessionAuthStatus(fiber));
+
 		if (authStatus === KickUtils.AUTHENTICATED_STATUS) return true;
+
 		if (authStatus === KickUtils.UNAUTHENTICATED_STATUS) return false;
+
 		return null;
 	}
 
 	private getPlayerFiberRoot() {
 		const element = document.querySelector(KickUtils.PLAYER_ANCHOR_SELECTOR);
+
 		if (!element) return null;
 		let fiber = this.reactUtils.getReactInstance(element);
+
 		for (let climb = 0; climb < KickUtils.PLAYER_FIBER_CLIMB && fiber?.return; climb++) {
 			fiber = fiber.return;
 		}
+
 		return fiber ?? null;
 	}
 
 	private searchPlayerFibers<T>(read: (fiber: any) => T | null): T | null {
 		const root = this.getPlayerFiberRoot();
+
 		if (!root) return null;
 
 		const queue: any[] = [root];
 		let visits = 0;
+
 		while (queue.length > 0 && visits < KickUtils.MAX_FIBER_VISITS) {
 			const fiber = queue.shift();
 			visits++;
 			const result = read(fiber);
+
 			if (result) return result;
+
 			if (fiber.child) queue.push(fiber.child);
+
 			if (fiber.sibling) queue.push(fiber.sibling);
 		}
 
@@ -190,8 +210,10 @@ export default class KickUtils {
 		let setQuality: KickQualityController["setQuality"] | null = null;
 
 		let visits = 0;
+
 		while (hook && visits < KickUtils.MAX_HOOK_VISITS) {
 			const state = hook.memoizedState;
+
 			if (this.isQualityList(state)) qualities = state;
 			else if (this.isSetQuality(state)) setQuality = state;
 			hook = hook.next;
@@ -199,6 +221,7 @@ export default class KickUtils {
 		}
 
 		if (!qualities || !setQuality) return null;
+
 		return { qualities, setQuality };
 	}
 
@@ -213,18 +236,22 @@ export default class KickUtils {
 	private isSetQuality(state: unknown): state is KickQualityController["setQuality"] {
 		if (typeof state !== "function") return false;
 		const source = state.toString();
+
 		return KickUtils.SET_QUALITY_MARKERS.every((marker) => source.includes(marker));
 	}
 
 	private readSessionAuthStatus(fiber: any): string | null {
 		let hook = fiber?.memoizedState;
 		let visits = 0;
+
 		while (hook && visits < KickUtils.MAX_HOOK_VISITS) {
 			const tag = hook.memoizedState?.tag;
+
 			if (tag?.type === "session" && typeof tag.authStatus === "string") return tag.authStatus;
 			hook = hook.next;
 			visits++;
 		}
+
 		return null;
 	}
 }

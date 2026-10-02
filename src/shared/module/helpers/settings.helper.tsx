@@ -27,12 +27,15 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 	loadSettings(defaults: TSettings): TSettings {
 		try {
 			const settings = { ...defaults, ...this.settingsCache.get() };
+
 			if (this.settingsSignal) {
 				this.settingsSignal.value = settings;
 			}
+
 			return settings;
 		} catch (error) {
 			this.logger.error("Failed to load settings:", error);
+
 			return defaults;
 		}
 	}
@@ -40,9 +43,11 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 	async saveSettings(settings: TSettings, updatedKey: keyof TSettings, eventPrefix: string): Promise<void> {
 		try {
 			await this.settingsCache.update(settings);
+
 			if (this.settingsSignal) {
 				this.settingsSignal.value = settings;
 			}
+
 			this.emitter.emit(`${String(eventPrefix)}${String(updatedKey)}`, settings[updatedKey]);
 			this.logger.debug(`Settings changed "${String(updatedKey)}" to`, settings[updatedKey]);
 		} catch (error) {

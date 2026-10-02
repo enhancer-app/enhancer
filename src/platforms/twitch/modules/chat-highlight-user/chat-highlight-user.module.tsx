@@ -25,7 +25,9 @@ export default class ChatHighlightUserModule extends TwitchModule {
 			...Array.from(element.querySelectorAll(".mention-fragment")),
 			...Array.from(element.querySelectorAll(".seventv-chat-message-body .mention-token")),
 		].filter((mention) => !mention.hasAttribute("enhancer-mention-user"));
+
 		if (mentions.length < 1) return;
+
 		for (const mention of mentions) {
 			const mentionElement = mention as HTMLElement;
 			const username = mentionElement.textContent?.replace("@", "").toLowerCase() || "";
@@ -39,6 +41,7 @@ export default class ChatHighlightUserModule extends TwitchModule {
 		// todo change color to red of mention is not 7tv
 		const target = event.currentTarget as HTMLElement;
 		const username = target.getAttribute("enhancer-mention-user");
+
 		if (!username) return;
 		this.logger.debug(`Highlighting ${username} messages`);
 
@@ -47,9 +50,11 @@ export default class ChatHighlightUserModule extends TwitchModule {
 				const authorElement =
 					messageElement.querySelector(".chat-author__display-name") ??
 					messageElement.querySelector(".seventv-chat-user-username");
+
 				if (!authorElement) return;
 
 				const authorName = authorElement.textContent?.toLowerCase() || "";
+
 				if (authorName === username) {
 					messageElement.classList.add("enhancer-highlighted-user-message");
 				}

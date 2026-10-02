@@ -36,6 +36,7 @@ export default class ChatMessagePopupModule extends TwitchModule {
 			typeof message.data.text === "string"
 				? message.data.text
 				: null;
+
 		if (!text?.trim()) return;
 		this.render({ title: "Enhancer", content: text, autoclose: text.length > 120 ? 30 : 10 });
 	}
@@ -51,6 +52,7 @@ export default class ChatMessagePopupModule extends TwitchModule {
 
 		if (contentElement) {
 			const wrapper = contentElement.querySelector(`.${this.getId()}`);
+
 			if (wrapper) wrapper.remove();
 
 			const wrappers = this.commonUtils().createEmptyElements(this.getId(), [contentElement], "span");
@@ -61,6 +63,7 @@ export default class ChatMessagePopupModule extends TwitchModule {
 						autoclose={message.autoclose ?? 15}
 						onClose={() => {
 							wrapper.remove();
+
 							if (message.onClose) {
 								message.onClose();
 							}
@@ -174,6 +177,7 @@ export function MessagePopup({ title, content, autoclose, onClose }: ChatMessage
 				if (intervalRef.current !== null) {
 					window.clearInterval(intervalRef.current);
 				}
+
 				onClose?.();
 			}
 		}, 100);
@@ -191,6 +195,7 @@ export function MessagePopup({ title, content, autoclose, onClose }: ChatMessage
 		if (intervalRef.current !== null) {
 			clearInterval(intervalRef.current);
 		}
+
 		onClose?.();
 	};
 

@@ -17,10 +17,12 @@ export class WatchtimeAccumulator {
 
 	watchChannel(platform: PlatformType, channel: string): Promise<WatchtimeRecord | null> {
 		const channelKey = createWatchtimeId(platform, channel);
+
 		if (!this.watchedChannels.has(channelKey)) {
 			this.watchedChannels.add(channelKey);
 			this.logger.debug(`Started watching channel: ${channelKey}`);
 		}
+
 		return this.database.getWatchtime(platform, channel);
 	}
 
@@ -29,11 +31,13 @@ export class WatchtimeAccumulator {
 			clearInterval(this.updateInterval);
 			this.updateInterval = null;
 		}
+
 		this.logger.info("Watchtime accumulator stopped");
 	}
 
 	private parseChannelKey(key: string): { platform: PlatformType; channel: string } {
 		const [platform, channel] = key.split(":");
+
 		return { platform: platform as PlatformType, channel };
 	}
 
@@ -49,6 +53,7 @@ export class WatchtimeAccumulator {
 					const { platform, channel } = this.parseChannelKey(channelKey);
 					await this.database.addWatchtime(platform, channel, 5);
 				}
+
 				this.watchedChannels.clear();
 			} catch (error) {
 				this.logger.error("Failed to update watchtime:", error);

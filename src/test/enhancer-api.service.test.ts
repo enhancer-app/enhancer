@@ -5,7 +5,9 @@ import type { CachedAggregateSeed } from "$types/shared/worker/enhancer-api-work
 import type { WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
 
 const originalChrome = globalThis.chrome;
+
 const originalFetch = globalThis.fetch;
+
 const originalWebSocket = globalThis.WebSocket;
 
 class FakeWebSocket extends EventTarget {
@@ -31,6 +33,7 @@ class FakeWebSocket extends EventTarget {
 	send(data: string): void {
 		const command = JSON.parse(data);
 		FakeWebSocket.commands.push(command);
+
 		if (command.type !== "subscribe") return;
 		const { subscription } = command;
 		const suffix = subscription.externalId ? `:${subscription.externalId}` : "";
@@ -58,7 +61,9 @@ class FakeWebSocket extends EventTarget {
 }
 
 const logger = { debug() {}, info() {}, warn() {}, error() {} } as unknown as Logger;
+
 const waitForEvents = () => new Promise((resolve) => setTimeout(resolve, 20));
+
 const aggregate = (cursor: string, accountId = "account-1") => ({
 	channelId: null,
 	platform: "TWITCH" as const,
@@ -82,6 +87,7 @@ function setupChrome(
 ) {
 	const broadcasts: WorkerBroadcast[] = [];
 	let closeTab: (tabId: number) => void = () => {};
+
 	globalThis.chrome = {
 		tabs: {
 			onRemoved: {
@@ -97,6 +103,7 @@ function setupChrome(
 			},
 		},
 	} as unknown as typeof chrome;
+
 	return { broadcasts, closeTab };
 }
 
@@ -114,6 +121,7 @@ test("uses one HTTP snapshot and applies final patches without refetching", asyn
 	globalThis.fetch = (async (input) => {
 		const url = new URL(input.toString());
 		requests.push(url);
+
 		return Response.json(aggregate("100-0"));
 	}) as typeof fetch;
 
@@ -166,6 +174,7 @@ test("installs a complete snapshot before applying buffered updates", async () =
 	let requests = 0;
 	globalThis.fetch = (async () => {
 		requests++;
+
 		return Response.json(aggregate("200-0"));
 	}) as unknown as typeof fetch;
 
@@ -222,7 +231,9 @@ test("moves unavailable channels through pending, restore, and canonical rename"
 		const url = new URL(input.toString());
 		const externalId = decodeURIComponent(url.pathname.split("/").at(-2) as string);
 		requests.push(externalId);
+
 		if (externalId === "old" && !oldAvailable) return new Response(null, { status: 404 });
+
 		return Response.json(aggregate(`${300 + requests.length}-0`, `${externalId}-account`));
 	}) as typeof fetch;
 
@@ -288,17 +299,20 @@ test("chooses the newest tab seed and applies only newer buffered events after w
 		aggregate: aggregate("0", "oldest"),
 		cursor: "600-0",
 	};
+
 	const newest: CachedAggregateSeed = {
 		topic: "global:TWITCH",
 		aggregate: aggregate("0", "newest"),
 		cursor: "600-3",
 	};
+
 	const { broadcasts } = setupChrome(
 		new Map<number, CachedAggregateSeed | null>([
 			[7, oldest],
 			[8, newest],
 		]),
 	);
+
 	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
 	globalThis.fetch = (() => {
 		throw new Error("HTTP must not run when a seed exists");
@@ -346,6 +360,7 @@ test("discovers an existing tab seed before falling back to HTTP", async () => {
 		aggregate: aggregate("0", "seeded"),
 		cursor: "700-3",
 	};
+
 	setupChrome(new Map([[8, seed]]));
 	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
 	globalThis.fetch = (() => {
@@ -365,22 +380,27 @@ test("retries a pending channel when availability races its initial 404", async 
 	setupChrome();
 	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
 	let resolveMissing: (response: Response) => void = () => {};
+
 	let channelRequests = 0;
 	globalThis.fetch = (async (input) => {
 		const url = new URL(input.toString());
+
 		if (!url.pathname.includes("/racing/")) return Response.json(aggregate("800-0"));
 		channelRequests++;
+
 		if (channelRequests === 1) {
 			return new Promise<Response>((resolve) => {
 				resolveMissing = resolve;
 			});
 		}
+
 		return Response.json(aggregate("800-2", "available"));
 	}) as typeof fetch;
 
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");
 	const pending = service.joinChannel(7, 0, "client-a", "twitch", "racing");
+
 	while (channelRequests === 0) await Promise.resolve();
 	FakeWebSocket.instance.receive({
 		type: "channel.available",
@@ -402,6 +422,7 @@ test("merges an alias confirmation into an existing canonical topic", async () =
 	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
 	globalThis.fetch = (async (input) => {
 		const alias = new URL(input.toString()).pathname.includes("/alias/");
+
 		return Response.json(aggregate(alias ? "900-3" : "900-0", alias ? "alias-account" : "canonical-account"));
 	}) as typeof fetch;
 	FakeWebSocket.onSubscribe = (socket, command, topic) => {
@@ -449,11 +470,13 @@ test("ignores an unavailable event older than the selected channel seed", async 
 		aggregate: aggregate("0", "old-channel"),
 		cursor: "1000-0",
 	};
+
 	const newest: CachedAggregateSeed = {
 		topic: "channel:TWITCH:seeded-channel",
 		aggregate: aggregate("0", "new-channel"),
 		cursor: "1000-3",
 	};
+
 	const { broadcasts } = setupChrome(new Map([[8, newest]]));
 	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
 	globalThis.fetch = (async (input) => {
@@ -494,12 +517,14 @@ test("replays archive and restore availability in cursor order", async () => {
 		aggregate: aggregate("0", "before-archive"),
 		cursor: "1100-0",
 	};
+
 	setupChrome(new Map([[8, seed]]));
 	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
 	let channelRequests = 0;
 	globalThis.fetch = (async (input) => {
 		if (new URL(input.toString()).pathname.includes("/global/")) return Response.json(aggregate("1099-0"));
 		channelRequests++;
+
 		return Response.json(aggregate("1100-3", "after-restore"));
 	}) as typeof fetch;
 
@@ -509,12 +534,14 @@ test("replays archive and restore availability in cursor order", async () => {
 	FakeWebSocket.onSubscribe = (socket, command, topic) => {
 		channelSubscriptions++;
 		queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic }));
+
 		if (channelSubscriptions === 1) {
 			queueMicrotask(() =>
 				socket.receive({ type: "channel.unavailable", topic, reason: "archived", cursor: "1100-1" }),
 			);
 			queueMicrotask(() => socket.receive({ type: "channel.available", topic, reason: "restored", cursor: "1100-2" }));
 		}
+
 		queueMicrotask(() => socket.receive({ type: "replay.complete", topic }));
 	};
 
@@ -529,21 +556,25 @@ test("moves to a replacement topic when rename races the initial HTTP", async ()
 	setupChrome();
 	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
 	let resolveOld: (response: Response) => void = () => {};
+
 	const requests: string[] = [];
 	globalThis.fetch = (async (input) => {
 		const externalId = decodeURIComponent(new URL(input.toString()).pathname.split("/").at(-2) as string);
 		requests.push(externalId);
+
 		if (externalId === "old-race") {
 			return new Promise<Response>((resolve) => {
 				resolveOld = resolve;
 			});
 		}
+
 		return Response.json(aggregate("1200-2", "replacement"));
 	}) as typeof fetch;
 
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");
 	const pending = service.joinChannel(7, 0, "client-a", "twitch", "old-race");
+
 	while (!requests.includes("old-race")) await Promise.resolve();
 	FakeWebSocket.instance.receive({
 		type: "channel.unavailable",
@@ -564,6 +595,7 @@ test("moves to a replacement topic when rename races the initial HTTP", async ()
 
 test("keeps restore availability that arrives during archive broadcasting", async () => {
 	let releaseBroadcast: () => void = () => {};
+
 	let archiveBroadcastStarted = false;
 	setupChrome(new Map(), async (message) => {
 		if (message.type !== "enhancer-api-updated" || message.payload.aggregate) return;
@@ -576,6 +608,7 @@ test("keeps restore availability that arrives during archive broadcasting", asyn
 	let channelRequests = 0;
 	globalThis.fetch = (async (input) => {
 		if (new URL(input.toString()).pathname.includes("/live-race/")) channelRequests++;
+
 		return Response.json(aggregate(`${1300 + channelRequests}-0`, "restored-live"));
 	}) as typeof fetch;
 
@@ -588,6 +621,7 @@ test("keeps restore availability that arrives during archive broadcasting", asyn
 		reason: "archived",
 		cursor: "1400-0",
 	});
+
 	while (!archiveBroadcastStarted) await Promise.resolve();
 	FakeWebSocket.instance.receive({
 		type: "channel.available",

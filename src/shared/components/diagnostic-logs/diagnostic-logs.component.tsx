@@ -80,23 +80,29 @@ export function DiagnosticLogsComponent({ platform, workerService }: DiagnosticL
 	useEffect(() => {
 		if (!status) return;
 		const timer = setTimeout(() => setStatus(null), 5000);
+
 		return () => clearTimeout(timer);
 	}, [status]);
 
 	const exportLogs = async () => {
 		setLoading(true);
 		setStatus(null);
+
 		try {
 			const [backgroundResult, bridgeResult] = await Promise.allSettled([
 				workerService.send("getLogs"),
 				workerService.getBridgeLogs(),
 			]);
+
 			const backgroundLogs =
 				backgroundResult.status === "fulfilled" && Array.isArray(backgroundResult.value) ? backgroundResult.value : [];
+
 			const bridgeLogs = bridgeResult.status === "fulfilled" ? bridgeResult.value : [];
+
 			const logs = [...Logger.getLogs(), ...bridgeLogs, ...backgroundLogs].sort(
 				(first, second) => first.timestamp - second.timestamp,
 			);
+
 			const exportData: ExportedLogs = {
 				meta: {
 					version: window.enhancer.version,

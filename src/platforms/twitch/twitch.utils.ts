@@ -30,16 +30,22 @@ export default class TwitchUtils {
 		url = url.replace(/(^\w+:|^)\/\//, "");
 		const elements = url.split("/");
 		let name = elements[1];
+
 		if (name === "popout" || elements[0].includes("dashboard")) name = elements[2];
+
 		if (name === "moderator" || elements[0].includes("dashboard")) name = elements[2];
+
 		if (name.includes("?")) name = name.substring(0, name.indexOf("?"));
+
 		if (name.endsWith("#")) name = name.substring(0, name.indexOf("#"));
+
 		return name.toLowerCase();
 	}
 
 	getCurrentChannelFromDirectTwitchPlayer() {
 		if (!this.isDirectTwitchPlayer()) return;
 		const url = new URL(window.location.href);
+
 		return url.searchParams.get("channel");
 	}
 
@@ -64,6 +70,7 @@ export default class TwitchUtils {
 		const selector = isDirect ? '[data-a-target="player-overlay-click-handler"]' : ".persistent-player";
 
 		const element = document.querySelector(selector);
+
 		if (!element) return undefined;
 
 		const reactInstance = this.reactUtils.getReactInstance(element);
@@ -126,6 +133,7 @@ export default class TwitchUtils {
 			(n) => n?.pendingProps?.value?.getCommands != null,
 			25,
 		);
+
 		return node?.pendingProps.value;
 	}
 
@@ -135,6 +143,7 @@ export default class TwitchUtils {
 			(n) => n?.stateNode?.props?.onSendMessage,
 			100,
 		);
+
 		return node?.stateNode;
 	}
 
@@ -146,11 +155,13 @@ export default class TwitchUtils {
 			(n) => n?.stateNode?.props?.chatConnectionAPI,
 			50,
 		);
+
 		return node?.stateNode;
 	}
 
 	addCommandToChat(command: TwitchChatCommand) {
 		const commandStore = this.getChatCommandStore();
+
 		if (!commandStore) return;
 		commandStore.addCommand({ ...command, group: "Enhancer" });
 	}
@@ -163,6 +174,7 @@ export default class TwitchUtils {
 		if (chatInputElement) {
 			return chatInputElement.textContent;
 		}
+
 		return null;
 	}
 
@@ -176,6 +188,7 @@ export default class TwitchUtils {
 
 	getChatMessage(message: Node | Element | HTMLElement | null) {
 		if (!message) return;
+
 		return this.reactUtils.findReactParents<never, { message?: TwitchChatMessage }>(
 			this.reactUtils.getReactInstance(message),
 			(n) => n?.memoizedProps?.message,
@@ -194,14 +207,17 @@ export default class TwitchUtils {
 	setChatText(message: string, focus?: boolean) {
 		const chatInput = this.getAutoCompleteHandler();
 		chatInput?.componentRef.props.onChange({ target: { value: message } });
+
 		if (focus) chatInput?.componentRef.focus();
 	}
 
 	addChatText(message: string, focus?: boolean) {
 		const chatInput = this.getAutoCompleteHandler();
+
 		if (!chatInput) return;
 		const fullMessage = `${chatInput.state.value} ${message}`;
 		chatInput.componentRef.props.onChange({ target: { value: fullMessage } });
+
 		if (focus) chatInput?.componentRef.focus();
 	}
 
@@ -212,28 +228,35 @@ export default class TwitchUtils {
 
 	format(text: string, value: string): string {
 		const formattedText = !value.endsWith(" ") && value.length > 0 ? ` ${text}` : text;
+
 		return `${value}${formattedText}`;
 	}
 
 	getScrollableChat() {
 		const element = document.querySelector('section[data-test-selector="chat-room-component-layout"]');
+
 		if (!element) return;
+
 		const props = this.reactUtils.findReactChildren<ScrollableChatComponent>(
 			this.reactUtils.getReactInstance(element),
 			(n) => n?.stateNode?.props?.setPaused && n?.stateNode?.props?.messagesHash,
 			100,
 		)?.stateNode.props;
+
 		if (!props) return;
+
 		return { element, props };
 	}
 
 	unstuckScroll() {
 		const nativeChat = this.getScrollableChat();
 		const sevenTvChat = document.querySelector(".scrollable-contents");
+
 		if (!nativeChat && !sevenTvChat) return;
 
 		const isNativePaused = nativeChat?.element?.classList.contains("chat-scrollable-area__message-container--paused");
 		const isSevenTvPaused = sevenTvChat?.querySelector(".seventv-message-buffer-notice")?.textContent === "Chat Paused";
+
 		if (isNativePaused || isSevenTvPaused) return;
 
 		if (sevenTvChat) {
@@ -248,9 +271,12 @@ export default class TwitchUtils {
 		if (!URL.canParse(link)) return;
 		const params = link.split("/");
 		const videoIndex = params.findIndex((item) => item === "videos" || item === "video");
+
 		if (videoIndex === -1) return;
 		let id = params[videoIndex + 1];
+
 		if (id.includes("?")) id = id.substring(0, id.lastIndexOf("?"));
+
 		return id;
 	}
 
@@ -288,7 +314,9 @@ export default class TwitchUtils {
 			(n) => n?.stateNode?.props?.channelLogin !== undefined && n?.stateNode?.props?.channelName !== undefined,
 			100,
 		)?.stateNode.props;
+
 		if (!props) return;
+
 		return { displayName: props.channelName, channelLogin: props.channelLogin };
 	}
 
@@ -298,7 +326,9 @@ export default class TwitchUtils {
 			(n) => n?.stateNode?.props?.channelID !== undefined && n?.stateNode?.props?.channelLogin !== undefined,
 			100,
 		)?.stateNode.props;
+
 		if (!props) return;
+
 		return {
 			displayName: props.displayName,
 			channelLogin: props.channelLogin,
@@ -308,6 +338,7 @@ export default class TwitchUtils {
 
 	getApolloClient() {
 		const reactRoot = this.reactUtils.getReactRoot(document.querySelector("#root"));
+
 		return this.reactUtils.findReactChildren<never, never, RootComponent>(
 			reactRoot?._internalRoot?.current ?? reactRoot,
 			(n) => n?.pendingProps?.value?.client,
@@ -324,13 +355,17 @@ export default class TwitchUtils {
 				n?.pendingProps?.guestList !== undefined,
 			100,
 		)?.pendingProps;
+
 		if (!props) return;
+
 		return props;
 	}
 
 	getMediaPlayerPlaybackRate() {
 		const mediaPlayer = this.getMediaPlayerInstance();
+
 		if (!mediaPlayer) return;
+
 		return mediaPlayer.core.renderSurface.video.element().playbackRate;
 	}
 

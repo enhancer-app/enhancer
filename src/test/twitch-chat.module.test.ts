@@ -49,6 +49,7 @@ test("finalizes a queued 7TV message id", () => {
 	});
 
 	const message = { ...MESSAGE, id: "", nonce: "message-nonce" };
+
 	const nonceLinkMessage = {
 		id: "final-id",
 		nonce: message.nonce,
@@ -68,6 +69,7 @@ test("finalizes a queued 7TV message id", () => {
 		} else {
 			Reflect.deleteProperty(globalThis, "document");
 		}
+
 		if (originalCss) {
 			Object.defineProperty(globalThis, "CSS", originalCss);
 		} else {
@@ -97,12 +99,15 @@ test("intercepts messages before 7TV suppresses the Twitch handler", () => {
 	let calls = 0;
 	let context: unknown;
 	let receivedMessages: TwitchChatMessage[] = [];
+
 	let originalHandler = function (this: unknown, ...messages: TwitchChatMessage[]) {
 		calls++;
 		context = this;
 		receivedMessages = messages;
+
 		return "";
 	};
+
 	const messageHandlerApi = {
 		addMessageHandler: () => {},
 		get handleMessage() {
@@ -112,6 +117,7 @@ test("intercepts messages before 7TV suppresses the Twitch handler", () => {
 			originalHandler = handler;
 		},
 	};
+
 	const originalDescriptor = Object.getOwnPropertyDescriptor(messageHandlerApi, "handleMessage");
 
 	try {
@@ -131,8 +137,10 @@ test("intercepts messages before 7TV suppresses the Twitch handler", () => {
 		messageHandlerApi.handleMessage = function (this: unknown, ...messages: TwitchChatMessage[]) {
 			context = this;
 			receivedMessages = messages;
+
 			return "replacement";
 		};
+
 		expect(messageHandlerApi.handleMessage(thirdMessage)).toBe("replacement");
 		expect(context).toBe(messageHandlerApi);
 		expect(receivedMessages).toEqual([thirdMessage]);
@@ -143,6 +151,7 @@ test("intercepts messages before 7TV suppresses the Twitch handler", () => {
 		} else {
 			Reflect.deleteProperty(globalThis, "document");
 		}
+
 		if (originalCss) {
 			Object.defineProperty(globalThis, "CSS", originalCss);
 		} else {
@@ -153,12 +162,16 @@ test("intercepts messages before 7TV suppresses the Twitch handler", () => {
 
 test("marks a cached 7TV message rerender as replay", () => {
 	const replayValues: boolean[] = [];
+
 	const chatModule = createChatModule({
 		emit: (_event: string, payload: { isReplay: boolean }) => replayValues.push(payload.isReplay),
 	} as never);
+
 	(chatModule as any).getSevenTvMessage = () => MESSAGE;
+
 	const createElement = () => {
 		let marker: string | null = null;
+
 		return {
 			getAttribute: () => marker,
 			setAttribute: (_name: string, value: string) => {

@@ -22,12 +22,17 @@ export default class LocalWatchtimeCounterModule extends KickModule {
 		if (this.watchingCheckerInterval) {
 			clearInterval(this.watchingCheckerInterval);
 		}
+
 		this.watchingCheckerInterval = setInterval(async () => {
 			const channelName = this.kickUtils().getChannelInfo()?.slug.toLowerCase();
+
 			if (!channelName) return;
 			const video = document.querySelector<HTMLVideoElement>("video");
+
 			if (!video) return;
+
 			if (!this.kickUtils().isLiveVideo(video)) return;
+
 			if (video.paused) return;
 			await this.workerService().send("addWatchtime", {
 				platform: "kick",

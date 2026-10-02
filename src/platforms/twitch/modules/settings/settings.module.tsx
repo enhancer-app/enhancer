@@ -396,12 +396,14 @@ export default class SettingsModule extends TwitchModule {
 	private async run() {
 		if (!this.settingsHelper) return;
 		const settings = this.settingsHelper.loadSettings(TWITCH_DEFAULT_SETTINGS);
+
 		const result = await this.settingsHelper.createSettingsContainer({
 			defaults: settings,
 			categories: this.SETTINGS_CATEGORIES,
 			definitions: this.SETTING_DEFINITIONS,
 			eventPrefix: "twitch:settings:",
 		});
+
 		this.settingsSignal = result.settingsSignal;
 		this.openSettingsFn = result.openSettings;
 	}

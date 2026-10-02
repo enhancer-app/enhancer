@@ -62,9 +62,12 @@ export default class ChatAttachmentsModule extends KickModule {
 	private async handleMessage(message: KickChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
 		const baseData = this.getBaseData(message);
+
 		if (!baseData) return;
+
 		try {
 			const result = await this.resolveChatAttachmentHandler(baseData);
+
 			if (result?.applies) await result.chatAttachmentHandler.handle(result.data);
 		} catch (error) {
 			this.logger.error("Failed to handle chat attachment:", error);
@@ -75,9 +78,11 @@ export default class ChatAttachmentsModule extends KickModule {
 		const chatAttachmentHandler = this.chatAttachmentHandlers.find((chatAttachmentHandler) =>
 			chatAttachmentHandler.validate(baseData),
 		);
+
 		if (!chatAttachmentHandler) return;
 		baseData.url = chatAttachmentHandler.parseUrl(baseData.url);
 		const data = await this.getData(baseData);
+
 		return { applies: await chatAttachmentHandler.applies(data), chatAttachmentHandler, data };
 	}
 
@@ -100,6 +105,7 @@ export default class ChatAttachmentsModule extends KickModule {
 				messageElement: firstElement,
 			};
 		}
+
 		if (this.commonUtils().isValidUrl(lastWord) && lastElement) {
 			return {
 				messageType: ChatAttachmentMessageType.LAST,
@@ -111,8 +117,10 @@ export default class ChatAttachmentsModule extends KickModule {
 
 	private async getData(baseData: BaseChatAttachmentData): Promise<ChatAttachmentData> {
 		const attachmentData = await this.getAttachmentData(baseData.url);
+
 		if (!attachmentData?.type || !attachmentData?.size || attachmentData === undefined)
 			throw new Error("Couldn't get attachment data");
+
 		return { ...baseData, attachmentType: attachmentData.type, attachmentSize: Number.parseInt(attachmentData.size) };
 	}
 
@@ -122,6 +130,7 @@ export default class ChatAttachmentsModule extends KickModule {
 				method: "HEAD",
 				responseType: "text",
 			});
+
 			return { type: response.headers.get("Content-Type"), size: response.headers.get("Content-Length") };
 		} catch (error) {
 			this.logger.warn("Couldn't get attachment data", error);
@@ -132,6 +141,7 @@ export default class ChatAttachmentsModule extends KickModule {
 		if (this.inputMonitoringInterval) return;
 		this.inputMonitoringInterval = setInterval(async () => {
 			const chatInputContent = this.kickUtils().getChatInputContent();
+
 			if (!chatInputContent) return;
 
 			const words = chatInputContent.split(" ");
@@ -145,6 +155,7 @@ export default class ChatAttachmentsModule extends KickModule {
 				(lastWordData && (await this.resolveChatAttachmentHandler(lastWordData))?.applies);
 
 			const url = firstWordData?.url?.toString() || lastWordData?.url?.toString();
+
 			if (attachmentResolved && url) {
 				if (this.previousInputContent === url) return;
 				this.previousInputContent = url;
@@ -171,11 +182,13 @@ export default class ChatAttachmentsModule extends KickModule {
 				url: new URL(word),
 			} as BaseChatAttachmentData;
 		}
+
 		return undefined;
 	}
 
 	async initialize() {
 		await this.imageAttachmentConfig.initialize();
+
 		if (await this.isModuleEnabled()) this.startInputMonitoring();
 		this.commonUtils().createGlobalStyle(`
 			.enhancer-chat-link {

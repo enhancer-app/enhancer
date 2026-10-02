@@ -5,6 +5,7 @@ import type Module from "$shared/module/module.ts";
 import type { SelectorModuleApplierConfig } from "$types/shared/module/module-applier.types.ts";
 
 const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 
 class FakeElement {
@@ -43,6 +44,7 @@ function createApplier(config: Omit<SelectorModuleApplierConfig, "type" | "selec
 	void applier.apply({
 		config: { name: "test", appliers: [{ type: "selector", selectors: [".target"], ...config }] },
 	} as unknown as Module<any, any, any>);
+
 	return applier as unknown as { run(): Promise<void> };
 }
 

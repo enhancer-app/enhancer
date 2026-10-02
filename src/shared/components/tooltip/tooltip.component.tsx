@@ -23,6 +23,7 @@ export function useTooltipPosition(
 		const spacing = 8;
 		let x = 0;
 		let y = 0;
+
 		switch (position) {
 			case "top":
 				x = container.left + container.width / 2;
@@ -49,20 +50,26 @@ export function useTooltipPosition(
 				tooltip.style.top = `${y}px`;
 				break;
 		}
+
 		const tooltipRect = tooltip.getBoundingClientRect();
+
 		const viewport = {
 			width: window.innerWidth,
 			height: window.innerHeight,
 		};
+
 		if (tooltipRect.right > viewport.width - spacing) {
 			tooltip.style.left = `${viewport.width - tooltipRect.width - spacing}px`;
 		}
+
 		if (tooltipRect.left < spacing) {
 			tooltip.style.left = `${spacing}px`;
 		}
+
 		if (tooltipRect.bottom > viewport.height - spacing) {
 			tooltip.style.top = `${viewport.height - tooltipRect.height - spacing}px`;
 		}
+
 		if (tooltipRect.top < spacing) {
 			tooltip.style.top = `${spacing}px`;
 		}
@@ -80,12 +87,15 @@ export function TooltipComponent({ children, content, position = "top", delay = 
 		if (!containerRef.current || !tooltipRef.current) return;
 		const container = containerRef.current.getBoundingClientRect();
 		const tooltip = tooltipRef.current.getBoundingClientRect();
+
 		const viewport = {
 			width: window.innerWidth,
 			height: window.innerHeight,
 		};
+
 		const spacing = 8;
 		let newPosition = position;
+
 		const positions = {
 			top: {
 				fits:
@@ -112,12 +122,14 @@ export function TooltipComponent({ children, content, position = "top", delay = 
 					container.top + container.height / 2 + tooltip.height / 2 < viewport.height - spacing,
 			},
 		};
+
 		if (positions[position].fits) {
 			newPosition = position;
 		} else {
 			const fallbackOrder: Array<keyof typeof positions> = ["top", "bottom", "right", "left"];
 			newPosition = fallbackOrder.find((pos) => positions[pos].fits) || position;
 		}
+
 		setActualPosition(newPosition);
 	}, [position]);
 
@@ -146,12 +158,15 @@ export function TooltipComponent({ children, content, position = "top", delay = 
 		calculatePosition();
 		const handleResize = () => calculatePosition();
 		const handleScroll = () => setIsVisible(false);
+
 		const observer = new MutationObserver(() => {
 			if (!containerRef.current?.isConnected) setIsVisible(false);
 		});
+
 		observer.observe(document.body, { childList: true, subtree: true });
 		window.addEventListener("resize", handleResize);
 		window.addEventListener("scroll", handleScroll, { passive: true });
+
 		return () => {
 			observer.disconnect();
 			window.removeEventListener("resize", handleResize);

@@ -35,11 +35,13 @@ export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 	static readonly CORSGO_PROXY_URL_PARSER = (url: URL) => {
 		const corsgoUrl = new URL("https://corsgo.enhancer.at/proxy");
 		corsgoUrl.searchParams.append("url", url.href);
+
 		return corsgoUrl;
 	};
 	static readonly URL_PARSERS: AttachmentUrlParser = {
 		"cdn.discordapp.com": (url) => {
 			url.host = "media.discordapp.net";
+
 			return url;
 		},
 		"prnt.sc": ImageChatAttachmentHandler.CORSGO_PROXY_URL_PARSER,
@@ -51,6 +53,7 @@ export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 		const previewUrl = new URL("https://preview.enhancer.at");
 		previewUrl.searchParams.append("type", "image");
 		previewUrl.searchParams.append("preview", url.href);
+
 		return previewUrl;
 	};
 	static readonly PREVIEW_URL_PARSERS: AttachmentUrlParser = {
@@ -59,11 +62,13 @@ export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 		// We need only proxy to show message in the chat, after this we can navigate user to original link
 		"corsgo.enhancer.at": (url) => {
 			const paramUrl = url.searchParams.get("url");
+
 			if (paramUrl) {
 				try {
 					return new URL(paramUrl);
 				} catch (_) {}
 			}
+
 			return url;
 		},
 	};
@@ -107,10 +112,12 @@ export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 			element.replaceChildren(image);
 			image.style.objectFit = "contain";
 			image.style.aspectRatio = `${image.naturalWidth} / ${image.naturalHeight}`;
+
 			if (this.config.imagesOnHover.value) {
 				styleAsFakeImage();
 				image.src = this.config.imageOnHoverSource;
 			}
+
 			await this.config.callback();
 		};
 
@@ -123,6 +130,7 @@ export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 				await renderImage();
 				isRendered = true;
 			}
+
 			if (renderingOriginal) styleAsOriginal();
 			else styleAsFakeImage();
 		};

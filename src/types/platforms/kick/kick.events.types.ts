@@ -16,6 +16,7 @@ export type KickChatMessage = {
 	user: string;
 	element: Element;
 };
+
 export type KickChatMessageData = {
 	id: string;
 	chatroom_id: number;
@@ -54,6 +55,7 @@ export type KickChatMessageData = {
 		};
 	};
 };
+
 export type KickChatMessageEvent = {
 	message: KickChatMessageData;
 	element: Element;

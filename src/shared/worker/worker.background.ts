@@ -52,6 +52,7 @@ export default class WorkerBackground {
 		chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 			if (!this.isInitialized) {
 				this.messageQueue.push({ message, sender, sendResponse });
+
 				return true;
 			}
 
@@ -87,10 +88,13 @@ export default class WorkerBackground {
 
 	private async handleMessage(message: { action: string; payload?: any }, sender: chrome.runtime.MessageSender) {
 		const { action, payload } = message;
+
 		if (!this.handlerRegistry.hasHandler(action)) {
 			throw new Error(`Unknown action: ${action}`);
 		}
+
 		const handler = this.handlerRegistry.getHandler(action);
+
 		return await handler.handle(payload, sender);
 	}
 }

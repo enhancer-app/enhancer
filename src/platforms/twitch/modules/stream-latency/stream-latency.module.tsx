@@ -32,6 +32,7 @@ export default class StreamLatencyModule extends TwitchModule {
 			const wrapper = document.createElement("span");
 			wrapper.id = this.getId();
 			element.appendChild(wrapper);
+
 			return wrapper;
 		});
 
@@ -46,6 +47,7 @@ export default class StreamLatencyModule extends TwitchModule {
 
 		wrappers.forEach((element: HTMLElement) => {
 			const header = document.querySelector("#chat-room-header-label") as HTMLElement | null;
+
 			if (header) header.style.display = "none";
 			render(
 				<LatencyComponent
@@ -80,6 +82,7 @@ export default class StreamLatencyModule extends TwitchModule {
 
 	private watchPlaybackRate() {
 		const video = this.twitchUtils().getMediaPlayerInstance()?.core.renderSurface.video.element();
+
 		if (!video) return;
 		video.addEventListener("ratechange", () => {
 			this.playbackRate.value = video.playbackRate;
@@ -88,31 +91,41 @@ export default class StreamLatencyModule extends TwitchModule {
 
 	private resetPlayer() {
 		const mediaPlayer = this.twitchUtils().getMediaPlayerInstance();
+
 		if (!mediaPlayer) {
 			this.logger.warn("Failed to find media player");
+
 			return;
 		}
+
 		const latency = this.getLatency();
+
 		if (typeof latency !== "number" || latency <= 0) return;
 		mediaPlayer.seekTo(mediaPlayer.getPosition() + latency);
 	}
 
 	private getLatency() {
 		const mediaPlayer = this.twitchUtils().getMediaPlayerInstance();
+
 		if (!mediaPlayer) {
 			this.logger.warn("Failed to find media player");
+
 			return;
 		}
+
 		return mediaPlayer.core.state.liveLatency;
 	}
 
 	private createPlaybackRateSignal() {
 		if ("value" in this.playbackRate) return;
 		const video = this.twitchUtils().getMediaPlayerInstance()?.core.renderSurface.video.element();
+
 		if (!video) {
 			this.playbackRate = signal(1);
+
 			return;
 		}
+
 		this.playbackRate = signal(video.playbackRate);
 	}
 

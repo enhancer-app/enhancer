@@ -37,6 +37,7 @@ export default class AdditionalFontsModule extends TwitchModule {
 
 	public async updateFonts() {
 		const head = document.querySelector("head");
+
 		if (!head) return;
 		this.additionalFontsHelper.loadFontsWithTruncation([head], this.logger);
 	}

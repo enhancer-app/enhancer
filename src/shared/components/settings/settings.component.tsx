@@ -983,6 +983,7 @@ function normalize(text: string): string {
 function matchesQuery(text: string, query: string): boolean {
 	const textTokens = normalize(text).split(/\s+/).filter(Boolean);
 	const queryTokens = normalize(query).split(/\s+/).filter(Boolean);
+
 	return queryTokens.every((qt) => textTokens.some((tt) => tt.includes(qt)));
 }
 
@@ -990,18 +991,23 @@ type RenderGroup<T> = { kind: "card"; items: SettingDefinition<T>[] } | { kind: 
 
 function groupSettings<T>(settings: SettingDefinition<T>[]): RenderGroup<T>[] {
 	const groups: RenderGroup<T>[] = [];
+
 	for (const setting of settings) {
 		if (setting.hideInfo) {
 			groups.push({ kind: "panel", item: setting });
 			continue;
 		}
+
 		const last = groups[groups.length - 1];
+
 		if (last?.kind === "card") {
 			last.items.push(setting);
 			continue;
 		}
+
 		groups.push({ kind: "card", items: [setting] });
 	}
+
 	return groups;
 }
 
@@ -1017,17 +1023,20 @@ const Settings = <T,>({
 }: SettingsProps<T>) => {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+
 	const [pendingToggle, setPendingToggle] = useState<{
 		key: keyof T;
 		value: boolean;
 		confirmationMessage?: string;
 	} | null>(null);
+
 	const [pendingArrayRemove, setPendingArrayRemove] = useState<{
 		key: keyof T;
 		index: number;
 		itemTitle?: string;
 		confirmationMessage?: string;
 	} | null>(null);
+
 	const [refreshPending, setRefreshPending] = useState<string[]>([]);
 	const [fileUploadError, setFileUploadError] = useState<string | null>(null);
 
@@ -1041,12 +1050,15 @@ const Settings = <T,>({
 
 	const matchCounts = useMemo(() => {
 		const counts = new Map<string, number>();
+
 		for (const category of sortedCategories) {
 			const matching = settingDefinitions.filter(
 				(setting) => setting.categoryId === category.id && settingMatches(setting, category, searchQuery),
 			);
+
 			counts.set(category.id, matching.length);
 		}
+
 		return counts;
 	}, [sortedCategories, settingDefinitions, searchQuery]);
 
@@ -1070,8 +1082,10 @@ const Settings = <T,>({
 			setPendingToggle(null);
 			setPendingArrayRemove(null);
 			setFileUploadError(null);
+
 			return;
 		}
+
 		searchRef.current?.focus();
 	}, [isOpen]);
 
@@ -1081,24 +1095,34 @@ const Settings = <T,>({
 
 	useEffect(() => {
 		if (!isOpen) return;
+
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (event.key !== "Escape") return;
 			event.stopPropagation();
+
 			if (pendingToggle) {
 				setPendingToggle(null);
+
 				return;
 			}
+
 			if (pendingArrayRemove) {
 				setPendingArrayRemove(null);
+
 				return;
 			}
+
 			if (searchQuery) {
 				setSearchQuery("");
+
 				return;
 			}
+
 			onClose();
 		};
+
 		document.addEventListener("keydown", handleKeyDown, true);
+
 		return () => document.removeEventListener("keydown", handleKeyDown, true);
 	}, [isOpen, pendingToggle, pendingArrayRemove, searchQuery, onClose]);
 
@@ -1140,6 +1164,7 @@ const Settings = <T,>({
 			if (!setting.validTypes.includes(file.type)) {
 				setFileUploadError("Invalid file type.");
 				target.value = "";
+
 				return;
 			}
 		}
@@ -1150,6 +1175,7 @@ const Settings = <T,>({
 				const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
 				setFileUploadError(`File size (${fileSizeMB}MB) exceeds maximum allowed size of ${maxSizeMB}MB.`);
 				target.value = "";
+
 				return;
 			}
 		}
@@ -1158,9 +1184,11 @@ const Settings = <T,>({
 		reader.onload = (e) => {
 			updateSetting(setting.id as keyof T, e.target?.result as string);
 		};
+
 		reader.onerror = () => {
 			setFileUploadError("Failed to read the selected file. Please try again.");
 		};
+
 		reader.readAsDataURL(file);
 		target.value = "";
 	};
@@ -1179,6 +1207,7 @@ const Settings = <T,>({
 				value: checked,
 				confirmationMessage: setting.confirmationMessage ?? "Are you sure you want to enable this setting?",
 			});
+
 			return;
 		}
 
@@ -1206,14 +1235,17 @@ const Settings = <T,>({
 				typeof item === "object" && item !== null && "title" in item && typeof item.title === "string"
 					? item.title
 					: "";
+
 			setPendingArrayRemove({
 				key: setting.id as keyof T,
 				index,
 				itemTitle,
 				confirmationMessage: setting.confirmationMessage,
 			});
+
 			return;
 		}
+
 		updateArraySetting(setting.id as keyof T, index, null, "remove");
 	};
 
@@ -1226,6 +1258,7 @@ const Settings = <T,>({
 	const isDisabled = (setting: SettingDefinition<T>): boolean => {
 		if (!setting.dependsOn) return false;
 		const expected = setting.dependsOn.value ?? true;
+
 		return settings[setting.dependsOn.key as keyof T] !== expected;
 	};
 
@@ -1251,6 +1284,7 @@ const Settings = <T,>({
 					</ToggleTrack>
 				);
 			}
+
 			case "input": {
 				return (
 					<TextInput
@@ -1260,6 +1294,7 @@ const Settings = <T,>({
 					/>
 				);
 			}
+
 			case "number": {
 				if (setting.slider) {
 					return (
@@ -1279,6 +1314,7 @@ const Settings = <T,>({
 						</SliderField>
 					);
 				}
+
 				return (
 					<NumberField>
 						<NumberInput
@@ -1293,6 +1329,7 @@ const Settings = <T,>({
 					</NumberField>
 				);
 			}
+
 			case "select": {
 				return (
 					<Select
@@ -1307,6 +1344,7 @@ const Settings = <T,>({
 					</Select>
 				);
 			}
+
 			case "radio": {
 				return (
 					<RadioContainer>
@@ -1327,6 +1365,7 @@ const Settings = <T,>({
 					</RadioContainer>
 				);
 			}
+
 			case "array": {
 				const arrayValue = (value as unknown[]) || [];
 				const fields = setting.arrayItemFields || [{ name: "page", placeholder: "Enter value..." }];
@@ -1353,6 +1392,7 @@ const Settings = <T,>({
 															[field.name]: (e.target as HTMLInputElement).value,
 														}
 													: { [field.name]: (e.target as HTMLInputElement).value };
+
 											updateArraySetting(setting.id as keyof T, index, newValue, "update");
 										}}
 									/>
@@ -1371,10 +1411,12 @@ const Settings = <T,>({
 								const newValue = fields.reduce(
 									(acc: Record<string, string>, field: { name: string; placeholder: string }) => {
 										acc[field.name] = "";
+
 										return acc;
 									},
 									{},
 								);
+
 								updateArraySetting(setting.id as keyof T, arrayValue.length, newValue, "add");
 							}}
 						>
@@ -1384,15 +1426,19 @@ const Settings = <T,>({
 					</ArrayContainer>
 				);
 			}
+
 			case "text": {
 				try {
 					const Component = setting.content;
+
 					return <Component />;
 				} catch (e) {
 					logger.error("Enhancer Error when rendering component", e);
 				}
+
 				return null;
 			}
+
 			case "file": {
 				const fileValue = value as string;
 				const hasFile = fileValue && fileValue.length > 0;
@@ -1435,6 +1481,7 @@ const Settings = <T,>({
 					</div>
 				);
 			}
+
 			default:
 				return null;
 		}
@@ -1482,6 +1529,7 @@ const Settings = <T,>({
 					<Sidebar>
 						{sortedCategories.map((category) => {
 							const count = matchCounts.get(category.id) ?? 0;
+
 							return (
 								<NavItem
 									key={category.id}
@@ -1523,6 +1571,7 @@ const Settings = <T,>({
 											<Card key={`card-${section.category.id}-${groupIndex}`}>
 												{group.items.map((setting) => {
 													const disabled = isDisabled(setting);
+
 													return (
 														<Row
 															key={`setting-${setting.id as string}`}
@@ -1596,6 +1645,7 @@ function settingMatches<T>(setting: SettingDefinition<T>, category: SettingCateg
 	if (!query.trim()) return true;
 	const settingText = [setting.title, setting.description, String(setting.id), ...(setting.tags || [])].join(" ");
 	const categoryText = [category.title, ...(category.tags || [])].join(" ");
+
 	return matchesQuery(settingText, query) || matchesQuery(categoryText, query);
 }
 

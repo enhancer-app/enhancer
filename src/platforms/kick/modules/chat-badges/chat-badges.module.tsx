@@ -24,10 +24,12 @@ export default class ChatBadgesModule extends KickModule {
 		const kickUsername = element.querySelector('button[data-prevent-expand="true"]');
 		const kickBadgesContainer = kickUsername?.parentElement?.querySelector(":scope > div");
 		const badgesContainer = isUsingNTV ? ntvBadgesContainer : kickBadgesContainer;
+
 		if (!badgesContainer) return;
 
 		const userBadges = this.enhancerApi().findUserBadgesForCurrentChannel(message.sender.id.toString()) ?? [];
 		const badgeIds = new Set(userBadges.map((badge) => badge.badgeId));
+
 		for (const container of [ntvBadgesContainer, kickBadgesContainer]) {
 			container?.querySelectorAll<HTMLElement>(".enhancer-badges").forEach((badge) => {
 				if (
@@ -53,17 +55,21 @@ export default class ChatBadgesModule extends KickModule {
 		for (const badge of userBadges) {
 			const lowestSourceUrl = this.commonUtils().getLowestBadgeSourceUrl(badge.sources);
 			const highestSourceUrl = this.commonUtils().getHighestBadgeSourceUrl(badge.sources);
+
 			if (!lowestSourceUrl) {
 				this.logger.warn(`Badge ${badge.badgeId} is missing a source url`);
 				continue;
 			}
+
 			const size = isUsingNTV ? 16.38 : 19.38;
 			const badgeId = CSS.escape(badge.badgeId);
+
 			if (
 				badgesContainer.querySelector(`[data-enhancer-badge="${badgeId}"], [data-enhancer-badge-content="${badgeId}"]`)
 			) {
 				continue;
 			}
+
 			const badgeWrapper = document.createElement(isUsingNTV ? "span" : "div");
 			badgeWrapper.classList.add("enhancer-badges");
 			badgeWrapper.dataset.enhancerBadge = badge.badgeId;
@@ -93,9 +99,11 @@ export default class ChatBadgesModule extends KickModule {
 				</TooltipComponent>,
 				badgeWrapper,
 			);
+
 			if (badgeWrapper.firstElementChild instanceof HTMLElement) {
 				badgeWrapper.firstElementChild.dataset.enhancerBadgeContent = badge.badgeId;
 			}
+
 			badgesContainer.insertBefore(badgeWrapper, badgesContainer.firstChild);
 		}
 	}

@@ -38,6 +38,7 @@ export default class ClipDownloadModule extends TwitchModule {
 			const wrapper = document.createElement("div");
 			wrapper.id = this.getId();
 			element.appendChild(wrapper);
+
 			return wrapper;
 		});
 
@@ -48,10 +49,13 @@ export default class ClipDownloadModule extends TwitchModule {
 
 	private downloadClip() {
 		const videoElement = document.querySelector("video");
+
 		if (!videoElement?.src) {
 			this.logger.warn("Failed to find video source");
+
 			return;
 		}
+
 		window.open(videoElement.src);
 	}
 }

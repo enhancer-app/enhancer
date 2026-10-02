@@ -31,7 +31,9 @@ export class UpdateSettingsHandler extends MessageHandler {
 			type: "settings-updated",
 			payload: { platform: payload.platform, settings: payload.settings },
 		};
+
 		const tabs = await chrome.tabs.query({});
+
 		for (const tab of tabs) {
 			if (tab.id) {
 				chrome.tabs.sendMessage(tab.id, broadcast).catch(() => {});

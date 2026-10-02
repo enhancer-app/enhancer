@@ -20,10 +20,12 @@ export default class ChatBadgesModule extends TwitchModule {
 
 	private async handleMessage({ message, element, type }: TwitchChatMessageEvent) {
 		if (!(await this.isModuleEnabled())) return;
+
 		const badgeList =
 			element.querySelector(".seventv-chat-user-badge-list") ||
 			element.querySelector(".chat-line__username-container")?.children[0] ||
 			element.querySelector(".chat-line__message--badges");
+
 		if (!badgeList) return;
 
 		const userBadges = this.enhancerApi().findUserBadgesForCurrentChannel(message.user.userID) ?? [];
@@ -38,20 +40,24 @@ export default class ChatBadgesModule extends TwitchModule {
 		for (const badge of userBadges) {
 			const lowestSourceUrl = this.commonUtils().getLowestBadgeSourceUrl(badge.sources);
 			const highestSourceUrl = this.commonUtils().getHighestBadgeSourceUrl(badge.sources);
+
 			if (!lowestSourceUrl) {
 				this.logger.warn(`Badge ${badge.badgeId} is missing a source url`);
 				continue;
 			}
+
 			if (badgeList.querySelector(`[data-enhancer-badge="${CSS.escape(badge.badgeId)}"]`)) continue;
 
 			const badgeWrapper = document.createElement("span");
 			badgeWrapper.classList.add("enhancer-badges");
 			badgeWrapper.dataset.enhancerBadge = badge.badgeId;
+
 			if (type === "7TV") {
 				badgeWrapper.style.display = "inline-block";
 				badgeWrapper.style.marginRight = ".25em";
 				badgeWrapper.style.verticalAlign = "baseline";
 			}
+
 			render(
 				<TooltipComponent
 					content={

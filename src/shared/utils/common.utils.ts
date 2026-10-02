@@ -7,6 +7,7 @@ export default class CommonUtils {
 		const element = document.createElement(tag);
 		element.classList.add(name);
 		parent.appendChild(element);
+
 		return element;
 	}
 
@@ -43,18 +44,23 @@ export default class CommonUtils {
 	): Promise<boolean> {
 		if (config?.initialDelay) await this.delay(config.initialDelay);
 		const retries = config?.maxRetries ?? 1;
+
 		for (let i = 0; i < retries; i++) {
 			const result = await predicate();
+
 			if (result) {
 				return callback(result, i);
 			}
+
 			if (i < retries - 1) {
 				await this.delay(config?.delay ?? 100);
 			}
 		}
+
 		if (config?.notFoundCallback) {
 			await config.notFoundCallback();
 		}
+
 		return false;
 	}
 
@@ -64,6 +70,7 @@ export default class CommonUtils {
 
 	async getAssetFile(workerApi: WorkerService, path: string, defaultValue = ""): Promise<string> {
 		const response = await workerApi.send("getAssetsFile", { path });
+
 		return response?.url || defaultValue;
 	}
 
@@ -71,15 +78,19 @@ export default class CommonUtils {
 		if (!Number.isFinite(timeInMs) || timeInMs < 0) {
 			return "--:--:--";
 		}
+
 		const date = new Date(timeInMs);
 		const hours = date.getHours();
 		const minutes = date.getMinutes().toString().padStart(2, "0");
 		const seconds = date.getSeconds().toString().padStart(2, "0");
+
 		if (type === "12") {
 			const ampm = hours >= 12 ? "PM" : "AM";
 			const twelveHour = (hours % 12 || 12).toString().padStart(2, "0");
+
 			return `${twelveHour}:${minutes}:${seconds} ${ampm}`;
 		}
+
 		return `${hours.toString().padStart(2, "0")}:${minutes}:${seconds}`;
 	}
 
@@ -88,18 +99,21 @@ export default class CommonUtils {
 		const date = new Date(timeInMs);
 		const day = date.getDate().toString().padStart(2, "0");
 		const month = (date.getMonth() + 1).toString().padStart(2, "0");
+
 		return `${day}.${month}.${date.getFullYear()}`;
 	}
 
 	getLowestBadgeSourceUrl(sources: Record<string, string>): string | null {
 		const entries = Object.entries(sources);
 		entries.sort(([left], [right]) => Number.parseInt(left, 10) - Number.parseInt(right, 10));
+
 		return entries[0]?.[1] ?? null;
 	}
 
 	getHighestBadgeSourceUrl(sources: Record<string, string>): string | null {
 		const entries = Object.entries(sources);
 		entries.sort(([left], [right]) => Number.parseInt(left, 10) - Number.parseInt(right, 10));
+
 		return entries.at(-1)?.[1] ?? null;
 	}
 }

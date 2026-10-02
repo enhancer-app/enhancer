@@ -9,13 +9,17 @@ export default class ReactUtils {
 	): ReactComponent<StateNode, MemoizedProps, PendingProps> | null {
 		if (!node) return null;
 		let success = false;
+
 		try {
 			success = predicate(node);
 		} catch (_) {}
+
 		if (success) return node;
+
 		if (depth > maxDepth) return null;
 
 		const { return: parent } = node;
+
 		if (parent) {
 			return this.findReactParents(parent, predicate, maxDepth, depth + 1);
 		}
@@ -31,13 +35,17 @@ export default class ReactUtils {
 	): ReactComponent<StateNode, MemoizedProps, PendingProps> | null {
 		if (!node) return null;
 		let success = false;
+
 		try {
 			success = predicate(node);
 		} catch (_) {}
+
 		if (success) return node;
+
 		if (depth > maxDepth) return null;
 
 		const { child, sibling } = node;
+
 		if (child || sibling) {
 			return (
 				this.findReactChildren(child, predicate, maxDepth, depth + 1) ||
