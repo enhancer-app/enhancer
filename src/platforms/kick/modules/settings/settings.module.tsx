@@ -106,6 +106,19 @@ export default class SettingsModule extends KickModule {
 				dependsOn: { key: "realVideoTimeEnabled" },
 			},
 			{
+				id: "realVideoTimeDateMode",
+				title: "Real Video Time Date Display",
+				description: "Choose when to show the date next to the real video time.",
+				type: "select",
+				categoryId: CATEGORY.GENERAL,
+				dependsOn: { key: "realVideoTimeEnabled" },
+				options: [
+					{ value: "hover", label: "Show date on hover (default)" },
+					{ value: "always", label: "Always show" },
+					{ value: "never", label: "Never show" },
+				],
+			},
+			{
 				id: "channelSection",
 				title: "Channel Section",
 				description: "Shows a section with watch time and quick access links.",

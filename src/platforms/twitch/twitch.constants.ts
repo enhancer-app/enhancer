@@ -29,6 +29,7 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	streamLatencyReducerMaxThreshold: 6,
 	realVideoTimeEnabled: true,
 	realVideoTimeFormat12h: false,
+	realVideoTimeDateMode: "hover",
 	pinnedStreamersEnabled: true,
 	xayoWatchtimeEnabled: true,
 	xayoWatchtimePeriod: "365d",

@@ -19,6 +19,7 @@ export const KICK_DEFAULT_SETTINGS: KickSettings = {
 	streamLatencyReducerMaxThreshold: 6,
 	realVideoTimeEnabled: true,
 	realVideoTimeFormat12h: false,
+	realVideoTimeDateMode: "hover",
 	xayoWatchtimeEnabled: true,
 	xayoWatchtimePeriod: "365d",
 	channelSection: true,

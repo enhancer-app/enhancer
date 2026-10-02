@@ -1,6 +1,10 @@
 import KickModule from "$kick/kick.module.ts";
+import type {
+	RealVideoTimeDateMode,
+	VisibleRealVideoTimeComponentProps,
+} from "$types/shared/components/real-video-time.component.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
-import { type Signal, signal } from "@preact/signals";
+import { signal } from "@preact/signals";
 import { render } from "preact";
 import styled from "styled-components";
 
@@ -21,6 +25,18 @@ export default class RealVideoTimeModule extends KickModule {
 				event: "kick:settings:realVideoTimeFormat12h",
 				callback: (enabled) => this.updateTimeFormat(enabled),
 			},
+			{
+				type: "event",
+				key: "settings-real-video-time-date-mode",
+				event: "kick:settings:realVideoTimeDateMode",
+				callback: (mode) => this.updateDateMode(mode),
+			},
+			{
+				type: "event",
+				key: "settings-real-video-time-date-refresh",
+				event: "extension:settings-refresh",
+				callback: () => this.updateDateMode(this.settings().realVideoTimeDateMode ?? "hover"),
+			},
 		],
 		enabled: () => this.settings().realVideoTimeEnabled,
 	};
@@ -30,6 +46,7 @@ export default class RealVideoTimeModule extends KickModule {
 	private videoCreatedAt: Date | undefined;
 	private timeInterval: NodeJS.Timeout | undefined;
 	private use12HourFormat = signal<boolean>(false);
+	private dateMode = signal<RealVideoTimeDateMode>("hover");
 	private elementCheckInterval: NodeJS.Timeout | undefined;
 	private currentVideoId: string | undefined;
 
@@ -63,6 +80,10 @@ export default class RealVideoTimeModule extends KickModule {
 		this.use12HourFormat.value = enabled;
 	}
 
+	private updateDateMode(mode: RealVideoTimeDateMode) {
+		this.dateMode.value = mode;
+	}
+
 	private formatTime(timeInMs: number): string {
 		return this.commonUtils().timeInMsToTimestamp(timeInMs, this.use12HourFormat.value ? "12" : "24");
 	}
@@ -82,6 +103,7 @@ export default class RealVideoTimeModule extends KickModule {
 			<RealTimeComponent
 				formatTime={this.formatTime.bind(this)}
 				formatDate={(timeInMs) => this.commonUtils().timeInMsToDate(timeInMs)}
+				dateMode={this.dateMode}
 				visibility={this.visibilitySignal}
 				time={this.timeCounter}
 			/>,
@@ -138,6 +160,7 @@ export default class RealVideoTimeModule extends KickModule {
 
 	initialize() {
 		this.use12HourFormat.value = this.settings().realVideoTimeFormat12h;
+		this.updateDateMode(this.settings().realVideoTimeDateMode ?? "hover");
 		this.commonUtils().createGlobalStyle(`
 			.enhancer-video-real-time-wrapper {
 				flex-grow: 1;
@@ -148,15 +171,8 @@ export default class RealVideoTimeModule extends KickModule {
 	}
 }
 
-interface RealVideoTimeComponentProps {
-	time: Signal<number>;
-	visibility: Signal<boolean>;
-	formatTime: (timeInMs: number) => string;
-	formatDate: (timeInMs: number) => string;
-}
-
-const HoverDate = styled.span`
-	display: none;
+const DateDisplay = styled.span<{ $mode: RealVideoTimeDateMode }>`
+	display: ${(props) => (props.$mode === "always" ? "inline" : "none")};
 	margin-left: 4px;
 `;
 
@@ -169,16 +185,18 @@ const Wrapper = styled.span<{ isVisible: boolean }>`
 	margin: 8px 0 8px 16px;
 	font-size: 14px;
 	font-weight: bold;
-	&:hover ${HoverDate} {
+	&:hover ${DateDisplay} {
 		display: inline;
 	}
 `;
 
-function RealTimeComponent({ time, visibility, formatTime, formatDate }: RealVideoTimeComponentProps) {
+function RealTimeComponent({ time, dateMode, visibility, formatTime, formatDate }: VisibleRealVideoTimeComponentProps) {
 	return (
 		<Wrapper isVisible={visibility.value}>
 			{formatTime(time.value)}
-			{time.value >= 0 && <HoverDate>({formatDate(time.value)})</HoverDate>}
+			{time.value >= 0 && dateMode.value !== "never" && (
+				<DateDisplay $mode={dateMode.value}>({formatDate(time.value)})</DateDisplay>
+			)}
 		</Wrapper>
 	);
 }
