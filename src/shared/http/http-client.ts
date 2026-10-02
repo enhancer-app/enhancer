@@ -4,7 +4,26 @@ import type { RequestConfig, RequestResponse } from "$types/shared/http-client.t
 export class HttpClient {
 	constructor(private readonly logger?: Logger) {}
 
-	public async request<T>(url: string, config: RequestConfig = {}): Promise<RequestResponse<T>> {
+	public request<T>(
+		url: string,
+		config?: RequestConfig & { responseType?: "json" | "raw" },
+	): Promise<RequestResponse<T>>;
+	public request<_T extends string = string>(
+		url: string,
+		config: RequestConfig & { responseType: "text" },
+	): Promise<RequestResponse<string>>;
+	public request<_T extends Blob = Blob>(
+		url: string,
+		config: RequestConfig & { responseType: "blob" },
+	): Promise<RequestResponse<Blob>>;
+	public request<_T extends ArrayBuffer = ArrayBuffer>(
+		url: string,
+		config: RequestConfig & { responseType: "arrayBuffer" },
+	): Promise<RequestResponse<ArrayBuffer>>;
+	public async request<T>(
+		url: string,
+		config: RequestConfig = {},
+	): Promise<RequestResponse<T | string | Blob | ArrayBuffer>> {
 		const {
 			method = "GET",
 			body,
@@ -43,17 +62,17 @@ export class HttpClient {
 				throw new Error(`Request failed: ${response.status} ${response.statusText}`);
 			}
 
-			let data: T;
+			let data: T | string | Blob | ArrayBuffer;
 
 			switch (responseType) {
 				case "text":
-					data = (await response.text()) as T;
+					data = await response.text();
 					break;
 				case "blob":
-					data = (await response.blob()) as T;
+					data = await response.blob();
 					break;
 				case "arrayBuffer":
-					data = (await response.arrayBuffer()) as T;
+					data = await response.arrayBuffer();
 					break;
 				default:
 					data = await response.json();

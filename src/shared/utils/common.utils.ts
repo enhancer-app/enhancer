@@ -3,7 +3,7 @@ import type { WaitForConfig } from "$types/shared/utils/common.utils.types.ts";
 
 export default class CommonUtils {
 	static readonly UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-	createElementByParent(name: string, tag: keyof HTMLElementTagNameMap, parent: Element) {
+	createElementByParent<K extends keyof HTMLElementTagNameMap>(name: string, tag: K, parent: Element) {
 		const element = document.createElement(tag);
 		element.classList.add(name);
 		parent.appendChild(element);
@@ -20,7 +20,7 @@ export default class CommonUtils {
 	}
 
 	createGlobalStyle(css: string): HTMLStyleElement {
-		let styleElement = document.getElementById("enhancer-style") as HTMLStyleElement;
+		let styleElement = document.querySelector<HTMLStyleElement>("#enhancer-style");
 
 		if (!styleElement) {
 			styleElement = document.createElement("style");

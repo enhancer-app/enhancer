@@ -21,6 +21,7 @@ export default class SettingsCache<T extends PlatformSettings> {
 			platform: this.platformType,
 		});
 
+		// SAFETY: the worker returns the settings stored for this.platformType, whose shape is T.
 		this.cache = settings as T;
 	}
 
@@ -41,6 +42,7 @@ export default class SettingsCache<T extends PlatformSettings> {
 
 	private handleBroadcast(payload: SettingsBroadcastPayload): void {
 		if (payload.platform !== this.platformType) return;
+		// SAFETY: the platform check above guarantees the payload carries this platform's settings shape T.
 		this.cache = payload.settings as T;
 		this.emitter.emit("extension:settings-refresh");
 	}

@@ -78,7 +78,7 @@ export default class WorkerBackground {
 				sendResponse(result);
 			} catch (error) {
 				this.logger.error("Queued message handling failed:", error);
-				sendResponse({ __enhancerWorkerError: (error as Error).message });
+				sendResponse({ __enhancerWorkerError: error instanceof Error ? error.message : undefined });
 			}
 		});
 

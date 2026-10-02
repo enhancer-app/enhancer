@@ -3,55 +3,72 @@ import type { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-ap
 import { MessageHandler } from "$shared/worker/message.handler.ts";
 import type {
 	DisconnectEnhancerApiPayload,
-	EnhancerApiAction,
 	GetEnhancerWatchTimePayload,
 	InitializeEnhancerApiPayload,
 	JoinEnhancerChannelPayload,
 } from "$types/shared/worker/enhancer-api-worker.types.ts";
 import type { WorkerApiActions } from "$types/shared/worker/worker.types.ts";
 
-export class EnhancerApiHandler extends MessageHandler {
+abstract class EnhancerApiHandler extends MessageHandler {
 	constructor(
 		logger: Logger,
-		private readonly service: EnhancerApiService,
-		private readonly action: EnhancerApiAction,
+		protected readonly service: EnhancerApiService,
 	) {
 		super(logger);
 	}
 
-	async handle(
-		payload:
-			| InitializeEnhancerApiPayload
-			| JoinEnhancerChannelPayload
-			| GetEnhancerWatchTimePayload
-			| DisconnectEnhancerApiPayload,
-		sender?: chrome.runtime.MessageSender,
-	): Promise<WorkerApiActions[EnhancerApiAction]["response"]> {
-		if (this.action === "getEnhancerWatchTime") {
-			const { username, period, platform } = payload as GetEnhancerWatchTimePayload;
-
-			return this.service.getWatchTime(username, period, platform);
-		}
-
+	protected requireTabId(sender?: chrome.runtime.MessageSender): number {
 		if (sender?.tab?.id == null) throw new Error("Enhancer API requests require a browser tab");
 
-		if (this.action === "disconnectEnhancerApi") {
-			const { platform, clientId } = payload as DisconnectEnhancerApiPayload;
-			this.service.disconnect(sender.tab.id, sender.frameId ?? 0, clientId, platform);
+		return sender.tab.id;
+	}
+}
 
-			return { success: true };
-		}
+export class GetEnhancerWatchTimeHandler extends EnhancerApiHandler {
+	async handle({
+		username,
+		period,
+		platform,
+	}: GetEnhancerWatchTimePayload): Promise<WorkerApiActions["getEnhancerWatchTime"]["response"]> {
+		return this.service.getWatchTime(username, period, platform);
+	}
+}
 
-		if (this.action === "initializeEnhancerApi") {
-			const { platform, clientId, seed } = payload as InitializeEnhancerApiPayload;
+export class DisconnectEnhancerApiHandler extends EnhancerApiHandler {
+	async handle(
+		payload: DisconnectEnhancerApiPayload,
+		sender?: chrome.runtime.MessageSender,
+	): Promise<WorkerApiActions["disconnectEnhancerApi"]["response"]> {
+		const tabId = this.requireTabId(sender);
+		const { platform, clientId } = payload;
+		this.service.disconnect(tabId, sender?.frameId ?? 0, clientId, platform);
 
-			return this.service.initialize(sender.tab.id, sender.frameId ?? 0, clientId, platform, seed);
-		}
+		return { success: true };
+	}
+}
 
-		const { platform, externalId, clientId, seed } = payload as JoinEnhancerChannelPayload;
+export class InitializeEnhancerApiHandler extends EnhancerApiHandler {
+	async handle(
+		payload: InitializeEnhancerApiPayload,
+		sender?: chrome.runtime.MessageSender,
+	): Promise<WorkerApiActions["initializeEnhancerApi"]["response"]> {
+		const tabId = this.requireTabId(sender);
+		const { platform, clientId, seed } = payload;
+
+		return this.service.initialize(tabId, sender?.frameId ?? 0, clientId, platform, seed);
+	}
+}
+
+export class JoinEnhancerChannelHandler extends EnhancerApiHandler {
+	async handle(
+		payload: JoinEnhancerChannelPayload,
+		sender?: chrome.runtime.MessageSender,
+	): Promise<WorkerApiActions["joinEnhancerChannel"]["response"]> {
+		const tabId = this.requireTabId(sender);
+		const { platform, externalId, clientId, seed } = payload;
 
 		return {
-			seed: await this.service.joinChannel(sender.tab.id, sender.frameId ?? 0, clientId, platform, externalId, seed),
+			seed: await this.service.joinChannel(tabId, sender?.frameId ?? 0, clientId, platform, externalId, seed),
 		};
 	}
 }

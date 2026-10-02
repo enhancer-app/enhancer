@@ -11,7 +11,7 @@ export abstract class Database {
 		this.logger = new Logger({ context, source: "background" });
 	}
 
-	protected abstract onUpgrade(event: IDBVersionChangeEvent, db: IDBDatabase): void;
+	protected abstract onUpgrade(event: IDBVersionChangeEvent, db: IDBDatabase, tx: IDBTransaction | null): void;
 
 	async initialize(): Promise<void> {
 		if (this.database) return;
@@ -31,7 +31,7 @@ export abstract class Database {
 			};
 
 			request.onupgradeneeded = (event) => {
-				this.onUpgrade(event, request.result);
+				this.onUpgrade(event, request.result, request.transaction);
 			};
 		});
 	}
@@ -47,7 +47,7 @@ export abstract class Database {
 	protected async request<T>(
 		storeName: string,
 		mode: IDBTransactionMode,
-		fn: (store: IDBObjectStore) => IDBRequest,
+		fn: (store: IDBObjectStore) => IDBRequest<T>,
 	): Promise<T> {
 		const db = this.requireDatabase();
 
@@ -55,7 +55,7 @@ export abstract class Database {
 			const tx = db.transaction(storeName, mode);
 			const store = tx.objectStore(storeName);
 			const request = fn(store);
-			request.onsuccess = () => resolve(request.result as T);
+			request.onsuccess = () => resolve(request.result);
 			request.onerror = () => {
 				this.logger.error("Database request failed:", request.error);
 				reject(request.error);
@@ -77,8 +77,8 @@ export abstract class Database {
 			const store = tx.objectStore(storeName);
 			const index = store.index(indexName);
 			const request = index.openCursor(range, direction);
-			request.onsuccess = (event) => {
-				const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+			request.onsuccess = () => {
+				const cursor = request.result;
 
 				if (!cursor) {
 					resolve();
@@ -86,6 +86,7 @@ export abstract class Database {
 					return;
 				}
 
+				// SAFETY: the store/index named by the caller contains the record type supplied as T.
 				const shouldContinue = callback(cursor.value as T);
 
 				if (shouldContinue === false) {

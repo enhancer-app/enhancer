@@ -3,7 +3,7 @@ import Storage from "$shared/storage/storage.ts";
 
 export default class LocalStorage<T extends Record<string, any>> extends Storage<T> {
 	private readonly logger = new Logger({ context: "local-storage" });
-	private cache: T | undefined;
+	private cache: Partial<T> | undefined;
 
 	async save<K extends keyof T>(key: K, value: T[K]): Promise<void> {
 		const storage = this.getMutableStorage();
@@ -29,32 +29,11 @@ export default class LocalStorage<T extends Record<string, any>> extends Storage
 		return defaultValue;
 	}
 
-	private getMutableStorage(): T {
-		if (this.cache) {
-			return JSON.parse(JSON.stringify(this.cache)) as T;
-		}
-
-		const rawStorage = localStorage.getItem(this.storageId);
-
-		if (rawStorage) {
-			try {
-				this.cache = JSON.parse(rawStorage) as T;
-
-				return JSON.parse(JSON.stringify(this.cache)) as T;
-			} catch (error) {
-				this.logger.error("Failed to parse storage data:", error);
-				this.cache = {} as T;
-
-				return {} as T;
-			}
-		}
-
-		this.cache = {} as T;
-
-		return {} as T;
+	private getMutableStorage(): Partial<T> {
+		return this.parseStorage(JSON.stringify(this.getImmutableStorage()));
 	}
 
-	private getImmutableStorage(): T {
+	private getImmutableStorage(): Partial<T> {
 		if (this.cache) {
 			return this.cache;
 		}
@@ -63,23 +42,25 @@ export default class LocalStorage<T extends Record<string, any>> extends Storage
 
 		if (rawStorage) {
 			try {
-				this.cache = JSON.parse(rawStorage) as T;
+				this.cache = this.parseStorage(rawStorage);
 
 				return this.cache;
 			} catch (error) {
 				this.logger.error("Failed to parse storage data:", error);
-				this.cache = {} as T;
-
-				return {} as T;
 			}
 		}
 
-		this.cache = {} as T;
+		this.cache = {};
 
 		return this.cache;
 	}
 
-	private updateCacheAndPersist(storage: T): void {
+	private parseStorage(rawStorage: string): Partial<T> {
+		// SAFETY: this storage key is only written by updateCacheAndPersist, which serializes a Partial<T>.
+		return JSON.parse(rawStorage) as Partial<T>;
+	}
+
+	private updateCacheAndPersist(storage: Partial<T>): void {
 		this.cache = storage;
 		localStorage.setItem(this.storageId, JSON.stringify(storage));
 	}

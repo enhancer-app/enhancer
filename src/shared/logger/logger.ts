@@ -1,4 +1,5 @@
-import type { LogEntry, LogType, LoggerOptions } from "$types/shared/logger.types.ts";
+import { isBigInt, isObject, isString } from "$shared/utils/type-guards.ts";
+import type { LogEntry, LogType, LogValue, LoggerOptions } from "$types/shared/logger.types.ts";
 
 export class Logger {
 	private static readonly MAX_ENTRIES = 500;
@@ -97,20 +98,20 @@ export class Logger {
 		Logger.entries = [];
 	}
 
-	private static serialize(value: unknown): string {
+	private static serialize(value: LogValue): string {
 		if (value instanceof Error) {
 			return Logger.sanitize(`${value.name}: ${value.message}${value.stack ? `\n${value.stack}` : ""}`);
 		}
 
-		if (typeof value === "string") return Logger.sanitize(value);
+		if (isString(value)) return Logger.sanitize(value);
 
 		if (value === undefined) return "undefined";
 
 		if (value === null) return "null";
 
-		if (typeof value === "bigint") return `${value.toString()}n`;
+		if (isBigInt(value)) return `${value.toString()}n`;
 
-		if (typeof value !== "object") return Logger.sanitize(String(value));
+		if (!isObject(value)) return Logger.sanitize(String(value));
 
 		const seen = new WeakSet<object>();
 
@@ -122,7 +123,7 @@ export class Logger {
 					return { name: nestedValue.name, message: nestedValue.message, stack: nestedValue.stack };
 				}
 
-				if (nestedValue && typeof nestedValue === "object") {
+				if (isObject(nestedValue)) {
 					if (seen.has(nestedValue)) return "[Circular]";
 					seen.add(nestedValue);
 				}

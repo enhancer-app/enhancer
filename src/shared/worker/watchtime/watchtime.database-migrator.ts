@@ -6,7 +6,7 @@ export class WatchtimeDatabaseMigrator {
 		private readonly logger: Logger,
 	) {}
 
-	migrate(event: IDBVersionChangeEvent, db: IDBDatabase, newVersion: number): void {
+	migrate(event: IDBVersionChangeEvent, db: IDBDatabase, tx: IDBTransaction | null, newVersion: number): void {
 		this.logger.info(`Upgrading watchtime database from version ${event.oldVersion} to ${newVersion}...`);
 
 		if (event.oldVersion < 1) {
@@ -21,9 +21,6 @@ export class WatchtimeDatabaseMigrator {
 		}
 
 		if (event.oldVersion < 2) {
-			const request = event.target as IDBOpenDBRequest;
-			const tx = request.transaction;
-
 			if (!tx) {
 				throw new Error("No transaction available during upgrade");
 			}
@@ -34,9 +31,6 @@ export class WatchtimeDatabaseMigrator {
 		}
 
 		if (event.oldVersion < 3) {
-			const request = event.target as IDBOpenDBRequest;
-			const tx = request.transaction;
-
 			if (!tx) {
 				throw new Error("No transaction available during upgrade");
 			}
@@ -72,9 +66,6 @@ export class WatchtimeDatabaseMigrator {
 		// effectively repairing the schema and undoing the earlier migration issues.
 		// In short: this is the "safety net" migration to fix our previous fuckup :smutnażaba:
 		if (event.oldVersion < 4) {
-			const request = event.target as IDBOpenDBRequest;
-			const tx = request.transaction;
-
 			if (!tx) {
 				throw new Error("No transaction available during upgrade");
 			}

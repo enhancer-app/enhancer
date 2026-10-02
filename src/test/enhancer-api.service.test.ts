@@ -1,8 +1,15 @@
 import { afterEach, expect, test } from "bun:test";
-import type { Logger } from "$shared/logger/logger.ts";
 import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
+import type {
+	EnhancerAggregateTopic,
+	EnhancerChannelTopic,
+	EnhancerSubscription,
+	EnhancerWebSocketMessage,
+} from "$types/apis/enhancer.apis.ts";
 import type { CachedAggregateSeed } from "$types/shared/worker/enhancer-api-worker.types.ts";
 import type { WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
+import type { FakeSocketCommand, FakeSubscribeCommand } from "$types/test/fakes-a.types.ts";
+import { createSilentLogger } from "./fakes-a-logger.ts";
 
 const originalChrome = globalThis.chrome;
 
@@ -10,42 +17,69 @@ const originalFetch = globalThis.fetch;
 
 const originalWebSocket = globalThis.WebSocket;
 
-class FakeWebSocket extends EventTarget {
+class FakeWebSocket extends EventTarget implements WebSocket {
+	static readonly CONNECTING = 0;
 	static readonly OPEN = 1;
+	static readonly CLOSING = 2;
+	static readonly CLOSED = 3;
+	readonly CONNECTING = FakeWebSocket.CONNECTING;
+	readonly OPEN = FakeWebSocket.OPEN;
+	readonly CLOSING = FakeWebSocket.CLOSING;
+	readonly CLOSED = FakeWebSocket.CLOSED;
+	binaryType: WebSocket["binaryType"] = "blob";
+	readonly bufferedAmount = 0;
+	readonly extensions = "";
+	readonly protocol = "";
+	onclose: WebSocket["onclose"] = null;
+	onerror: WebSocket["onerror"] = null;
+	onmessage: WebSocket["onmessage"] = null;
+	onopen: WebSocket["onopen"] = null;
+	readonly url: string;
 	static instance: FakeWebSocket;
 	static instances = 0;
 	static urls: string[] = [];
-	static commands: any[] = [];
-	static onSubscribe: (socket: FakeWebSocket, command: any, topic: string) => void = (socket, _command, topic) => {
+	static commands: FakeSocketCommand[] = [];
+	static onSubscribe: (socket: FakeWebSocket, command: FakeSubscribeCommand, topic: EnhancerAggregateTopic) => void = (
+		socket,
+		_command,
+		topic,
+	) => {
 		queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic }));
 		queueMicrotask(() => socket.receive({ type: "replay.complete", topic }));
 	};
 	readonly readyState = FakeWebSocket.OPEN;
 
-	constructor(url: string) {
+	constructor(url: string | URL) {
 		super();
+		this.url = url.toString();
 		FakeWebSocket.instance = this;
 		FakeWebSocket.instances++;
-		FakeWebSocket.urls.push(url);
+		FakeWebSocket.urls.push(this.url);
 		queueMicrotask(() => this.receive({ type: "connection.ready" }));
 	}
 
-	send(data: string): void {
-		const command = JSON.parse(data);
+	send(data: Parameters<WebSocket["send"]>[0]): void {
+		if (!isTextFrame(data)) throw new Error("Expected a text WebSocket command");
+		const command: unknown = JSON.parse(data);
+
+		if (!isSocketCommand(command)) throw new Error("Unexpected WebSocket command");
 		FakeWebSocket.commands.push(command);
 
 		if (command.type !== "subscribe") return;
-		const { subscription } = command;
-		const suffix = subscription.externalId ? `:${subscription.externalId}` : "";
-		const topic = `${subscription.scope.toLowerCase()}:${subscription.platform}${suffix}`;
-		FakeWebSocket.onSubscribe(this, command, topic);
+
+		if (!command.subscription) throw new Error("Subscribe command must include a subscription");
+		FakeWebSocket.onSubscribe(
+			this,
+			{ ...command, type: "subscribe", subscription: command.subscription },
+			subscriptionTopic(command.subscription),
+		);
 	}
 
 	close(): void {
 		this.dispatchEvent(new Event("close"));
 	}
 
-	receive(message: object): void {
+	receive(message: EnhancerWebSocketMessage): void {
 		this.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(message) }));
 	}
 
@@ -60,7 +94,64 @@ class FakeWebSocket extends EventTarget {
 	}
 }
 
-const logger = { debug() {}, info() {}, warn() {}, error() {} } as unknown as Logger;
+function subscriptionTopic(subscription: EnhancerSubscription): EnhancerAggregateTopic {
+	if (subscription.scope === "GLOBAL") return `global:${subscription.platform}`;
+
+	return `channel:${subscription.platform}:${subscription.externalId}`;
+}
+
+function isSubscription(value: unknown): value is EnhancerSubscription {
+	if (!value || typeof value !== "object" || !("scope" in value) || !("platform" in value)) return false;
+
+	if (value.platform !== "TWITCH" && value.platform !== "KICK") return false;
+
+	if (value.scope === "GLOBAL") return true;
+
+	return (
+		(value.scope === "CHANNEL" || value.scope === "USER") &&
+		"externalId" in value &&
+		typeof value.externalId === "string"
+	);
+}
+
+function isSocketCommand(value: unknown): value is FakeSocketCommand {
+	if (!value || typeof value !== "object" || !("type" in value)) return false;
+
+	if (value.type !== "subscribe" && value.type !== "unsubscribe" && value.type !== "ping") return false;
+
+	if ("subscription" in value && !isSubscription(value.subscription)) return false;
+
+	if ("after" in value && typeof value.after !== "string") return false;
+
+	return value.type === "ping" || "subscription" in value;
+}
+
+function isChannelTopic(topic: EnhancerAggregateTopic): topic is EnhancerChannelTopic {
+	return topic.startsWith("channel:");
+}
+
+function isTextFrame(data: Parameters<WebSocket["send"]>[0]): data is string {
+	return typeof data === "string";
+}
+
+function subscriptionExternalId(subscription: EnhancerSubscription | undefined): string | undefined {
+	return subscription && "externalId" in subscription ? subscription.externalId : undefined;
+}
+
+function useFakeWebSocket(): void {
+	globalThis.WebSocket = FakeWebSocket;
+}
+
+function stubFetch(handler: (input: RequestInfo | URL) => Promise<Response>): void {
+	function fetchStub(input: RequestInfo | URL): Promise<Response> {
+		return handler(input);
+	}
+
+	fetchStub.preconnect = originalFetch.preconnect;
+	globalThis.fetch = fetchStub;
+}
+
+const logger = createSilentLogger();
 
 const waitForEvents = () => new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -88,21 +179,25 @@ function setupChrome(
 	const broadcasts: WorkerBroadcast[] = [];
 	let closeTab: (tabId: number) => void = () => {};
 
-	globalThis.chrome = {
-		tabs: {
-			onRemoved: {
-				addListener: (listener: (tabId: number) => void) => {
-					closeTab = listener;
-				},
-			},
-			query: async () => [...seeds.keys()].map((id) => ({ id })),
-			sendMessage: async (tabId: number, message: WorkerBroadcast) => {
-				if (message.type === "enhancer-api-seed-request") return seeds.get(tabId) ?? null;
-				broadcasts.push(message);
-				await onBroadcast?.(message);
+	const tabs = {
+		onRemoved: {
+			addListener: (listener: (tabId: number) => void) => {
+				closeTab = listener;
 			},
 		},
-	} as unknown as typeof chrome;
+		query: async () => [...seeds.keys()].map((id) => ({ id })),
+		sendMessage: async (tabId: number, message: WorkerBroadcast) => {
+			if (message.type === "enhancer-api-seed-request") return seeds.get(tabId) ?? null;
+			broadcasts.push(message);
+			await onBroadcast?.(message);
+		},
+	};
+
+	Object.defineProperty(globalThis, "chrome", {
+		configurable: true,
+		writable: true,
+		value: { tabs },
+	});
 
 	return { broadcasts, closeTab };
 }
@@ -116,14 +211,14 @@ afterEach(() => {
 
 test("uses one HTTP snapshot and applies final patches without refetching", async () => {
 	const { broadcasts } = setupChrome();
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+	useFakeWebSocket();
 	const requests: URL[] = [];
-	globalThis.fetch = (async (input) => {
+	stubFetch(async (input) => {
 		const url = new URL(input.toString());
 		requests.push(url);
 
 		return Response.json(aggregate("100-0"));
-	}) as typeof fetch;
+	});
 
 	const service = new EnhancerApiService(logger, "5.1.41");
 	const first = await service.initialize(7, 0, "client-a", "twitch");
@@ -170,13 +265,13 @@ test("uses one HTTP snapshot and applies final patches without refetching", asyn
 
 test("installs a complete snapshot before applying buffered updates", async () => {
 	const { broadcasts } = setupChrome();
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+	useFakeWebSocket();
 	let requests = 0;
-	globalThis.fetch = (async () => {
+	stubFetch(async () => {
 		requests++;
 
 		return Response.json(aggregate("200-0"));
-	}) as unknown as typeof fetch;
+	});
 
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");
@@ -224,18 +319,21 @@ test("installs a complete snapshot before applying buffered updates", async () =
 
 test("moves unavailable channels through pending, restore, and canonical rename", async () => {
 	const { broadcasts } = setupChrome();
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+	useFakeWebSocket();
 	const requests: string[] = [];
 	let oldAvailable = false;
-	globalThis.fetch = (async (input) => {
+	stubFetch(async (input) => {
 		const url = new URL(input.toString());
-		const externalId = decodeURIComponent(url.pathname.split("/").at(-2) as string);
+		const encodedExternalId = url.pathname.split("/").at(-2);
+
+		if (encodedExternalId === undefined) throw new Error("Request path must contain an external ID");
+		const externalId = decodeURIComponent(encodedExternalId);
 		requests.push(externalId);
 
 		if (externalId === "old" && !oldAvailable) return new Response(null, { status: 404 });
 
 		return Response.json(aggregate(`${300 + requests.length}-0`, `${externalId}-account`));
-	}) as typeof fetch;
+	});
 
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");
@@ -248,7 +346,7 @@ test("moves unavailable channels through pending, restore, and canonical rename"
 		cursor: "310-0",
 	});
 	await waitForEvents();
-	expect(FakeWebSocket.commands.some((command) => command.subscription?.externalId === "old")).toBe(true);
+	expect(FakeWebSocket.commands.some((command) => subscriptionExternalId(command.subscription) === "old")).toBe(true);
 
 	FakeWebSocket.instance.receive({
 		type: "channel.unavailable",
@@ -284,7 +382,7 @@ test("moves unavailable channels through pending, restore, and canonical rename"
 
 	expect(requests.filter((externalId) => externalId === "old")).toHaveLength(3);
 	expect(requests.filter((externalId) => externalId === "new")).toHaveLength(1);
-	expect(FakeWebSocket.commands.some((command) => command.subscription?.externalId === "new")).toBe(true);
+	expect(FakeWebSocket.commands.some((command) => subscriptionExternalId(command.subscription) === "new")).toBe(true);
 	expect(
 		broadcasts.some(
 			(message) => message.type === "enhancer-api-updated" && message.payload.replacementTopic === "channel:TWITCH:new",
@@ -313,10 +411,10 @@ test("chooses the newest tab seed and applies only newer buffered events after w
 		]),
 	);
 
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	globalThis.fetch = (() => {
+	useFakeWebSocket();
+	stubFetch(() => {
 		throw new Error("HTTP must not run when a seed exists");
-	}) as unknown as typeof fetch;
+	});
 	FakeWebSocket.onSubscribe = (socket, _command, topic) => {
 		queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic }));
 		queueMicrotask(() =>
@@ -362,10 +460,10 @@ test("discovers an existing tab seed before falling back to HTTP", async () => {
 	};
 
 	setupChrome(new Map([[8, seed]]));
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	globalThis.fetch = (() => {
+	useFakeWebSocket();
+	stubFetch(() => {
 		throw new Error("HTTP must not run when another tab has a seed");
-	}) as unknown as typeof fetch;
+	});
 
 	const service = new EnhancerApiService(logger);
 	const result = await service.initialize(7, 0, "client-a", "twitch");
@@ -378,11 +476,11 @@ test("discovers an existing tab seed before falling back to HTTP", async () => {
 
 test("retries a pending channel when availability races its initial 404", async () => {
 	setupChrome();
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+	useFakeWebSocket();
 	let resolveMissing: (response: Response) => void = () => {};
 
 	let channelRequests = 0;
-	globalThis.fetch = (async (input) => {
+	stubFetch(async (input) => {
 		const url = new URL(input.toString());
 
 		if (!url.pathname.includes("/racing/")) return Response.json(aggregate("800-0"));
@@ -395,7 +493,7 @@ test("retries a pending channel when availability races its initial 404", async 
 		}
 
 		return Response.json(aggregate("800-2", "available"));
-	}) as typeof fetch;
+	});
 
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");
@@ -413,20 +511,24 @@ test("retries a pending channel when availability races its initial 404", async 
 	expect(await pending).toBeNull();
 	await waitForEvents();
 	expect(channelRequests).toBe(2);
-	expect(FakeWebSocket.commands.some((command) => command.subscription?.externalId === "racing")).toBe(true);
+	expect(FakeWebSocket.commands.some((command) => subscriptionExternalId(command.subscription) === "racing")).toBe(
+		true,
+	);
 	service.disconnect(7, 0, "client-a", "twitch");
 });
 
 test("merges an alias confirmation into an existing canonical topic", async () => {
 	const { broadcasts } = setupChrome();
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	globalThis.fetch = (async (input) => {
+	useFakeWebSocket();
+	stubFetch(async (input) => {
 		const alias = new URL(input.toString()).pathname.includes("/alias/");
 
 		return Response.json(aggregate(alias ? "900-3" : "900-0", alias ? "alias-account" : "canonical-account"));
-	}) as typeof fetch;
+	});
 	FakeWebSocket.onSubscribe = (socket, command, topic) => {
-		const confirmedTopic = command.subscription.externalId === "alias" ? "channel:TWITCH:canonical" : topic;
+		const confirmedTopic =
+			subscriptionExternalId(command.subscription) === "alias" ? "channel:TWITCH:canonical" : topic;
+
 		queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic: confirmedTopic }));
 		queueMicrotask(() => socket.receive({ type: "replay.complete", topic: confirmedTopic }));
 	};
@@ -478,15 +580,16 @@ test("ignores an unavailable event older than the selected channel seed", async 
 	};
 
 	const { broadcasts } = setupChrome(new Map([[8, newest]]));
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	globalThis.fetch = (async (input) => {
+	useFakeWebSocket();
+	stubFetch(async (input) => {
 		if (new URL(input.toString()).pathname.includes("/global/")) return Response.json(aggregate("999-0"));
 		throw new Error("Channel HTTP must not run when a seed exists");
-	}) as typeof fetch;
+	});
 
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");
 	FakeWebSocket.onSubscribe = (socket, _command, topic) => {
+		if (!isChannelTopic(topic)) throw new Error("Expected a channel subscription");
 		queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic }));
 		queueMicrotask(() =>
 			socket.receive({
@@ -519,19 +622,20 @@ test("replays archive and restore availability in cursor order", async () => {
 	};
 
 	setupChrome(new Map([[8, seed]]));
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+	useFakeWebSocket();
 	let channelRequests = 0;
-	globalThis.fetch = (async (input) => {
+	stubFetch(async (input) => {
 		if (new URL(input.toString()).pathname.includes("/global/")) return Response.json(aggregate("1099-0"));
 		channelRequests++;
 
 		return Response.json(aggregate("1100-3", "after-restore"));
-	}) as typeof fetch;
+	});
 
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");
 	let channelSubscriptions = 0;
 	FakeWebSocket.onSubscribe = (socket, command, topic) => {
+		if (!isChannelTopic(topic)) throw new Error("Expected a channel subscription");
 		channelSubscriptions++;
 		queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic }));
 
@@ -554,12 +658,15 @@ test("replays archive and restore availability in cursor order", async () => {
 
 test("moves to a replacement topic when rename races the initial HTTP", async () => {
 	setupChrome();
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+	useFakeWebSocket();
 	let resolveOld: (response: Response) => void = () => {};
 
 	const requests: string[] = [];
-	globalThis.fetch = (async (input) => {
-		const externalId = decodeURIComponent(new URL(input.toString()).pathname.split("/").at(-2) as string);
+	stubFetch(async (input) => {
+		const encodedExternalId = new URL(input.toString()).pathname.split("/").at(-2);
+
+		if (encodedExternalId === undefined) throw new Error("Request path must contain an external ID");
+		const externalId = decodeURIComponent(encodedExternalId);
 		requests.push(externalId);
 
 		if (externalId === "old-race") {
@@ -569,7 +676,7 @@ test("moves to a replacement topic when rename races the initial HTTP", async ()
 		}
 
 		return Response.json(aggregate("1200-2", "replacement"));
-	}) as typeof fetch;
+	});
 
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");
@@ -589,7 +696,9 @@ test("moves to a replacement topic when rename races the initial HTTP", async ()
 	await waitForEvents();
 	expect(requests.filter((externalId) => externalId === "old-race")).toHaveLength(1);
 	expect(requests.filter((externalId) => externalId === "new-race")).toHaveLength(1);
-	expect(FakeWebSocket.commands.some((command) => command.subscription?.externalId === "new-race")).toBe(true);
+	expect(FakeWebSocket.commands.some((command) => subscriptionExternalId(command.subscription) === "new-race")).toBe(
+		true,
+	);
 	service.disconnect(7, 0, "client-a", "twitch");
 });
 
@@ -604,13 +713,13 @@ test("keeps restore availability that arrives during archive broadcasting", asyn
 			releaseBroadcast = resolve;
 		});
 	});
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+	useFakeWebSocket();
 	let channelRequests = 0;
-	globalThis.fetch = (async (input) => {
+	stubFetch(async (input) => {
 		if (new URL(input.toString()).pathname.includes("/live-race/")) channelRequests++;
 
 		return Response.json(aggregate(`${1300 + channelRequests}-0`, "restored-live"));
-	}) as typeof fetch;
+	});
 
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");

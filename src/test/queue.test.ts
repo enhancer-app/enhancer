@@ -1,8 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import Queue from "$shared/queue/queue.ts";
-import type { QueueValue } from "$types/shared/queue.types.ts";
-
-type TestValue = QueueValue & { id: string };
+import type { QueueTestValue } from "$types/test/fakes-a.types.ts";
 
 const originalNow = Date.now;
 
@@ -11,10 +9,10 @@ let now = 0;
 function createQueue(expire = 10) {
 	Date.now = () => now;
 
-	return new Queue<TestValue>({ expire });
+	return new Queue<QueueTestValue>({ expire });
 }
 
-function value(id: string, createdAt = now): TestValue {
+function value(id: string, createdAt = now): QueueTestValue {
 	return { id, queueKey: id, createdAt };
 }
 
@@ -52,13 +50,17 @@ test("sweeps expired entries at most once per second while adding", () => {
 	const queue = createQueue(1);
 	let reads = 0;
 
-	const tracked = new Proxy(value("tracked"), {
-		get(target, property, receiver) {
-			if (property === "createdAt") reads++;
+	const original = value("tracked");
 
-			return Reflect.get(target, property, receiver);
+	const tracked: QueueTestValue = {
+		id: original.id,
+		queueKey: original.queueKey,
+		get createdAt() {
+			reads++;
+
+			return original.createdAt;
 		},
-	});
+	};
 
 	now = 1_000;
 	queue.addByValue(tracked);

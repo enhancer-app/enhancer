@@ -1,15 +1,12 @@
 import { Logger } from "$shared/logger/logger.ts";
+import { isString } from "$shared/utils/type-guards.ts";
+import { isBroadcast, isLogsResponse, isResponseDetail, isSeedRequest } from "$shared/worker/worker-payload.guards.ts";
 import type { LogEntry } from "$types/shared/logger.types.ts";
 import type {
 	CachedAggregateSeed,
 	EnhancerApiSeedRequestPayload,
 } from "$types/shared/worker/enhancer-api-worker.types.ts";
-import type {
-	ExtensionResponseDetail,
-	WorkerAction,
-	WorkerApiActions,
-	WorkerBroadcast,
-} from "$types/shared/worker/worker.types.ts";
+import type { WorkerAction, WorkerApiActions, WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
 
 export default class WorkerService {
 	private readonly logger = new Logger({ context: "worker" });
@@ -104,8 +101,12 @@ export default class WorkerService {
 	}
 
 	private setupMessageListener() {
-		this.element.addEventListener("enhancer-response", ((event: CustomEvent<string>) => {
-			const detail = JSON.parse(event.detail) as ExtensionResponseDetail;
+		this.element.addEventListener("enhancer-response", (event) => {
+			if (!(event instanceof CustomEvent) || !isString(event.detail)) return;
+			const detail: unknown = JSON.parse(event.detail);
+
+			if (!isResponseDetail(detail)) return;
+
 			const { messageId, data, error } = detail;
 			const pending = this.pendingMessages.get(messageId);
 
@@ -120,12 +121,16 @@ export default class WorkerService {
 
 				pending.resolve(data);
 			}
-		}) as unknown as EventListener);
+		});
 	}
 
 	private setupBroadcastListener() {
-		this.element.addEventListener("enhancer-api-seed-request", ((event: CustomEvent<string>) => {
-			const request = JSON.parse(event.detail) as EnhancerApiSeedRequestPayload;
+		this.element.addEventListener("enhancer-api-seed-request", (event) => {
+			if (!(event instanceof CustomEvent) || !isString(event.detail)) return;
+			const request: unknown = JSON.parse(event.detail);
+
+			if (!isSeedRequest(request)) return;
+
 			let seed: CachedAggregateSeed | null = null;
 
 			for (const handler of this.enhancerApiSeedHandlers) {
@@ -139,10 +144,14 @@ export default class WorkerService {
 					detail: JSON.stringify({ requestId: request.requestId, seed }),
 				}),
 			);
-		}) as EventListener);
-		this.element.addEventListener("enhancer-broadcast", ((event: CustomEvent<string>) => {
+		});
+		this.element.addEventListener("enhancer-broadcast", (event) => {
 			try {
-				const broadcast = JSON.parse(event.detail) as WorkerBroadcast;
+				if (!(event instanceof CustomEvent) || !isString(event.detail)) return;
+				const broadcast: unknown = JSON.parse(event.detail);
+
+				if (!isBroadcast(broadcast)) return;
+
 				const handlers = this.broadcastHandlers.get(broadcast.type);
 
 				if (handlers) {
@@ -153,7 +162,7 @@ export default class WorkerService {
 			} catch (error) {
 				this.logger.error("Failed to parse broadcast:", error);
 			}
-		}) as EventListener);
+		});
 	}
 
 	async send<T extends WorkerAction>(
@@ -193,10 +202,10 @@ export default class WorkerService {
 
 			const handleResponse = (event: Event) => {
 				try {
-					const detail = JSON.parse((event as CustomEvent<string>).detail) as {
-						requestId: string;
-						logs?: LogEntry[];
-					};
+					if (!(event instanceof CustomEvent) || !isString(event.detail)) return;
+					const detail: unknown = JSON.parse(event.detail);
+
+					if (!isLogsResponse(detail)) return;
 
 					if (detail.requestId !== requestId) return;
 					cleanup();

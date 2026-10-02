@@ -1,5 +1,28 @@
-import type { LogEntry } from "$types/shared/logger.types.ts";
+import type { LogEntry, LogValue } from "$types/shared/logger.types.ts";
+import type { BridgeRequestId, BridgeSeedResponse } from "$types/shared/worker/bridge-envelope.types.ts";
 import type { ExtensionMessageDetail, WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
+
+function isString<T>(value: T): value is T & string {
+	return typeof value === "string";
+}
+
+function isObject<T>(value: T): value is T & object {
+	return typeof value === "object" && value !== null;
+}
+
+function isMessageDetail(value: unknown): value is ExtensionMessageDetail {
+	return (
+		isObject(value) && "messageId" in value && isString(value.messageId) && "action" in value && isString(value.action)
+	);
+}
+
+function isRequestId(value: unknown): value is BridgeRequestId {
+	return isObject(value) && "requestId" in value && isString(value.requestId);
+}
+
+function isSeedResponse(value: unknown): value is BridgeSeedResponse {
+	return isRequestId(value) && "seed" in value;
+}
 
 class BridgeLogger {
 	private static readonly MAX_ENTRIES = 500;
@@ -33,7 +56,7 @@ class BridgeLogger {
 		let entryLength = 0;
 
 		for (const value of data) {
-			const serialized = this.serialize(value);
+			const serialized = isBridgeLogValue(value) ? this.serialize(value) : this.sanitize(String(value));
 			const remaining = BridgeLogger.MAX_ENTRY_LENGTH - entryLength;
 
 			if (serialized.length > remaining) {
@@ -64,17 +87,17 @@ class BridgeLogger {
 		console[level](`Enhancer worker-bridge ${level.toUpperCase()}`, ...normalizedData);
 	}
 
-	private serialize(value: unknown): string {
+	private serialize(value: LogValue): string {
 		if (value instanceof Error)
 			return this.sanitize(`${value.name}: ${value.message}${value.stack ? `\n${value.stack}` : ""}`);
 
-		if (typeof value === "string") return this.sanitize(value);
+		if (isString(value)) return this.sanitize(value);
 
 		if (value === undefined) return "undefined";
 
 		if (value === null) return "null";
 
-		if (typeof value !== "object") return this.sanitize(String(value));
+		if (!isObject(value)) return this.sanitize(String(value));
 
 		const seen = new WeakSet<object>();
 
@@ -86,7 +109,7 @@ class BridgeLogger {
 					return { name: nestedValue.name, message: nestedValue.message, stack: nestedValue.stack };
 				}
 
-				if (nestedValue && typeof nestedValue === "object") {
+				if (isObject(nestedValue)) {
 					if (seen.has(nestedValue)) return "[Circular]";
 					seen.add(nestedValue);
 				}
@@ -108,6 +131,20 @@ class BridgeLogger {
 			.replace(BridgeLogger.SENSITIVE_QUERY, "$1[REDACTED]")
 			.slice(0, BridgeLogger.MAX_DATA_LENGTH);
 	}
+}
+
+function isBridgeLogValue(value: unknown): value is LogValue {
+	return (
+		value === null ||
+		value === undefined ||
+		isObject(value) ||
+		isString(value) ||
+		typeof value === "number" ||
+		typeof value === "boolean" ||
+		typeof value === "bigint" ||
+		typeof value === "symbol" ||
+		typeof value === "function"
+	);
 }
 
 export default class WorkerBridge {
@@ -157,8 +194,12 @@ export default class WorkerBridge {
 
 	private setupMessageForwarding() {
 		if (!this.bridgeElement) return;
-		this.bridgeElement.addEventListener("enhancer-message", (async (event: CustomEvent<string>) => {
-			const detail = JSON.parse(event.detail) as ExtensionMessageDetail;
+		this.bridgeElement.addEventListener("enhancer-message", async (event) => {
+			if (!(event instanceof CustomEvent) || !isString(event.detail)) return;
+			const detail: unknown = JSON.parse(event.detail);
+
+			if (!isMessageDetail(detail)) return;
+
 			const { messageId, action, payload } = detail;
 
 			try {
@@ -167,8 +208,8 @@ export default class WorkerBridge {
 					payload,
 				});
 
-				if (response && typeof response === "object" && "__enhancerWorkerError" in response) {
-					throw new Error(response.__enhancerWorkerError as string);
+				if (isObject(response) && "__enhancerWorkerError" in response) {
+					throw new Error(isString(response.__enhancerWorkerError) ? response.__enhancerWorkerError : undefined);
 				}
 
 				const responseEvent = new CustomEvent<string>("enhancer-response", {
@@ -179,13 +220,13 @@ export default class WorkerBridge {
 				this.bridgeElement!.dispatchEvent(responseEvent);
 			} catch (error) {
 				const errorEvent = new CustomEvent<string>("enhancer-response", {
-					detail: JSON.stringify({ messageId, error: (error as Error).message }),
+					detail: JSON.stringify({ messageId, error: error instanceof Error ? error.message : undefined }),
 				});
 
 				// we are checking it above, it cannot be null
 				this.bridgeElement!.dispatchEvent(errorEvent);
 			}
-		}) as unknown as EventListener);
+		});
 	}
 
 	private setupBroadcastReceiving() {
@@ -196,10 +237,10 @@ export default class WorkerBridge {
 				const requestId = message.payload.requestId;
 
 				const handleResponse = (event: Event) => {
-					const detail = JSON.parse((event as CustomEvent<string>).detail) as {
-						requestId: string;
-						seed: unknown;
-					};
+					if (!(event instanceof CustomEvent) || !isString(event.detail)) return;
+					const detail: unknown = JSON.parse(event.detail);
+
+					if (!isSeedResponse(detail)) return;
 
 					if (detail.requestId !== requestId) return;
 					clearTimeout(timeout);
@@ -230,9 +271,14 @@ export default class WorkerBridge {
 
 	private setupLogRetrieval() {
 		if (!this.bridgeElement) return;
-		this.bridgeElement.addEventListener("enhancer-bridge-logs-request", ((event: CustomEvent<string>) => {
+		this.bridgeElement.addEventListener("enhancer-bridge-logs-request", (event) => {
 			try {
-				const { requestId } = JSON.parse(event.detail) as { requestId: string };
+				if (!(event instanceof CustomEvent) || !isString(event.detail)) return;
+				const detail: unknown = JSON.parse(event.detail);
+
+				if (!isRequestId(detail)) return;
+
+				const { requestId } = detail;
 
 				const response = new CustomEvent<string>("enhancer-bridge-logs-response", {
 					detail: JSON.stringify({ requestId, logs: BridgeLogger.getLogs() satisfies LogEntry[] }),
@@ -242,7 +288,7 @@ export default class WorkerBridge {
 			} catch (error) {
 				this.logger.error("Failed to provide bridge logs:", error);
 			}
-		}) as unknown as EventListener);
+		});
 	}
 
 	private log(...data: any[]) {

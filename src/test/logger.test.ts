@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { Logger } from "$shared/logger/logger.ts";
 
-const originalEnvironment = (globalThis as typeof globalThis & { __environment__?: string }).__environment__;
+const originalEnvironment = Object.getOwnPropertyDescriptor(globalThis, "__environment__")?.value;
 
 afterEach(() => {
 	Logger.clearLogs();

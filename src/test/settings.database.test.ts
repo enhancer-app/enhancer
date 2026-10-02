@@ -8,7 +8,7 @@ import type { PlatformType } from "$types/shared/worker/worker.types.ts";
 
 const originalChrome = globalThis.chrome;
 
-const originalEnvironment = (globalThis as typeof globalThis & { __environment__?: string }).__environment__;
+const originalEnvironment = Object.getOwnPropertyDescriptor(globalThis, "__environment__")?.value;
 
 afterEach(() => {
 	Object.defineProperty(globalThis, "chrome", { configurable: true, writable: true, value: originalChrome });
@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 test("keeps settings in extension storage after a worker restart", async () => {
-	const values = new Map<string, unknown>();
+	const values = new Map<string, PlatformSettings>();
 	Object.defineProperty(globalThis, "__environment__", { configurable: true, value: "test" });
 	Object.defineProperty(globalThis, "chrome", {
 		configurable: true,
@@ -25,7 +25,7 @@ test("keeps settings in extension storage after a worker restart", async () => {
 			storage: {
 				local: {
 					get: async (key: string) => ({ [key]: values.get(key) }),
-					set: async (entries: Record<string, unknown>) => {
+					set: async (entries: Record<string, PlatformSettings>) => {
 						for (const [key, value] of Object.entries(entries)) values.set(key, value);
 					},
 				},

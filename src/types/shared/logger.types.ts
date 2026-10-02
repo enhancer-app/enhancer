@@ -10,6 +10,8 @@ export type LogEntry = {
 	data: string[];
 };
 
+export type LogValue = string | number | bigint | boolean | symbol | object | null | undefined;
+
 export type LoggerOptions = {
 	context?: string;
 	source?: LogSource;

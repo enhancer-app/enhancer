@@ -59,6 +59,7 @@ export default class ReactUtils {
 	getReactInstance(element: Element | Node | null) {
 		for (const k in element) {
 			if (k.startsWith("__reactFiber$") || k.startsWith("__reactInternalInstance$")) {
+				// SAFETY: React stores its private fiber on host nodes under these enumerable key prefixes.
 				return (element as any)[k];
 			}
 		}
@@ -67,6 +68,7 @@ export default class ReactUtils {
 	getReactRoot(element: Element | Node | null) {
 		for (const key in element) {
 			if (key.startsWith("_reactRootContainer") || key.startsWith("__reactContainer$")) {
+				// SAFETY: React stores its private root on host nodes under these enumerable key prefixes.
 				return (element as any)[key];
 			}
 		}

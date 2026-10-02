@@ -13,8 +13,8 @@ export default class SelectorModuleApplier<
 
 	async apply(module: Module<Events, Storage, Settings>) {
 		const selectorAppliers = module.config.appliers.filter(
-			(applier) => applier.type === "selector",
-		) as SelectorModuleApplierConfig[];
+			(applier): applier is SelectorModuleApplierConfig => applier.type === "selector",
+		);
 
 		this.appliers.push(
 			...selectorAppliers.map((selectorApplier) => ({
@@ -61,22 +61,20 @@ export default class SelectorModuleApplier<
 	}
 
 	private processElements(elements: Element[], config: SelectorModuleApplierConfig) {
-		return elements
-			.map((_element) => {
-				let element: Element | null = _element;
+		return elements.flatMap((_element) => {
+			let element: Element | null = _element;
 
-				if (element && config.useParent) element = element.parentElement;
+			if (element && config.useParent) element = element.parentElement;
 
-				if (!element) return;
-				const isAlreadyUsed = this.isElementAlreadyUsed(element, config.key);
+			if (!element) return [];
+			const isAlreadyUsed = this.isElementAlreadyUsed(element, config.key);
 
-				if (isAlreadyUsed && config.once) return;
+			if (isAlreadyUsed && config.once) return [];
 
-				if (!isAlreadyUsed) this.markElementAsUsed(element, config.key);
+			if (!isAlreadyUsed) this.markElementAsUsed(element, config.key);
 
-				return element;
-			})
-			.filter((element): element is Element => element !== undefined);
+			return [element];
+		});
 	}
 
 	private isApplierOnCooldown(applier: SelectorModuleApplierRunner) {

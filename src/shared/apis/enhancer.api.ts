@@ -18,6 +18,10 @@ import type {
 import type { Emitter } from "nanoevents";
 
 export default class EnhancerApi {
+	private static readonly UPPERCASE_PLATFORMS = { twitch: "TWITCH", kick: "KICK" } as const satisfies Record<
+		PlatformType,
+		Uppercase<PlatformType>
+	>;
 	private currentChannelId = "";
 	private desiredChannelId = "";
 	private globalSeed: CachedAggregateSeed | null = null;
@@ -48,7 +52,7 @@ export default class EnhancerApi {
 		const seed = await this.worker.send("initializeEnhancerApi", {
 			platform: this.platform,
 			clientId: this.clientId,
-			...(this.globalSeed ? { seed: this.globalSeed } : {}),
+			seed: this.globalSeed ?? undefined,
 		});
 
 		if (!seed) throw new Error("Enhancer API initialization timed out");
@@ -80,7 +84,7 @@ export default class EnhancerApi {
 				platform: this.platform,
 				externalId: channelId,
 				clientId: this.clientId,
-				...(seed ? { seed } : {}),
+				seed: seed ?? undefined,
 			});
 
 			if (!response) throw new Error("Enhancer channel request timed out");
@@ -253,10 +257,10 @@ export default class EnhancerApi {
 	};
 
 	private getChannelTopic(externalId: string): EnhancerAggregateTopic {
-		return `channel:${this.platform.toUpperCase()}:${externalId}` as EnhancerAggregateTopic;
+		return `channel:${EnhancerApi.UPPERCASE_PLATFORMS[this.platform]}:${externalId}`;
 	}
 
 	private getChannelExternalId(topic: EnhancerAggregateTopic): string {
-		return topic.slice(`channel:${this.platform.toUpperCase()}:`.length);
+		return topic.slice(`channel:${EnhancerApi.UPPERCASE_PLATFORMS[this.platform]}:`.length);
 	}
 }

@@ -15,8 +15,8 @@ export class WatchtimeDatabase extends Database {
 		super("watchtime-db");
 	}
 
-	protected onUpgrade(event: IDBVersionChangeEvent, db: IDBDatabase): void {
-		this.migrator.migrate(event, db, this.dbVersion);
+	protected onUpgrade(event: IDBVersionChangeEvent, db: IDBDatabase, tx: IDBTransaction | null): void {
+		this.migrator.migrate(event, db, tx, this.dbVersion);
 	}
 
 	async getWatchtime(platform: PlatformType, username: string): Promise<WatchtimeRecord | null> {
@@ -49,7 +49,7 @@ export class WatchtimeDatabase extends Database {
 			};
 		}
 
-		await this.request<void>(this.storeName, "readwrite", (store) => store.put(watchtime));
+		await this.request(this.storeName, "readwrite", (store) => store.put(watchtime));
 	}
 
 	async getAllWatchtimePaginated(platform: PlatformType, page: number, pageSize: number): Promise<WatchtimeRecord[]> {
@@ -77,6 +77,6 @@ export class WatchtimeDatabase extends Database {
 	}
 
 	async setWatchtime(watchtime: WatchtimeRecord): Promise<void> {
-		await this.request<void>(this.storeName, "readwrite", (store) => store.put(watchtime));
+		await this.request(this.storeName, "readwrite", (store) => store.put(watchtime));
 	}
 }

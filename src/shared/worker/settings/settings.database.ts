@@ -35,8 +35,17 @@ export class SettingsDatabase extends Database {
 	}
 
 	async getSettings<T extends PlatformSettings>(platform: PlatformType): Promise<T> {
-		if (this.cache.has(platform)) {
-			return this.cache.get(platform) as T;
+		const settings = await this.loadSettings(platform);
+
+		// SAFETY: settings for a platform are always built from that platform's defaults, which callers name as T.
+		return settings as T;
+	}
+
+	private async loadSettings(platform: PlatformType): Promise<PlatformSettings> {
+		const cached = this.cache.get(platform);
+
+		if (cached) {
+			return cached;
 		}
 
 		const defaultSettings = this.getDefaultSettings(platform);
@@ -47,7 +56,7 @@ export class SettingsDatabase extends Database {
 			this.cache.set(platform, settings);
 			await this.saveIndexedDbSettings(platform, settings);
 
-			return settings as T;
+			return settings;
 		}
 
 		const indexedDbResult = await this.getIndexedDbSettings(platform);
@@ -60,7 +69,7 @@ export class SettingsDatabase extends Database {
 
 		if (indexedDbResult.available) await this.saveExtensionSettings(platform, settings);
 
-		return settings as T;
+		return settings;
 	}
 
 	async updateSettings(platform: PlatformType, settings: PlatformSettings): Promise<void> {
@@ -84,13 +93,13 @@ export class SettingsDatabase extends Database {
 		this.logger.debug(`Settings updated for platform: ${platform}`);
 	}
 
-	private async getExtensionSettings(platform: PlatformType): Promise<PlatformSettings | undefined> {
+	private async getExtensionSettings(platform: PlatformType): Promise<object | undefined> {
 		try {
 			const key = this.getStorageKey(platform);
 			const result = await chrome.storage.local.get(key);
 			const settings = result[key];
 
-			return isRecord(settings) ? (settings as PlatformSettings) : undefined;
+			return isStoredSettings(settings) ? settings : undefined;
 		} catch (error) {
 			this.logger.warn("Failed to read extension storage:", error);
 
@@ -137,7 +146,7 @@ export class SettingsDatabase extends Database {
 				lastUpdate: Date.now(),
 			};
 
-			await this.request<void>(this.storeName, "readwrite", (store) => store.put(settingsRecord));
+			await this.request(this.storeName, "readwrite", (store) => store.put(settingsRecord));
 
 			return true;
 		} catch (error) {
@@ -162,6 +171,6 @@ export class SettingsDatabase extends Database {
 	}
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+function isStoredSettings(value: unknown): value is object {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -2,12 +2,7 @@ import type { Logger } from "$shared/logger/logger.ts";
 import { MessageHandler } from "$shared/worker/message.handler.ts";
 import type { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
 import { createWatchtimeId } from "$shared/worker/watchtime/watchtime.utils.ts";
-import type {
-	ImportWatchtimePayload,
-	PlatformType,
-	WatchtimeRecord,
-	WatchtimeResponse,
-} from "$types/shared/worker/worker.types.ts";
+import type { ImportWatchtimePayload, WatchtimeRecord, WatchtimeResponse } from "$types/shared/worker/worker.types.ts";
 
 export class ImportWatchtimeHandler extends MessageHandler {
 	constructor(
@@ -40,7 +35,7 @@ export class ImportWatchtimeHandler extends MessageHandler {
 
 		const watchtimeRecord: WatchtimeRecord = {
 			id,
-			platform: payload.platform as PlatformType,
+			platform: payload.platform,
 			username: normalizedUsername,
 			time: payload.time,
 			firstUpdate: payload.firstUpdate ?? now,

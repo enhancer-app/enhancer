@@ -1,5 +1,10 @@
 import type { Logger } from "$shared/logger/logger.ts";
-import { EnhancerApiHandler } from "$shared/worker/enhancer-api/enhancer-api.handler.ts";
+import {
+	DisconnectEnhancerApiHandler,
+	GetEnhancerWatchTimeHandler,
+	InitializeEnhancerApiHandler,
+	JoinEnhancerChannelHandler,
+} from "$shared/worker/enhancer-api/enhancer-api.handler.ts";
 import type { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { AssetsFileHandler } from "$shared/worker/file/assets-file.handler.ts";
 import { GetLogsHandler } from "$shared/worker/logs/get-logs.handler.ts";
@@ -39,22 +44,10 @@ export class HandlerRegistry {
 		this.handlers.set("importWatchtime", new ImportWatchtimeHandler(this.logger, this.watchtimeDatabase));
 		this.handlers.set("getSettings", new GetSettingsHandler(this.logger, this.settingsDatabase));
 		this.handlers.set("updateSettings", new UpdateSettingsHandler(this.logger, this.settingsDatabase));
-		this.handlers.set(
-			"initializeEnhancerApi",
-			new EnhancerApiHandler(this.logger, this.enhancerApiService, "initializeEnhancerApi"),
-		);
-		this.handlers.set(
-			"joinEnhancerChannel",
-			new EnhancerApiHandler(this.logger, this.enhancerApiService, "joinEnhancerChannel"),
-		);
-		this.handlers.set(
-			"getEnhancerWatchTime",
-			new EnhancerApiHandler(this.logger, this.enhancerApiService, "getEnhancerWatchTime"),
-		);
-		this.handlers.set(
-			"disconnectEnhancerApi",
-			new EnhancerApiHandler(this.logger, this.enhancerApiService, "disconnectEnhancerApi"),
-		);
+		this.handlers.set("initializeEnhancerApi", new InitializeEnhancerApiHandler(this.logger, this.enhancerApiService));
+		this.handlers.set("joinEnhancerChannel", new JoinEnhancerChannelHandler(this.logger, this.enhancerApiService));
+		this.handlers.set("getEnhancerWatchTime", new GetEnhancerWatchTimeHandler(this.logger, this.enhancerApiService));
+		this.handlers.set("disconnectEnhancerApi", new DisconnectEnhancerApiHandler(this.logger, this.enhancerApiService));
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {
@@ -68,6 +61,6 @@ export class HandlerRegistry {
 	}
 
 	hasHandler(action: string): action is WorkerAction {
-		return this.handlers.has(action as WorkerAction);
+		return Array.from(this.handlers.keys()).some((registeredAction) => registeredAction === action);
 	}
 }

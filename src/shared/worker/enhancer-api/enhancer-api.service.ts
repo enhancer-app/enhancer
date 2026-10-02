@@ -1,10 +1,18 @@
 import type { Logger } from "$shared/logger/logger.ts";
+import { isString } from "$shared/utils/type-guards.ts";
+import {
+	isAggregateResponse,
+	isApiError,
+	isSeed,
+	isSocketMessage,
+	isWatchtimeData,
+} from "$shared/worker/worker-payload.guards.ts";
+import type { EnhancerSubscribeCommand } from "$types/shared/worker/bridge-envelope.types.ts";
 import type {
 	EnhancerAggregateResponse,
 	EnhancerAggregateSnapshotEvent,
 	EnhancerAggregateTopic,
 	EnhancerAggregateUpdatedEvent,
-	EnhancerApiError,
 	EnhancerChannelAvailableEvent,
 	EnhancerChannelDto,
 	EnhancerChannelUnavailableEvent,
@@ -106,7 +114,11 @@ export class EnhancerApiService {
 
 		if (!response.ok) throw new Error(`Watchtime request failed with status ${response.status}`);
 
-		return response.json() as Promise<EnhancerStreamerWatchTimeData[]>;
+		const data: unknown = await response.json();
+
+		if (!isWatchtimeData(data)) throw new Error("Invalid watchtime response");
+
+		return data;
 	}
 
 	disconnect(_tabId: number, _frameId: number, clientId: string, _platform: PlatformType): void {
@@ -149,10 +161,10 @@ export class EnhancerApiService {
 		let state = this.subscriptions.get(topic);
 
 		if (!state) {
-			const platform = client.platform.toUpperCase() as Uppercase<PlatformType>;
+			const platform = this.getApiPlatform(client.platform);
 
 			const subscription: EnhancerSubscription =
-				scope === "GLOBAL" ? { scope, platform } : { scope, platform, externalId: externalId as string };
+				scope === "GLOBAL" ? { scope, platform } : { scope, platform, externalId: this.requireExternalId(externalId) };
 
 			state = {
 				topic,
@@ -226,11 +238,19 @@ export class EnhancerApiService {
 	}
 
 	private getTopic(platform: PlatformType, scope: AggregateScope, externalId?: string): EnhancerAggregateTopic {
-		const platformName = platform.toUpperCase() as Uppercase<PlatformType>;
+		const platformName = this.getApiPlatform(platform);
 
-		return (
-			scope === "GLOBAL" ? `global:${platformName}` : `channel:${platformName}:${externalId}`
-		) as EnhancerAggregateTopic;
+		return scope === "GLOBAL" ? `global:${platformName}` : `channel:${platformName}:${externalId}`;
+	}
+
+	private getApiPlatform(platform: PlatformType): Uppercase<PlatformType> {
+		return platform === "twitch" ? "TWITCH" : "KICK";
+	}
+
+	private requireExternalId(externalId: string | undefined): string {
+		if (externalId === undefined) throw new Error("Channel external ID is required");
+
+		return externalId;
 	}
 
 	private async bootstrap(state: SubscriptionState, seed?: CachedAggregateSeed): Promise<CachedAggregateSeed | null> {
@@ -271,7 +291,7 @@ export class EnhancerApiService {
 
 				const response = await this.fetchAggregate(
 					current.platform,
-					current.scope === "GLOBAL" ? "global" : (current.externalId as string),
+					current.scope === "GLOBAL" ? "global" : this.requireExternalId(current.externalId),
 				);
 
 				current = this.resolveState(root);
@@ -348,11 +368,15 @@ export class EnhancerApiService {
 			}, EnhancerApiService.CONFIRMATION_TIMEOUT_MS);
 
 			socket.addEventListener("message", (event) => {
-				if (this.socket !== socket || typeof event.data !== "string") return;
+				if (this.socket !== socket || !isString(event.data)) return;
 				let message: EnhancerWebSocketMessage;
 
 				try {
-					message = JSON.parse(event.data) as EnhancerWebSocketMessage;
+					const parsed: unknown = JSON.parse(event.data);
+
+					if (!isSocketMessage(parsed)) throw new Error("Invalid Enhancer WebSocket message");
+
+					message = parsed;
 				} catch (error) {
 					this.logger.warn("Invalid Enhancer WebSocket message:", error);
 
@@ -534,8 +558,8 @@ export class EnhancerApiService {
 			state.externalId = topic.startsWith(prefix) ? topic.slice(prefix.length) : state.externalId;
 			state.subscription = {
 				scope: "CHANNEL",
-				platform: state.platform.toUpperCase() as Uppercase<PlatformType>,
-				externalId: state.externalId as string,
+				platform: this.getApiPlatform(state.platform),
+				externalId: this.requireExternalId(state.externalId),
 			};
 		}
 
@@ -572,6 +596,8 @@ export class EnhancerApiService {
 
 	private handleDataEvent(event: EnhancerDataEvent): void {
 		const topic = event.type === "aggregate.updated" ? event.topic : this.getMessageTopic(event);
+
+		if (topic === null) return;
 		const state = this.subscriptions.get(topic);
 
 		if (!state?.confirmed) return;
@@ -672,10 +698,14 @@ export class EnhancerApiService {
 		const accounts: AggregateMaps["accounts"] = new Map();
 		const badges: AggregateMaps["badges"] = new Map();
 		let channelId: string | null = null;
-		let platform = state.platform.toUpperCase() as Uppercase<PlatformType>;
+		let platform = this.getApiPlatform(state.platform);
 
-		for (let page = 0; page <= (snapshot.lastPage as number); page++) {
-			const data = snapshot.pages.get(page) as EnhancerAggregateSnapshotEvent;
+		if (snapshot.lastPage === undefined) return;
+
+		for (let page = 0; page <= snapshot.lastPage; page++) {
+			const data = snapshot.pages.get(page);
+
+			if (!data) return;
 			channelId = data.channelId;
 			platform = data.platform;
 
@@ -879,14 +909,14 @@ export class EnhancerApiService {
 		});
 	}
 
-	private getMessageTopic(event: EnhancerMessageEvent): EnhancerAggregateTopic {
+	private getMessageTopic(event: EnhancerMessageEvent): EnhancerAggregateTopic | null {
 		const { target } = event;
 
-		return (
-			target.scope === "GLOBAL"
-				? `global:${target.platform}`
-				: `${target.scope.toLowerCase()}:${target.platform}:${target.externalId}`
-		) as EnhancerAggregateTopic;
+		if (target.scope === "GLOBAL") return `global:${target.platform}`;
+
+		if (target.scope === "CHANNEL") return `channel:${target.platform}:${target.externalId}`;
+
+		return null;
 	}
 
 	private rejectPendingSubscription(): void {
@@ -935,11 +965,12 @@ export class EnhancerApiService {
 		state.replayComplete = false;
 		state.eventBuffer = [];
 
-		const command = {
+		const command: EnhancerSubscribeCommand = {
 			type: "subscribe",
 			subscription: state.subscription,
-			...(state.cursor !== undefined ? { after: state.cursor } : {}),
 		};
+
+		if (state.cursor !== undefined) command.after = state.cursor;
 
 		this.socket.send(JSON.stringify(command));
 		this.scheduleConfirmationRetry(state);
@@ -1029,13 +1060,15 @@ export class EnhancerApiService {
 		if (response.status === 404) return null;
 
 		if (!response.ok) {
-			const body = (await response.json()) as EnhancerApiError;
-			throw new Error(`${body.error?.code ?? response.status}: ${body.error?.message ?? response.statusText}`);
+			const body: unknown = await response.json();
+			throw new Error(
+				isApiError(body) ? `${body.error.code}: ${body.error.message}` : `${response.status}: ${response.statusText}`,
+			);
 		}
 
-		const body = (await response.json()) as EnhancerAggregateResponse;
+		const body: unknown = await response.json();
 
-		if (!Array.isArray(body.accounts) || !Array.isArray(body.badges) || typeof body.cursor !== "string") {
+		if (!isAggregateResponse(body)) {
 			throw new Error("Invalid Enhancer aggregate response");
 		}
 
@@ -1093,7 +1126,9 @@ export class EnhancerApiService {
 				if (tab.id === undefined) return null;
 
 				try {
-					return (await chrome.tabs.sendMessage(tab.id, request, { frameId: 0 })) as CachedAggregateSeed | null;
+					const seed: unknown = await chrome.tabs.sendMessage(tab.id, request, { frameId: 0 });
+
+					return isSeed(seed) ? seed : null;
 				} catch {
 					return null;
 				}
@@ -1108,7 +1143,9 @@ export class EnhancerApiService {
 		aggregate: EnhancerChannelDto | null,
 		replacementTopic?: EnhancerAggregateTopic,
 	): Promise<void> {
-		if (!state.cursor) return;
+		const cursor = state.cursor;
+
+		if (!cursor) return;
 		await this.broadcastToSubscribers(state, (client) => ({
 			type: "enhancer-api-updated",
 			payload: {
@@ -1117,7 +1154,7 @@ export class EnhancerApiService {
 				scope: state.scope,
 				topic: state.topic,
 				aggregate,
-				cursor: state.cursor as string,
+				cursor,
 				replacementTopic,
 			},
 		}));

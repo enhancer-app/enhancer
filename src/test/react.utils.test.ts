@@ -1,12 +1,6 @@
 import { expect, test } from "bun:test";
 import ReactUtils from "$shared/utils/react.utils.ts";
-
-type TestFiber = {
-	child?: TestFiber | null;
-	sibling?: TestFiber | null;
-	return?: TestFiber | null;
-	stateNode?: { props?: Record<string, unknown> } | null;
-};
+import type { TestFiber } from "$types/test/fakes-a.types.ts";
 
 function createTree(): TestFiber {
 	const target: TestFiber = { stateNode: { props: { mediaPlayerInstance: {} } } };
@@ -43,7 +37,9 @@ test("never calls the predicate with a nullish node", () => {
 
 test("findReactParents never calls the predicate with a nullish node", () => {
 	const root = createTree();
-	const leaf = root.child?.child as TestFiber;
+	const leaf = root.child?.child;
+
+	if (!leaf) throw new Error("Test tree must contain a leaf");
 	const seen: unknown[] = [];
 
 	reactUtils.findReactParents(
