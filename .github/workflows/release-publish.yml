@@ -3,7 +3,9 @@ name: Release
 on:
   push:
     branches:
-      - release
+      - master
+    paths:
+      - package.json
   workflow_dispatch:
     inputs:
       custom_tag:
@@ -14,20 +16,26 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: release-publish
+  cancel-in-progress: false
+
 jobs:
   build-release:
     name: Build & GitHub Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     outputs:
       VERSION: ${{ steps.get_version.outputs.VERSION }}
       CLEAN_VER: ${{ steps.get_version.outputs.CLEAN_VER }}
-      EXISTS: ${{ steps.check_tag.outputs.exists }}
+      PUBLISH: ${{ steps.check_release.outputs.publish }}
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Determine Version
@@ -53,26 +61,62 @@ jobs:
           echo "VERSION=$RAW_VER" >> $GITHUB_OUTPUT
           echo "CLEAN_VER=$CLEAN_VER" >> $GITHUB_OUTPUT
 
-      - name: Check if tag exists
-        id: check_tag
+      - name: Check release
+        id: check_release
         env:
           VERSION: ${{ steps.get_version.outputs.VERSION }}
+          CLEAN_VER: ${{ steps.get_version.outputs.CLEAN_VER }}
+          EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git fetch --tags
           if git rev-parse "$VERSION" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Tag $VERSION already exists. Skipping."
+            echo "publish=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
+          if [ "$EVENT_NAME" != "push" ]; then
+            echo "publish=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          PREV_VER=$(git show HEAD^:package.json | jq -r .version)
+          if [ "$PREV_VER" == "$CLEAN_VER" ]; then
+            echo "Version unchanged ($CLEAN_VER). Skipping."
+            echo "publish=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          if [ "$CHANGED_FILES" != "package.json" ]; then
+            echo "::error::Release commit must change only package.json. Changed files: $CHANGED_FILES"
+            exit 1
+          fi
+
+          RELEASE_PRS=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
+            --jq "[.[] | select(.merged_at != null and .head.ref == \"release/next\" and .head.repo.full_name == \"$GITHUB_REPOSITORY\")] | length")
+          if [ "$RELEASE_PRS" -lt 1 ]; then
+            echo "::error::Version change did not come from the release/next PR."
+            exit 1
+          fi
+
+          LATEST_TAG=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+          HIGHEST=$(printf '%s\n%s\n' "${LATEST_TAG#v}" "$CLEAN_VER" | sort -V | tail -n1)
+          if [ -n "$LATEST_TAG" ] && [ "$HIGHEST" != "$CLEAN_VER" ]; then
+            echo "::error::Version $CLEAN_VER is lower than the latest tag $LATEST_TAG."
+            exit 1
+          fi
+
+          echo "publish=true" >> $GITHUB_OUTPUT
+
       - name: Setup Bun
-        if: steps.check_tag.outputs.exists == 'false'
+        if: steps.check_release.outputs.publish == 'true'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version-file: ".bun-version"
 
       - name: Install & Pack
-        if: steps.check_tag.outputs.exists == 'false'
+        if: steps.check_release.outputs.publish == 'true'
         env:
           ENVIRONMENT: production
         run: |
@@ -80,17 +124,18 @@ jobs:
           bun run pack
 
       - name: Upload Artifacts
-        if: steps.check_tag.outputs.exists == 'false'
+        if: steps.check_release.outputs.publish == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: extension-builds
           path: dist/
 
       - name: Create GitHub Release
-        if: steps.check_tag.outputs.exists == 'false'
+        if: steps.check_release.outputs.publish == 'true'
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
         with:
           tag_name: ${{ steps.get_version.outputs.VERSION }}
+          target_commitish: ${{ github.sha }}
           name: Release ${{ steps.get_version.outputs.VERSION }}
           generate_release_notes: true
           files: |
@@ -99,21 +144,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  approve-release:
-    name: Approve Publishing
-    needs: build-release
-    if: needs.build-release.outputs.EXISTS == 'false'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    environment: release
-    steps:
-      - run: echo "Manual approval received."
-
   publish-chrome:
     name: Publish Chrome
-    needs: [build-release, approve-release]
+    needs: build-release
+    if: needs.build-release.outputs.PUBLISH == 'true'
     runs-on: ubuntu-latest
+    environment: release
     permissions:
       contents: read
     steps:
@@ -136,8 +172,10 @@ jobs:
 
   publish-firefox:
     name: Publish Firefox
-    needs: [build-release, approve-release]
+    needs: build-release
+    if: needs.build-release.outputs.PUBLISH == 'true'
     runs-on: ubuntu-latest
+    environment: release
     permissions:
       contents: read
     steps:
@@ -160,7 +198,7 @@ jobs:
   announce-discord:
     name: Announce Release on Discord
     needs: [build-release, publish-chrome, publish-firefox]
-    if: needs.build-release.outputs.EXISTS == 'false' && needs.publish-chrome.result == 'success' && needs.publish-firefox.result == 'success'
+    if: needs.build-release.outputs.PUBLISH == 'true' && needs.publish-chrome.result == 'success' && needs.publish-firefox.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
