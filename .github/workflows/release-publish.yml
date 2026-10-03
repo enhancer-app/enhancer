@@ -200,6 +200,7 @@ jobs:
     needs: [build-release, publish-chrome, publish-firefox]
     if: needs.build-release.outputs.PUBLISH == 'true' && needs.publish-chrome.result == 'success' && needs.publish-firefox.result == 'success'
     runs-on: ubuntu-latest
+    environment: release-announce
     permissions:
       contents: read
     steps:
