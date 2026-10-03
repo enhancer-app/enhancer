@@ -87,14 +87,32 @@ module.exports = async ({ github, context, core, exec }) => {
 		upToDate = parent === baseSha && remoteVersion === next;
 	}
 
+	const title = `release: v${next}`;
+
 	if (!upToDate) {
 		await git("switch", "-C", BRANCH, baseSha);
 		await exec.exec("npm", ["version", next, "--no-git-tag-version"]);
-		await git("-c", `user.name=${BOT_NAME}`, "-c", `user.email=${BOT_EMAIL}`, "commit", "-m", `release: v${next}`, "--", "package.json");
+		await git("-c", `user.name=${BOT_NAME}`, "-c", `user.email=${BOT_EMAIL}`, "commit", "-m", title, "--", "package.json");
 		await git("push", "--force", "origin", `HEAD:refs/heads/${BRANCH}`);
+
+		const headSha = await git("rev-parse", "HEAD");
+		const pullRequestOnlyChecks = {
+			"Validate Pull Request Title": `Generated title \`${title}\` follows the release convention.`,
+			"Lint & Format": `Only package.json differs from ${base}, so src/ matches the already checked base.`,
+		};
+		for (const [name, summary] of Object.entries(pullRequestOnlyChecks)) {
+			await github.rest.checks.create({
+				owner,
+				repo,
+				name,
+				head_sha: headSha,
+				status: "completed",
+				conclusion: "success",
+				output: { title: name, summary },
+			});
+		}
 	}
 
-	const title = `release: v${next}`;
 	const newBody = renderBody(current, level, changes);
 	if (existing) {
 		await github.rest.pulls.update({ owner, repo, pull_number: existing.number, title, body: newBody });

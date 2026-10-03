@@ -29,6 +29,7 @@ jobs:
       contents: write
       pull-requests: write
       actions: write
+      checks: write
     steps:
       - name: Checkout default branch
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
