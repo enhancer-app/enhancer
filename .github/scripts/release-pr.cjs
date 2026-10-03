@@ -1,4 +1,4 @@
-const BRANCH = "release/next";
+const BRANCH = "release-next";
 const LEVELS = ["patch", "minor", "major"];
 const LEVEL_PATTERN = /^- \[([ xX])\] .*<!-- release-level:(patch|minor|major) -->\s*$/gm;
 const BOT_NAME = "github-actions[bot]";
