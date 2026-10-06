@@ -1,9 +1,13 @@
 import type { Logger } from "$shared/logger/logger.ts";
+import { EnhancerAccountHandler } from "$shared/worker/enhancer-account/enhancer-account.handler.ts";
+import type { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
 import { EnhancerApiHandler } from "$shared/worker/enhancer-api/enhancer-api.handler.ts";
 import type { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { AssetsFileHandler } from "$shared/worker/file/assets-file.handler.ts";
 import { GetLogsHandler } from "$shared/worker/logs/get-logs.handler.ts";
 import type { MessageHandler } from "$shared/worker/message.handler.ts";
+import { MomentsHandler } from "$shared/worker/moments/moments.handler.ts";
+import type { MomentsService } from "$shared/worker/moments/moments.service.ts";
 import { PingHandler } from "$shared/worker/ping/ping.handler.ts";
 import { GetSettingsHandler } from "$shared/worker/settings/get-settings.handler.ts";
 import type { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
@@ -25,6 +29,8 @@ export class HandlerRegistry {
 		private readonly watchtimeDatabase: WatchtimeDatabase,
 		private readonly watchtimeAccumulator: WatchtimeAccumulator,
 		private readonly enhancerApiService: EnhancerApiService,
+		private readonly enhancerAccountService: EnhancerAccountService,
+		private readonly momentsService: MomentsService,
 	) {
 		this.registerHandlers();
 	}
@@ -55,6 +61,12 @@ export class HandlerRegistry {
 			"disconnectEnhancerApi",
 			new EnhancerApiHandler(this.logger, this.enhancerApiService, "disconnectEnhancerApi"),
 		);
+		for (const action of ["getEnhancerAccount", "loginEnhancerAccount", "logoutEnhancerAccount"] as const) {
+			this.handlers.set(action, new EnhancerAccountHandler(this.logger, this.enhancerAccountService, action));
+		}
+		for (const action of ["getChannelMoment", "getMomentClaimStatus", "getMomentViewerState", "claimMoment"] as const) {
+			this.handlers.set(action, new MomentsHandler(this.logger, this.momentsService, action));
+		}
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {

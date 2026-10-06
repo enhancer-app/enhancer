@@ -11,6 +11,21 @@ import type {
 	InitializeEnhancerApiPayload,
 	JoinEnhancerChannelPayload,
 } from "$types/shared/worker/enhancer-api-worker.types.ts";
+import type {
+	EnhancerAccountBroadcastPayload,
+	EnhancerAccountState,
+	LoginEnhancerAccountResponse,
+	LogoutEnhancerAccountResponse,
+} from "$types/shared/worker/enhancer-account-worker.types.ts";
+import type {
+	ClaimMomentResult,
+	GetChannelMomentPayload,
+	GetChannelMomentResponse,
+	GetMomentClaimStatusPayload,
+	MomentClaimStatusResult,
+	MomentIdPayload,
+	MomentViewerStateResult,
+} from "$types/shared/worker/moments-worker.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 
 export type { PlatformType };
@@ -150,6 +165,34 @@ export interface WorkerApiActions {
 		payload: DisconnectEnhancerApiPayload;
 		response: { success: true };
 	};
+	getEnhancerAccount: {
+		payload: never;
+		response: EnhancerAccountState;
+	};
+	loginEnhancerAccount: {
+		payload: never;
+		response: LoginEnhancerAccountResponse;
+	};
+	logoutEnhancerAccount: {
+		payload: never;
+		response: LogoutEnhancerAccountResponse;
+	};
+	getChannelMoment: {
+		payload: GetChannelMomentPayload;
+		response: GetChannelMomentResponse;
+	};
+	getMomentClaimStatus: {
+		payload: GetMomentClaimStatusPayload;
+		response: MomentClaimStatusResult;
+	};
+	getMomentViewerState: {
+		payload: MomentIdPayload;
+		response: MomentViewerStateResult;
+	};
+	claimMoment: {
+		payload: MomentIdPayload;
+		response: ClaimMomentResult;
+	};
 }
 
 export type WorkerAction = keyof WorkerApiActions;
@@ -163,4 +206,5 @@ export type WorkerBroadcast =
 	| { type: "settings-updated"; payload: SettingsBroadcastPayload }
 	| { type: "enhancer-api-updated"; payload: EnhancerApiUpdatedPayload }
 	| { type: "enhancer-api-message"; payload: EnhancerApiMessagePayload }
-	| { type: "enhancer-api-seed-request"; payload: EnhancerApiSeedRequestPayload };
+	| { type: "enhancer-api-seed-request"; payload: EnhancerApiSeedRequestPayload }
+	| { type: "enhancer-account-updated"; payload: EnhancerAccountBroadcastPayload };
