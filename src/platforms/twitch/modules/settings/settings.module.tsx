@@ -1,3 +1,4 @@
+import { EnhancerAccountComponent } from "$shared/components/enhancer-account/enhancer-account.component.tsx";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
@@ -75,6 +76,24 @@ export default class SettingsModule extends TwitchModule {
 		} as const;
 
 		this.SETTING_DEFINITIONS = [
+			{
+				id: "momentsEnabled",
+				title: "Enable Moments",
+				description: "Shows limited-time Moments above the chat with badge claims.",
+				type: "toggle",
+				categoryId: CATEGORY.GENERAL,
+			},
+			{
+				id: "enhancer-account",
+				title: "Enhancer Account",
+				description: "Enhancer Account",
+				type: "text",
+				categoryId: CATEGORY.GENERAL,
+				content: () => {
+					return <EnhancerAccountComponent workerService={workerService} />;
+				},
+				hideInfo: true,
+			},
 			{
 				id: "chattersEnabled",
 				title: "Enable Chatters Counter",

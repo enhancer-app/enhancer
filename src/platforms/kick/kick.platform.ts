@@ -11,6 +11,7 @@ import ChatMessagePopupModule from "$kick/modules/chat-message-popup/chat-messag
 import ChatNicknameCustomizationModule from "$kick/modules/chat-nickname-customization/chat-nickname-customization.module.ts";
 import ChatModule from "$kick/modules/chat/chat.module.ts";
 import ForceQualityModule from "$kick/modules/force-quality/force-quality.module.ts";
+import MomentsModule from "$kick/modules/moments/moments.module.tsx";
 import LocalWatchtimeCounterModule from "$kick/modules/local-watchtime-counter/local-watchtime-counter.module.tsx";
 import RealVideoTimeModule from "$kick/modules/real-video-time/real-video-time.module.tsx";
 import SettingsButtonModule from "$kick/modules/settings-button/settings-button.module.tsx";
@@ -62,6 +63,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			// new ChatMessageMenuModule(...dependencies),
 			new AdditionalFontsModule(...dependencies),
 			new ChatFixAutoScrollModule(...dependencies),
+			new MomentsModule(...dependencies),
 		];
 	}
 

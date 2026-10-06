@@ -23,6 +23,7 @@ import ChatHighlightUserModule from "./modules/chat-highlight-user/chat-highligh
 import ChatMessageHideGiphy from "./modules/chat-message-hide-giphy/chat-message-hide-giphy.module.tsx";
 import ChatMessagePopupModule from "./modules/chat-message-popup/chat-message-popup.module.tsx";
 import ChatModule from "./modules/chat/chat.module.tsx";
+import MomentsModule from "./modules/moments/moments.module.tsx";
 import ClipDownloadModule from "./modules/clip-download/clip-download.module.tsx";
 import HideStoriesModule from "./modules/hide-stories/hide-stories.module.ts";
 import StreamLatencyReducerModule from "./modules/stream-latency-reducer/stream-latency-reducer.module.tsx";
@@ -74,6 +75,7 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			new ChatMessageMenuModule(...dependencies),
 			new ChatMentionSoundModule(...dependencies),
 			new AdditionalFontsModule(...dependencies),
+			new MomentsModule(...dependencies),
 		];
 	}
 

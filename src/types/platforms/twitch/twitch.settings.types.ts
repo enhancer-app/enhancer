@@ -37,6 +37,7 @@ export type TwitchSettings = {
 	channelSection: boolean;
 	chattersEnabled: boolean;
 	hideStories: boolean;
+	momentsEnabled: boolean;
 };
 
 export type TwitchSettingsEvents = {
