@@ -15,6 +15,7 @@ const CATEGORY = {
 	CHAT: "chat",
 	CHANNEL: "channel",
 	LATENCY: "latency",
+	ACCOUNT: "account",
 	ABOUT: "about",
 } as const;
 
@@ -65,7 +66,8 @@ export default class SettingsModule extends TwitchModule {
 			{ id: CATEGORY.CHAT, title: "Chat", order: 1 },
 			{ id: CATEGORY.CHANNEL, title: "Channel", order: 2 },
 			{ id: CATEGORY.LATENCY, title: "Latency", order: 3 },
-			{ id: CATEGORY.ABOUT, title: "About", order: 4 },
+			{ id: CATEGORY.ACCOUNT, title: "Account", order: 4 },
+			{ id: CATEGORY.ABOUT, title: "About", order: 5 },
 		];
 
 		const brandIcons = {
@@ -88,7 +90,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Enhancer Account",
 				description: "Enhancer Account",
 				type: "text",
-				categoryId: CATEGORY.GENERAL,
+				categoryId: CATEGORY.ACCOUNT,
 				content: () => {
 					return <EnhancerAccountComponent workerService={workerService} />;
 				},

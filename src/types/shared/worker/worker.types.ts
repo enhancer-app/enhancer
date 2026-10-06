@@ -14,8 +14,12 @@ import type {
 import type {
 	EnhancerAccountBroadcastPayload,
 	EnhancerAccountState,
+	GetEnhancerBadgesResponse,
+	GetEnhancerProfileResponse,
 	LoginEnhancerAccountResponse,
 	LogoutEnhancerAccountResponse,
+	SaveEnhancerBadgeSlotPayload,
+	SaveEnhancerBadgeSlotResponse,
 } from "$types/shared/worker/enhancer-account-worker.types.ts";
 import type {
 	ClaimMomentResult,
@@ -176,6 +180,18 @@ export interface WorkerApiActions {
 	logoutEnhancerAccount: {
 		payload: never;
 		response: LogoutEnhancerAccountResponse;
+	};
+	getEnhancerProfile: {
+		payload: never;
+		response: GetEnhancerProfileResponse;
+	};
+	getEnhancerBadges: {
+		payload: never;
+		response: GetEnhancerBadgesResponse;
+	};
+	saveEnhancerBadgeSlot: {
+		payload: SaveEnhancerBadgeSlotPayload;
+		response: SaveEnhancerBadgeSlotResponse;
 	};
 	getChannelMoment: {
 		payload: GetChannelMomentPayload;

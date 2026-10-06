@@ -2,304 +2,279 @@ import { pickBadgeImage } from "$shared/moments/moment-countdown.ts";
 import type { MomentCardComponentProps } from "$types/shared/components/moment-card.component.types.ts";
 import styled from "styled-components";
 
-const Card = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	margin: 8px;
-	padding: 10px 12px;
-	background: #0d0d0d;
-	border: 1px solid #232323;
-	border-left: 3px solid #9147ff;
-	border-radius: 8px;
-	color: white;
-	font-size: 13px;
-	line-height: 1.4;
-`;
-
-const Header = styled.div`
+const TitleRow = styled.span`
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 6px;
+	min-width: 0;
 `;
 
-const Eyebrow = styled.span<{ $live: boolean }>`
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-	font-size: 10px;
-	font-weight: 700;
-	letter-spacing: 0.6px;
-	text-transform: uppercase;
-	color: ${({ $live }) => ($live ? "#9147ff" : "#565656")};
-`;
-
-const LiveDot = styled.span`
+const LiveDot = styled.span<{ $live: boolean }>`
 	width: 7px;
 	height: 7px;
 	border-radius: 50%;
-	background: #ff4757;
+	flex-shrink: 0;
+	background: ${({ $live }) => ($live ? "#ff4757" : "#565656")};
 `;
 
-const Title = styled.span`
-	flex: 1;
-	min-width: 0;
+const TitleText = styled.span`
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-weight: 600;
-	color: white;
 `;
 
-const IconButton = styled.button`
+const Eyebrow = styled.span`
+	color: var(--main-color);
 	flex-shrink: 0;
+`;
+
+const Body = styled.div`
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+`;
+
+const BadgeImage = styled.img<{ $size: number }>`
+	width: ${({ $size }) => $size}px;
+	height: ${({ $size }) => $size}px;
+	border-radius: 6px;
+	object-fit: contain;
+	flex-shrink: 0;
+`;
+
+const Details = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+	flex: 1;
+`;
+
+const PrimaryAction = styled.button`
+	align-self: flex-start;
 	background: transparent;
 	border: none;
-	color: #565656;
+	padding: 0;
+	color: var(--main-color);
 	font-size: 14px;
-	line-height: 1;
+	font-weight: 700;
+	text-align: left;
 	cursor: pointer;
-	padding: 2px 4px;
+
+	&:hover:not(:disabled) {
+		text-decoration: underline;
+	}
+
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+`;
+
+const Success = styled.span`
+	color: #7bed9f;
+	font-size: 14px;
+	font-weight: 700;
+`;
+
+const ChatAlternative = styled.div`
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	color: #8e8e8e;
+	font-size: 12px;
+`;
+
+const CommandChip = styled.button`
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 4px;
+	color: #efeff1;
+	font-family: monospace;
+	font-size: 12px;
+	padding: 1px 6px;
+	cursor: pointer;
+
+	&:hover:not(:disabled) {
+		border-color: var(--main-color);
+	}
+
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+`;
+
+const CopyButton = styled.button`
+	background: transparent;
+	border: none;
+	color: #8e8e8e;
+	font-size: 12px;
+	padding: 0 2px;
+	cursor: pointer;
 
 	&:hover {
 		color: white;
 	}
 `;
 
-const Body = styled.div`
-	display: flex;
-	gap: 10px;
-	align-items: center;
+const Meta = styled.span`
+	color: #8e8e8e;
+	font-size: 11px;
 `;
 
-const BadgeImage = styled.img`
-	width: 40px;
-	height: 40px;
-	border-radius: 6px;
-	object-fit: contain;
-	background: #161616;
+const Note = styled.span<{ $tone?: "error" | "success" }>`
+	font-size: 12px;
+	color: ${({ $tone }) => ($tone === "error" ? "#ff4757" : $tone === "success" ? "#7bed9f" : "#adadb8")};
+`;
+
+const InlineAction = styled.button`
+	background: transparent;
+	border: none;
+	padding: 0;
+	margin-left: 4px;
+	color: var(--main-color);
+	font-size: 12px;
+	cursor: pointer;
+
+	&:hover {
+		text-decoration: underline;
+	}
+`;
+
+const CompactRow = styled.span`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	font-size: 13px;
+`;
+
+const CompactMeta = styled.span`
+	color: #8e8e8e;
+	font-size: 12px;
 	flex-shrink: 0;
 `;
 
-const Meta = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	min-width: 0;
-`;
-
-const BadgeName = styled.span`
-	color: #ccc;
-	font-size: 12px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-`;
-
-const Stats = styled.span`
-	color: #565656;
-	font-size: 12px;
-`;
-
-const Actions = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-`;
-
-const ButtonRow = styled.div`
-	display: flex;
-	gap: 6px;
-`;
-
-const PrimaryButton = styled.button`
-	flex: 1;
-	background: #9147ff;
-	border: 1px solid #9147ff;
-	border-radius: 6px;
-	color: white;
-	font-size: 12px;
-	font-weight: 600;
-	padding: 7px 10px;
-	cursor: pointer;
-
-	&:hover:not(:disabled) {
-		background: #a35fff;
-	}
-
-	&:disabled {
-		opacity: 0.45;
-		cursor: not-allowed;
-	}
-`;
-
-const SecondaryButton = styled.button`
-	flex: 1;
-	background: transparent;
-	border: 1px solid #232323;
-	border-radius: 6px;
-	color: #ccc;
-	font-size: 12px;
-	font-weight: 500;
-	padding: 7px 10px;
-	cursor: pointer;
-
-	&:hover:not(:disabled) {
-		border-color: #9147ff;
-		color: white;
-	}
-
-	&:disabled {
-		opacity: 0.45;
-		cursor: not-allowed;
-	}
-`;
-
-const Note = styled.span<{ $tone?: "muted" | "error" | "success" }>`
-	font-size: 12px;
-	color: ${({ $tone }) => ($tone === "error" ? "#ff4757" : $tone === "success" ? "#7bed9f" : "#565656")};
-`;
-
-function formatClaimTime(iso: string): string {
-	const time = new Date(iso).toLocaleString();
-	return time === "Invalid Date" ? iso : time;
-}
-
-function describePollStatus(status: string, redeemCommand: string): string {
-	if (status === "GRANTED") return "Badge claimed! It may take a moment to appear in chat.";
+function describePollStatus(status: string): string {
+	if (status === "GRANTED") return "Badge claimed! It will show up next to your name shortly.";
 	if (status === "ALREADY_CLAIMED") return "You already claimed this badge.";
-	if (status === "INVALID_CODE") return `Wrong code — send "${redeemCommand}" in this channel's chat.`;
+	if (status === "INVALID_CODE") return "Wrong code — use the command above.";
 	if (status === "NOT_LIVE") return "The moment ended before your message arrived.";
 	if (status === "LIMIT_REACHED") return "This moment reached its claim limit.";
 	if (status === "BLOCKED") return "Your account is not eligible for this moment.";
 	return "Something went wrong. Try sending the command again.";
 }
 
-export function MomentCardComponent({ controller }: MomentCardComponentProps) {
+export function MomentPopupTitle({ controller }: MomentCardComponentProps) {
+	const moment = controller.moment.value;
+	if (!moment) return null;
+	const ended = controller.hasEnded.value || moment.status === "ENDED";
+	return (
+		<TitleRow>
+			<LiveDot $live={!ended} />
+			<Eyebrow>{ended ? "Moment ended" : "Moment"}</Eyebrow>
+			<TitleText>· {moment.title}</TitleText>
+		</TitleRow>
+	);
+}
+
+export function MomentPopupCompact({ controller }: MomentCardComponentProps) {
+	const moment = controller.moment.value;
+	if (!moment) return null;
+	const badgeImage = pickBadgeImage(moment.badge.sources);
+	return (
+		<CompactRow>
+			{badgeImage && <BadgeImage $size={20} src={badgeImage} alt={moment.badge.name} />}
+			<TitleText>{moment.title}</TitleText>
+			<CompactMeta>{controller.claimedAt.value ? "✓ Claimed" : controller.countdownText.value}</CompactMeta>
+		</CompactRow>
+	);
+}
+
+function PollNote({ controller }: MomentCardComponentProps) {
+	const ended = controller.hasEnded.value;
+	if (controller.pollPhase.value === "checking") return <Note>Checking your message…</Note>;
+	if (controller.pollPhase.value === "timeout") {
+		return (
+			<Note>
+				We have not seen your message yet.
+				{!ended && (
+					<InlineAction type="button" onClick={controller.onCheckAgain}>
+						Check again
+					</InlineAction>
+				)}
+			</Note>
+		);
+	}
+	const status = controller.pollStatus.value;
+	if (controller.pollPhase.value === "settled" && status && status !== "GRANTED") {
+		return (
+			<Note $tone="error">
+				{describePollStatus(status)}
+				{!ended && (
+					<InlineAction type="button" onClick={controller.onCheckAgain}>
+						Check again
+					</InlineAction>
+				)}
+			</Note>
+		);
+	}
+	if (controller.awaitingSend.value) return <Note>Command pasted — press Enter to send it.</Note>;
+	return null;
+}
+
+export function MomentPopupContent({ controller }: MomentCardComponentProps) {
 	const moment = controller.moment.value;
 	if (!moment) return null;
 	const ended = controller.hasEnded.value || moment.status === "ENDED";
 	const badgeImage = pickBadgeImage(moment.badge.sources);
-	const claimedAt = controller.claimedAt.value;
-	const receipt = controller.claimReceipt.value;
-	const methodSuffix =
-		controller.claimMethod.value === "CHAT"
-			? " via chat"
-			: controller.claimMethod.value === "ACCOUNT"
-				? " with one click"
-				: "";
+	const claimed = controller.claimedAt.value !== null;
+	const loggedIn = controller.account.value.loggedIn;
 
 	return (
-		<Card>
-			<Header>
-				<Eyebrow $live={!ended}>
-					{!ended && <LiveDot />} Moment · {ended ? "Ended" : "Live"}
-				</Eyebrow>
-				<Title>{moment.title}</Title>
-				<IconButton
-					type="button"
-					onClick={controller.onToggleCollapsed}
-					title={controller.collapsed.value ? "Expand" : "Collapse"}
-				>
-					{controller.collapsed.value ? "▸" : "▾"}
-				</IconButton>
-				<IconButton type="button" onClick={controller.onDismiss} title="Dismiss">
-					✕
-				</IconButton>
-			</Header>
-			{!controller.collapsed.value && (
-				<>
-					<Body>
-						{badgeImage && <BadgeImage src={badgeImage} alt={moment.badge.name} />}
-						<Meta>
-							<BadgeName>{moment.badge.name}</BadgeName>
-							<Stats>
-								{moment.claimCount} claimed · {controller.countdownText.value}
-								{moment.maxClaims ? ` · max ${moment.maxClaims}` : ""}
-							</Stats>
-						</Meta>
-					</Body>
-					<Actions>
-						{claimedAt ? (
-							<Note $tone="success">
-								{receipt ? "Badge added to your account. " : "Already claimed. "}
-								{formatClaimTime(claimedAt)}
-								{methodSuffix}
-								{receipt ? " It may take a moment to appear in chat." : ""}
-							</Note>
-						) : controller.account.value.loggedIn ? (
-							<>
-								{controller.claimError.value ? (
-									<>
-										<Note $tone="error">{controller.claimError.value}</Note>
-										<ButtonRow>
-											<SecondaryButton type="button" onClick={controller.onClaim} disabled={ended}>
-												Try again
-											</SecondaryButton>
-										</ButtonRow>
-									</>
-								) : (
-									<>
-										<ButtonRow>
-											<PrimaryButton
-												type="button"
-												onClick={controller.onClaim}
-												disabled={controller.claimBusy.value || ended}
-											>
-												{controller.claimBusy.value ? "Claiming…" : "Claim badge"}
-											</PrimaryButton>
-										</ButtonRow>
-										{controller.viewerEligible.value === false && (
-											<Note>Link an account on this platform to your Enhancer account to claim.</Note>
-										)}
-									</>
-								)}
-							</>
-						) : controller.pollPhase.value === "checking" ? (
-							<Note>Checking your message…</Note>
-						) : controller.pollPhase.value === "settled" && controller.pollStatus.value ? (
-							<>
-								<Note $tone={controller.pollStatus.value === "GRANTED" ? "success" : undefined}>
-									{describePollStatus(controller.pollStatus.value, moment.redeemCommand)}
-									{claimedAt ? ` ${formatClaimTime(claimedAt)}` : ""}
-								</Note>
-								{!ended && controller.pollStatus.value !== "GRANTED" && (
-									<ButtonRow>
-										<SecondaryButton type="button" onClick={controller.onCheckAgain}>
-											Check again
-										</SecondaryButton>
-									</ButtonRow>
-								)}
-							</>
-						) : controller.pollPhase.value === "timeout" ? (
-							<>
-								<Note>We have not seen your message yet — check you typed it in this channel, then try again.</Note>
-								{!ended && (
-									<ButtonRow>
-										<SecondaryButton type="button" onClick={controller.onCheckAgain}>
-											Check again
-										</SecondaryButton>
-									</ButtonRow>
-								)}
-							</>
-						) : (
-							<>
-								<ButtonRow>
-									<PrimaryButton type="button" onClick={controller.onInsertRedeem} disabled={ended}>
-										Insert {moment.redeemCommand}
-									</PrimaryButton>
-									<SecondaryButton type="button" onClick={controller.onLogin}>
-										Log in for one-click claim
-									</SecondaryButton>
-								</ButtonRow>
-								{controller.awaitingSend.value && (
-									<Note>Command ready — press Enter to send it, confirmation will appear here.</Note>
-								)}
-							</>
+		<Body>
+			{badgeImage && <BadgeImage $size={48} src={badgeImage} alt={moment.badge.name} />}
+			<Details>
+				{claimed ? (
+					<>
+						<Success>✓ Badge claimed</Success>
+						<Note>{moment.badge.name} will show up next to your name in chat shortly.</Note>
+					</>
+				) : ended ? (
+					<Note>This moment has ended.</Note>
+				) : (
+					<>
+						<PrimaryAction type="button" onClick={controller.onLoginAndClaim} disabled={controller.claimBusy.value}>
+							{controller.claimBusy.value
+								? "Claiming…"
+								: loggedIn
+									? `Claim ${moment.badge.name}`
+									: "Log in & claim the badge"}
+						</PrimaryAction>
+						<ChatAlternative>
+							<span>or type in chat</span>
+							<CommandChip type="button" title="Paste into chat" onClick={controller.onInsertRedeem}>
+								{moment.redeemCommand}
+							</CommandChip>
+							<CopyButton type="button" title="Copy command" onClick={controller.onCopyCommand}>
+								{controller.copied.value ? "Copied" : "⧉ Copy"}
+							</CopyButton>
+						</ChatAlternative>
+						{controller.claimError.value && <Note $tone="error">{controller.claimError.value}</Note>}
+						{loggedIn && controller.viewerEligible.value === false && (
+							<Note>Link this platform's account to Enhancer for one-click claims.</Note>
 						)}
-					</Actions>
-				</>
-			)}
-		</Card>
+						<PollNote controller={controller} />
+					</>
+				)}
+				<Meta>
+					{moment.claimCount} claimed
+					{moment.maxClaims ? ` of ${moment.maxClaims}` : ""}
+					{ended ? "" : ` · ${controller.countdownText.value}`}
+				</Meta>
+			</Details>
+		</Body>
 	);
 }

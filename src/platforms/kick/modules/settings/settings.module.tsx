@@ -16,6 +16,7 @@ const CATEGORY = {
 	CHANNEL: "channel",
 	PLAYER: "player",
 	LATENCY: "latency",
+	ACCOUNT: "account",
 	ABOUT: "about",
 } as const;
 
@@ -79,7 +80,8 @@ export default class SettingsModule extends KickModule {
 			{ id: CATEGORY.CHANNEL, title: "Channel", order: 2 },
 			{ id: CATEGORY.PLAYER, title: "Player", order: 3 },
 			{ id: CATEGORY.LATENCY, title: "Latency", order: 4 },
-			{ id: CATEGORY.ABOUT, title: "About", order: 5 },
+			{ id: CATEGORY.ACCOUNT, title: "Account", order: 5 },
+			{ id: CATEGORY.ABOUT, title: "About", order: 6 },
 		];
 
 		const brandIcons = {
@@ -102,7 +104,7 @@ export default class SettingsModule extends KickModule {
 				title: "Enhancer Account",
 				description: "Enhancer Account",
 				type: "text",
-				categoryId: CATEGORY.GENERAL,
+				categoryId: CATEGORY.ACCOUNT,
 				content: () => {
 					return <EnhancerAccountComponent workerService={workerService} />;
 				},

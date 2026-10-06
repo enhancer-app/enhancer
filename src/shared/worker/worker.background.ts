@@ -1,6 +1,7 @@
 import { KICK_DEFAULT_SETTINGS } from "$kick/kick.constants.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
+import { EnhancerProfileService } from "$shared/worker/enhancer-account/enhancer-profile.service.ts";
 import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { MomentsService } from "$shared/worker/moments/moments.service.ts";
@@ -31,6 +32,10 @@ export default class WorkerBackground {
 		new Logger({ context: "moments", source: "background" }),
 		this.enhancerAccountService,
 	);
+	private readonly enhancerProfileService = new EnhancerProfileService(
+		new Logger({ context: "enhancer-profile", source: "background" }),
+		this.enhancerAccountService,
+	);
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.settingsDatabase,
@@ -39,6 +44,7 @@ export default class WorkerBackground {
 		this.enhancerApiService,
 		this.enhancerAccountService,
 		this.momentsService,
+		this.enhancerProfileService,
 	);
 
 	private isInitialized = false;

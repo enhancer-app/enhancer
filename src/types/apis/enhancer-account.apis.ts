@@ -19,3 +19,53 @@ export type OidcIdTokenClaims = {
 	preferred_username?: string;
 	given_name?: string;
 };
+
+export type EnhancerViewerIdentity = {
+	provider: string;
+	providerUsername: string | null;
+	providerDisplayName: string | null;
+	avatarUrl: string | null;
+};
+
+export type EnhancerViewerSummary = {
+	user: {
+		id: string;
+		username: string | null;
+		displayName: string | null;
+		primaryProvider: string | null;
+		avatarUrl: string | null;
+		createdAt: string;
+	};
+	identities: EnhancerViewerIdentity[];
+};
+
+export type EnhancerViewerBadge = {
+	assignmentId: string;
+	accountId: string;
+	accountPlatform: "TWITCH" | "KICK";
+	accountLogin: string;
+	badgeId: string;
+	name: string;
+	sources: Record<string, string>;
+	scope: "GLOBAL" | "CHANNEL";
+	channelId: string | null;
+	channelLogin: string | null;
+	channelAvatarUrl: string | null;
+	hidden: boolean;
+	forced: boolean;
+	visible: boolean;
+	createdAt: string;
+	cooldownUntil: string | null;
+};
+
+export type EnhancerViewerBadges = {
+	global: EnhancerViewerBadge[];
+	channels: EnhancerViewerBadge[];
+};
+
+export type SaveBadgeSlotRequest = {
+	scope: "GLOBAL" | "CHANNEL";
+	channelId?: string;
+	accountId?: string;
+	visibleAssignmentIds: string[];
+};

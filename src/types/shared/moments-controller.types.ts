@@ -1,6 +1,6 @@
 import type { ClaimMomentResponse, ClaimStatus, PublicMoment } from "$types/apis/moments.apis.ts";
 import type { EnhancerAccountState } from "$types/shared/worker/enhancer-account-worker.types.ts";
-import type { Signal } from "@preact/signals";
+import type { ReadonlySignal, Signal } from "@preact/signals";
 
 export type MomentPollPhase = "idle" | "checking" | "settled" | "timeout";
 
@@ -17,12 +17,13 @@ export type MomentsCardViewModel = {
 	pollStatus: Signal<ClaimStatus | null>;
 	countdownText: Signal<string>;
 	hasEnded: Signal<boolean>;
-	collapsed: Signal<boolean>;
 	awaitingSend: Signal<boolean>;
+	copied: Signal<boolean>;
+	autoCloseSeconds: ReadonlySignal<number | null>;
 	onClaim: () => void;
 	onInsertRedeem: () => void;
 	onCheckAgain: () => void;
-	onLogin: () => void;
-	onToggleCollapsed: () => void;
+	onLoginAndClaim: () => void;
+	onCopyCommand: () => void;
 	onDismiss: () => void;
 };

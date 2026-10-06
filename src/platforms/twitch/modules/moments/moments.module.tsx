@@ -1,23 +1,29 @@
-import { MomentCardComponent } from "$shared/components/moment-card/moment-card.component.tsx";
+import {
+	MomentPopupCompact,
+	MomentPopupContent,
+	MomentPopupTitle,
+} from "$shared/components/moment-card/moment-card.component.tsx";
 import { MomentsController } from "$shared/moments/moments-controller.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { EnhancerMessageEvent } from "$types/apis/enhancer.apis.ts";
 import type { TwitchChatMessageEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import { render } from "preact";
+import { effect } from "@preact/signals";
 
 export default class MomentsModule extends TwitchModule {
+	private static readonly POPUP_ID = "moment";
+
 	private controller: MomentsController | null = null;
-	private cardHost: HTMLElement | null = null;
+	private popupMomentId: string | null = null;
 
 	readonly config: TwitchModuleConfig = {
 		name: "moments",
 		appliers: [
 			{
 				type: "selector",
-				key: "moments-card",
-				selectors: [".chat-input"],
-				callback: this.attachCard.bind(this),
+				key: "moments-chat-list",
+				selectors: [".chat-list--default", "seventv-container.seventv-chat-list"],
+				callback: this.handleChatList.bind(this),
 				once: true,
 			},
 			{
@@ -55,7 +61,7 @@ export default class MomentsModule extends TwitchModule {
 	};
 
 	async initialize() {
-		this.controller = new MomentsController({
+		const controller = new MomentsController({
 			platform: "twitch",
 			workerService: this.workerService(),
 			loadDismissed: async () => (await this.localStorage().get("momentsDismissed")) ?? [],
@@ -63,20 +69,45 @@ export default class MomentsModule extends TwitchModule {
 			resolveOwnLogin: async () => this.twitchUtils().getOwnLogin() ?? null,
 			insertCommand: (command) => this.twitchUtils().setChatText(command, true),
 		});
-		this.controller.start();
+		this.controller = controller;
+		controller.start();
+		effect(() => {
+			const momentId = controller.moment.value?.id ?? null;
+			queueMicrotask(() => this.syncPopup(momentId));
+		});
 	}
 
-	private attachCard(elements: Element[]) {
-		if (!this.controller || !this.isModuleEnabled()) return;
-		const chatInput = elements.at(0) as HTMLElement | undefined;
-		if (!chatInput) return;
-		if (!this.cardHost) {
-			this.cardHost = document.createElement("div");
-			this.cardHost.id = this.getId();
-			render(<MomentCardComponent controller={this.controller} />, this.cardHost);
+	private syncPopup(momentId: string | null) {
+		const controller = this.controller;
+		if (!controller) return;
+		if (!momentId) {
+			if (this.popupMomentId) this.emitter.emit("twitch:chatPopupClose", MomentsModule.POPUP_ID);
+			this.popupMomentId = null;
+			return;
 		}
-		if (this.cardHost.parentElement !== chatInput) chatInput.prepend(this.cardHost);
+		if (this.popupMomentId === momentId && this.isPopupMounted()) return;
+		this.popupMomentId = momentId;
+		this.emitter.emit("twitch:chatPopupMessage", {
+			id: MomentsModule.POPUP_ID,
+			title: <MomentPopupTitle controller={controller} />,
+			content: <MomentPopupContent controller={controller} />,
+			compactContent: <MomentPopupCompact controller={controller} />,
+			autoclose: controller.autoCloseSeconds,
+			onClose: () => {
+				this.popupMomentId = null;
+				controller.onDismiss();
+			},
+		});
+	}
+
+	private isPopupMounted(): boolean {
+		return document.querySelector(`[data-popup-id="${MomentsModule.POPUP_ID}"]`) !== null;
+	}
+
+	private handleChatList() {
+		if (!this.controller || !this.isModuleEnabled()) return;
 		void this.syncChannel();
+		this.syncPopup(this.controller.moment.value?.id ?? null);
 	}
 
 	private async syncChannel() {
@@ -114,10 +145,6 @@ export default class MomentsModule extends TwitchModule {
 
 	private handleSettingsToggle(enabled: boolean) {
 		this.controller?.setEnabled(enabled);
-		if (enabled && this.cardHost && !this.cardHost.isConnected) {
-			const chatInput = document.querySelector(".chat-input");
-			if (chatInput) chatInput.prepend(this.cardHost);
-			void this.syncChannel();
-		}
+		if (enabled) void this.syncChannel();
 	}
 }

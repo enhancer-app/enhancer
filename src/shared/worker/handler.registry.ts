@@ -1,6 +1,8 @@
 import type { Logger } from "$shared/logger/logger.ts";
 import { EnhancerAccountHandler } from "$shared/worker/enhancer-account/enhancer-account.handler.ts";
 import type { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
+import { EnhancerProfileHandler } from "$shared/worker/enhancer-account/enhancer-profile.handler.ts";
+import type { EnhancerProfileService } from "$shared/worker/enhancer-account/enhancer-profile.service.ts";
 import { EnhancerApiHandler } from "$shared/worker/enhancer-api/enhancer-api.handler.ts";
 import type { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { AssetsFileHandler } from "$shared/worker/file/assets-file.handler.ts";
@@ -31,6 +33,7 @@ export class HandlerRegistry {
 		private readonly enhancerApiService: EnhancerApiService,
 		private readonly enhancerAccountService: EnhancerAccountService,
 		private readonly momentsService: MomentsService,
+		private readonly enhancerProfileService: EnhancerProfileService,
 	) {
 		this.registerHandlers();
 	}
@@ -63,6 +66,9 @@ export class HandlerRegistry {
 		);
 		for (const action of ["getEnhancerAccount", "loginEnhancerAccount", "logoutEnhancerAccount"] as const) {
 			this.handlers.set(action, new EnhancerAccountHandler(this.logger, this.enhancerAccountService, action));
+		}
+		for (const action of ["getEnhancerProfile", "getEnhancerBadges", "saveEnhancerBadgeSlot"] as const) {
+			this.handlers.set(action, new EnhancerProfileHandler(this.logger, this.enhancerProfileService, action));
 		}
 		for (const action of ["getChannelMoment", "getMomentClaimStatus", "getMomentViewerState", "claimMoment"] as const) {
 			this.handlers.set(action, new MomentsHandler(this.logger, this.momentsService, action));

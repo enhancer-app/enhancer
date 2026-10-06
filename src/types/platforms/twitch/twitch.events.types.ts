@@ -1,12 +1,14 @@
 import type { MessageMenuEvent } from "$shared/components/message-menu/message-menu.component.tsx";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { TwitchSettingsEvents } from "$types/platforms/twitch/twitch.settings.types.ts";
+import type { ReadonlySignal } from "@preact/signals";
 import type { ComponentChildren } from "preact";
 
 export type TwitchEvents = {
 	"twitch:chatInitialized": (channelId: string) => void | Promise<void>;
 	"twitch:chatMessage": (message: TwitchChatMessageEvent) => void | Promise<void>;
 	"twitch:chatPopupMessage": (message: ChatMessagePopupEvent) => void | Promise<void>;
+	"twitch:chatPopupClose": (id: string) => void | Promise<void>;
 	"twitch:messageMenu": (message: MessageMenuEvent) => void | Promise<void>;
 	"twitch:pinnedStreamer:sync": (payload: TwitchPinnedStreamerSyncEvent) => void | Promise<void>;
 } & TwitchSettingsEvents &
@@ -51,8 +53,10 @@ export type TwitchChatMessageEvent = {
 };
 
 export type ChatMessagePopupEvent = {
-	title: string;
+	id?: string;
+	title: ComponentChildren;
 	content: ComponentChildren;
-	autoclose?: number;
+	compactContent?: ComponentChildren;
+	autoclose?: number | ReadonlySignal<number | null>;
 	onClose?: () => void;
 };

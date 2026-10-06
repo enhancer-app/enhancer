@@ -1,4 +1,25 @@
+import type {
+	EnhancerViewerBadges,
+	EnhancerViewerSummary,
+	SaveBadgeSlotRequest,
+} from "$types/apis/enhancer-account.apis.ts";
+
 export type EnhancerAccountAction = "getEnhancerAccount" | "loginEnhancerAccount" | "logoutEnhancerAccount";
+
+export type EnhancerProfileAction = "getEnhancerProfile" | "getEnhancerBadges" | "saveEnhancerBadgeSlot";
+
+export type EnhancerProfileResult<T> =
+	| { kind: "ok"; data: T }
+	| { kind: "unauthenticated" }
+	| { kind: "error"; message: string };
+
+export type GetEnhancerProfileResponse = EnhancerProfileResult<EnhancerViewerSummary>;
+
+export type GetEnhancerBadgesResponse = EnhancerProfileResult<EnhancerViewerBadges>;
+
+export type SaveEnhancerBadgeSlotPayload = SaveBadgeSlotRequest;
+
+export type SaveEnhancerBadgeSlotResponse = EnhancerProfileResult<null>;
 
 export type EnhancerAccountProfile = {
 	subject: string | null;

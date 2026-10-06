@@ -7,7 +7,7 @@ import type { MomentPollPhase, MomentsCardViewModel } from "$types/shared/moment
 import type { EnhancerAccountState } from "$types/shared/worker/enhancer-account-worker.types.ts";
 import type { ClaimMomentErrorReason, MomentClaimStatusResult } from "$types/shared/worker/moments-worker.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
-import { type Signal, signal } from "@preact/signals";
+import { computed, type ReadonlySignal, type Signal, signal } from "@preact/signals";
 
 export type MomentsControllerDeps = {
 	platform: PlatformType;
@@ -19,6 +19,9 @@ export type MomentsControllerDeps = {
 };
 
 export class MomentsController implements MomentsCardViewModel {
+	private static readonly CLAIMED_AUTOCLOSE_SECONDS = 20;
+	private static readonly ENDED_AUTOCLOSE_SECONDS = 15;
+
 	readonly moment: Signal<PublicMoment | null> = signal(null);
 	readonly account: Signal<EnhancerAccountState> = signal({ loggedIn: false });
 	readonly claimedAt: Signal<string | null> = signal(null);
@@ -31,8 +34,14 @@ export class MomentsController implements MomentsCardViewModel {
 	readonly pollStatus: Signal<ClaimStatus | null> = signal(null);
 	readonly countdownText: Signal<string> = signal("");
 	readonly hasEnded: Signal<boolean> = signal(false);
-	readonly collapsed: Signal<boolean> = signal(false);
 	readonly awaitingSend: Signal<boolean> = signal(false);
+	readonly copied: Signal<boolean> = signal(false);
+	readonly autoCloseSeconds: ReadonlySignal<number | null> = computed(() => {
+		if (!this.moment.value) return null;
+		if (this.claimedAt.value) return MomentsController.CLAIMED_AUTOCLOSE_SECONDS;
+		if (this.hasEnded.value) return MomentsController.ENDED_AUTOCLOSE_SECONDS;
+		return null;
+	});
 
 	private readonly logger = new Logger({ context: "moments" });
 	private channelId: string | null = null;
@@ -42,6 +51,7 @@ export class MomentsController implements MomentsCardViewModel {
 	private generation = 0;
 	private tickTimer: NodeJS.Timeout | undefined;
 	private liveTimer: NodeJS.Timeout | undefined;
+	private copiedTimer: NodeJS.Timeout | undefined;
 
 	constructor(private readonly deps: MomentsControllerDeps) {}
 
@@ -67,7 +77,6 @@ export class MomentsController implements MomentsCardViewModel {
 		this.channelId = externalId;
 		this.generation++;
 		this.resetClaimState();
-		this.collapsed.value = false;
 		void this.refreshMoment();
 	}
 
@@ -93,16 +102,16 @@ export class MomentsController implements MomentsCardViewModel {
 		void this.pollClaimStatus();
 	};
 
-	onToggleCollapsed = (): void => {
-		this.collapsed.value = !this.collapsed.value;
+	onCopyCommand = (): void => {
+		void this.copyCommand();
 	};
 
 	onDismiss = (): void => {
 		void this.dismiss();
 	};
 
-	onLogin = (): void => {
-		void this.login();
+	onLoginAndClaim = (): void => {
+		void this.loginAndClaim();
 	};
 
 	async refreshMoment(): Promise<void> {
@@ -133,10 +142,7 @@ export class MomentsController implements MomentsCardViewModel {
 		}
 		const changed = this.moment.value?.id !== moment.id;
 		this.moment.value = moment;
-		if (changed) {
-			this.resetClaimState();
-			this.collapsed.value = false;
-		}
+		if (changed) this.resetClaimState();
 		this.updateCountdown();
 		this.restartTimers();
 		if (this.account.value.loggedIn && !this.claimedAt.value) await this.refreshViewerState(generation);
@@ -239,12 +245,33 @@ export class MomentsController implements MomentsCardViewModel {
 		return true;
 	}
 
-	private async login(): Promise<void> {
-		const response = await this.deps.workerService.send("loginEnhancerAccount");
-		if (response?.success) {
-			this.account.value = response.account;
-			if (this.moment.value && !this.claimedAt.value) await this.refreshViewerState(this.generation);
+	private async loginAndClaim(): Promise<void> {
+		if (this.account.value.loggedIn) {
+			await this.claim();
+			return;
 		}
+		const response = await this.deps.workerService.send("loginEnhancerAccount");
+		if (!response?.success) return;
+		this.account.value = response.account;
+		if (!this.moment.value) return;
+		await this.refreshViewerState(this.generation);
+		if (!this.claimedAt.value && this.viewerEligible.value !== false) await this.claim();
+	}
+
+	private async copyCommand(): Promise<void> {
+		const command = this.moment.value?.redeemCommand;
+		if (!command) return;
+		try {
+			await navigator.clipboard.writeText(command);
+		} catch (error) {
+			this.logger.warn("Failed to copy redeem command:", error);
+			return;
+		}
+		this.copied.value = true;
+		if (this.copiedTimer) clearTimeout(this.copiedTimer);
+		this.copiedTimer = setTimeout(() => {
+			this.copied.value = false;
+		}, 2000);
 	}
 
 	private async refreshAccount(): Promise<void> {
@@ -301,7 +328,6 @@ export class MomentsController implements MomentsCardViewModel {
 		this.generation++;
 		this.moment.value = null;
 		this.resetClaimState();
-		this.collapsed.value = false;
 		this.stopTimers();
 	}
 

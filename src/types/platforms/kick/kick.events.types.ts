@@ -6,6 +6,7 @@ import type { ChatMessagePopupEvent } from "$types/platforms/twitch/twitch.event
 export type KickEvents = {
 	"kick:chatMessage": (message: KickChatMessageEvent) => void | Promise<void>;
 	"kick:chatPopupMessage": (message: ChatMessagePopupEvent) => void | Promise<void>;
+	"kick:chatPopupClose": (id: string) => void | Promise<void>;
 	"kick:messageMenu": (message: MessageMenuEvent) => void | Promise<void>;
 } & KickSettingsEvents &
 	CommonEvents;

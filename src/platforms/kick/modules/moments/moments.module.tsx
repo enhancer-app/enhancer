@@ -1,14 +1,20 @@
 import KickModule from "$kick/kick.module.ts";
-import { MomentCardComponent } from "$shared/components/moment-card/moment-card.component.tsx";
+import {
+	MomentPopupCompact,
+	MomentPopupContent,
+	MomentPopupTitle,
+} from "$shared/components/moment-card/moment-card.component.tsx";
 import { MomentsController } from "$shared/moments/moments-controller.ts";
 import type { EnhancerMessageEvent } from "$types/apis/enhancer.apis.ts";
 import type { KickChatMessageEvent } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
-import { render } from "preact";
+import { effect } from "@preact/signals";
 
 export default class MomentsModule extends KickModule {
+	private static readonly POPUP_ID = "moment";
+
 	private controller: MomentsController | null = null;
-	private cardHost: HTMLElement | null = null;
+	private popupMomentId: string | null = null;
 	private ownLogin: string | null | undefined;
 
 	readonly config: KickModuleConfig = {
@@ -16,9 +22,9 @@ export default class MomentsModule extends KickModule {
 		appliers: [
 			{
 				type: "selector",
-				key: "moments-card",
-				selectors: ["#channel-chatroom"],
-				callback: this.attachCard.bind(this),
+				key: "moments-chat-footer",
+				selectors: ["#chatroom-footer"],
+				callback: this.handleChatFooter.bind(this),
 				once: true,
 			},
 			{
@@ -50,7 +56,7 @@ export default class MomentsModule extends KickModule {
 	};
 
 	async initialize() {
-		this.controller = new MomentsController({
+		const controller = new MomentsController({
 			platform: "kick",
 			workerService: this.workerService(),
 			loadDismissed: async () => (await this.localStorage().get("momentsDismissed")) ?? [],
@@ -58,7 +64,12 @@ export default class MomentsModule extends KickModule {
 			resolveOwnLogin: () => this.getOwnLogin(),
 			insertCommand: (command) => this.kickUtils().setChatInputContent(command, true),
 		});
-		this.controller.start();
+		this.controller = controller;
+		controller.start();
+		effect(() => {
+			const momentId = controller.moment.value?.id ?? null;
+			queueMicrotask(() => this.syncPopup(momentId));
+		});
 	}
 
 	private async getOwnLogin(): Promise<string | null> {
@@ -69,33 +80,37 @@ export default class MomentsModule extends KickModule {
 		return login;
 	}
 
-	private attachCard(elements: Element[]) {
-		if (!this.controller || !this.isModuleEnabled()) return;
-		const chatRoom = elements.at(0) as HTMLElement | undefined;
-		if (!chatRoom) return;
-		if (!this.cardHost) {
-			this.cardHost = document.createElement("div");
-			this.cardHost.id = this.getId();
-			render(<MomentCardComponent controller={this.controller} />, this.cardHost);
+	private syncPopup(momentId: string | null) {
+		const controller = this.controller;
+		if (!controller) return;
+		if (!momentId) {
+			if (this.popupMomentId) this.emitter.emit("kick:chatPopupClose", MomentsModule.POPUP_ID);
+			this.popupMomentId = null;
+			return;
 		}
-		void this.commonUtils().waitFor(
-			() => this.findInputAnchor(chatRoom),
-			(anchor) => {
-				if (this.cardHost && this.cardHost.nextSibling !== anchor) anchor.before(this.cardHost);
-				void this.syncChannel();
-				return true;
+		if (this.popupMomentId === momentId && this.isPopupMounted()) return;
+		this.popupMomentId = momentId;
+		this.emitter.emit("kick:chatPopupMessage", {
+			id: MomentsModule.POPUP_ID,
+			title: <MomentPopupTitle controller={controller} />,
+			content: <MomentPopupContent controller={controller} />,
+			compactContent: <MomentPopupCompact controller={controller} />,
+			autoclose: controller.autoCloseSeconds,
+			onClose: () => {
+				this.popupMomentId = null;
+				controller.onDismiss();
 			},
-			{ delay: 500, maxRetries: 20 },
-		);
+		});
 	}
 
-	private findInputAnchor(chatRoom: HTMLElement): HTMLElement | undefined {
-		const input =
-			chatRoom.querySelector("#ntv__message-input") ?? chatRoom.querySelector('div[data-testid="chat-input"]');
-		if (!(input instanceof HTMLElement)) return undefined;
-		let anchor = input;
-		while (anchor.parentElement && anchor.parentElement !== chatRoom) anchor = anchor.parentElement;
-		return anchor.parentElement === chatRoom ? anchor : undefined;
+	private isPopupMounted(): boolean {
+		return document.querySelector(`[data-popup-id="${MomentsModule.POPUP_ID}"]`) !== null;
+	}
+
+	private handleChatFooter() {
+		if (!this.controller || !this.isModuleEnabled()) return;
+		void this.syncChannel();
+		this.syncPopup(this.controller.moment.value?.id ?? null);
 	}
 
 	private async syncChannel() {
@@ -135,14 +150,6 @@ export default class MomentsModule extends KickModule {
 
 	private handleSettingsToggle(enabled: boolean) {
 		this.controller?.setEnabled(enabled);
-		if (enabled && this.cardHost && !this.cardHost.isConnected) {
-			const chatRoom = document.querySelector("#channel-chatroom");
-			if (chatRoom) {
-				const anchor = this.findInputAnchor(chatRoom as HTMLElement);
-				if (anchor) anchor.before(this.cardHost);
-				else chatRoom.prepend(this.cardHost);
-			}
-			void this.syncChannel();
-		}
+		if (enabled) void this.syncChannel();
 	}
 }
