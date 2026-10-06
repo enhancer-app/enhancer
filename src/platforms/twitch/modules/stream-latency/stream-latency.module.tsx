@@ -8,6 +8,8 @@ export default class StreamLatencyModule extends TwitchModule {
 	private latencyCounter = {} as Signal<number>;
 	private isLiveState = {} as Signal<boolean>;
 	private playbackRate = {} as Signal<number>;
+	private trackedVideo: HTMLVideoElement | null = null;
+	private consecutiveUnknownLatency = 0;
 	private updateInterval: NodeJS.Timeout | undefined;
 
 	readonly config: TwitchModuleConfig = {
@@ -27,6 +29,11 @@ export default class StreamLatencyModule extends TwitchModule {
 		enabled: () => this.settings().streamLatencyEnabled,
 	};
 
+	private readonly handleRateChange = (event: Event) => {
+		const video = event.target as HTMLVideoElement | null;
+		if (video) this.playbackRate.value = video.playbackRate;
+	};
+
 	private run(elements: Element[]) {
 		const wrappers = elements.map((element) => {
 			const wrapper = document.createElement("span");
@@ -36,13 +43,12 @@ export default class StreamLatencyModule extends TwitchModule {
 		});
 
 		this.createLatencyCounter();
+		this.createPlaybackRateSignal();
+		this.syncPlaybackRate();
 		this.updateLatency();
 
-		this.createPlaybackRateSignal();
-		this.watchPlaybackRate();
-
 		if (this.updateInterval) clearInterval(this.updateInterval);
-		this.updateInterval = setInterval(async () => this.updateLatency(), 1000);
+		this.updateInterval = setInterval(() => this.updateLatency(), 1000);
 
 		wrappers.forEach((element: HTMLElement) => {
 			const header = document.querySelector("#chat-room-header-label") as HTMLElement | null;
@@ -60,30 +66,66 @@ export default class StreamLatencyModule extends TwitchModule {
 	}
 
 	private updateLatency() {
-		const videoInfo = this.twitchUtils().getVideoInfo();
-		const liveStatus = this.twitchUtils().getCurrentLiveStatus();
+		try {
+			const videoInfo = this.twitchUtils().getVideoInfo();
+			const liveStatus = this.twitchUtils().getCurrentLiveStatus();
 
-		const isVod = videoInfo?.content.type === "vod";
-		const isBroadcasterLive = !!(liveStatus?.isLive && !liveStatus.isOffline);
+			const isVod = videoInfo?.content.type === "vod";
+			const isBroadcasterLive = !!(liveStatus?.isLive && !liveStatus.isOffline);
 
-		const isLive = !isVod && isBroadcasterLive;
+			const isLive = !isVod && isBroadcasterLive;
 
-		if (this.isLiveState.value !== isLive) {
-			this.isLiveState.value = isLive;
-		}
+			if (this.isLiveState.value !== isLive) {
+				this.isLiveState.value = isLive;
+			}
 
-		if (isLive) {
+			this.syncPlaybackRate();
+
+			if (!isLive) {
+				this.latencyCounter.value = -1;
+				this.consecutiveUnknownLatency = 0;
+				return;
+			}
+
 			const latency = this.getLatency();
-			this.latencyCounter.value = typeof latency === "number" && latency > 0 ? latency : -1;
+			if (typeof latency === "number" && Number.isFinite(latency) && latency > 0) {
+				this.latencyCounter.value = latency;
+				this.consecutiveUnknownLatency = 0;
+				return;
+			}
+
+			this.latencyCounter.value = -1;
+			this.consecutiveUnknownLatency += 1;
+			if (this.consecutiveUnknownLatency === 10 || this.consecutiveUnknownLatency % 60 === 0) {
+				const mediaPlayer = this.twitchUtils().getMediaPlayerInstance();
+				const video = mediaPlayer?.core?.renderSurface?.video?.element?.();
+				this.logger.warn("Stream latency unavailable", {
+					contentType: videoInfo?.content?.type,
+					statusLive: liveStatus?.isLive,
+					statusOffline: liveStatus?.isOffline,
+					statusPlaying: liveStatus?.isPlaying,
+					adShowing: liveStatus?.isVideoAdShowing,
+					hasPlayer: !!mediaPlayer,
+					reportedLatency: mediaPlayer?.core?.state?.liveLatency,
+					videoPaused: video?.paused,
+					videoReadyState: video?.readyState,
+				});
+			}
+		} catch (error) {
+			this.logger.error("Failed to update stream latency", error);
 		}
 	}
 
-	private watchPlaybackRate() {
-		const video = this.twitchUtils().getMediaPlayerInstance()?.core.renderSurface.video.element();
+	private syncPlaybackRate() {
+		if (!("value" in this.playbackRate)) return;
+		const video = this.twitchUtils().getMediaPlayerInstance()?.core?.renderSurface?.video?.element?.();
 		if (!video) return;
-		video.addEventListener("ratechange", () => {
-			this.playbackRate.value = video.playbackRate;
-		});
+		if (this.playbackRate.value !== video.playbackRate) this.playbackRate.value = video.playbackRate;
+		if (this.trackedVideo !== video) {
+			this.trackedVideo?.removeEventListener("ratechange", this.handleRateChange);
+			video.addEventListener("ratechange", this.handleRateChange);
+			this.trackedVideo = video;
+		}
 	}
 
 	private resetPlayer() {
@@ -100,15 +142,21 @@ export default class StreamLatencyModule extends TwitchModule {
 	private getLatency() {
 		const mediaPlayer = this.twitchUtils().getMediaPlayerInstance();
 		if (!mediaPlayer) {
-			this.logger.warn("Failed to find media player");
+			this.logger.debug("Failed to find media player");
 			return;
 		}
-		return mediaPlayer.core.state.liveLatency;
+		const reported = mediaPlayer.core?.state?.liveLatency;
+		if (typeof reported === "number" && Number.isFinite(reported) && reported > 0) return reported;
+		const video = mediaPlayer.core?.renderSurface?.video?.element?.();
+		if (!video || video.paused || video.buffered.length === 0) return reported;
+		const fallback = video.buffered.end(video.buffered.length - 1) - video.currentTime;
+		if (typeof fallback === "number" && Number.isFinite(fallback) && fallback > 0) return fallback;
+		return reported;
 	}
 
 	private createPlaybackRateSignal() {
 		if ("value" in this.playbackRate) return;
-		const video = this.twitchUtils().getMediaPlayerInstance()?.core.renderSurface.video.element();
+		const video = this.twitchUtils().getMediaPlayerInstance()?.core?.renderSurface?.video?.element?.();
 		if (!video) {
 			this.playbackRate = signal(1);
 			return;
