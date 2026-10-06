@@ -52,12 +52,13 @@ export class EnhancerAccountService {
 		await this.broadcast({ account: { loggedIn: false } });
 		if (!session?.refreshToken) return;
 		try {
-			await fetch(this.endpoint("logout"), {
+			await fetch(this.endpoint("revoke"), {
 				method: "POST",
 				headers: { "Content-Type": "application/x-www-form-urlencoded" },
 				body: new URLSearchParams({
 					client_id: EnhancerAccountService.CLIENT_ID,
-					refresh_token: session.refreshToken,
+					token: session.refreshToken,
+					token_type_hint: "refresh_token",
 				}),
 			});
 		} catch (error) {
@@ -269,7 +270,7 @@ export class EnhancerAccountService {
 		return undefined;
 	}
 
-	private endpoint(name: "auth" | "token" | "logout"): string {
+	private endpoint(name: "auth" | "token" | "revoke"): string {
 		return `${EnhancerAccountService.ISSUER}/protocol/openid-connect/${name}`;
 	}
 }
