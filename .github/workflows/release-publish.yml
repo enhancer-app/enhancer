@@ -70,9 +70,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if git rev-parse "$VERSION" >/dev/null 2>&1; then
-            echo "Tag $VERSION already exists. Skipping."
-            echo "publish=false" >> $GITHUB_OUTPUT
-            exit 0
+            BUILD_ZIP="build-${CLEAN_VER}.zip"
+            SOURCE_ZIP="source-${CLEAN_VER}.zip"
+            if gh release view "$VERSION" --json assets \
+              --jq -e --arg b "$BUILD_ZIP" --arg s "$SOURCE_ZIP" \
+              '.assets | map(.name) | contains([$b, $s])' >/dev/null 2>&1; then
+              echo "Release $VERSION already complete. Skipping."
+              echo "publish=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            echo "::error::Tag $VERSION already exists and tags are immutable. Bump the version to cut a new release; incomplete releases are never reused."
+            exit 1
           fi
 
           if [ "$EVENT_NAME" != "push" ]; then
@@ -132,17 +140,42 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.check_release.outputs.publish == 'true'
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
-        with:
-          tag_name: ${{ steps.get_version.outputs.VERSION }}
-          target_commitish: ${{ github.sha }}
-          name: Release ${{ steps.get_version.outputs.VERSION }}
-          generate_release_notes: true
-          files: |
-            dist/build-${{ steps.get_version.outputs.CLEAN_VER }}.zip
-            dist/source-${{ steps.get_version.outputs.CLEAN_VER }}.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+          CLEAN_VER: ${{ steps.get_version.outputs.CLEAN_VER }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          BUILD_ZIP="dist/build-${CLEAN_VER}.zip"
+          SOURCE_ZIP="dist/source-${CLEAN_VER}.zip"
+          for f in "$BUILD_ZIP" "$SOURCE_ZIP"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Missing asset: $f. Did 'bun run pack' succeed?"
+              exit 1
+            fi
+          done
+          ATTEMPT=0
+          until [ "$ATTEMPT" -ge 3 ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Creating release $VERSION (attempt $ATTEMPT/3)..."
+            if gh release create "$VERSION" --target "$TARGET_SHA" \
+              --title "Release $VERSION" --generate-notes "$BUILD_ZIP" "$SOURCE_ZIP"; then
+              break
+            fi
+            echo "::warning::Release create/upload failed (attempt $ATTEMPT/3). Cleaning up tag."
+            gh release delete "$VERSION" --yes --cleanup-tag || true
+            if [ "$ATTEMPT" -ge 3 ]; then
+              echo "::error::Failed to create release $VERSION with assets after 3 attempts. Tag was cleaned up."
+              exit 1
+            fi
+            sleep 5
+          done
+          COUNT=$(gh release view "$VERSION" --json assets --jq '.assets | length')
+          if [ "$COUNT" -lt 2 ]; then
+            echo "::error::Release $VERSION is missing assets (found $COUNT, expected 2). Cleaning up tag."
+            gh release delete "$VERSION" --yes --cleanup-tag || true
+            exit 1
+          fi
 
   publish-chrome:
     name: Publish Chrome
