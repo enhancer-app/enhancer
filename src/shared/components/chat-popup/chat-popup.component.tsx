@@ -114,7 +114,7 @@ const Card = styled.div<{ $variant: ChatPopupVariant }>`
 			--m-button-radius: 6px;
 		`}
 	position: relative;
-	margin: ${({ $variant }) => ($variant === "kick" ? "0 0 8px" : "0 10px 8px")};
+	margin: ${({ $variant }) => ($variant === "kick" ? "0 1.25rem 8px" : "0 10px 8px")};
 	background: var(--m-bg);
 	border: 1px solid var(--m-border);
 	border-radius: 6px;

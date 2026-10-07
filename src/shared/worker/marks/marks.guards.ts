@@ -1,13 +1,13 @@
 import type { EnhancerApiError } from "$types/apis/enhancer.apis.ts";
 import type {
-	ChannelMomentResponse,
-	ClaimMomentResponse,
+	ChannelMarkResponse,
+	ClaimMarkResponse,
 	ClaimStatus,
 	ClaimStatusResponse,
-	MomentClaimsMessageData,
-	PublicMoment,
-	ViewerMomentState,
-} from "$types/apis/moments.apis.ts";
+	MarkClaimsMessageData,
+	PublicMark,
+	ViewerMarkState,
+} from "$types/apis/marks.apis.ts";
 
 const CLAIM_STATUSES: ReadonlySet<string> = new Set<ClaimStatus>([
 	"GRANTED",
@@ -44,7 +44,7 @@ function isDateString(value: unknown): value is string {
 	return isString(value) && !Number.isNaN(Date.parse(value));
 }
 
-export function isPublicMoment(value: unknown): value is PublicMoment {
+export function isPublicMark(value: unknown): value is PublicMark {
 	if (!isRecord(value)) return false;
 	const { channel, badge } = value;
 	return (
@@ -71,8 +71,8 @@ export function isPublicMoment(value: unknown): value is PublicMoment {
 	);
 }
 
-export function isChannelMomentResponse(value: unknown): value is ChannelMomentResponse {
-	return isRecord(value) && (value.moment === null || isPublicMoment(value.moment));
+export function isChannelMarkResponse(value: unknown): value is ChannelMarkResponse {
+	return isRecord(value) && (value.mark === null || isPublicMark(value.mark));
 }
 
 export function isClaimStatusResponse(value: unknown): value is ClaimStatusResponse {
@@ -85,7 +85,7 @@ export function isClaimStatusResponse(value: unknown): value is ClaimStatusRespo
 	);
 }
 
-export function isViewerMomentState(value: unknown): value is ViewerMomentState {
+export function isViewerMarkState(value: unknown): value is ViewerMarkState {
 	if (!isRecord(value)) return false;
 	const { claim } = value;
 	return (
@@ -95,15 +95,15 @@ export function isViewerMomentState(value: unknown): value is ViewerMomentState 
 	);
 }
 
-export function isClaimMomentResponse(value: unknown): value is ClaimMomentResponse {
+export function isClaimMarkResponse(value: unknown): value is ClaimMarkResponse {
 	if (!isRecord(value)) return false;
-	const { moment, badge } = value;
+	const { mark, badge } = value;
 	return (
 		(value.result === "GRANTED" || value.result === "ALREADY_CLAIMED") &&
 		isDateString(value.claimedAt) &&
 		(value.accountLogin === undefined || isNullableString(value.accountLogin)) &&
-		isRecord(moment) &&
-		isString(moment.id) &&
+		isRecord(mark) &&
+		isString(mark.id) &&
 		isRecord(badge) &&
 		isString(badge.id) &&
 		isString(badge.name) &&
@@ -115,10 +115,10 @@ export function isEnhancerApiError(value: unknown): value is EnhancerApiError {
 	return isRecord(value) && isRecord(value.error) && isString(value.error.code) && isString(value.error.message);
 }
 
-export function isMomentClaimsMessageData(value: unknown): value is MomentClaimsMessageData {
+export function isMarkClaimsMessageData(value: unknown): value is MarkClaimsMessageData {
 	return (
 		isRecord(value) &&
-		isString(value.momentId) &&
+		isString(value.markId) &&
 		isFiniteNumber(value.claimCount) &&
 		value.claimCount >= 0 &&
 		(value.maxClaims === null || isFiniteNumber(value.maxClaims))

@@ -1,9 +1,9 @@
-import { pickBadgeImage } from "$shared/moments/moment-countdown.ts";
+import { pickBadgeImage } from "$shared/marks/mark-countdown.ts";
 import type {
-	MomentCardComponentProps,
-	MomentCompactComponentProps,
-} from "$types/shared/components/moment-card.component.types.ts";
-import type { MomentsCardViewModel } from "$types/shared/moments-controller.types.ts";
+	MarkCardComponentProps,
+	MarkCompactComponentProps,
+} from "$types/shared/components/mark-card.component.types.ts";
+import type { MarksCardViewModel } from "$types/shared/marks-controller.types.ts";
 import styled from "styled-components";
 
 const TopRow = styled.div`
@@ -44,6 +44,9 @@ const Meta = styled.div`
 `;
 
 const PrimaryButton = styled.button`
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	width: 100%;
 	height: 30px;
 	border: none;
@@ -67,6 +70,7 @@ const PrimaryButton = styled.button`
 const ChatAlternative = styled.div`
 	display: flex;
 	align-items: center;
+	justify-content: center;
 	flex-wrap: wrap;
 	gap: 6px;
 	font-size: 12px;
@@ -88,19 +92,41 @@ const CommandChip = styled.button`
 	}
 `;
 
-const TextButton = styled.button`
-	background: none;
-	border: none;
+const IconButton = styled.button`
+	display: grid;
+	place-items: center;
+	width: 22px;
+	height: 22px;
 	padding: 0;
+	border: none;
+	border-radius: 4px;
+	background: transparent;
 	color: var(--m-muted);
-	font-size: 12px;
 	cursor: pointer;
 
 	&:hover {
+		background: var(--m-chip);
 		color: var(--m-text);
-		text-decoration: underline;
+	}
+
+	svg {
+		width: 14px;
+		height: 14px;
 	}
 `;
+
+function CopyIcon({ copied }: { copied: boolean }) {
+	return copied ? (
+		<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+			<path d="M3 8.5l3.5 3.5L13 4.5" />
+		</svg>
+	) : (
+		<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+			<rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+			<path d="M3 10.5V4a1 1 0 011-1h6.5" />
+		</svg>
+	);
+}
 
 const Note = styled.div<{ $error?: boolean }>`
 	font-size: 12px;
@@ -164,58 +190,58 @@ const CompactClaim = styled.button`
 function describePollStatus(status: string): string {
 	if (status === "ALREADY_CLAIMED") return "You already claimed this badge.";
 	if (status === "INVALID_CODE") return "Wrong code. Use the command above.";
-	if (status === "NOT_LIVE") return "The moment ended before your message arrived.";
+	if (status === "NOT_LIVE") return "The mark ended before your message arrived.";
 	if (status === "LIMIT_REACHED") return "All badges were claimed before your message arrived.";
-	if (status === "BLOCKED") return "Your account is not eligible for this moment.";
+	if (status === "BLOCKED") return "Your account is not eligible for this mark.";
 	return "Something went wrong. Try sending the command again.";
 }
 
-function poolText(controller: MomentsCardViewModel): string {
-	const moment = controller.moment.value;
-	if (!moment) return "";
-	if (moment.maxClaims === null) return `${moment.claimCount} claimed`;
-	return `${Math.max(0, moment.maxClaims - moment.claimCount)} of ${moment.maxClaims} left`;
+function poolText(controller: MarksCardViewModel): string {
+	const mark = controller.mark.value;
+	if (!mark) return "";
+	if (mark.maxClaims === null) return `${mark.claimCount} claimed`;
+	return `${Math.max(0, mark.maxClaims - mark.claimCount)} of ${mark.maxClaims} left`;
 }
 
-export function MomentPopupTitle({ controller }: MomentCardComponentProps) {
-	const moment = controller.moment.value;
-	if (!moment) return null;
-	const image = pickBadgeImage(moment.badge.sources);
+export function MarkPopupTitle({ controller }: MarkCardComponentProps) {
+	const mark = controller.mark.value;
+	if (!mark) return null;
+	const image = pickBadgeImage(mark.badge.sources);
 	const claimed = controller.claimedAt.value !== null;
-	const ended = controller.hasEnded.value || moment.status === "ENDED";
+	const ended = controller.hasEnded.value || mark.status === "ENDED";
 	const meta = claimed
-		? `${moment.badge.name} is yours`
+		? `${mark.badge.name} is yours`
 		: controller.soldOut.value
-			? `All ${moment.maxClaims} badges were claimed`
+			? `All ${mark.maxClaims} badges were claimed`
 			: ended
-				? `Ended · ${moment.claimCount} viewers claimed it`
+				? `Ended · ${mark.claimCount} viewers claimed it`
 				: `${controller.countdownText.value} · ${poolText(controller)}`;
 	return (
 		<TopRow>
-			{image && <Badge $size={36} src={image} alt={moment.badge.name} />}
+			{image && <Badge $size={36} src={image} alt={mark.badge.name} />}
 			<Heading>
-				<Title>{claimed ? "Badge claimed" : moment.title}</Title>
+				<Title>{claimed ? "Badge claimed" : mark.title}</Title>
 				<Meta>{meta}</Meta>
 			</Heading>
 		</TopRow>
 	);
 }
 
-export function MomentPopupCompact({ controller, expand }: MomentCompactComponentProps) {
-	const moment = controller.moment.value;
-	if (!moment) return null;
-	const image = pickBadgeImage(moment.badge.sources);
+export function MarkPopupCompact({ controller, expand }: MarkCompactComponentProps) {
+	const mark = controller.mark.value;
+	if (!mark) return null;
+	const image = pickBadgeImage(mark.badge.sources);
 	const status = controller.claimedAt.value
 		? "Claimed"
 		: controller.soldOut.value
 			? "All claimed"
-			: controller.hasEnded.value || moment.status === "ENDED"
+			: controller.hasEnded.value || mark.status === "ENDED"
 				? "Ended"
 				: null;
 	return (
 		<CompactRow>
 			{image && <Badge $size={18} src={image} alt="" />}
-			<CompactTitle>{moment.title}</CompactTitle>
+			<CompactTitle>{mark.title}</CompactTitle>
 			{status ? (
 				<CompactStatus>{status}</CompactStatus>
 			) : (
@@ -227,7 +253,7 @@ export function MomentPopupCompact({ controller, expand }: MomentCompactComponen
 	);
 }
 
-function PollNote({ controller }: MomentCardComponentProps) {
+function PollNote({ controller }: MarkCardComponentProps) {
 	const phase = controller.pollPhase.value;
 	if (phase === "checking") return <Note>Looking for your message…</Note>;
 	if (phase === "timeout") {
@@ -255,10 +281,10 @@ function PollNote({ controller }: MomentCardComponentProps) {
 	return null;
 }
 
-export function MomentPopupContent({ controller }: MomentCardComponentProps) {
-	const moment = controller.moment.value;
-	if (!moment) return null;
-	const ended = controller.hasEnded.value || moment.status === "ENDED";
+export function MarkPopupContent({ controller }: MarkCardComponentProps) {
+	const mark = controller.mark.value;
+	if (!mark) return null;
+	const ended = controller.hasEnded.value || mark.status === "ENDED";
 	if (controller.claimedAt.value || ended || controller.soldOut.value) return null;
 	const loggedIn = controller.account.value.loggedIn;
 	const label = controller.claimBusy.value ? "Claiming…" : loggedIn ? "Claim badge" : "Log in & claim badge";
@@ -271,11 +297,16 @@ export function MomentPopupContent({ controller }: MomentCardComponentProps) {
 			<ChatAlternative>
 				or type
 				<CommandChip type="button" title="Paste into chat" onClick={controller.onInsertRedeem}>
-					{moment.redeemCommand}
+					{mark.redeemCommand}
 				</CommandChip>
-				<TextButton type="button" onClick={controller.onCopyCommand}>
-					{controller.copied.value ? "Copied" : "Copy"}
-				</TextButton>
+				<IconButton
+					type="button"
+					title={controller.copied.value ? "Copied" : "Copy command"}
+					aria-label="Copy command"
+					onClick={controller.onCopyCommand}
+				>
+					<CopyIcon copied={controller.copied.value} />
+				</IconButton>
 			</ChatAlternative>
 			{controller.claimError.value && <Note $error>{controller.claimError.value}</Note>}
 			{loggedIn && controller.viewerEligible.value === false && (

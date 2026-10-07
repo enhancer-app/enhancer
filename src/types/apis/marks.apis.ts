@@ -1,6 +1,6 @@
-export type MomentPlatform = "TWITCH" | "KICK";
+export type MarkPlatform = "TWITCH" | "KICK";
 
-export type PublicMomentStatus = "LIVE" | "ENDED";
+export type PublicMarkStatus = "LIVE" | "ENDED";
 
 export type RedeemResult =
 	| "GRANTED"
@@ -15,39 +15,39 @@ export type ClaimStatus = RedeemResult | "NONE";
 
 export type ClaimMethod = "ACCOUNT" | "CHAT";
 
-export type PublicMomentChannel = {
-	platform: MomentPlatform;
+export type PublicMarkChannel = {
+	platform: MarkPlatform;
 	externalChannelId: string;
 	login: string;
 	displayName: string;
 	avatarUrl: string | null;
 };
 
-export type PublicMomentBadge = {
+export type PublicMarkBadge = {
 	id: string;
 	name: string;
 	description: string;
 	sources: Record<string, string>;
 };
 
-export type PublicMoment = {
+export type PublicMark = {
 	id: string;
-	channel: PublicMomentChannel;
+	channel: PublicMarkChannel;
 	title: string;
 	reason: string;
 	code: string;
 	redeemCommand: string;
-	status: PublicMomentStatus;
+	status: PublicMarkStatus;
 	startedAt: string;
 	endsAt: string;
 	claimCount: number;
 	maxClaims: number | null;
 	graceSeconds: number;
-	badge: PublicMomentBadge;
+	badge: PublicMarkBadge;
 };
 
-export type ChannelMomentResponse = {
-	moment: PublicMoment | null;
+export type ChannelMarkResponse = {
+	mark: PublicMark | null;
 };
 
 export type ClaimStatusResponse = {
@@ -56,32 +56,32 @@ export type ClaimStatusResponse = {
 	attemptAt: string | null;
 };
 
-export type ViewerMomentClaim = {
+export type ViewerMarkClaim = {
 	claimedAt: string;
 	method: ClaimMethod;
 };
 
-export type ViewerMomentState = {
+export type ViewerMarkState = {
 	eligible: boolean;
 	accountLogin: string | null;
-	claim: ViewerMomentClaim | null;
+	claim: ViewerMarkClaim | null;
 };
 
-export type ClaimMomentResponse = {
+export type ClaimMarkResponse = {
 	result: "GRANTED" | "ALREADY_CLAIMED";
 	claimedAt: string;
 	accountLogin: string | null;
-	moment: { id: string; title: string };
+	mark: { id: string; title: string };
 	badge: { id: string; name: string; sources: Record<string, string> };
 };
 
-export type MomentUpdatedMessageData = {
-	momentId: string;
+export type MarkUpdatedMessageData = {
+	markId: string;
 	status: string;
 };
 
-export type MomentClaimsMessageData = {
-	momentId: string;
+export type MarkClaimsMessageData = {
+	markId: string;
 	claimCount: number;
 	maxClaims: number | null;
 };

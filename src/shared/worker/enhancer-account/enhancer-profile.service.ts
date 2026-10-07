@@ -1,7 +1,7 @@
 import type { Logger } from "$shared/logger/logger.ts";
 import { isViewerBadges, isViewerSummary } from "$shared/worker/enhancer-account/enhancer-account.guards.ts";
 import type { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
-import { isEnhancerApiError } from "$shared/worker/moments/moments.guards.ts";
+import { isEnhancerApiError } from "$shared/worker/marks/marks.guards.ts";
 import type { SaveBadgeSlotRequest } from "$types/apis/enhancer-account.apis.ts";
 import type {
 	EnhancerProfileResult,

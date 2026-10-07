@@ -93,9 +93,9 @@ export default class SettingsModule extends KickModule {
 
 		this.SETTING_DEFINITIONS = [
 			{
-				id: "momentsEnabled",
-				title: "Enable Moments",
-				description: "Shows limited-time Moments above the chat with badge claims.",
+				id: "marksEnabled",
+				title: "Enable Marks",
+				description: "Shows limited-time Marks above the chat with badge claims.",
 				type: "toggle",
 				categoryId: CATEGORY.GENERAL,
 			},
@@ -106,7 +106,7 @@ export default class SettingsModule extends KickModule {
 				type: "text",
 				categoryId: CATEGORY.ACCOUNT,
 				content: () => {
-					return <EnhancerAccountComponent workerService={workerService} />;
+					return <EnhancerAccountComponent workerService={workerService} platform="kick" />;
 				},
 				hideInfo: true,
 			},

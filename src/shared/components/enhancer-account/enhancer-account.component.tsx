@@ -1,5 +1,5 @@
 import { buildSlotRequest, cooldownMinutesLeft, groupBadgeSlots } from "$shared/enhancer-account/badge-slots.ts";
-import { pickBadgeImage } from "$shared/moments/moment-countdown.ts";
+import { pickBadgeImage } from "$shared/marks/mark-countdown.ts";
 import type { EnhancerViewerBadges, EnhancerViewerSummary } from "$types/apis/enhancer-account.apis.ts";
 import type {
 	BadgeSlotEditorProps,
@@ -99,24 +99,54 @@ const Button = styled.button<{ $primary?: boolean }>`
 	}
 `;
 
-const Picker = styled.div`
+const Section = styled.div`
+	background: var(--settings-surface);
+	border: 1px solid var(--settings-border);
+	border-radius: 12px;
+	padding: 14px 16px;
 	display: flex;
-	flex-wrap: wrap;
-	justify-content: flex-end;
-	gap: 6px;
-	max-width: 60%;
+	flex-direction: column;
+	gap: 12px;
 `;
 
-const Pick = styled.button<{ $selected: boolean }>`
-	width: 40px;
-	height: 40px;
+const SectionHeader = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 12px;
+`;
+
+const SectionTitle = styled.div`
+	flex: 1;
+	min-width: 0;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--settings-text-strong);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+`;
+
+const HeaderNote = styled.span<{ $error?: boolean }>`
+	font-size: 12px;
+	color: ${({ $error }) => ($error ? "#ff4757" : "var(--settings-text-muted)")};
+`;
+
+const Pills = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+`;
+
+const Pill = styled.button<{ $selected: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 32px;
+	padding: 0 10px;
 	border-radius: 8px;
-	padding: 0;
-	display: grid;
-	place-items: center;
+	font-size: 12px;
 	cursor: pointer;
-	font-size: 11px;
-	color: var(--settings-text-muted);
+	color: ${({ $selected }) => ($selected ? "var(--settings-text-strong)" : "var(--settings-text-secondary)")};
 	border: 1px solid ${({ $selected }) => ($selected ? "#9147ff" : "var(--settings-control-border)")};
 	background: ${({ $selected }) => ($selected ? "rgba(145, 71, 255, 0.12)" : "var(--settings-control-background)")};
 
@@ -126,18 +156,13 @@ const Pick = styled.button<{ $selected: boolean }>`
 
 	&:disabled {
 		cursor: not-allowed;
-		opacity: 0.4;
+		opacity: 0.45;
 	}
 
 	img {
-		width: 24px;
-		height: 24px;
+		width: 20px;
+		height: 20px;
 	}
-`;
-
-const Actions = styled.div`
-	display: flex;
-	gap: 6px;
 `;
 
 function formatProvider(provider: string): string {
@@ -145,9 +170,7 @@ function formatProvider(provider: string): string {
 }
 
 function slotTitle(group: BadgeSlotGroup): string {
-	const platform = formatProvider(group.accountPlatform);
-	if (group.scope === "GLOBAL") return `Everywhere on ${platform}`;
-	return `In ${group.channelLogin ?? "this channel"}'s chat`;
+	return group.scope === "GLOBAL" ? "Global badges" : (group.channelLogin ?? "Channel");
 }
 
 function BadgeSlotEditor({ group, onSave }: BadgeSlotEditorProps) {
@@ -158,7 +181,7 @@ function BadgeSlotEditor({ group, onSave }: BadgeSlotEditorProps) {
 	const dirty = selected !== group.selectedAssignmentId;
 	const regular = group.badges.filter((badge) => !badge.forced);
 	const forced = group.badges.filter((badge) => badge.forced);
-	const selectedName = regular.find((badge) => badge.assignmentId === selected)?.name ?? "nothing";
+	const locked = cooldown > 0 || saving;
 
 	useEffect(() => setSelected(group.selectedAssignmentId), [group.selectedAssignmentId]);
 
@@ -169,62 +192,43 @@ function BadgeSlotEditor({ group, onSave }: BadgeSlotEditorProps) {
 		setSaving(false);
 	};
 
-	const details = [
-		`Showing ${selectedName}`,
-		forced.length > 0 ? `always on: ${forced.map((badge) => badge.name).join(", ")}` : null,
-		cooldown > 0 ? `you can change it in ${cooldown} min` : null,
-	]
-		.filter(Boolean)
-		.join(" · ");
+	const note = error ?? (cooldown > 0 ? `You can change this in ${cooldown} min` : null);
 
 	return (
-		<Row>
-			<RowMain>
-				<RowTitle>{slotTitle(group)}</RowTitle>
-				<RowDescription $error={error !== null}>{error ?? details}</RowDescription>
-			</RowMain>
-			<Picker>
+		<Section>
+			<SectionHeader>
+				<SectionTitle>{slotTitle(group)}</SectionTitle>
+				{note && <HeaderNote $error={error !== null}>{note}</HeaderNote>}
+				<Button type="button" $primary={dirty} disabled={!dirty || locked} onClick={save}>
+					{saving ? "…" : "Save"}
+				</Button>
+			</SectionHeader>
+			<Pills>
 				{regular.map((badge) => {
 					const image = pickBadgeImage(badge.sources);
 					return (
-						<Pick
+						<Pill
 							key={badge.assignmentId}
 							type="button"
-							title={badge.name}
-							aria-label={badge.name}
 							$selected={selected === badge.assignmentId}
-							disabled={cooldown > 0 || saving}
+							disabled={locked}
 							onClick={() => setSelected(badge.assignmentId)}
 						>
-							{image ? <img src={image} alt="" /> : badge.name.charAt(0)}
-						</Pick>
+							{image && <img src={image} alt="" />}
+							{badge.name}
+						</Pill>
 					);
 				})}
-				<Pick
-					type="button"
-					title="None"
-					$selected={selected === null}
-					disabled={cooldown > 0 || saving}
-					onClick={() => setSelected(null)}
-				>
+				<Pill type="button" $selected={selected === null} disabled={locked} onClick={() => setSelected(null)}>
 					None
-				</Pick>
-			</Picker>
-			{dirty && (
-				<Actions>
-					<Button type="button" disabled={saving} onClick={() => setSelected(group.selectedAssignmentId)}>
-						Cancel
-					</Button>
-					<Button type="button" $primary disabled={saving || cooldown > 0} onClick={save}>
-						{saving ? "…" : "Save"}
-					</Button>
-				</Actions>
-			)}
-		</Row>
+				</Pill>
+			</Pills>
+			{forced.length > 0 && <HeaderNote>Always shown: {forced.map((badge) => badge.name).join(", ")}</HeaderNote>}
+		</Section>
 	);
 }
 
-export function EnhancerAccountComponent({ workerService }: EnhancerAccountComponentProps) {
+export function EnhancerAccountComponent({ workerService, platform }: EnhancerAccountComponentProps) {
 	const [account, setAccount] = useState<EnhancerAccountState>({ loggedIn: false });
 	const [profile, setProfile] = useState<EnhancerViewerSummary | null>(null);
 	const [badges, setBadges] = useState<EnhancerViewerBadges | null>(null);
@@ -311,7 +315,7 @@ export function EnhancerAccountComponent({ workerService }: EnhancerAccountCompo
 						<RowTitle>Enhancer account</RowTitle>
 						<RowDescription $error={error !== null}>
 							{error ??
-								"Log in to claim Moment badges with one click and choose which badge shows next to your name. Not required: you can always claim by typing the command in chat."}
+								"Log in to claim Mark badges with one click and choose which badge shows next to your name. Not required: you can always claim by typing the command in chat."}
 						</RowDescription>
 					</RowMain>
 					<Button type="button" $primary onClick={login} disabled={busy}>
@@ -326,7 +330,13 @@ export function EnhancerAccountComponent({ workerService }: EnhancerAccountCompo
 	const displayName =
 		user?.displayName ?? user?.username ?? account.displayName ?? account.username ?? "Enhancer account";
 	const badgeCount = badges ? badges.global.length + badges.channels.length : null;
-	const groups = badges ? groupBadgeSlots(badges) : [];
+	const platformBadges = badges
+		? {
+				global: badges.global.filter((badge) => badge.accountPlatform.toLowerCase() === platform),
+				channels: badges.channels.filter((badge) => badge.accountPlatform.toLowerCase() === platform),
+			}
+		: null;
+	const groups = platformBadges ? groupBadgeSlots(platformBadges) : [];
 	const platforms = profile?.identities.map((identity) => formatProvider(identity.provider)) ?? [];
 	const summary = [
 		platforms.length > 0 ? `${platforms.join(", ")} connected` : null,
@@ -355,7 +365,7 @@ export function EnhancerAccountComponent({ workerService }: EnhancerAccountCompo
 			{badges === null ? (
 				<RowDescription>Loading badges…</RowDescription>
 			) : groups.length === 0 ? (
-				<RowDescription>No badges yet. Claim one during a live Moment.</RowDescription>
+				<RowDescription>No badges yet. Claim one during a live Mark.</RowDescription>
 			) : (
 				groups.map((group) => <BadgeSlotEditor key={group.key} group={group} onSave={saveSlot} />)
 			)}

@@ -1,26 +1,26 @@
 import type { Logger } from "$shared/logger/logger.ts";
 import type { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
 import {
-	isChannelMomentResponse,
-	isClaimMomentResponse,
+	isChannelMarkResponse,
+	isClaimMarkResponse,
 	isClaimStatusResponse,
 	isEnhancerApiError,
-	isViewerMomentState,
-} from "$shared/worker/moments/moments.guards.ts";
+	isViewerMarkState,
+} from "$shared/worker/marks/marks.guards.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type {
-	ClaimMomentErrorReason,
-	ClaimMomentResult,
-	GetChannelMomentResponse,
-	MomentClaimStatusResult,
-	MomentViewerStateResult,
-} from "$types/shared/worker/moments-worker.types.ts";
+	ClaimMarkErrorReason,
+	ClaimMarkResult,
+	GetChannelMarkResponse,
+	MarkClaimStatusResult,
+	MarkViewerStateResult,
+} from "$types/shared/worker/marks-worker.types.ts";
 
-export class MomentsService {
+export class MarksService {
 	private static readonly HTTP_BASE_URL = "https://api.enhancer.at";
-	private static readonly KNOWN_CLAIM_ERRORS: ReadonlySet<string> = new Set<ClaimMomentErrorReason>([
-		"MOMENT_NOT_LIVE",
-		"MOMENT_LIMIT_REACHED",
+	private static readonly KNOWN_CLAIM_ERRORS: ReadonlySet<string> = new Set<ClaimMarkErrorReason>([
+		"MARK_NOT_LIVE",
+		"MARK_LIMIT_REACHED",
 		"NO_PLATFORM_ACCOUNT",
 	]);
 
@@ -29,24 +29,24 @@ export class MomentsService {
 		private readonly accountService: EnhancerAccountService,
 	) {}
 
-	async getChannelMoment(platform: PlatformType, externalId: string): Promise<GetChannelMomentResponse> {
+	async getChannelMark(platform: PlatformType, externalId: string): Promise<GetChannelMarkResponse> {
 		if (!externalId) throw new Error("Channel external ID is required");
 		try {
-			const response = await fetch(this.url(`/v1/channel/${platform}/${encodeURIComponent(externalId)}/moment`), {
+			const response = await fetch(this.url(`/v1/channel/${platform}/${encodeURIComponent(externalId)}/mark`), {
 				headers: { Accept: "application/json" },
 			});
-			if (response.status === 404) return { kind: "ok", moment: null };
+			if (response.status === 404) return { kind: "ok", mark: null };
 			const body: unknown = await response.json().catch(() => null);
 			if (!response.ok) return { kind: "error", message: this.describeError(body, response.status) };
-			if (!isChannelMomentResponse(body)) return { kind: "error", message: "Invalid moment response" };
-			return { kind: "ok", moment: body.moment };
+			if (!isChannelMarkResponse(body)) return { kind: "error", message: "Invalid mark response" };
+			return { kind: "ok", mark: body.mark };
 		} catch (error) {
 			return { kind: "error", message: this.errorMessage(error) };
 		}
 	}
 
-	async getClaimStatus(momentId: string, login: string): Promise<MomentClaimStatusResult> {
-		const url = new URL(this.url(`/v1/moments/${encodeURIComponent(momentId)}/claim-status`));
+	async getClaimStatus(markId: string, login: string): Promise<MarkClaimStatusResult> {
+		const url = new URL(this.url(`/v1/marks/${encodeURIComponent(markId)}/claim-status`));
 		url.searchParams.set("login", login.toLowerCase());
 		try {
 			const response = await fetch(url, { headers: { Accept: "application/json" } });
@@ -61,22 +61,21 @@ export class MomentsService {
 		}
 	}
 
-	async getViewerState(momentId: string): Promise<MomentViewerStateResult> {
-		const result = await this.accountService.authorizedFetch(
-			this.url(`/v1/me/moments/${encodeURIComponent(momentId)}`),
-			{ headers: { Accept: "application/json" } },
-		);
+	async getViewerState(markId: string): Promise<MarkViewerStateResult> {
+		const result = await this.accountService.authorizedFetch(this.url(`/v1/me/marks/${encodeURIComponent(markId)}`), {
+			headers: { Accept: "application/json" },
+		});
 		if (result.kind === "unauthenticated") return { kind: "unauthenticated" };
 		if (result.kind === "network-error") return { kind: "error", message: result.message };
 		const body: unknown = await result.response.json().catch(() => null);
 		if (!result.response.ok) return { kind: "error", message: this.describeError(body, result.response.status) };
-		if (!isViewerMomentState(body)) return { kind: "error", message: "Invalid viewer state response" };
+		if (!isViewerMarkState(body)) return { kind: "error", message: "Invalid viewer state response" };
 		return { kind: "ok", state: body };
 	}
 
-	async claim(momentId: string): Promise<ClaimMomentResult> {
+	async claim(markId: string): Promise<ClaimMarkResult> {
 		const result = await this.accountService.authorizedFetch(
-			this.url(`/v1/me/moments/${encodeURIComponent(momentId)}/claim`),
+			this.url(`/v1/me/marks/${encodeURIComponent(markId)}/claim`),
 			{ method: "POST", headers: { Accept: "application/json" } },
 		);
 		if (result.kind === "unauthenticated") {
@@ -88,20 +87,20 @@ export class MomentsService {
 		const { response } = result;
 		const body: unknown = await response.json().catch(() => null);
 		if (response.ok) {
-			if (isClaimMomentResponse(body)) return { kind: "ok", claim: body };
+			if (isClaimMarkResponse(body)) return { kind: "ok", claim: body };
 			return { kind: "error", reason: "UNKNOWN", message: "Invalid claim response" };
 		}
 		const message = this.describeError(body, response.status);
-		this.logger.warn(`Moment claim failed: ${message}`);
+		this.logger.warn(`Mark claim failed: ${message}`);
 		return { kind: "error", reason: this.mapClaimError(body, response.status), message };
 	}
 
-	private mapClaimError(body: unknown, status: number): ClaimMomentErrorReason {
+	private mapClaimError(body: unknown, status: number): ClaimMarkErrorReason {
 		const code = isEnhancerApiError(body) ? body.error.code : null;
-		if (code && MomentsService.KNOWN_CLAIM_ERRORS.has(code)) return code as ClaimMomentErrorReason;
+		if (code && MarksService.KNOWN_CLAIM_ERRORS.has(code)) return code as ClaimMarkErrorReason;
 		if (status === 403) return "FORBIDDEN";
 		if (status === 404) return "NOT_FOUND";
-		if (status === 409) return "MOMENT_NOT_LIVE";
+		if (status === 409) return "MARK_NOT_LIVE";
 		if (status >= 500 || status === 429) return "NETWORK_ERROR";
 		return "UNKNOWN";
 	}
@@ -116,6 +115,6 @@ export class MomentsService {
 	}
 
 	private url(path: string): string {
-		return new URL(path, MomentsService.HTTP_BASE_URL).toString();
+		return new URL(path, MarksService.HTTP_BASE_URL).toString();
 	}
 }

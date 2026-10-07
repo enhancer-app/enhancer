@@ -1,4 +1,4 @@
-import { isRecord } from "$shared/worker/moments/moments.guards.ts";
+import { isRecord } from "$shared/worker/marks/marks.guards.ts";
 import type {
 	EnhancerViewerBadge,
 	EnhancerViewerBadges,

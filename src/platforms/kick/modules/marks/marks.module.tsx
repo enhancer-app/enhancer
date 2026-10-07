@@ -1,74 +1,74 @@
 import KickModule from "$kick/kick.module.ts";
 import {
-	MomentPopupCompact,
-	MomentPopupContent,
-	MomentPopupTitle,
-} from "$shared/components/moment-card/moment-card.component.tsx";
-import { MomentsController } from "$shared/moments/moments-controller.ts";
+	MarkPopupCompact,
+	MarkPopupContent,
+	MarkPopupTitle,
+} from "$shared/components/mark-card/mark-card.component.tsx";
+import { MarksController } from "$shared/marks/marks-controller.ts";
 import type { EnhancerMessageEvent } from "$types/apis/enhancer.apis.ts";
 import type { KickChatMessageEvent } from "$types/platforms/kick/kick.events.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 import { effect } from "@preact/signals";
 
-export default class MomentsModule extends KickModule {
-	private static readonly POPUP_ID = "moment";
+export default class MarksModule extends KickModule {
+	private static readonly POPUP_ID = "mark";
 
-	private controller: MomentsController | null = null;
-	private popupMomentId: string | null = null;
+	private controller: MarksController | null = null;
+	private popupMarkId: string | null = null;
 	private ownLogin: string | null | undefined;
 
 	readonly config: KickModuleConfig = {
-		name: "moments",
+		name: "marks",
 		appliers: [
 			{
 				type: "selector",
-				key: "moments-chat-footer",
+				key: "marks-chat-footer",
 				selectors: ["#chatroom-footer"],
 				callback: this.handleChatFooter.bind(this),
 				once: true,
 			},
 			{
 				type: "event",
-				key: "moments-joined",
+				key: "marks-joined",
 				event: "extension:joined-channel",
 				callback: this.handleJoinedChannel.bind(this),
 			},
 			{
 				type: "event",
-				key: "moments-message",
+				key: "marks-message",
 				event: "extension:enhancer-api-message",
 				callback: this.handleApiMessage.bind(this),
 			},
 			{
 				type: "event",
-				key: "moments-chat",
+				key: "marks-chat",
 				event: "kick:chatMessage",
 				callback: this.handleChatMessage.bind(this),
 			},
 			{
 				type: "event",
-				key: "moments-settings",
-				event: "kick:settings:momentsEnabled",
+				key: "marks-settings",
+				event: "kick:settings:marksEnabled",
 				callback: this.handleSettingsToggle.bind(this),
 			},
 		],
-		enabled: () => this.settings().momentsEnabled,
+		enabled: () => this.settings().marksEnabled,
 	};
 
 	async initialize() {
-		const controller = new MomentsController({
+		const controller = new MarksController({
 			platform: "kick",
 			workerService: this.workerService(),
-			loadDismissed: async () => (await this.localStorage().get("momentsDismissed")) ?? [],
-			saveDismissed: (ids) => this.localStorage().save("momentsDismissed", ids),
+			loadDismissed: async () => (await this.localStorage().get("marksDismissed")) ?? [],
+			saveDismissed: (ids) => this.localStorage().save("marksDismissed", ids),
 			resolveOwnLogin: () => this.getOwnLogin(),
 			insertCommand: (command) => this.kickUtils().setChatInputContent(command, true),
 		});
 		this.controller = controller;
 		controller.start();
 		effect(() => {
-			const momentId = controller.moment.value?.id ?? null;
-			queueMicrotask(() => this.syncPopup(momentId));
+			const markId = controller.mark.value?.id ?? null;
+			queueMicrotask(() => this.syncPopup(markId));
 		});
 	}
 
@@ -80,39 +80,39 @@ export default class MomentsModule extends KickModule {
 		return login;
 	}
 
-	private syncPopup(momentId: string | null) {
+	private syncPopup(markId: string | null) {
 		const controller = this.controller;
 		if (!controller) return;
-		if (!momentId) {
-			if (this.popupMomentId) this.emitter.emit("kick:chatPopupClose", MomentsModule.POPUP_ID);
-			this.popupMomentId = null;
+		if (!markId) {
+			if (this.popupMarkId) this.emitter.emit("kick:chatPopupClose", MarksModule.POPUP_ID);
+			this.popupMarkId = null;
 			return;
 		}
-		if (this.popupMomentId === momentId && this.isPopupMounted()) return;
-		this.popupMomentId = momentId;
+		if (this.popupMarkId === markId && this.isPopupMounted()) return;
+		this.popupMarkId = markId;
 		this.emitter.emit("kick:chatPopupMessage", {
-			id: MomentsModule.POPUP_ID,
-			title: <MomentPopupTitle controller={controller} />,
-			content: <MomentPopupContent controller={controller} />,
-			compactContent: (expand) => <MomentPopupCompact controller={controller} expand={expand} />,
+			id: MarksModule.POPUP_ID,
+			title: <MarkPopupTitle controller={controller} />,
+			content: <MarkPopupContent controller={controller} />,
+			compactContent: (expand) => <MarkPopupCompact controller={controller} expand={expand} />,
 			autoclose: controller.autoCloseSeconds,
 			appearance: "card",
 			progress: controller.timeProgress,
 			onClose: () => {
-				this.popupMomentId = null;
+				this.popupMarkId = null;
 				controller.onDismiss();
 			},
 		});
 	}
 
 	private isPopupMounted(): boolean {
-		return document.querySelector(`[data-popup-id="${MomentsModule.POPUP_ID}"]`) !== null;
+		return document.querySelector(`[data-popup-id="${MarksModule.POPUP_ID}"]`) !== null;
 	}
 
 	private handleChatFooter() {
 		if (!this.controller || !this.isModuleEnabled()) return;
 		void this.syncChannel();
-		this.syncPopup(this.controller.moment.value?.id ?? null);
+		this.syncPopup(this.controller.mark.value?.id ?? null);
 	}
 
 	private async syncChannel() {

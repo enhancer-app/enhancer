@@ -1,4 +1,4 @@
-import type { ClaimStatus } from "$types/apis/moments.apis.ts";
+import type { ClaimStatus } from "$types/apis/marks.apis.ts";
 
 export const CLAIM_STATUS_POLL_DELAYS = [2000, 5000, 10000, 30000, 30000, 30000];
 

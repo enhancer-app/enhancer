@@ -22,14 +22,14 @@ import type {
 	SaveEnhancerBadgeSlotResponse,
 } from "$types/shared/worker/enhancer-account-worker.types.ts";
 import type {
-	ClaimMomentResult,
-	GetChannelMomentPayload,
-	GetChannelMomentResponse,
-	GetMomentClaimStatusPayload,
-	MomentClaimStatusResult,
-	MomentIdPayload,
-	MomentViewerStateResult,
-} from "$types/shared/worker/moments-worker.types.ts";
+	ClaimMarkResult,
+	GetChannelMarkPayload,
+	GetChannelMarkResponse,
+	GetMarkClaimStatusPayload,
+	MarkClaimStatusResult,
+	MarkIdPayload,
+	MarkViewerStateResult,
+} from "$types/shared/worker/marks-worker.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 
 export type { PlatformType };
@@ -193,21 +193,21 @@ export interface WorkerApiActions {
 		payload: SaveEnhancerBadgeSlotPayload;
 		response: SaveEnhancerBadgeSlotResponse;
 	};
-	getChannelMoment: {
-		payload: GetChannelMomentPayload;
-		response: GetChannelMomentResponse;
+	getChannelMark: {
+		payload: GetChannelMarkPayload;
+		response: GetChannelMarkResponse;
 	};
-	getMomentClaimStatus: {
-		payload: GetMomentClaimStatusPayload;
-		response: MomentClaimStatusResult;
+	getMarkClaimStatus: {
+		payload: GetMarkClaimStatusPayload;
+		response: MarkClaimStatusResult;
 	};
-	getMomentViewerState: {
-		payload: MomentIdPayload;
-		response: MomentViewerStateResult;
+	getMarkViewerState: {
+		payload: MarkIdPayload;
+		response: MarkViewerStateResult;
 	};
-	claimMoment: {
-		payload: MomentIdPayload;
-		response: ClaimMomentResult;
+	claimMark: {
+		payload: MarkIdPayload;
+		response: ClaimMarkResult;
 	};
 }
 

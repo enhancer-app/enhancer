@@ -4,7 +4,7 @@ import { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer
 import { EnhancerProfileService } from "$shared/worker/enhancer-account/enhancer-profile.service.ts";
 import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
-import { MomentsService } from "$shared/worker/moments/moments.service.ts";
+import { MarksService } from "$shared/worker/marks/marks.service.ts";
 import { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
 import { WatchtimeAccumulator } from "$shared/worker/watchtime/watchtime.accumulator.ts";
 import { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
@@ -28,8 +28,8 @@ export default class WorkerBackground {
 	private readonly enhancerAccountService = new EnhancerAccountService(
 		new Logger({ context: "enhancer-account", source: "background" }),
 	);
-	private readonly momentsService = new MomentsService(
-		new Logger({ context: "moments", source: "background" }),
+	private readonly marksService = new MarksService(
+		new Logger({ context: "marks", source: "background" }),
 		this.enhancerAccountService,
 	);
 	private readonly enhancerProfileService = new EnhancerProfileService(
@@ -43,7 +43,7 @@ export default class WorkerBackground {
 		this.watchtimeAccumulator,
 		this.enhancerApiService,
 		this.enhancerAccountService,
-		this.momentsService,
+		this.marksService,
 		this.enhancerProfileService,
 	);
 

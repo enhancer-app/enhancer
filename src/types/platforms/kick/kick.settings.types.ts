@@ -28,7 +28,7 @@ export type KickSettings = {
 	xayoWatchtimePeriod: XayoWatchtimePeriod;
 	channelSection: boolean;
 	_disableExtensionOnDashboard: boolean;
-	momentsEnabled: boolean;
+	marksEnabled: boolean;
 };
 
 export type KickSettingsEvents = {

@@ -1,9 +1,5 @@
 import { expect, test } from "bun:test";
-import {
-	CLAIM_STATUS_POLL_DELAYS,
-	getClaimPollDelay,
-	isTerminalClaimStatus,
-} from "$shared/moments/claim-status-poll.ts";
+import { CLAIM_STATUS_POLL_DELAYS, getClaimPollDelay, isTerminalClaimStatus } from "$shared/marks/claim-status-poll.ts";
 
 test("treats outcome statuses as terminal and NONE as pending", () => {
 	for (const status of [

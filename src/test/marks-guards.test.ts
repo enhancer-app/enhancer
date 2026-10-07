@@ -5,17 +5,17 @@ import {
 	isOidcTokenResponse,
 } from "$shared/worker/enhancer-account/enhancer-account.guards.ts";
 import {
-	isChannelMomentResponse,
-	isClaimMomentResponse,
+	isChannelMarkResponse,
+	isClaimMarkResponse,
 	isClaimStatusResponse,
 	isEnhancerApiError,
-	isMomentClaimsMessageData,
-	isPublicMoment,
-	isViewerMomentState,
-} from "$shared/worker/moments/moments.guards.ts";
+	isMarkClaimsMessageData,
+	isPublicMark,
+	isViewerMarkState,
+} from "$shared/worker/marks/marks.guards.ts";
 
-const moment = {
-	id: "moment-1",
+const mark = {
+	id: "mark-1",
 	channel: {
 		platform: "TWITCH",
 		externalChannelId: "123",
@@ -33,21 +33,21 @@ const moment = {
 	claimCount: 3,
 	maxClaims: null,
 	graceSeconds: 10,
-	badge: { id: "badge-1", name: "Moment badge", description: "Claimed live", sources: { "1x": "https://x/1" } },
+	badge: { id: "badge-1", name: "Mark badge", description: "Claimed live", sources: { "1x": "https://x/1" } },
 };
 
-test("accepts a valid public moment and channel response", () => {
-	expect(isPublicMoment(moment)).toBe(true);
-	expect(isChannelMomentResponse({ moment })).toBe(true);
-	expect(isChannelMomentResponse({ moment: null })).toBe(true);
+test("accepts a valid public mark and channel response", () => {
+	expect(isPublicMark(mark)).toBe(true);
+	expect(isChannelMarkResponse({ mark })).toBe(true);
+	expect(isChannelMarkResponse({ mark: null })).toBe(true);
 });
 
-test("rejects public moments with bad status, dates or badge", () => {
-	expect(isPublicMoment({ ...moment, status: "READY" })).toBe(false);
-	expect(isPublicMoment({ ...moment, endsAt: "yesterday" })).toBe(false);
-	expect(isPublicMoment({ ...moment, channel: { ...moment.channel, platform: "YOUTUBE" } })).toBe(false);
-	expect(isPublicMoment({ ...moment, badge: { id: "b" } })).toBe(false);
-	expect(isPublicMoment(null)).toBe(false);
+test("rejects public marks with bad status, dates or badge", () => {
+	expect(isPublicMark({ ...mark, status: "READY" })).toBe(false);
+	expect(isPublicMark({ ...mark, endsAt: "yesterday" })).toBe(false);
+	expect(isPublicMark({ ...mark, channel: { ...mark.channel, platform: "YOUTUBE" } })).toBe(false);
+	expect(isPublicMark({ ...mark, badge: { id: "b" } })).toBe(false);
+	expect(isPublicMark(null)).toBe(false);
 });
 
 test("validates claim status responses including NONE", () => {
@@ -60,27 +60,27 @@ test("validates claim status responses including NONE", () => {
 });
 
 test("validates viewer state and claim responses", () => {
-	expect(isViewerMomentState({ eligible: true, accountLogin: "user", claim: null })).toBe(true);
+	expect(isViewerMarkState({ eligible: true, accountLogin: "user", claim: null })).toBe(true);
 	expect(
-		isViewerMomentState({
+		isViewerMarkState({
 			eligible: false,
 			accountLogin: null,
 			claim: { claimedAt: "2026-01-01T00:01:00.000Z", method: "CHAT" },
 		}),
 	).toBe(true);
-	expect(isViewerMomentState({ eligible: "yes", accountLogin: null, claim: null })).toBe(false);
+	expect(isViewerMarkState({ eligible: "yes", accountLogin: null, claim: null })).toBe(false);
 	expect(
-		isClaimMomentResponse({
+		isClaimMarkResponse({
 			result: "GRANTED",
 			claimedAt: "2026-01-01T00:01:00.000Z",
 			accountLogin: "user",
-			moment: { id: "m", title: "t" },
+			mark: { id: "m", title: "t" },
 			badge: { id: "b", name: "n", sources: {} },
 		}),
 	).toBe(true);
-	expect(isClaimMomentResponse({ result: "GRANTED", claimedAt: "bad-date", moment: {}, badge: {} })).toBe(false);
-	expect(isEnhancerApiError({ error: { code: "MOMENT_NOT_LIVE", message: "ended" } })).toBe(true);
-	expect(isEnhancerApiError({ error: "MOMENT_NOT_LIVE" })).toBe(false);
+	expect(isClaimMarkResponse({ result: "GRANTED", claimedAt: "bad-date", mark: {}, badge: {} })).toBe(false);
+	expect(isEnhancerApiError({ error: { code: "MARK_NOT_LIVE", message: "ended" } })).toBe(true);
+	expect(isEnhancerApiError({ error: "MARK_NOT_LIVE" })).toBe(false);
 });
 
 test("validates OIDC token and error responses", () => {
@@ -115,9 +115,9 @@ test("validates stored account sessions", () => {
 	expect(isEnhancerAccountSession(null)).toBe(false);
 });
 
-test("validates moment.claims message data", () => {
-	expect(isMomentClaimsMessageData({ momentId: "m1", claimCount: 17, maxClaims: 100 })).toBe(true);
-	expect(isMomentClaimsMessageData({ momentId: "m1", claimCount: 3, maxClaims: null })).toBe(true);
-	expect(isMomentClaimsMessageData({ momentId: "m1", claimCount: -1, maxClaims: null })).toBe(false);
-	expect(isMomentClaimsMessageData({ momentId: 1, claimCount: 1, maxClaims: null })).toBe(false);
+test("validates mark.claims message data", () => {
+	expect(isMarkClaimsMessageData({ markId: "m1", claimCount: 17, maxClaims: 100 })).toBe(true);
+	expect(isMarkClaimsMessageData({ markId: "m1", claimCount: 3, maxClaims: null })).toBe(true);
+	expect(isMarkClaimsMessageData({ markId: "m1", claimCount: -1, maxClaims: null })).toBe(false);
+	expect(isMarkClaimsMessageData({ markId: 1, claimCount: 1, maxClaims: null })).toBe(false);
 });

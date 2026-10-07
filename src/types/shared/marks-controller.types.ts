@@ -1,19 +1,19 @@
-import type { ClaimMomentResponse, ClaimStatus, PublicMoment } from "$types/apis/moments.apis.ts";
+import type { ClaimMarkResponse, ClaimStatus, PublicMark } from "$types/apis/marks.apis.ts";
 import type { EnhancerAccountState } from "$types/shared/worker/enhancer-account-worker.types.ts";
 import type { ReadonlySignal, Signal } from "@preact/signals";
 
-export type MomentPollPhase = "idle" | "checking" | "settled" | "timeout";
+export type MarkPollPhase = "idle" | "checking" | "settled" | "timeout";
 
-export type MomentsCardViewModel = {
-	moment: Signal<PublicMoment | null>;
+export type MarksCardViewModel = {
+	mark: Signal<PublicMark | null>;
 	account: Signal<EnhancerAccountState>;
 	claimedAt: Signal<string | null>;
 	claimMethod: Signal<string | null>;
 	viewerEligible: Signal<boolean | null>;
 	claimBusy: Signal<boolean>;
 	claimError: Signal<string | null>;
-	claimReceipt: Signal<ClaimMomentResponse | null>;
-	pollPhase: Signal<MomentPollPhase>;
+	claimReceipt: Signal<ClaimMarkResponse | null>;
+	pollPhase: Signal<MarkPollPhase>;
 	pollStatus: Signal<ClaimStatus | null>;
 	countdownText: Signal<string>;
 	hasEnded: Signal<boolean>;

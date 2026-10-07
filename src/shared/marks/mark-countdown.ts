@@ -1,9 +1,9 @@
-export type MomentCountdown = {
+export type MarkCountdown = {
 	ended: boolean;
 	text: string;
 };
 
-export function formatMomentCountdown(endsAt: string, now = Date.now()): MomentCountdown {
+export function formatMarkCountdown(endsAt: string, now = Date.now()): MarkCountdown {
 	const remaining = Date.parse(endsAt) - now;
 	if (Number.isNaN(remaining) || remaining <= 0) return { ended: true, text: "Ended" };
 	const totalSeconds = Math.ceil(remaining / 1000);
