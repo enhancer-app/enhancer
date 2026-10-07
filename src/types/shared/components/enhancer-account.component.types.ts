@@ -5,6 +5,7 @@ import type { EnhancerViewerBadge } from "$types/apis/enhancer-account.apis.ts";
 export type EnhancerAccountComponentProps = {
 	workerService: WorkerService;
 	platform: PlatformType;
+	logoUrl: string;
 };
 
 export type BadgeSlotGroup = {
@@ -15,6 +16,7 @@ export type BadgeSlotGroup = {
 	accountLogin: string;
 	channelId: string | null;
 	channelLogin: string | null;
+	channelDisplayName: string | null;
 	channelAvatarUrl: string | null;
 	badges: EnhancerViewerBadge[];
 	selectedAssignmentId: string | null;
@@ -24,4 +26,11 @@ export type BadgeSlotGroup = {
 export type BadgeSlotEditorProps = {
 	group: BadgeSlotGroup;
 	onSave: (group: BadgeSlotGroup, assignmentId: string | null) => Promise<string | null>;
+};
+
+export type LoginScreenProps = {
+	logoUrl: string;
+	busy: boolean;
+	error: string | null;
+	onLogin: () => void;
 };

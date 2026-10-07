@@ -90,6 +90,7 @@ export default class SettingsModule extends KickModule {
 			twitter: await this.commonUtils().getAssetFile(this.workerService(), "brands/twitter.svg"),
 			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
 		} as const;
+		const enhancerLogo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo.svg");
 
 		this.SETTING_DEFINITIONS = [
 			{
@@ -106,7 +107,7 @@ export default class SettingsModule extends KickModule {
 				type: "text",
 				categoryId: CATEGORY.ACCOUNT,
 				content: () => {
-					return <EnhancerAccountComponent workerService={workerService} platform="kick" />;
+					return <EnhancerAccountComponent workerService={workerService} platform="kick" logoUrl={enhancerLogo} />;
 				},
 				hideInfo: true,
 			},

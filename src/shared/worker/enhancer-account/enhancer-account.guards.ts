@@ -79,6 +79,7 @@ function isViewerBadge(value: unknown): value is EnhancerViewerBadge {
 		(value.scope === "GLOBAL" || value.scope === "CHANNEL") &&
 		isNullableString(value.channelId) &&
 		isNullableString(value.channelLogin) &&
+		(value.channelDisplayName === undefined || isNullableString(value.channelDisplayName)) &&
 		isNullableString(value.channelAvatarUrl) &&
 		typeof value.hidden === "boolean" &&
 		typeof value.forced === "boolean" &&

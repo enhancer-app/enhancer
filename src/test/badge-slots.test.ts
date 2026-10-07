@@ -14,6 +14,7 @@ const badge = (overrides: Partial<EnhancerViewerBadge>): EnhancerViewerBadge => 
 	scope: "GLOBAL",
 	channelId: null,
 	channelLogin: null,
+	channelDisplayName: null,
 	channelAvatarUrl: null,
 	hidden: false,
 	forced: false,

@@ -123,10 +123,10 @@ const Card = styled.div<{ $variant: ChatPopupVariant }>`
 	overflow: hidden;
 `;
 
-const CardBar = styled.div<{ $bottom: boolean }>`
+const CardBar = styled.div`
 	position: absolute;
 	left: 0;
-	${({ $bottom }) => ($bottom ? "bottom: 0;" : "top: 0;")}
+	bottom: 0;
 	height: 2px;
 	background: var(--m-accent);
 	transition: width 1s linear;
@@ -235,7 +235,7 @@ export function ChatPopupComponent({
 		const ratio = hasTimer ? timerRatio : (progress?.value ?? null);
 		return (
 			<Card $variant={variant}>
-				{ratio !== null && <CardBar $bottom={compact} style={{ width: `${Math.max(0, Math.min(1, ratio)) * 100}%` }} />}
+				{ratio !== null && <CardBar style={{ width: `${Math.max(0, Math.min(1, ratio)) * 100}%` }} />}
 				<CardBody $compact={compact}>
 					<CardRow>
 						<CardRowMain>{compact ? compactContent?.(expand) : title}</CardRowMain>

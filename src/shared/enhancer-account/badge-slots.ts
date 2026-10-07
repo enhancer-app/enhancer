@@ -19,6 +19,7 @@ export function groupBadgeSlots(badges: EnhancerViewerBadges): BadgeSlotGroup[] 
 				accountLogin: badge.accountLogin,
 				channelId: badge.channelId,
 				channelLogin: badge.channelLogin,
+				channelDisplayName: badge.channelDisplayName ?? null,
 				channelAvatarUrl: badge.channelAvatarUrl,
 				badges: [],
 				selectedAssignmentId: null,
@@ -34,7 +35,7 @@ export function groupBadgeSlots(badges: EnhancerViewerBadges): BadgeSlotGroup[] 
 		(a, b) =>
 			(a.scope === b.scope ? 0 : a.scope === "GLOBAL" ? -1 : 1) ||
 			a.accountPlatform.localeCompare(b.accountPlatform) ||
-			(a.channelLogin ?? "").localeCompare(b.channelLogin ?? ""),
+			(a.channelDisplayName ?? a.channelLogin ?? "").localeCompare(b.channelDisplayName ?? b.channelLogin ?? ""),
 	);
 }
 

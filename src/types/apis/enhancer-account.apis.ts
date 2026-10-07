@@ -50,6 +50,7 @@ export type EnhancerViewerBadge = {
 	scope: "GLOBAL" | "CHANNEL";
 	channelId: string | null;
 	channelLogin: string | null;
+	channelDisplayName: string | null;
 	channelAvatarUrl: string | null;
 	hidden: boolean;
 	forced: boolean;

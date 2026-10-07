@@ -76,6 +76,7 @@ export default class SettingsModule extends TwitchModule {
 			twitter: await this.commonUtils().getAssetFile(this.workerService(), "brands/twitter.svg"),
 			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
 		} as const;
+		const enhancerLogo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo.svg");
 
 		this.SETTING_DEFINITIONS = [
 			{
@@ -92,7 +93,7 @@ export default class SettingsModule extends TwitchModule {
 				type: "text",
 				categoryId: CATEGORY.ACCOUNT,
 				content: () => {
-					return <EnhancerAccountComponent workerService={workerService} platform="twitch" />;
+					return <EnhancerAccountComponent workerService={workerService} platform="twitch" logoUrl={enhancerLogo} />;
 				},
 				hideInfo: true,
 			},
