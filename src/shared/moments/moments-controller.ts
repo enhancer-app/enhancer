@@ -1,8 +1,14 @@
 import { Logger } from "$shared/logger/logger.ts";
-import { formatMomentCountdown } from "$shared/moments/moment-countdown.ts";
+import { formatMomentCountdown, remainingRatio } from "$shared/moments/moment-countdown.ts";
+import { isMomentClaimsMessageData } from "$shared/worker/moments/moments.guards.ts";
 import { getClaimPollDelay, isTerminalClaimStatus } from "$shared/moments/claim-status-poll.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
-import type { ClaimMomentResponse, ClaimStatus, PublicMoment } from "$types/apis/moments.apis.ts";
+import type {
+	ClaimMomentResponse,
+	ClaimStatus,
+	MomentClaimsMessageData,
+	PublicMoment,
+} from "$types/apis/moments.apis.ts";
 import type { MomentPollPhase, MomentsCardViewModel } from "$types/shared/moments-controller.types.ts";
 import type { EnhancerAccountState } from "$types/shared/worker/enhancer-account-worker.types.ts";
 import type { ClaimMomentErrorReason, MomentClaimStatusResult } from "$types/shared/worker/moments-worker.types.ts";
@@ -34,12 +40,18 @@ export class MomentsController implements MomentsCardViewModel {
 	readonly pollStatus: Signal<ClaimStatus | null> = signal(null);
 	readonly countdownText: Signal<string> = signal("");
 	readonly hasEnded: Signal<boolean> = signal(false);
+	readonly timeProgress: Signal<number | null> = signal(null);
+	readonly soldOut: ReadonlySignal<boolean> = computed(() => {
+		const moment = this.moment.value;
+		if (!moment || moment.maxClaims === null) return false;
+		return moment.claimCount >= moment.maxClaims;
+	});
 	readonly awaitingSend: Signal<boolean> = signal(false);
 	readonly copied: Signal<boolean> = signal(false);
 	readonly autoCloseSeconds: ReadonlySignal<number | null> = computed(() => {
 		if (!this.moment.value) return null;
 		if (this.claimedAt.value) return MomentsController.CLAIMED_AUTOCLOSE_SECONDS;
-		if (this.hasEnded.value) return MomentsController.ENDED_AUTOCLOSE_SECONDS;
+		if (this.hasEnded.value || this.soldOut.value) return MomentsController.ENDED_AUTOCLOSE_SECONDS;
 		return null;
 	});
 
@@ -80,8 +92,15 @@ export class MomentsController implements MomentsCardViewModel {
 		void this.refreshMoment();
 	}
 
-	handleApiMessage(name: string): void {
+	handleApiMessage(name: string, data?: unknown): void {
 		if (name === "moment.updated") void this.refreshMoment();
+		if (name === "moment.claims" && isMomentClaimsMessageData(data)) this.applyClaimCount(data);
+	}
+
+	private applyClaimCount(data: MomentClaimsMessageData): void {
+		const moment = this.moment.value;
+		if (!moment || moment.id !== data.momentId || data.claimCount < moment.claimCount) return;
+		this.moment.value = { ...moment, claimCount: data.claimCount, maxClaims: data.maxClaims };
 	}
 
 	handleOwnChatMessage(text: string, login?: string): void {
@@ -343,6 +362,7 @@ export class MomentsController implements MomentsCardViewModel {
 		this.awaitingSend.value = false;
 		this.hasEnded.value = false;
 		this.countdownText.value = "";
+		this.timeProgress.value = null;
 	}
 
 	private updateCountdown(): void {
@@ -350,6 +370,7 @@ export class MomentsController implements MomentsCardViewModel {
 		if (!moment) return;
 		const countdown = formatMomentCountdown(moment.endsAt);
 		this.countdownText.value = countdown.text;
+		this.timeProgress.value = remainingRatio(moment.startedAt, moment.endsAt);
 		if (countdown.ended && !this.hasEnded.value) {
 			this.hasEnded.value = true;
 			this.stopLiveTimer();

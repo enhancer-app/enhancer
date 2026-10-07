@@ -74,6 +74,8 @@ export default class ChatMessagePopupModule extends KickModule {
 				title={message.title}
 				content={message.content}
 				compactContent={message.compactContent}
+				appearance={message.appearance}
+				progress={message.progress}
 				autoclose={message.autoclose ?? 15}
 				onClose={() => {
 					this.close(id);

@@ -4,6 +4,7 @@ import type {
 	ClaimMomentResponse,
 	ClaimStatus,
 	ClaimStatusResponse,
+	MomentClaimsMessageData,
 	PublicMoment,
 	ViewerMomentState,
 } from "$types/apis/moments.apis.ts";
@@ -112,4 +113,14 @@ export function isClaimMomentResponse(value: unknown): value is ClaimMomentRespo
 
 export function isEnhancerApiError(value: unknown): value is EnhancerApiError {
 	return isRecord(value) && isRecord(value.error) && isString(value.error.code) && isString(value.error.message);
+}
+
+export function isMomentClaimsMessageData(value: unknown): value is MomentClaimsMessageData {
+	return (
+		isRecord(value) &&
+		isString(value.momentId) &&
+		isFiniteNumber(value.claimCount) &&
+		value.claimCount >= 0 &&
+		(value.maxClaims === null || isFiniteNumber(value.maxClaims))
+	);
 }

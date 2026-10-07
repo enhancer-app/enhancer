@@ -3,3 +3,7 @@ import type { MomentsCardViewModel } from "$types/shared/moments-controller.type
 export type MomentCardComponentProps = {
 	controller: MomentsCardViewModel;
 };
+
+export type MomentCompactComponentProps = MomentCardComponentProps & {
+	expand: () => void;
+};

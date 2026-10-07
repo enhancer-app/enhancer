@@ -56,7 +56,9 @@ export type ChatMessagePopupEvent = {
 	id?: string;
 	title: ComponentChildren;
 	content: ComponentChildren;
-	compactContent?: ComponentChildren;
+	compactContent?: (expand: () => void) => ComponentChildren;
 	autoclose?: number | ReadonlySignal<number | null>;
+	appearance?: "default" | "card";
+	progress?: ReadonlySignal<number | null>;
 	onClose?: () => void;
 };

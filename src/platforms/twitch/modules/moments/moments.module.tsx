@@ -91,8 +91,10 @@ export default class MomentsModule extends TwitchModule {
 			id: MomentsModule.POPUP_ID,
 			title: <MomentPopupTitle controller={controller} />,
 			content: <MomentPopupContent controller={controller} />,
-			compactContent: <MomentPopupCompact controller={controller} />,
+			compactContent: (expand) => <MomentPopupCompact controller={controller} expand={expand} />,
 			autoclose: controller.autoCloseSeconds,
+			appearance: "card",
+			progress: controller.timeProgress,
 			onClose: () => {
 				this.popupMomentId = null;
 				controller.onDismiss();
@@ -133,7 +135,7 @@ export default class MomentsModule extends TwitchModule {
 
 	private handleApiMessage(message: EnhancerMessageEvent) {
 		if (!this.isModuleEnabled()) return;
-		this.controller?.handleApiMessage(message.name);
+		this.controller?.handleApiMessage(message.name, message.data);
 	}
 
 	private handleChatMessage({ message }: TwitchChatMessageEvent) {

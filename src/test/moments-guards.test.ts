@@ -9,6 +9,7 @@ import {
 	isClaimMomentResponse,
 	isClaimStatusResponse,
 	isEnhancerApiError,
+	isMomentClaimsMessageData,
 	isPublicMoment,
 	isViewerMomentState,
 } from "$shared/worker/moments/moments.guards.ts";
@@ -112,4 +113,11 @@ test("validates stored account sessions", () => {
 	expect(isEnhancerAccountSession({ ...session, accessToken: 1 })).toBe(false);
 	expect(isEnhancerAccountSession({ ...session, profile: null })).toBe(false);
 	expect(isEnhancerAccountSession(null)).toBe(false);
+});
+
+test("validates moment.claims message data", () => {
+	expect(isMomentClaimsMessageData({ momentId: "m1", claimCount: 17, maxClaims: 100 })).toBe(true);
+	expect(isMomentClaimsMessageData({ momentId: "m1", claimCount: 3, maxClaims: null })).toBe(true);
+	expect(isMomentClaimsMessageData({ momentId: "m1", claimCount: -1, maxClaims: null })).toBe(false);
+	expect(isMomentClaimsMessageData({ momentId: 1, claimCount: 1, maxClaims: null })).toBe(false);
 });

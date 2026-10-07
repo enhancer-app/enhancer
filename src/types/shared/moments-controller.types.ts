@@ -17,6 +17,8 @@ export type MomentsCardViewModel = {
 	pollStatus: Signal<ClaimStatus | null>;
 	countdownText: Signal<string>;
 	hasEnded: Signal<boolean>;
+	timeProgress: Signal<number | null>;
+	soldOut: ReadonlySignal<boolean>;
 	awaitingSend: Signal<boolean>;
 	copied: Signal<boolean>;
 	autoCloseSeconds: ReadonlySignal<number | null>;

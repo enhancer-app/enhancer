@@ -79,3 +79,9 @@ export type MomentUpdatedMessageData = {
 	momentId: string;
 	status: string;
 };
+
+export type MomentClaimsMessageData = {
+	momentId: string;
+	claimCount: number;
+	maxClaims: number | null;
+};

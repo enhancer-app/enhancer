@@ -11,252 +11,143 @@ import { useCallback, useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
 
 const Container = styled.div`
-	line-height: 1.6;
-	color: var(--settings-text);
 	width: 100%;
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: 8px;
+	color: var(--settings-text);
+	line-height: 1.5;
 `;
 
-const Card = styled.div`
+const Row = styled.div`
 	background: var(--settings-surface);
 	border: 1px solid var(--settings-border);
 	border-radius: 12px;
-	padding: 16px 18px;
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-`;
-
-const ProfileRow = styled.div`
+	padding: 14px 16px;
 	display: flex;
 	align-items: center;
 	gap: 14px;
 `;
 
-const Avatar = styled.img`
-	width: 52px;
-	height: 52px;
-	border-radius: 50%;
-	object-fit: cover;
-	background: var(--settings-control-background);
-	flex-shrink: 0;
-`;
-
-const AvatarFallback = styled.div`
-	width: 52px;
-	height: 52px;
-	border-radius: 50%;
-	background: #9147ff;
-	color: white;
-	font-size: 20px;
-	font-weight: 700;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-`;
-
-const Identity = styled.div`
-	display: flex;
-	flex-direction: column;
-	min-width: 0;
+const RowMain = styled.div`
 	flex: 1;
+	min-width: 0;
 `;
 
-const Name = styled.span`
+const RowTitle = styled.div`
+	font-size: 13px;
+	font-weight: 600;
 	color: var(--settings-text-strong);
-	font-size: 15px;
-	font-weight: 700;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 `;
 
-const Chips = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	gap: 6px;
-	margin-top: 4px;
+const RowDescription = styled.div<{ $error?: boolean }>`
+	font-size: 12px;
+	color: ${({ $error }) => ($error ? "#ff4757" : "var(--settings-text-muted)")};
+	margin-top: 2px;
 `;
 
-const Chip = styled.span`
-	font-size: 11px;
-	color: var(--settings-text-muted);
-	background: var(--settings-control-background);
-	border: 1px solid var(--settings-control-border);
-	border-radius: 999px;
-	padding: 0 8px;
+const Avatar = styled.img`
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	object-fit: cover;
+	flex-shrink: 0;
 `;
 
-const Stats = styled.div`
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 8px;
-`;
-
-const Stat = styled.div`
-	background: var(--settings-control-background);
-	border: 1px solid var(--settings-control-border);
-	border-radius: 10px;
-	padding: 8px 12px;
-	display: flex;
-	flex-direction: column;
-`;
-
-const StatValue = styled.span`
+const AvatarFallback = styled.div`
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	background: var(--settings-control-hover);
 	color: var(--settings-text-strong);
 	font-size: 16px;
 	font-weight: 700;
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
 `;
 
-const StatLabel = styled.span`
-	color: var(--settings-text-muted);
-	font-size: 11px;
-`;
-
-const SectionTitle = styled.span`
-	color: var(--settings-text-strong);
+const Heading = styled.div`
 	font-size: 13px;
 	font-weight: 600;
-`;
-
-const Hint = styled.span`
-	color: var(--settings-text-muted);
-	font-size: 11.5px;
-`;
-
-const ErrorText = styled.span`
-	color: #ff4757;
-	font-size: 11.5px;
-`;
-
-const Slot = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	padding-top: 12px;
-	border-top: 1px solid var(--settings-divider);
-`;
-
-const SlotHeader = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 8px;
-`;
-
-const SlotAvatar = styled.img`
-	width: 20px;
-	height: 20px;
-	border-radius: 50%;
-`;
-
-const SlotLabel = styled.span`
 	color: var(--settings-text-strong);
-	font-size: 12.5px;
-	font-weight: 600;
-	flex: 1;
+	margin: 14px 0 2px;
 `;
 
-const BadgeGrid = styled.div`
+const Button = styled.button<{ $primary?: boolean }>`
+	height: 30px;
+	padding: 0 12px;
+	border-radius: 8px;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	flex-shrink: 0;
+	border: 1px solid ${({ $primary }) => ($primary ? "#9147ff" : "var(--settings-control-border)")};
+	background: ${({ $primary }) => ($primary ? "#9147ff" : "var(--settings-control-background)")};
+	color: ${({ $primary }) => ($primary ? "white" : "var(--settings-text)")};
+
+	&:hover:not(:disabled) {
+		${({ $primary }) => ($primary ? "background: #a35fff;" : "border-color: var(--settings-text-faint);")}
+	}
+
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+`;
+
+const Picker = styled.div`
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
-`;
-
-const BadgeTile = styled.button<{ $selected: boolean }>`
-	display: flex;
-	align-items: center;
+	justify-content: flex-end;
 	gap: 6px;
-	background: ${({ $selected }) => ($selected ? "rgba(145, 71, 255, 0.18)" : "var(--settings-control-background)")};
+	max-width: 60%;
+`;
+
+const Pick = styled.button<{ $selected: boolean }>`
+	width: 40px;
+	height: 40px;
+	border-radius: 8px;
+	padding: 0;
+	display: grid;
+	place-items: center;
+	cursor: pointer;
+	font-size: 11px;
+	color: var(--settings-text-muted);
 	border: 1px solid ${({ $selected }) => ($selected ? "#9147ff" : "var(--settings-control-border)")};
-	border-radius: 8px;
-	color: var(--settings-text);
-	font-size: 11.5px;
-	padding: 5px 9px;
-	cursor: pointer;
+	background: ${({ $selected }) => ($selected ? "rgba(145, 71, 255, 0.12)" : "var(--settings-control-background)")};
 
 	&:hover:not(:disabled) {
-		border-color: #9147ff;
+		border-color: ${({ $selected }) => ($selected ? "#9147ff" : "var(--settings-text-faint)")};
 	}
 
 	&:disabled {
 		cursor: not-allowed;
-		opacity: 0.6;
+		opacity: 0.4;
+	}
+
+	img {
+		width: 24px;
+		height: 24px;
 	}
 `;
 
-const BadgeIcon = styled.img`
-	width: 22px;
-	height: 22px;
-	object-fit: contain;
-`;
-
-const Row = styled.div`
+const Actions = styled.div`
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-`;
-
-const PrimaryButton = styled.button`
-	background: #9147ff;
-	border: 1px solid #9147ff;
-	border-radius: 8px;
-	color: white;
-	padding: 7px 14px;
-	font-size: 11px;
-	font-weight: 600;
-	cursor: pointer;
-	flex-shrink: 0;
-
-	&:hover:not(:disabled) {
-		background: #a35fff;
-	}
-
-	&:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-`;
-
-const SecondaryButton = styled.button`
-	background: var(--settings-control-background);
-	border: 1px solid var(--settings-control-border);
-	border-radius: 8px;
-	color: var(--settings-text);
-	padding: 7px 14px;
-	font-size: 11px;
-	font-weight: 500;
-	cursor: pointer;
-	flex-shrink: 0;
-
-	&:hover:not(:disabled) {
-		border-color: #9147ff;
-		color: #9147ff;
-	}
-
-	&:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
+	gap: 6px;
 `;
 
 function formatProvider(provider: string): string {
 	return provider.charAt(0) + provider.slice(1).toLowerCase();
 }
 
-function formatMemberSince(iso: string): string {
-	const date = new Date(iso);
-	if (Number.isNaN(date.getTime())) return "—";
-	return date.toLocaleDateString(undefined, { month: "short", year: "numeric" });
-}
-
-function slotLabel(group: BadgeSlotGroup): string {
+function slotTitle(group: BadgeSlotGroup): string {
 	const platform = formatProvider(group.accountPlatform);
-	if (group.scope === "GLOBAL") return `Global · ${platform} (${group.accountLogin})`;
-	return `${group.channelLogin ?? "Channel"} · ${platform}`;
+	if (group.scope === "GLOBAL") return `Everywhere on ${platform}`;
+	return `In ${group.channelLogin ?? "this channel"}'s chat`;
 }
 
 function BadgeSlotEditor({ group, onSave }: BadgeSlotEditorProps) {
@@ -267,6 +158,7 @@ function BadgeSlotEditor({ group, onSave }: BadgeSlotEditorProps) {
 	const dirty = selected !== group.selectedAssignmentId;
 	const regular = group.badges.filter((badge) => !badge.forced);
 	const forced = group.badges.filter((badge) => badge.forced);
+	const selectedName = regular.find((badge) => badge.assignmentId === selected)?.name ?? "nothing";
 
 	useEffect(() => setSelected(group.selectedAssignmentId), [group.selectedAssignmentId]);
 
@@ -277,51 +169,58 @@ function BadgeSlotEditor({ group, onSave }: BadgeSlotEditorProps) {
 		setSaving(false);
 	};
 
+	const details = [
+		`Showing ${selectedName}`,
+		forced.length > 0 ? `always on: ${forced.map((badge) => badge.name).join(", ")}` : null,
+		cooldown > 0 ? `you can change it in ${cooldown} min` : null,
+	]
+		.filter(Boolean)
+		.join(" · ");
+
 	return (
-		<Slot>
-			<SlotHeader>
-				{group.scope === "CHANNEL" && group.channelAvatarUrl && <SlotAvatar src={group.channelAvatarUrl} alt="" />}
-				<SlotLabel>{slotLabel(group)}</SlotLabel>
-				{dirty && (
-					<>
-						<SecondaryButton type="button" disabled={saving} onClick={() => setSelected(group.selectedAssignmentId)}>
-							Cancel
-						</SecondaryButton>
-						<PrimaryButton type="button" disabled={saving || cooldown > 0} onClick={save}>
-							{saving ? "…" : "Save"}
-						</PrimaryButton>
-					</>
-				)}
-			</SlotHeader>
-			<BadgeGrid>
+		<Row>
+			<RowMain>
+				<RowTitle>{slotTitle(group)}</RowTitle>
+				<RowDescription $error={error !== null}>{error ?? details}</RowDescription>
+			</RowMain>
+			<Picker>
 				{regular.map((badge) => {
 					const image = pickBadgeImage(badge.sources);
 					return (
-						<BadgeTile
+						<Pick
 							key={badge.assignmentId}
 							type="button"
+							title={badge.name}
+							aria-label={badge.name}
 							$selected={selected === badge.assignmentId}
-							disabled={cooldown > 0}
+							disabled={cooldown > 0 || saving}
 							onClick={() => setSelected(badge.assignmentId)}
 						>
-							{image && <BadgeIcon src={image} alt="" />}
-							{badge.name}
-						</BadgeTile>
+							{image ? <img src={image} alt="" /> : badge.name.charAt(0)}
+						</Pick>
 					);
 				})}
-				<BadgeTile
+				<Pick
 					type="button"
+					title="None"
 					$selected={selected === null}
-					disabled={cooldown > 0}
+					disabled={cooldown > 0 || saving}
 					onClick={() => setSelected(null)}
 				>
 					None
-				</BadgeTile>
-			</BadgeGrid>
-			{forced.length > 0 && <Hint>Always shown: {forced.map((badge) => badge.name).join(", ")}</Hint>}
-			{cooldown > 0 && <Hint>You can change this badge again in {cooldown} min.</Hint>}
-			{error && <ErrorText>{error}</ErrorText>}
-		</Slot>
+				</Pick>
+			</Picker>
+			{dirty && (
+				<Actions>
+					<Button type="button" disabled={saving} onClick={() => setSelected(group.selectedAssignmentId)}>
+						Cancel
+					</Button>
+					<Button type="button" $primary disabled={saving || cooldown > 0} onClick={save}>
+						{saving ? "…" : "Save"}
+					</Button>
+				</Actions>
+			)}
+		</Row>
 	);
 }
 
@@ -407,18 +306,18 @@ export function EnhancerAccountComponent({ workerService }: EnhancerAccountCompo
 	if (!account.loggedIn) {
 		return (
 			<Container>
-				<Card>
-					<Row>
-						<Identity>
-							<Name>Not logged in</Name>
-							<Hint>Log in to claim Moment badges with one click and choose which badges you show in chat.</Hint>
-						</Identity>
-						<PrimaryButton type="button" onClick={login} disabled={busy}>
-							{busy ? "…" : "Log in"}
-						</PrimaryButton>
-					</Row>
-					{error && <ErrorText>{error}</ErrorText>}
-				</Card>
+				<Row>
+					<RowMain>
+						<RowTitle>Enhancer account</RowTitle>
+						<RowDescription $error={error !== null}>
+							{error ??
+								"Log in to claim Moment badges with one click and choose which badge shows next to your name. Not required: you can always claim by typing the command in chat."}
+						</RowDescription>
+					</RowMain>
+					<Button type="button" $primary onClick={login} disabled={busy}>
+						{busy ? "…" : "Log in"}
+					</Button>
+				</Row>
 			</Container>
 		);
 	}
@@ -426,65 +325,40 @@ export function EnhancerAccountComponent({ workerService }: EnhancerAccountCompo
 	const user = profile?.user;
 	const displayName =
 		user?.displayName ?? user?.username ?? account.displayName ?? account.username ?? "Enhancer account";
-	const allBadges = badges ? [...badges.global, ...badges.channels] : [];
+	const badgeCount = badges ? badges.global.length + badges.channels.length : null;
 	const groups = badges ? groupBadgeSlots(badges) : [];
+	const platforms = profile?.identities.map((identity) => formatProvider(identity.provider)) ?? [];
+	const summary = [
+		platforms.length > 0 ? `${platforms.join(", ")} connected` : null,
+		badgeCount !== null ? `${badgeCount} ${badgeCount === 1 ? "badge" : "badges"}` : null,
+	]
+		.filter(Boolean)
+		.join(" · ");
 
 	return (
 		<Container>
-			<Card>
-				<ProfileRow>
-					{user?.avatarUrl ? (
-						<Avatar src={user.avatarUrl} alt="" />
-					) : (
-						<AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
-					)}
-					<Identity>
-						<Name>{displayName}</Name>
-						{user?.username && <Hint>@{user.username}</Hint>}
-						{profile && profile.identities.length > 0 && (
-							<Chips>
-								{profile.identities.map((identity) => (
-									<Chip key={`${identity.provider}:${identity.providerUsername ?? ""}`}>
-										{formatProvider(identity.provider)}
-										{identity.providerUsername ? ` · ${identity.providerUsername}` : ""}
-									</Chip>
-								))}
-							</Chips>
-						)}
-					</Identity>
-					<SecondaryButton type="button" onClick={logout} disabled={busy}>
-						{busy ? "…" : "Log out"}
-					</SecondaryButton>
-				</ProfileRow>
-				<Stats>
-					<Stat>
-						<StatValue>{badges ? allBadges.length : "—"}</StatValue>
-						<StatLabel>Badges owned</StatLabel>
-					</Stat>
-					<Stat>
-						<StatValue>{badges ? allBadges.filter((badge) => badge.visible).length : "—"}</StatValue>
-						<StatLabel>Shown in chat</StatLabel>
-					</Stat>
-					<Stat>
-						<StatValue>{user ? formatMemberSince(user.createdAt) : "—"}</StatValue>
-						<StatLabel>Member since</StatLabel>
-					</Stat>
-				</Stats>
-				{error && <ErrorText>{error}</ErrorText>}
-			</Card>
-			<Card>
-				<Identity>
-					<SectionTitle>Your badges</SectionTitle>
-					<Hint>Pick which badge appears next to your name. Each slot can be changed once every 15 minutes.</Hint>
-				</Identity>
-				{badges === null ? (
-					<Hint>Loading badges…</Hint>
-				) : groups.length === 0 ? (
-					<Hint>No badges yet. Claim one during a live Moment!</Hint>
+			<Row>
+				{user?.avatarUrl ? (
+					<Avatar src={user.avatarUrl} alt="" />
 				) : (
-					groups.map((group) => <BadgeSlotEditor key={group.key} group={group} onSave={saveSlot} />)
+					<AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
 				)}
-			</Card>
+				<RowMain>
+					<RowTitle>{displayName}</RowTitle>
+					<RowDescription $error={error !== null}>{error ?? (summary || "Logged in")}</RowDescription>
+				</RowMain>
+				<Button type="button" onClick={logout} disabled={busy}>
+					{busy ? "…" : "Log out"}
+				</Button>
+			</Row>
+			<Heading>Badges</Heading>
+			{badges === null ? (
+				<RowDescription>Loading badges…</RowDescription>
+			) : groups.length === 0 ? (
+				<RowDescription>No badges yet. Claim one during a live Moment.</RowDescription>
+			) : (
+				groups.map((group) => <BadgeSlotEditor key={group.key} group={group} onSave={saveSlot} />)
+			)}
 		</Container>
 	);
 }

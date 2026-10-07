@@ -94,8 +94,10 @@ export default class MomentsModule extends KickModule {
 			id: MomentsModule.POPUP_ID,
 			title: <MomentPopupTitle controller={controller} />,
 			content: <MomentPopupContent controller={controller} />,
-			compactContent: <MomentPopupCompact controller={controller} />,
+			compactContent: (expand) => <MomentPopupCompact controller={controller} expand={expand} />,
 			autoclose: controller.autoCloseSeconds,
+			appearance: "card",
+			progress: controller.timeProgress,
 			onClose: () => {
 				this.popupMomentId = null;
 				controller.onDismiss();
@@ -136,7 +138,7 @@ export default class MomentsModule extends KickModule {
 
 	private handleApiMessage(message: EnhancerMessageEvent) {
 		if (!this.isModuleEnabled()) return;
-		this.controller?.handleApiMessage(message.name);
+		this.controller?.handleApiMessage(message.name, message.data);
 	}
 
 	private async handleChatMessage({ message }: KickChatMessageEvent) {
