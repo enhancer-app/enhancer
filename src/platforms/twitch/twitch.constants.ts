@@ -36,4 +36,5 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	channelSection: true,
 	chattersEnabled: true,
 	hideStories: false,
+	marksEnabled: true,
 };

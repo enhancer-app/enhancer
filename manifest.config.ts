@@ -8,7 +8,7 @@ export function getManifest(isDevelopment: boolean) {
 		name,
 		description: "Enhancer is open-sourced and free extension, which adds what is missing on streaming platforms.",
 		version: data.version,
-		permissions: ["storage", "unlimitedStorage"],
+		permissions: ["storage", "unlimitedStorage", "identity"],
 		action: {
 			default_icon: "assets/enhancer/logo-128.png",
 		},

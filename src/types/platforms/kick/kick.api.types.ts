@@ -41,6 +41,12 @@ export interface User {
 	profile_pic: any;
 }
 
+export interface KickCurrentUser {
+	id: number;
+	username: string;
+	slug: string;
+}
+
 export interface Chatroom {
 	id: number;
 	chatable_type: string;

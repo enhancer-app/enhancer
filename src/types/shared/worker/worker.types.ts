@@ -11,6 +11,25 @@ import type {
 	InitializeEnhancerApiPayload,
 	JoinEnhancerChannelPayload,
 } from "$types/shared/worker/enhancer-api-worker.types.ts";
+import type {
+	EnhancerAccountBroadcastPayload,
+	EnhancerAccountState,
+	GetEnhancerBadgesResponse,
+	GetEnhancerProfileResponse,
+	LoginEnhancerAccountResponse,
+	LogoutEnhancerAccountResponse,
+	SaveEnhancerBadgeSlotPayload,
+	SaveEnhancerBadgeSlotResponse,
+} from "$types/shared/worker/enhancer-account-worker.types.ts";
+import type {
+	ClaimMarkResult,
+	GetChannelMarkPayload,
+	GetChannelMarkResponse,
+	GetMarkClaimStatusPayload,
+	MarkClaimStatusResult,
+	MarkIdPayload,
+	MarkViewerStateResult,
+} from "$types/shared/worker/marks-worker.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 
 export type { PlatformType };
@@ -150,6 +169,46 @@ export interface WorkerApiActions {
 		payload: DisconnectEnhancerApiPayload;
 		response: { success: true };
 	};
+	getEnhancerAccount: {
+		payload: never;
+		response: EnhancerAccountState;
+	};
+	loginEnhancerAccount: {
+		payload: never;
+		response: LoginEnhancerAccountResponse;
+	};
+	logoutEnhancerAccount: {
+		payload: never;
+		response: LogoutEnhancerAccountResponse;
+	};
+	getEnhancerProfile: {
+		payload: never;
+		response: GetEnhancerProfileResponse;
+	};
+	getEnhancerBadges: {
+		payload: never;
+		response: GetEnhancerBadgesResponse;
+	};
+	saveEnhancerBadgeSlot: {
+		payload: SaveEnhancerBadgeSlotPayload;
+		response: SaveEnhancerBadgeSlotResponse;
+	};
+	getChannelMark: {
+		payload: GetChannelMarkPayload;
+		response: GetChannelMarkResponse;
+	};
+	getMarkClaimStatus: {
+		payload: GetMarkClaimStatusPayload;
+		response: MarkClaimStatusResult;
+	};
+	getMarkViewerState: {
+		payload: MarkIdPayload;
+		response: MarkViewerStateResult;
+	};
+	claimMark: {
+		payload: MarkIdPayload;
+		response: ClaimMarkResult;
+	};
 }
 
 export type WorkerAction = keyof WorkerApiActions;
@@ -163,4 +222,5 @@ export type WorkerBroadcast =
 	| { type: "settings-updated"; payload: SettingsBroadcastPayload }
 	| { type: "enhancer-api-updated"; payload: EnhancerApiUpdatedPayload }
 	| { type: "enhancer-api-message"; payload: EnhancerApiMessagePayload }
-	| { type: "enhancer-api-seed-request"; payload: EnhancerApiSeedRequestPayload };
+	| { type: "enhancer-api-seed-request"; payload: EnhancerApiSeedRequestPayload }
+	| { type: "enhancer-account-updated"; payload: EnhancerAccountBroadcastPayload };

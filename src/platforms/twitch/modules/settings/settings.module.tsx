@@ -1,3 +1,4 @@
+import { EnhancerAccountComponent } from "$shared/components/enhancer-account/enhancer-account.component.tsx";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
@@ -14,6 +15,7 @@ const CATEGORY = {
 	CHAT: "chat",
 	CHANNEL: "channel",
 	LATENCY: "latency",
+	ACCOUNT: "account",
 	ABOUT: "about",
 } as const;
 
@@ -64,7 +66,8 @@ export default class SettingsModule extends TwitchModule {
 			{ id: CATEGORY.CHAT, title: "Chat", order: 1 },
 			{ id: CATEGORY.CHANNEL, title: "Channel", order: 2 },
 			{ id: CATEGORY.LATENCY, title: "Latency", order: 3 },
-			{ id: CATEGORY.ABOUT, title: "About", order: 4 },
+			{ id: CATEGORY.ACCOUNT, title: "Account", order: 4 },
+			{ id: CATEGORY.ABOUT, title: "About", order: 5 },
 		];
 
 		const brandIcons = {
@@ -73,8 +76,27 @@ export default class SettingsModule extends TwitchModule {
 			twitter: await this.commonUtils().getAssetFile(this.workerService(), "brands/twitter.svg"),
 			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
 		} as const;
+		const enhancerLogo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo.svg");
 
 		this.SETTING_DEFINITIONS = [
+			{
+				id: "marksEnabled",
+				title: "Enable Marks",
+				description: "Shows limited-time Marks above the chat with badge claims.",
+				type: "toggle",
+				categoryId: CATEGORY.GENERAL,
+			},
+			{
+				id: "enhancer-account",
+				title: "Enhancer Account",
+				description: "Enhancer Account",
+				type: "text",
+				categoryId: CATEGORY.ACCOUNT,
+				content: () => {
+					return <EnhancerAccountComponent workerService={workerService} platform="twitch" logoUrl={enhancerLogo} />;
+				},
+				hideInfo: true,
+			},
 			{
 				id: "chattersEnabled",
 				title: "Enable Chatters Counter",

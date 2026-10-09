@@ -215,6 +215,10 @@ export default class TwitchUtils {
 		return `${value}${formattedText}`;
 	}
 
+	getOwnLogin(): string | undefined {
+		return this.getScrollableChat()?.props.currentUserLogin?.toLowerCase();
+	}
+
 	getScrollableChat() {
 		const element = document.querySelector('section[data-test-selector="chat-room-component-layout"]');
 		if (!element) return;

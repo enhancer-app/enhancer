@@ -1,7 +1,10 @@
 import { KICK_DEFAULT_SETTINGS } from "$kick/kick.constants.ts";
 import { Logger } from "$shared/logger/logger.ts";
+import { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
+import { EnhancerProfileService } from "$shared/worker/enhancer-account/enhancer-profile.service.ts";
 import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
+import { MarksService } from "$shared/worker/marks/marks.service.ts";
 import { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
 import { WatchtimeAccumulator } from "$shared/worker/watchtime/watchtime.accumulator.ts";
 import { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
@@ -22,12 +25,26 @@ export default class WorkerBackground {
 	private readonly watchtimeDatabase = new WatchtimeDatabase();
 	private readonly watchtimeAccumulator = new WatchtimeAccumulator(this.watchtimeDatabase);
 	private readonly enhancerApiService = new EnhancerApiService(this.enhancerApiLogger, __version__);
+	private readonly enhancerAccountService = new EnhancerAccountService(
+		new Logger({ context: "enhancer-account", source: "background" }),
+	);
+	private readonly marksService = new MarksService(
+		new Logger({ context: "marks", source: "background" }),
+		this.enhancerAccountService,
+	);
+	private readonly enhancerProfileService = new EnhancerProfileService(
+		new Logger({ context: "enhancer-profile", source: "background" }),
+		this.enhancerAccountService,
+	);
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.settingsDatabase,
 		this.watchtimeDatabase,
 		this.watchtimeAccumulator,
 		this.enhancerApiService,
+		this.enhancerAccountService,
+		this.marksService,
+		this.enhancerProfileService,
 	);
 
 	private isInitialized = false;

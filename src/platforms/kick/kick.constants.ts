@@ -24,4 +24,5 @@ export const KICK_DEFAULT_SETTINGS: KickSettings = {
 	xayoWatchtimePeriod: "365d",
 	channelSection: true,
 	_disableExtensionOnDashboard: false,
+	marksEnabled: true,
 };
