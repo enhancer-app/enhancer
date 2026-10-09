@@ -57,3 +57,13 @@ export function cooldownMinutesLeft(cooldownUntil: string | null, now = Date.now
 	if (Number.isNaN(remaining) || remaining <= 0) return 0;
 	return Math.ceil(remaining / 60_000);
 }
+
+export function filterSlotGroups(groups: BadgeSlotGroup[], query: string): BadgeSlotGroup[] {
+	const needle = query.trim().toLowerCase();
+	if (!needle) return groups;
+	return groups.filter(
+		(group) =>
+			group.scope === "CHANNEL" &&
+			[group.channelDisplayName, group.channelLogin].some((name) => name?.toLowerCase().includes(needle)),
+	);
+}

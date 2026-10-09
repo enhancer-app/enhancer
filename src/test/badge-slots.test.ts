@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { buildSlotRequest, cooldownMinutesLeft, groupBadgeSlots } from "$shared/enhancer-account/badge-slots.ts";
+import {
+	buildSlotRequest,
+	cooldownMinutesLeft,
+	filterSlotGroups,
+	groupBadgeSlots,
+} from "$shared/enhancer-account/badge-slots.ts";
 import { isViewerBadges, isViewerSummary } from "$shared/worker/enhancer-account/enhancer-account.guards.ts";
 import type { EnhancerViewerBadge } from "$types/apis/enhancer-account.apis.ts";
 
@@ -86,4 +91,30 @@ test("validates viewer summary and badge list payloads", () => {
 	expect(isViewerSummary({ user: { id: 1 }, identities: [] })).toBe(false);
 	expect(isViewerBadges({ global: [badge({})], channels: [] })).toBe(true);
 	expect(isViewerBadges({ global: [{ assignmentId: "x" }], channels: [] })).toBe(false);
+});
+
+test("channel search matches display names and logins and hides the global slot", () => {
+	const groups = groupBadgeSlots({
+		global: [badge({ assignmentId: "g1" })],
+		channels: [
+			badge({
+				assignmentId: "c1",
+				scope: "CHANNEL",
+				channelId: "ch-1",
+				channelLogin: "summit1g",
+				channelDisplayName: "Summit1G",
+			}),
+			badge({
+				assignmentId: "c2",
+				scope: "CHANNEL",
+				channelId: "ch-2",
+				channelLogin: "pokimane",
+				channelDisplayName: "Pokimane",
+			}),
+		],
+	});
+	expect(filterSlotGroups(groups, "").length).toBe(3);
+	expect(filterSlotGroups(groups, "  SUM ").map((group) => group.channelLogin)).toEqual(["summit1g"]);
+	expect(filterSlotGroups(groups, "poki").map((group) => group.channelLogin)).toEqual(["pokimane"]);
+	expect(filterSlotGroups(groups, "nope")).toEqual([]);
 });

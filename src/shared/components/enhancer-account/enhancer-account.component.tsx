@@ -1,4 +1,9 @@
-import { buildSlotRequest, cooldownMinutesLeft, groupBadgeSlots } from "$shared/enhancer-account/badge-slots.ts";
+import {
+	buildSlotRequest,
+	cooldownMinutesLeft,
+	filterSlotGroups,
+	groupBadgeSlots,
+} from "$shared/enhancer-account/badge-slots.ts";
 import { pickBadgeImage } from "$shared/marks/mark-countdown.ts";
 import type { EnhancerViewerBadges, EnhancerViewerSummary } from "$types/apis/enhancer-account.apis.ts";
 import type {
@@ -103,7 +108,60 @@ const Heading = styled.div`
 	font-size: 13px;
 	font-weight: 600;
 	color: var(--settings-text-strong);
-	margin: 12px 0 0;
+`;
+
+const HeadingRow = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-top: 12px;
+`;
+
+const TitleCount = styled.span`
+	margin-left: 6px;
+	font-size: 12px;
+	font-weight: 400;
+	color: var(--settings-text-muted);
+`;
+
+const Search = styled.label`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 240px;
+	height: 32px;
+	padding: 0 10px;
+	border-radius: 9px;
+	border: 1px solid var(--settings-border);
+	background: var(--settings-control-background);
+	color: var(--settings-text-faint);
+
+	&:focus-within {
+		border-color: #9147ff;
+		color: #9147ff;
+	}
+
+	svg {
+		width: 14px;
+		height: 14px;
+		flex-shrink: 0;
+	}
+
+	input {
+		flex: 1;
+		min-width: 0;
+		background: none;
+		border: none;
+		outline: none;
+		color: var(--settings-text-primary);
+		font: inherit;
+		font-size: 12px;
+	}
+
+	input::placeholder {
+		color: var(--settings-input-placeholder);
+	}
 `;
 
 const Button = styled.button<{ $primary?: boolean }>`
@@ -508,6 +566,7 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 	const [badges, setBadges] = useState<EnhancerViewerBadges | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [query, setQuery] = useState("");
 
 	useEffect(() => {
 		let active = true;
@@ -595,6 +654,7 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 			}
 		: null;
 	const groups = platformBadges ? groupBadgeSlots(platformBadges) : [];
+	const visibleGroups = filterSlotGroups(groups, query);
 	const badgeCount = badges ? badges.global.length + badges.channels.length : null;
 
 	return (
@@ -606,7 +666,14 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 					<AvatarFallback $size={48}>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
 				)}
 				<RowMain>
-					<RowTitle>{displayName}</RowTitle>
+					<RowTitle>
+						{displayName}
+						{badgeCount !== null && (
+							<TitleCount>
+								· {badgeCount} {badgeCount === 1 ? "badge" : "badges"} collected
+							</TitleCount>
+						)}
+					</RowTitle>
 					{profile && profile.identities.length > 0 && (
 						<Chips>
 							{profile.identities.map((identity) => {
@@ -626,22 +693,38 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 							})}
 						</Chips>
 					)}
-					<Muted $error={error !== null}>
-						{error ??
-							(badgeCount === null ? "Loading…" : `${badgeCount} ${badgeCount === 1 ? "badge" : "badges"} collected`)}
-					</Muted>
+					{error && <Muted $error>{error}</Muted>}
 				</RowMain>
 				<Button type="button" onClick={logout} disabled={busy}>
 					{busy ? "…" : "Log out"}
 				</Button>
 			</Row>
-			<Heading>Badges</Heading>
+			<HeadingRow>
+				<Heading>Badges</Heading>
+				{groups.length > 0 && (
+					<Search>
+						<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+							<circle cx="7" cy="7" r="4.5" />
+							<path d="M10.5 10.5L14 14" />
+						</svg>
+						<input
+							type="search"
+							placeholder="Search channels"
+							aria-label="Search channels"
+							value={query}
+							onInput={(event) => setQuery(event.currentTarget.value)}
+						/>
+					</Search>
+				)}
+			</HeadingRow>
 			{badges === null ? (
 				<Muted>Loading badges…</Muted>
 			) : groups.length === 0 ? (
 				<Muted>No badges on this platform yet. Claim one during a live Mark.</Muted>
+			) : visibleGroups.length === 0 ? (
+				<Muted>No channels match "{query.trim()}".</Muted>
 			) : (
-				groups.map((group) => <BadgeSlotEditor key={group.key} group={group} onSave={saveSlot} />)
+				visibleGroups.map((group) => <BadgeSlotEditor key={group.key} group={group} onSave={saveSlot} />)
 			)}
 		</Container>
 	);

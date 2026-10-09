@@ -136,7 +136,7 @@ const CardBody = styled.div<{ $compact: boolean }>`
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
-	padding: ${({ $compact }) => ($compact ? "5px 6px 5px 8px" : "10px")};
+	padding: ${({ $compact }) => ($compact ? "5px 6px 7px 8px" : "10px")};
 `;
 
 const CardRow = styled.div`

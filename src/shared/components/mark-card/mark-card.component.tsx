@@ -75,6 +75,10 @@ const ChatAlternative = styled.div`
 	gap: 6px;
 	font-size: 12px;
 	color: var(--m-muted);
+
+	& > button:last-of-type {
+		margin: 0 -7px;
+	}
 `;
 
 const CommandChip = styled.button`
@@ -130,6 +134,7 @@ function CopyIcon({ copied }: { copied: boolean }) {
 
 const Note = styled.div<{ $error?: boolean }>`
 	font-size: 12px;
+	text-align: center;
 	color: ${({ $error }) => ($error ? "#ff8280" : "var(--m-muted)")};
 `;
 
@@ -307,6 +312,7 @@ export function MarkPopupContent({ controller }: MarkCardComponentProps) {
 				>
 					<CopyIcon copied={controller.copied.value} />
 				</IconButton>
+				in chat
 			</ChatAlternative>
 			{controller.claimError.value && <Note $error>{controller.claimError.value}</Note>}
 			{loggedIn && controller.viewerEligible.value === false && (
