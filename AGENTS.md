@@ -173,7 +173,7 @@ config: TwitchModuleConfig = {
 
 ### Applier types
 
-- **Selector applier** (`type: "selector"`): Polls DOM every 1 second. Supports `once` (run once per element), `cooldown`, `validateUrl`, `useParent`. Tracks processed elements via `enhanced` DOM attributes.
+- **Selector applier** (`type: "selector"`): A `MutationObserver` triggers a full run when elements are added outside the platform's `ignoredMutationSelectors` (chat lists), at most every 500 ms (2 s in hidden tabs). Appliers without `once` also run every 1 s, and every applier runs at least every 5 s and after settings change. Supports `once` (run once per element), `cooldown`, `validateUrl`, `useParent`. Tracks processed elements via `enhanced` DOM attributes.
 - **Event applier** (`type: "event"`): Subscribes to a nanoevents event. Event must be defined in the platform's Events type.
 
 ### Creating a new module
@@ -342,4 +342,4 @@ Categories: `correctness` errors, `suspicious` warnings. Key rules off: `typescr
 7. **No comments in code.** Unless explicitly requested.
 8. **Module access to settings cache.** Use `this.settings()` for the settings object, `this.settingsCache()` when you need the cache instance (e.g., for `SettingsHelper`).
 9. **Extension contexts.** `index.ts` runs in the main world, `worker.bridge.ts` runs as a content script (isolated world). They share the DOM but have separate JS contexts. CustomEvents on DOM elements are visible across worlds.
-10. **The `enabled` callback on ModuleConfig is synchronous.** It's checked on every selector applier poll cycle (1s interval). Keep it fast.
+10. **The `enabled` callback on ModuleConfig is synchronous.** It's checked on every selector applier poll cycle (up to once per second). Keep it fast.
