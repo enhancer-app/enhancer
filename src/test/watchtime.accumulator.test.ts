@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { WatchtimeAccumulator } from "$shared/worker/watchtime/watchtime.accumulator.ts";
-import type { PlatformType } from "$types/shared/worker/worker.types.ts";
+import type { WatchtimeChannel } from "$types/shared/worker/worker.types.ts";
 
 const originalSetInterval = globalThis.setInterval;
 const originalEnvironment = (globalThis as typeof globalThis & { __environment__?: string }).__environment__;
@@ -20,10 +20,11 @@ function setup() {
 		return 0;
 	}) as unknown as typeof setInterval;
 	const database = {
-		getWatchtime: async () => null,
-		addWatchtime: async (platform: PlatformType, channel: string, seconds: number) => {
-			const key = `${platform}:${channel}`;
-			totals.set(key, (totals.get(key) ?? 0) + seconds);
+		addWatchtime: async (entries: WatchtimeChannel[], seconds: number) => {
+			for (const { platform, username } of entries) {
+				const key = `${platform}:${username}`;
+				totals.set(key, (totals.get(key) ?? 0) + seconds);
+			}
 		},
 	};
 	const accumulator = new WatchtimeAccumulator(database as never);
