@@ -66,6 +66,8 @@ export default class RealVideoTimeModule extends TwitchModule {
 	private timeInterval: NodeJS.Timeout | undefined;
 	private videoCreatedAt = new Date(0);
 	private mediaPlayer: MediaPlayerInstanceBase | undefined;
+	private playerMissing = false;
+	private videoIdMissing = false;
 	private use12HourFormat = signal<boolean>(false);
 	private dateMode = signal<RealVideoTimeDateMode>("hover");
 
@@ -89,6 +91,7 @@ export default class RealVideoTimeModule extends TwitchModule {
 			clearInterval(this.timeInterval);
 		}
 		this.timeInterval = setInterval(async () => {
+			if (document.hidden) return;
 			await this.updateCurrentVideo();
 			this.updateTime();
 		}, 1000);
@@ -129,8 +132,11 @@ export default class RealVideoTimeModule extends TwitchModule {
 		const videoId = this.twitchUtils().getVideoIdFromLink(window.location.href);
 		if (!videoId) {
 			this.lastFailedVideoId = null;
-			return this.logger.warn("Failed to find video id");
+			if (!this.videoIdMissing) this.logger.warn("Failed to find video id");
+			this.videoIdMissing = true;
+			return;
 		}
+		this.videoIdMissing = false;
 		if (this.currentVideoId === videoId) {
 			return;
 		}
@@ -152,9 +158,11 @@ export default class RealVideoTimeModule extends TwitchModule {
 	private updateTime() {
 		const mediaPlayerInstance = this.mediaPlayer ?? this.twitchUtils().getMediaPlayerInstance();
 		if (!mediaPlayerInstance) {
-			this.logger.error("Failed to find media player instance");
+			if (!this.playerMissing) this.logger.error("Failed to find media player instance");
+			this.playerMissing = true;
 			return;
 		}
+		this.playerMissing = false;
 		this.mediaPlayer = mediaPlayerInstance;
 		this.timeCounter.value = this.videoCreatedAt.getTime() + mediaPlayerInstance.getPosition() * 1000;
 	}

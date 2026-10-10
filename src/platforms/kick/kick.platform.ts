@@ -25,7 +25,7 @@ import type { KickStorage } from "$types/platforms/kick/kick.storage.types.ts";
 
 export default class KickPlatform extends Platform<KickModule, KickEvents, KickStorage, KickSettings> {
 	constructor() {
-		super({ type: "kick" });
+		super({ type: "kick", ignoredMutationSelectors: ["#chatroom-messages"] });
 	}
 
 	private readonly kickUtils = new KickUtils(this.utilsRepository.reactUtils, this.utilsRepository.commonUtils);

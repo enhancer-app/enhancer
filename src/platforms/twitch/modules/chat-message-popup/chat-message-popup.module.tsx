@@ -50,8 +50,11 @@ export default class ChatMessagePopupModule extends TwitchModule {
 		}
 
 		if (contentElement) {
-			const wrapper = contentElement.querySelector(`.${this.getId()}`);
-			if (wrapper) wrapper.remove();
+			const previousWrapper = contentElement.querySelector(`.${this.getId()}`);
+			if (previousWrapper) {
+				render(null, previousWrapper);
+				previousWrapper.remove();
+			}
 
 			const wrappers = this.commonUtils().createEmptyElements(this.getId(), [contentElement], "span");
 			wrappers.forEach((wrapper) => {
@@ -60,6 +63,7 @@ export default class ChatMessagePopupModule extends TwitchModule {
 						title={message.title}
 						autoclose={message.autoclose ?? 15}
 						onClose={() => {
+							render(null, wrapper);
 							wrapper.remove();
 							if (message.onClose) {
 								message.onClose();
@@ -151,6 +155,7 @@ export function MessagePopup({ title, content, autoclose, onClose }: ChatMessage
 	const [timeLeft, setTimeLeft] = useState(autoclose || 0);
 	const intervalRef = useRef<NodeJS.Timeout | null>(null);
 	const startTimeRef = useRef<number | null>(null);
+	const lastTimeLeftRef = useRef<number | null>(null);
 
 	useEffect(() => {
 		if (!autoclose || autoclose <= 0) {
@@ -158,6 +163,7 @@ export function MessagePopup({ title, content, autoclose, onClose }: ChatMessage
 		}
 
 		startTimeRef.current = Date.now();
+		lastTimeLeftRef.current = autoclose;
 		setTimeLeft(autoclose);
 
 		intervalRef.current = setInterval(() => {
@@ -168,7 +174,10 @@ export function MessagePopup({ title, content, autoclose, onClose }: ChatMessage
 			const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
 			const remaining = Math.max(0, autoclose - elapsed);
 
-			setTimeLeft(remaining - 1);
+			if (lastTimeLeftRef.current !== remaining - 1) {
+				lastTimeLeftRef.current = remaining - 1;
+				setTimeLeft(remaining - 1);
+			}
 
 			if (remaining === 0) {
 				if (intervalRef.current !== null) {

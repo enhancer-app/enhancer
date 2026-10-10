@@ -31,7 +31,10 @@ export default class KickWatchTimeModule extends KickModule {
 
 		const existing = identity.querySelector<HTMLElement>(`.${this.getId()}`);
 		if (existing?.dataset.username === username) return;
-		existing?.remove();
+		if (existing) {
+			render(null, existing);
+			existing.remove();
+		}
 
 		const wrapper = this.commonUtils().createElementByParent(this.getId(), "div", identity);
 		wrapper.dataset.username = username;

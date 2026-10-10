@@ -3,6 +3,13 @@ import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class ChatHighlightUserModule extends TwitchModule {
+	static readonly MENTION_SELECTOR =
+		".chat-line__message-mention, .mention-fragment, .seventv-chat-message-body .mention-token";
+	static readonly MENTION_USER_ATTRIBUTE = "enhancer-mention-user";
+	static readonly HIGHLIGHTED_CLASS = "enhancer-highlighted-user-message";
+
+	private readonly highlightedMessages = new Set<Element>();
+
 	readonly config: TwitchModuleConfig = {
 		name: "chat-highlight-user",
 		appliers: [
@@ -16,51 +23,49 @@ export default class ChatHighlightUserModule extends TwitchModule {
 	};
 
 	async initialize(): Promise<void> {
-		this.commonUtils().createGlobalStyle(".enhancer-highlighted-user-message { background-color: #444 !important; }");
+		this.commonUtils().createGlobalStyle(
+			`.${ChatHighlightUserModule.HIGHLIGHTED_CLASS} { background-color: #444 !important; }`,
+		);
+		document.addEventListener("mouseover", this.handleMouseOver.bind(this));
+		document.addEventListener("mouseout", this.handleMouseOut.bind(this));
 	}
 
 	private handleMessage({ element }: TwitchChatMessageEvent) {
-		const mentions = [
-			...Array.from(element.querySelectorAll(".chat-line__message-mention")),
-			...Array.from(element.querySelectorAll(".mention-fragment")),
-			...Array.from(element.querySelectorAll(".seventv-chat-message-body .mention-token")),
-		].filter((mention) => !mention.hasAttribute("enhancer-mention-user"));
-		if (mentions.length < 1) return;
-		for (const mention of mentions) {
-			const mentionElement = mention as HTMLElement;
-			const username = mentionElement.textContent?.replace("@", "").toLowerCase() || "";
-			mentionElement.setAttribute("enhancer-mention-user", username);
-			mentionElement.addEventListener("mouseover", this.highlightUserMentions.bind(this));
-			mentionElement.addEventListener("mouseout", this.removeHighlightedUserMentions.bind(this));
+		for (const mention of element.querySelectorAll(ChatHighlightUserModule.MENTION_SELECTOR)) {
+			if (mention.hasAttribute(ChatHighlightUserModule.MENTION_USER_ATTRIBUTE)) continue;
+			const username = mention.textContent?.replace("@", "").toLowerCase() || "";
+			mention.setAttribute(ChatHighlightUserModule.MENTION_USER_ATTRIBUTE, username);
 		}
 	}
 
-	private highlightUserMentions(event: MouseEvent): void {
-		// todo change color to red of mention is not 7tv
-		const target = event.currentTarget as HTMLElement;
-		const username = target.getAttribute("enhancer-mention-user");
-		if (!username) return;
-		this.logger.debug(`Highlighting ${username} messages`);
-
-		[...document.querySelectorAll(".chat-line__message"), ...document.querySelectorAll(".seventv-message")].forEach(
-			(messageElement) => {
-				const authorElement =
-					messageElement.querySelector(".chat-author__display-name") ??
-					messageElement.querySelector(".seventv-chat-user-username");
-				if (!authorElement) return;
-
-				const authorName = authorElement.textContent?.toLowerCase() || "";
-				if (authorName === username) {
-					messageElement.classList.add("enhancer-highlighted-user-message");
-				}
-			},
-		);
+	private findMention(event: MouseEvent): Element | null {
+		const target = event.target;
+		if (!(target instanceof Element)) return null;
+		return target.closest(`[${ChatHighlightUserModule.MENTION_USER_ATTRIBUTE}]`);
 	}
 
-	private removeHighlightedUserMentions(): void {
-		this.logger.debug("Removing highlighted messages");
-		document
-			.querySelectorAll(".enhancer-highlighted-user-message")
-			.forEach((message) => message.classList.remove("enhancer-highlighted-user-message"));
+	private handleMouseOver(event: MouseEvent): void {
+		const mention = this.findMention(event);
+		if (!mention) return;
+		const username = mention.getAttribute(ChatHighlightUserModule.MENTION_USER_ATTRIBUTE);
+		if (!username) return;
+
+		for (const messageElement of document.querySelectorAll(".chat-line__message, .seventv-message")) {
+			const authorElement =
+				messageElement.querySelector(".chat-author__display-name") ??
+				messageElement.querySelector(".seventv-chat-user-username");
+			if (!authorElement) continue;
+			if ((authorElement.textContent?.toLowerCase() || "") !== username) continue;
+			messageElement.classList.add(ChatHighlightUserModule.HIGHLIGHTED_CLASS);
+			this.highlightedMessages.add(messageElement);
+		}
+	}
+
+	private handleMouseOut(event: MouseEvent): void {
+		if (!this.findMention(event)) return;
+		for (const message of this.highlightedMessages) {
+			message.classList.remove(ChatHighlightUserModule.HIGHLIGHTED_CLASS);
+		}
+		this.highlightedMessages.clear();
 	}
 }

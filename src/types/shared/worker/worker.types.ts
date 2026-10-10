@@ -51,6 +51,11 @@ export interface WatchtimeRecord {
 	lastUpdate: number;
 }
 
+export interface WatchtimeChannel {
+	platform: PlatformType;
+	username: string;
+}
+
 export interface AddWatchtimePayload {
 	platform: PlatformType;
 	channel: string;

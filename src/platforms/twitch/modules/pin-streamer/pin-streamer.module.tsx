@@ -7,6 +7,9 @@ import styled from "styled-components";
 import TwitchModule from "../../twitch.module.ts";
 
 export default class PinStreamerModule extends TwitchModule {
+	static readonly SKIP_PIN_SELECTOR =
+		'.pin-streamer-button, a[data-test-selector="similarity-channel"], .side-nav-card__link--promoted-followed';
+
 	readonly config: TwitchModuleConfig = {
 		name: "pin-streamer",
 		appliers: [
@@ -92,12 +95,7 @@ export default class PinStreamerModule extends TwitchModule {
 	}
 
 	private createPin(channelWrapper: Element) {
-		if (
-			channelWrapper.querySelector(".pin-streamer-button") ||
-			channelWrapper.querySelector('a[data-test-selector="similarity-channel"]') ||
-			channelWrapper.querySelector(".side-nav-card__link--promoted-followed")
-		)
-			return;
+		if (channelWrapper.querySelector(PinStreamerModule.SKIP_PIN_SELECTOR)) return;
 		const channelID = this.twitchUtils().getUserIdBySideElement(channelWrapper);
 		if (!channelID) return;
 		const imageWrapper = channelWrapper.querySelector("div.tw-avatar");
@@ -135,7 +133,6 @@ export default class PinStreamerModule extends TwitchModule {
 		if (!reactComponent) return;
 		const originalFunction = reactComponent.render;
 		reactComponent.render = (...data: any[]) => {
-			this.logger.debug("Rendering personal section channels");
 			this.updateFollowList();
 			return originalFunction.apply(reactComponent, data);
 		};

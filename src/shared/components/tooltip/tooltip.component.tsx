@@ -126,7 +126,7 @@ export function TooltipComponent({ children, content, position = "top", delay = 
 		timeoutRef.current = setTimeout(() => {
 			if (!containerRef.current?.isConnected) return;
 			setIsVisible(true);
-			setTimeout(calculatePosition, 0);
+			timeoutRef.current = setTimeout(calculatePosition, 0);
 		}, delay);
 	}, [delay, calculatePosition]);
 
@@ -146,14 +146,19 @@ export function TooltipComponent({ children, content, position = "top", delay = 
 		calculatePosition();
 		const handleResize = () => calculatePosition();
 		const handleScroll = () => setIsVisible(false);
-		const observer = new MutationObserver(() => {
-			if (!containerRef.current?.isConnected) setIsVisible(false);
-		});
-		observer.observe(document.body, { childList: true, subtree: true });
+		let frame = 0;
+		const checkConnected = () => {
+			if (!containerRef.current?.isConnected) {
+				setIsVisible(false);
+				return;
+			}
+			frame = requestAnimationFrame(checkConnected);
+		};
+		frame = requestAnimationFrame(checkConnected);
 		window.addEventListener("resize", handleResize);
 		window.addEventListener("scroll", handleScroll, { passive: true });
 		return () => {
-			observer.disconnect();
+			cancelAnimationFrame(frame);
 			window.removeEventListener("resize", handleResize);
 			window.removeEventListener("scroll", handleScroll);
 		};
