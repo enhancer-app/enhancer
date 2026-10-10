@@ -58,7 +58,17 @@ class FakeWebSocket extends EventTarget {
 }
 
 const logger = { debug() {}, info() {}, warn() {}, error() {} } as unknown as Logger;
-const waitForEvents = () => new Promise((resolve) => setTimeout(resolve, 20));
+async function until(condition: () => boolean, timeoutMs = 1000): Promise<void> {
+	const deadline = Date.now() + timeoutMs;
+	while (!condition()) {
+		if (Date.now() > deadline) throw new Error("Timed out waiting for condition");
+		await new Promise((resolve) => setTimeout(resolve, 1));
+	}
+}
+const subscribedTo = (externalId: string) =>
+	FakeWebSocket.commands.some(
+		(command) => command.type === "subscribe" && command.subscription?.externalId === externalId,
+	);
 const aggregate = (cursor: string, accountId = "account-1") => ({
 	channelId: null,
 	platform: "TWITCH" as const,
@@ -147,7 +157,7 @@ test("uses one HTTP snapshot and applies final patches without refetching", asyn
 		badgeIdsRemove: ["badge-1"],
 		cursor: "100-1",
 	});
-	await waitForEvents();
+	await until(() => broadcasts.filter((message) => message.type === "enhancer-api-updated").length >= 2);
 
 	const updates = broadcasts.filter((message) => message.type === "enhancer-api-updated");
 	expect(updates).toHaveLength(2);
@@ -199,7 +209,9 @@ test("installs a complete snapshot before applying buffered updates", async () =
 		page: 0,
 		hasNextPage: true,
 	});
-	await waitForEvents();
+	await until(() =>
+		broadcasts.some((message) => message.type === "enhancer-api-updated" && message.payload.cursor === "200-2"),
+	);
 
 	const updates = broadcasts.filter((message) => message.type === "enhancer-api-updated");
 	const last = updates.at(-1);
@@ -236,8 +248,15 @@ test("moves unavailable channels through pending, restore, and canonical rename"
 		reason: "created",
 		cursor: "310-0",
 	});
-	await waitForEvents();
-	expect(FakeWebSocket.commands.some((command) => command.subscription?.externalId === "old")).toBe(true);
+	const oldUpdates = (withAggregate: boolean) =>
+		broadcasts.filter(
+			(message) =>
+				message.type === "enhancer-api-updated" &&
+				message.payload.topic === "channel:TWITCH:old" &&
+				!!message.payload.aggregate === withAggregate,
+		);
+	await until(() => oldUpdates(true).length === 1);
+	expect(subscribedTo("old")).toBe(true);
 
 	FakeWebSocket.instance.receive({
 		type: "channel.unavailable",
@@ -245,15 +264,7 @@ test("moves unavailable channels through pending, restore, and canonical rename"
 		reason: "archived",
 		cursor: "400-0",
 	});
-	await waitForEvents();
-	expect(
-		broadcasts.some(
-			(message) =>
-				message.type === "enhancer-api-updated" &&
-				message.payload.topic === "channel:TWITCH:old" &&
-				!message.payload.aggregate,
-		),
-	).toBe(true);
+	await until(() => oldUpdates(false).length === 1);
 
 	FakeWebSocket.instance.receive({
 		type: "channel.available",
@@ -261,7 +272,7 @@ test("moves unavailable channels through pending, restore, and canonical rename"
 		reason: "restored",
 		cursor: "401-0",
 	});
-	await waitForEvents();
+	await until(() => oldUpdates(true).length === 2);
 	FakeWebSocket.instance.receive({
 		type: "channel.unavailable",
 		topic: "channel:TWITCH:old",
@@ -269,7 +280,7 @@ test("moves unavailable channels through pending, restore, and canonical rename"
 		replacementTopic: "channel:TWITCH:new",
 		cursor: "500-0",
 	});
-	await waitForEvents();
+	await until(() => subscribedTo("new") && requests.includes("new"));
 
 	expect(requests.filter((externalId) => externalId === "old")).toHaveLength(3);
 	expect(requests.filter((externalId) => externalId === "new")).toHaveLength(1);
@@ -381,7 +392,7 @@ test("retries a pending channel when availability races its initial 404", async 
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");
 	const pending = service.joinChannel(7, 0, "client-a", "twitch", "racing");
-	while (channelRequests === 0) await Promise.resolve();
+	await until(() => channelRequests > 0);
 	FakeWebSocket.instance.receive({
 		type: "channel.available",
 		topic: "channel:TWITCH:racing",
@@ -391,7 +402,7 @@ test("retries a pending channel when availability races its initial 404", async 
 	resolveMissing(new Response(null, { status: 404 }));
 
 	expect(await pending).toBeNull();
-	await waitForEvents();
+	await until(() => channelRequests >= 2);
 	expect(channelRequests).toBe(2);
 	expect(FakeWebSocket.commands.some((command) => command.subscription?.externalId === "racing")).toBe(true);
 	service.disconnect(7, 0, "client-a", "twitch");
@@ -419,7 +430,14 @@ test("merges an alias confirmation into an existing canonical topic", async () =
 		reason: "archived",
 		cursor: "900-2",
 	});
-	await waitForEvents();
+	await until(() =>
+		broadcasts.some(
+			(message) =>
+				message.type === "enhancer-api-updated" &&
+				message.payload.topic === "channel:TWITCH:canonical" &&
+				!message.payload.aggregate,
+		),
+	);
 	await service.initialize(8, 0, "client-b", "twitch");
 	const alias = await service.joinChannel(8, 0, "client-b", "twitch", "alias");
 	expect(alias?.topic).toBe("channel:TWITCH:canonical");
@@ -432,7 +450,7 @@ test("merges an alias confirmation into an existing canonical topic", async () =
 		name: "channel.message",
 		cursor: "900-4",
 	});
-	await waitForEvents();
+	await until(() => broadcasts.filter((message) => message.type === "enhancer-api-message").length >= 2);
 	expect(
 		broadcasts
 			.filter((message) => message.type === "enhancer-api-message")
@@ -519,7 +537,7 @@ test("replays archive and restore availability in cursor order", async () => {
 	};
 
 	expect(await service.joinChannel(7, 0, "client-a", "twitch", "restored-channel", seed)).toBeNull();
-	await waitForEvents();
+	await until(() => channelSubscriptions >= 2 && channelRequests >= 1);
 	expect(channelRequests).toBe(1);
 	expect(channelSubscriptions).toBe(2);
 	service.disconnect(7, 0, "client-a", "twitch");
@@ -544,7 +562,7 @@ test("moves to a replacement topic when rename races the initial HTTP", async ()
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");
 	const pending = service.joinChannel(7, 0, "client-a", "twitch", "old-race");
-	while (!requests.includes("old-race")) await Promise.resolve();
+	await until(() => requests.includes("old-race"));
 	FakeWebSocket.instance.receive({
 		type: "channel.unavailable",
 		topic: "channel:TWITCH:old-race",
@@ -555,7 +573,7 @@ test("moves to a replacement topic when rename races the initial HTTP", async ()
 	resolveOld(new Response(null, { status: 404 }));
 
 	expect(await pending).toBeNull();
-	await waitForEvents();
+	await until(() => subscribedTo("new-race") && requests.includes("new-race"));
 	expect(requests.filter((externalId) => externalId === "old-race")).toHaveLength(1);
 	expect(requests.filter((externalId) => externalId === "new-race")).toHaveLength(1);
 	expect(FakeWebSocket.commands.some((command) => command.subscription?.externalId === "new-race")).toBe(true);
@@ -588,7 +606,7 @@ test("keeps restore availability that arrives during archive broadcasting", asyn
 		reason: "archived",
 		cursor: "1400-0",
 	});
-	while (!archiveBroadcastStarted) await Promise.resolve();
+	await until(() => archiveBroadcastStarted);
 	FakeWebSocket.instance.receive({
 		type: "channel.available",
 		topic: "channel:TWITCH:live-race",
@@ -596,7 +614,7 @@ test("keeps restore availability that arrives during archive broadcasting", asyn
 		cursor: "1400-1",
 	});
 	releaseBroadcast();
-	await waitForEvents();
+	await until(() => channelRequests >= 2);
 
 	expect(channelRequests).toBe(2);
 	service.disconnect(7, 0, "client-a", "twitch");
