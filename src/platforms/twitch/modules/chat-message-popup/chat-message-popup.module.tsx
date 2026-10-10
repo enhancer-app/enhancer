@@ -50,10 +50,10 @@ export default class ChatMessagePopupModule extends TwitchModule {
 		}
 
 		if (contentElement) {
-			const wrapper = contentElement.querySelector(`.${this.getId()}`);
-			if (wrapper) {
-				render(null, wrapper);
-				wrapper.remove();
+			const previousWrapper = contentElement.querySelector(`.${this.getId()}`);
+			if (previousWrapper) {
+				render(null, previousWrapper);
+				previousWrapper.remove();
 			}
 
 			const wrappers = this.commonUtils().createEmptyElements(this.getId(), [contentElement], "span");
