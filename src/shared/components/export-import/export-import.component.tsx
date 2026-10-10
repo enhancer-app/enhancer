@@ -155,7 +155,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 		setStatus({ message, type });
 	};
 
-	const fetchAllWatchtime = async (platform: PlatformType): Promise<WatchtimeRecord[]> => {
+	const fetchAllWatchtime = async (): Promise<WatchtimeRecord[]> => {
 		const allData: WatchtimeRecord[] = [];
 		let currentPageNum = 1;
 		let hasMore = true;
@@ -189,9 +189,9 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 		setStatus(null);
 		try {
 			const settings = await workerService.send("getSettings", { platform });
-			const watchtime = await fetchAllWatchtime(platform);
+			const watchtime = await fetchAllWatchtime();
 
-			const exportData: ExportImportData = {
+			const backup: ExportImportData = {
 				meta: {
 					version: window.enhancer.version,
 					platform,
@@ -201,7 +201,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 				watchtime,
 			};
 
-			const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+			const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement("a");
 			a.href = url;

@@ -33,7 +33,7 @@ jobs:
       PUBLISH: ${{ steps.check_release.outputs.publish }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -239,7 +239,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Checkout scripts
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           sparse-checkout: .github/scripts
           persist-credentials: false

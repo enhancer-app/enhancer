@@ -49,32 +49,40 @@ export default class RealVideoTimeModule extends KickModule {
 	private dateMode = signal<RealVideoTimeDateMode>("hover");
 	private elementCheckInterval: NodeJS.Timeout | undefined;
 	private currentVideoId: string | undefined;
+	private listenedPlayers = new WeakSet<Element>();
 
 	private async run(elements: Element[]) {
 		const video = this.getActiveVideo();
 		if (video) this.updateTime(video);
 		this.createTimeInterval();
 		elements.forEach((element) => {
-			const htmlElement = element as HTMLElement;
-			htmlElement.addEventListener("mouseenter", async () => {
-				await this.commonUtils().delay(25);
-				this.updateVisibility();
-				this.createElement(element);
-			});
-			htmlElement.addEventListener("click", async () => {
-				await this.commonUtils().delay(25);
-				this.updateVisibility();
-				const activeVideo = this.getActiveVideo();
-				if (activeVideo) this.updateTime(activeVideo);
-			});
+			if (this.listenedPlayers.has(element)) return;
+			this.listenedPlayers.add(element);
+			element.addEventListener("mouseenter", this.handlePlayerMouseEnter);
+			element.addEventListener("click", this.handlePlayerClick);
 		});
 
 		if (this.elementCheckInterval) clearInterval(this.elementCheckInterval);
 		this.elementCheckInterval = setInterval(() => {
+			if (document.hidden) return;
 			const created = elements.some((element) => this.createElement(element));
 			if (created) this.updateVisibility();
 		}, 1000);
 	}
+
+	private readonly handlePlayerMouseEnter = async (event: Event) => {
+		const player = event.currentTarget as Element;
+		await this.commonUtils().delay(25);
+		this.updateVisibility();
+		this.createElement(player);
+	};
+
+	private readonly handlePlayerClick = async () => {
+		await this.commonUtils().delay(25);
+		this.updateVisibility();
+		const activeVideo = this.getActiveVideo();
+		if (activeVideo) this.updateTime(activeVideo);
+	};
 
 	private updateTimeFormat(enabled: boolean) {
 		this.use12HourFormat.value = enabled;
@@ -116,6 +124,7 @@ export default class RealVideoTimeModule extends KickModule {
 	private createTimeInterval() {
 		if (this.timeInterval) clearInterval(this.timeInterval);
 		this.timeInterval = setInterval(() => {
+			if (document.hidden) return;
 			const video = this.getActiveVideo();
 			if (video) this.updateTime(video);
 		}, 1000);

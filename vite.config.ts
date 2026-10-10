@@ -6,6 +6,8 @@ import { getManifest } from "./manifest.config";
 import { version } from "./package.json";
 
 const isDevelopment = process.env.ENVIRONMENT === "development";
+// Classic content scripts share one global scope, so minified top-level names would collide.
+const CONTENT_SCRIPT_CHUNKS = new Set(["inject", "worker.bridge"]);
 
 export default defineConfig({
 	server: {
@@ -38,6 +40,8 @@ export default defineConfig({
 				entryFileNames: "[name].js",
 				chunkFileNames: "[name].js",
 				assetFileNames: "[name].[ext]",
+				banner: (chunk) => (CONTENT_SCRIPT_CHUNKS.has(chunk.name) ? "(() => {" : ""),
+				footer: (chunk) => (CONTENT_SCRIPT_CHUNKS.has(chunk.name) ? "})();" : ""),
 			},
 			input: {
 				index: "src/index.ts",
