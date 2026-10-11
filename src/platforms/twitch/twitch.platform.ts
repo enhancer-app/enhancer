@@ -50,6 +50,7 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			this.utilsRepository,
 			this.enhancerApi,
 			this.workerApi,
+			this.emotesApi,
 			this.twitchUtils,
 			this.twitchApi,
 		] as const;

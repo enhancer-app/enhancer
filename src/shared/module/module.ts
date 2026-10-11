@@ -1,3 +1,4 @@
+import type EmotesApi from "$shared/apis/emotes.api.ts";
 import type EnhancerApi from "$shared/apis/enhancer.api.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import type SettingsCache from "$shared/settings/settings.service.ts";
@@ -24,6 +25,7 @@ export default abstract class Module<
 		private readonly utilsRepository: UtilsRepository,
 		private readonly _enhancerApi: EnhancerApi,
 		private readonly _workerService: WorkerService,
+		private readonly _emotesApi: EmotesApi,
 	) {}
 
 	async setup() {
@@ -66,6 +68,10 @@ export default abstract class Module<
 
 	protected enhancerApi() {
 		return this._enhancerApi;
+	}
+
+	protected emotesApi() {
+		return this._emotesApi;
 	}
 
 	protected localStorage() {

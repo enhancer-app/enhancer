@@ -1,4 +1,6 @@
-export type EmotesApiProvider = "twitch" | "7tv" | "bttv" | "ffz";
+export type EmotesApiPlatform = "twitch" | "kick";
+
+export type EmotesApiProvider = "twitch" | "7tv" | "bttv" | "ffz" | "kick";
 
 export type EmotesApiEmote = {
 	id: string;
@@ -7,6 +9,8 @@ export type EmotesApiEmote = {
 	urls: { size: string; url: string }[];
 };
 
-export type EmotesApiCollection = {
-	twitch?: Partial<Record<EmotesApiProvider, EmotesApiEmote[]>>;
-};
+export type EmotesApiProviderEmotes = Map<EmotesApiProvider, EmotesApiEmote[]>;
+
+export type EmotesApiCollection = Partial<
+	Record<EmotesApiPlatform, Partial<Record<EmotesApiProvider, EmotesApiEmote[]>>>
+>;

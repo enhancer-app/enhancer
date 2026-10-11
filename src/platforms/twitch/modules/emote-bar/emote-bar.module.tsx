@@ -1,4 +1,3 @@
-import EmotesApi from "$shared/apis/emotes.api.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type {
 	EmoteBarEntry,
@@ -67,7 +66,7 @@ export default class EmoteBarModule extends TwitchModule {
 	};
 
 	initialize() {
-		this.catalog = new EmoteBarCatalog(new EmotesApi(), this.logger);
+		this.catalog = new EmoteBarCatalog(this.emotesApi(), this.logger);
 		this.storage.onChange(() => {
 			if (this.channelId) this.entries.value = this.storage.getEntries(this.channelId);
 		});

@@ -78,7 +78,7 @@ src/
       modules/                # Twitch feature modules (~23 modules)
     kick/                     # All Kick-specific code (mirrors twitch/ structure)
   shared/
-    apis/                     # EnhancerApi — external backend API client
+    apis/                     # EnhancerApi (backend client), EmotesApi (emotes-api client, `this.emotesApi()` in modules)
     components/               # Reusable Preact UI components
     event/                    # EventEmitterFactory (wraps nanoevents)
     logger/                   # Colored console Logger

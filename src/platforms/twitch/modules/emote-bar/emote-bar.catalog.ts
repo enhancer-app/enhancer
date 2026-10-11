@@ -78,7 +78,7 @@ export default class EmoteBarCatalog {
 		if (missing.length > 0 && context.channelLogin) {
 			try {
 				const fallback = await this.emotesApi.getEmoteNames(context.channelLogin, missing);
-				for (const [provider, providerNames] of fallback) names.set(provider, providerNames);
+				for (const provider of missing) names.set(provider, fallback.get(provider) ?? new Set());
 			} catch (error) {
 				this.logger.warn("Emote catalog fallback failed", error);
 			}

@@ -1,40 +1,60 @@
 import { HttpClient } from "$shared/http/http-client.ts";
 import { Logger } from "$shared/logger/logger.ts";
-import type { EmotesApiCollection, EmotesApiProvider } from "$types/apis/emotes.apis.ts";
+import type {
+	EmotesApiCollection,
+	EmotesApiPlatform,
+	EmotesApiProvider,
+	EmotesApiProviderEmotes,
+} from "$types/apis/emotes.apis.ts";
 
 export default class EmotesApi {
 	private static readonly API_URL = "https://emotes-api.enhancer.at";
 	private readonly logger = new Logger({ context: "emotes-api" });
 	private readonly httpClient = new HttpClient(this.logger);
-	private readonly cache = new Map<string, Promise<Map<EmotesApiProvider, Set<string>>>>();
+	private readonly cache = new Map<string, Promise<EmotesApiProviderEmotes>>();
+
+	constructor(private readonly platform: EmotesApiPlatform) {}
+
+	getGlobalEmotes(providers: EmotesApiProvider[]): Promise<EmotesApiProviderEmotes> {
+		return this.fetchEmotes(`/v1/global/emotes?${this.query(providers)}`);
+	}
+
+	getChannelEmotes(channelLogin: string, providers: EmotesApiProvider[]): Promise<EmotesApiProviderEmotes> {
+		const channel = encodeURIComponent(channelLogin.toLowerCase());
+		return this.fetchEmotes(`/v1/channel/${channel}/emotes?${this.query(providers)}`);
+	}
 
 	async getEmoteNames(
 		channelLogin: string,
 		providers: EmotesApiProvider[],
 	): Promise<Map<EmotesApiProvider, Set<string>>> {
-		const query = `platform=twitch&provider=${[...providers].sort().join(",")}`;
 		const [global, channel] = await Promise.all([
-			this.fetchNames(`/v1/global/emotes?${query}`),
-			this.fetchNames(`/v1/channel/${encodeURIComponent(channelLogin.toLowerCase())}/emotes?${query}`),
+			this.getGlobalEmotes(providers),
+			this.getChannelEmotes(channelLogin, providers),
 		]);
 		const names = new Map<EmotesApiProvider, Set<string>>();
 		for (const provider of providers) {
-			names.set(provider, new Set([...(global.get(provider) ?? []), ...(channel.get(provider) ?? [])]));
+			const emotes = [...(global.get(provider) ?? []), ...(channel.get(provider) ?? [])];
+			names.set(provider, new Set(emotes.map((emote) => emote.code)));
 		}
 		return names;
 	}
 
-	private fetchNames(path: string): Promise<Map<EmotesApiProvider, Set<string>>> {
+	private query(providers: EmotesApiProvider[]): string {
+		return `platform=${this.platform}&provider=${[...providers].sort().join(",")}`;
+	}
+
+	private fetchEmotes(path: string): Promise<EmotesApiProviderEmotes> {
 		const cached = this.cache.get(path);
 		if (cached) return cached;
 		const request = this.httpClient
 			.request<EmotesApiCollection>(`${EmotesApi.API_URL}${path}`, { timeout: 15000 })
 			.then(({ data }) => {
-				const names = new Map<EmotesApiProvider, Set<string>>();
-				for (const [provider, emotes] of Object.entries(data.twitch ?? {})) {
-					names.set(provider as EmotesApiProvider, new Set((emotes ?? []).map((emote) => emote.code)));
+				const emotes: EmotesApiProviderEmotes = new Map();
+				for (const [provider, providerEmotes] of Object.entries(data[this.platform] ?? {})) {
+					emotes.set(provider as EmotesApiProvider, providerEmotes ?? []);
 				}
-				return names;
+				return emotes;
 			});
 		this.cache.set(path, request);
 		request.catch((error) => {
