@@ -27,6 +27,13 @@ export type EmoteCatalog = {
 	loadedAt: number;
 };
 
+export type EmoteBarRemovalState = "none" | "pending" | "armed";
+
+export type EmoteBarRemoval = {
+	name: string;
+	armed: boolean;
+};
+
 export type EmoteBarProps = {
 	entries: Signal<EmoteBarEntry[]>;
 	catalog: Signal<EmoteCatalog | null>;

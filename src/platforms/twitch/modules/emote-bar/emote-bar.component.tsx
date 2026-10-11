@@ -1,4 +1,10 @@
-import type { EmoteBarEntry, EmoteBarProps, EmoteCatalog } from "$types/platforms/twitch/twitch.emote-bar.types.ts";
+import type {
+	EmoteBarEntry,
+	EmoteBarProps,
+	EmoteBarRemoval,
+	EmoteBarRemovalState,
+	EmoteCatalog,
+} from "$types/platforms/twitch/twitch.emote-bar.types.ts";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
 import { EMOTE_BAR_RECENT_WINDOW, selectVisible } from "./emote-bar.frecency.ts";
@@ -8,6 +14,8 @@ const BUTTON_HEIGHT = 30;
 const MAX_RATIO = 3;
 const ITEM_PADDING = 2;
 const GAP = 2;
+const REMOVAL_ARM_DELAY = 1000;
+const REMOVAL_TIMEOUT = 5000;
 
 function widthOf(entry: EmoteBarEntry): number {
 	const ratio = Math.min(Math.max(entry.ratio || 1, 0.5), MAX_RATIO);
@@ -26,6 +34,7 @@ export function EmoteBarComponent({ entries, catalog, onInsert, onSend, onRemove
 	const [hovered, setHovered] = useState(false);
 	const [now, setNow] = useState(() => Date.now());
 	const [displayed, setDisplayed] = useState<EmoteBarEntry[]>([]);
+	const [removal, setRemoval] = useState<EmoteBarRemoval | null>(null);
 	const currentEntries = entries.value;
 	const currentCatalog = catalog.value;
 
@@ -41,6 +50,27 @@ export function EmoteBarComponent({ entries, catalog, onInsert, onSend, onRemove
 		const timeout = setTimeout(() => setNow(Date.now()), EMOTE_BAR_RECENT_WINDOW + 1000);
 		return () => clearTimeout(timeout);
 	}, [currentEntries]);
+
+	const removalName = removal?.name;
+	useEffect(() => {
+		if (!removalName) return;
+		const arm = setTimeout(() => setRemoval({ name: removalName, armed: true }), REMOVAL_ARM_DELAY);
+		const cancel = setTimeout(() => setRemoval(null), REMOVAL_TIMEOUT);
+		return () => {
+			clearTimeout(arm);
+			clearTimeout(cancel);
+		};
+	}, [removalName]);
+
+	const requestRemoval = (name: string) => {
+		if (removal?.name !== name) {
+			setRemoval({ name, armed: false });
+			return;
+		}
+		if (!removal.armed) return;
+		setRemoval(null);
+		onRemove(name);
+	};
 
 	const available = useMemo(
 		() => currentEntries.filter((entry) => isAvailable(entry, currentCatalog)),
@@ -64,30 +94,38 @@ export function EmoteBarComponent({ entries, catalog, onInsert, onSend, onRemove
 			onMouseEnter={() => setHovered(true)}
 			onMouseLeave={() => setHovered(false)}
 		>
-			{visible.map((entry) => (
-				<EmoteButton
-					key={entry.name}
-					type="button"
-					title={entry.name}
-					aria-label={entry.name}
-					onClick={(event) => (event.ctrlKey || event.metaKey ? onSend(entry.name) : onInsert(entry.name))}
-					onContextMenu={(event) => {
-						event.preventDefault();
-						onRemove(entry.name);
-					}}
-				>
-					<img
-						src={entry.src}
-						alt={entry.name}
-						onLoad={(event) => {
-							const image = event.currentTarget;
-							if (!image.naturalHeight) return;
-							const ratio = image.naturalWidth / image.naturalHeight;
-							if (Math.abs(ratio - entry.ratio) > 0.05) onRatio(entry.name, ratio);
+			{visible.map((entry) => {
+				const removalState = removal?.name === entry.name ? (removal.armed ? "armed" : "pending") : "none";
+				return (
+					<EmoteButton
+						key={entry.name}
+						type="button"
+						$removal={removalState}
+						title={removalState === "none" ? entry.name : `${entry.name} (right-click again to remove)`}
+						aria-label={entry.name}
+						onClick={(event) => {
+							if (removalState !== "none") setRemoval(null);
+							if (event.ctrlKey || event.metaKey) onSend(entry.name);
+							else onInsert(entry.name);
 						}}
-					/>
-				</EmoteButton>
-			))}
+						onContextMenu={(event) => {
+							event.preventDefault();
+							requestRemoval(entry.name);
+						}}
+					>
+						<img
+							src={entry.src}
+							alt={entry.name}
+							onLoad={(event) => {
+								const image = event.currentTarget;
+								if (!image.naturalHeight) return;
+								const ratio = image.naturalWidth / image.naturalHeight;
+								if (Math.abs(ratio - entry.ratio) > 0.05) onRatio(entry.name, ratio);
+							}}
+						/>
+					</EmoteButton>
+				);
+			})}
 		</Bar>
 	);
 }
@@ -106,7 +144,13 @@ const Bar = styled.div<{ $empty: boolean; $full: boolean }>`
 	border-top: ${({ $empty }) => ($empty ? "none" : "1px solid rgba(255, 255, 255, 0.1)")};
 `;
 
-const EmoteButton = styled.button`
+const REMOVAL_BACKGROUNDS: Record<EmoteBarRemovalState, string> = {
+	none: "transparent",
+	pending: "rgba(255, 71, 87, 0.2)",
+	armed: "rgba(255, 71, 87, 0.45)",
+};
+
+const EmoteButton = styled.button<{ $removal: EmoteBarRemovalState }>`
 	display: flex;
 	flex-shrink: 0;
 	align-items: center;
@@ -115,16 +159,25 @@ const EmoteButton = styled.button`
 	padding: 0 ${ITEM_PADDING}px;
 	border: none;
 	border-radius: var(--border-radius-medium, 4px);
-	background: transparent;
+	background: ${({ $removal }) => REMOVAL_BACKGROUNDS[$removal]};
+	box-shadow: ${({ $removal }) => ($removal === "none" ? "none" : "inset 0 0 0 1px #ff4757")};
 	cursor: pointer;
-	transition: background-color 0.1s ease;
+	transition:
+		background-color 0.15s ease,
+		box-shadow 0.15s ease;
 
 	&:hover {
-		background: var(--color-background-button-text-hover, rgba(83, 83, 95, 0.48));
+		background: ${({ $removal }) =>
+			$removal === "none"
+				? "var(--color-background-button-text-hover, rgba(83, 83, 95, 0.48))"
+				: REMOVAL_BACKGROUNDS[$removal]};
 	}
 
 	&:active {
-		background: var(--color-background-button-text-active, rgba(83, 83, 95, 0.55));
+		background: ${({ $removal }) =>
+			$removal === "none"
+				? "var(--color-background-button-text-active, rgba(83, 83, 95, 0.55))"
+				: REMOVAL_BACKGROUNDS[$removal]};
 	}
 
 	img {
