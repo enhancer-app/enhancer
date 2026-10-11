@@ -22,7 +22,7 @@ const resolveLevel = (body, previousBody) => {
 
 const renderBody = (current, level, changes) =>
 	[
-		"Merging this PR releases a new version to GitHub, Chrome Web Store and Firefox Add-ons.",
+		"Merging this PR releases a new **stable** version to GitHub, Chrome Web Store and Firefox Add-ons.",
 		"",
 		"### Release type",
 		"",
@@ -87,7 +87,7 @@ module.exports = async ({ github, context, core, exec }) => {
 		upToDate = parent === baseSha && remoteVersion === next;
 	}
 
-	const title = `release: v${next}`;
+	const title = `release(stable): v${next}`;
 
 	if (!upToDate) {
 		await git("switch", "-C", BRANCH, baseSha);

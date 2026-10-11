@@ -100,6 +100,7 @@ class BridgeLogger {
 }
 
 export default class WorkerBridge {
+	private static readonly ELEMENT_TAG = __channel__ === "canary" ? "enhancer-bridge-canary" : "enhancer-bridge";
 	private readonly logger = new BridgeLogger("worker-bridge");
 	private bridgeElement: HTMLElement | null = null;
 
@@ -112,7 +113,7 @@ export default class WorkerBridge {
 		const observer = new MutationObserver((mutations) => {
 			for (const mutation of mutations) {
 				for (const node of mutation.addedNodes) {
-					if (node instanceof HTMLElement && node.tagName === "ENHANCER-BRIDGE") {
+					if (node instanceof HTMLElement && node.localName === WorkerBridge.ELEMENT_TAG) {
 						this.bridgeElement = node;
 						this.setupListeners();
 						observer.disconnect();
@@ -121,7 +122,7 @@ export default class WorkerBridge {
 				}
 			}
 		});
-		this.bridgeElement = document.querySelector("enhancer-bridge");
+		this.bridgeElement = document.querySelector(WorkerBridge.ELEMENT_TAG);
 		if (this.bridgeElement) {
 			this.setupListeners();
 		} else {

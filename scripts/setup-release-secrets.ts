@@ -2,10 +2,11 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { createInterface } from "node:readline/promises";
-import { getManifest } from "../manifest.config";
+import { CHANNELS, getManifest } from "../manifest.config";
+import type { ExtensionChannel } from "../src/types/shared/extension.types";
 
 const REPO = "enhancer-app/enhancer";
-const RELEASE_ENV = "release";
+const LEGACY_RELEASE_ENV = "release";
 const ANNOUNCE_ENV = "release-announce";
 const RELEASE_BRANCH = "master";
 const CHROME_SCOPE = "https://www.googleapis.com/auth/chromewebstore";
@@ -29,7 +30,8 @@ type Environment = {
 	}[];
 };
 
-const flags = new Set(process.argv.slice(2));
+const args = process.argv.slice(2);
+const flags = new Set(args);
 
 if (flags.has("--help")) {
 	console.log(`Configure release environments and secrets in ${REPO}.
@@ -39,8 +41,27 @@ Usage:
   bun run release:setup-secrets --chrome   Only Chrome Web Store secrets (e.g. refresh the token)
   bun run release:setup-secrets --firefox  Only Firefox Add-ons secrets
 
-Secrets are written to the "${RELEASE_ENV}" environment. Requires an authenticated GitHub CLI with admin access.`);
+Options:
+  --channel stable|canary                  Release channel to configure (asked when omitted)
+
+Secrets are written to the "release-<channel>" environment. Requires an authenticated GitHub CLI with admin access.`);
 	process.exit(0);
+}
+
+function isChannel(value: string | undefined): value is ExtensionChannel {
+	return value === "stable" || value === "canary";
+}
+
+async function resolveChannel(): Promise<ExtensionChannel> {
+	const index = args.findIndex((arg) => arg === "--channel" || arg.startsWith("--channel="));
+	if (index !== -1) {
+		const value = args[index].includes("=") ? args[index].split("=")[1] : args[index + 1];
+		if (!isChannel(value)) throw new Error(`Unknown channel "${value}". Use "stable" or "canary".`);
+		return value;
+	}
+	const answer = (await ask("Release channel [stable/canary]: ")).toLowerCase();
+	if (!isChannel(answer)) throw new Error(`Unknown channel "${answer}". Use "stable" or "canary".`);
+	return answer;
 }
 
 function heading(title: string): void {
@@ -152,11 +173,11 @@ function restrictEnvironmentToReleaseBranch(name: string, requireReviewers: bool
 	}
 }
 
-function configureRepository(): void {
+function configureRepository(channel: ExtensionChannel, releaseEnv: string): void {
 	heading("Repository");
 	allowActionsToCreatePullRequests();
-	restrictEnvironmentToReleaseBranch(RELEASE_ENV, true);
-	restrictEnvironmentToReleaseBranch(ANNOUNCE_ENV, false);
+	restrictEnvironmentToReleaseBranch(releaseEnv, true);
+	if (channel === "stable") restrictEnvironmentToReleaseBranch(ANNOUNCE_ENV, false);
 }
 
 async function getAuthorizationCode(clientId: string): Promise<{
@@ -223,15 +244,15 @@ async function getAuthorizationCode(clientId: string): Promise<{
 	}
 }
 
-async function collectChromeSecrets(): Promise<Secrets> {
-	heading("Chrome Web Store");
+async function collectChromeSecrets(channel: ExtensionChannel): Promise<Secrets> {
+	heading(`Chrome Web Store (${CHANNELS[channel].name})`);
 	console.log(`OAuth client (type "Desktop app", no redirect URI needed): ${LINKS.googleCredentials}`);
 	const clientId = await ask("Client ID (Enter to skip Chrome): ");
 	if (!clientId) return {};
 	const clientSecret = await askSecret("Client secret (hidden input): ");
 	if (!clientSecret) throw new Error("Client secret is required.");
 
-	console.log(`Publisher ID (Account page) and extension ID (item page): ${LINKS.chromeDashboard}`);
+	console.log(`Publisher ID (Account page) and "${CHANNELS[channel].name}" item ID: ${LINKS.chromeDashboard}`);
 	const publisherId = await ask("Publisher ID (Enter to keep current): ");
 	const extensionId = await ask("Extension ID (Enter to keep current): ");
 	if (Boolean(publisherId) !== Boolean(extensionId)) {
@@ -287,9 +308,9 @@ function createAmoJwt(issuer: string, secret: string): string {
 	return `${unsigned}.${createHmac("sha256", secret).update(unsigned).digest("base64url")}`;
 }
 
-async function collectFirefoxSecrets(): Promise<Secrets> {
-	heading("Firefox Add-ons");
-	const addonId = getManifest(false).browser_specific_settings.gecko.id;
+async function collectFirefoxSecrets(channel: ExtensionChannel): Promise<Secrets> {
+	heading(`Firefox Add-ons (${CHANNELS[channel].name})`);
+	const addonId = getManifest(false, channel).browser_specific_settings.gecko.id;
 	console.log(`Add-on ID from manifest.config.ts: ${addonId}`);
 	console.log(`API credentials (generating a new secret revokes the old one): ${LINKS.amoApiKeys}`);
 	const issuer = await ask("JWT issuer (Enter to skip API credentials): ");
@@ -306,14 +327,14 @@ async function collectFirefoxSecrets(): Promise<Secrets> {
 	return { FIREFOX_EXTENSION_ID: addonId, AMO_JWT_ISSUER: issuer, AMO_JWT_SECRET: secret };
 }
 
-async function removeRepositoryCopies(names: string[]): Promise<void> {
+async function removeRepositoryCopies(names: string[], releaseEnv: string): Promise<void> {
 	const repoSecrets = new Set(
 		(JSON.parse(gh(["secret", "list", "-R", REPO, "--json", "name"])) as { name: string }[]).map((s) => s.name),
 	);
 	const duplicates = names.filter((name) => repoSecrets.has(name));
 	if (duplicates.length) {
 		console.log(`\nRepository-level copies still exist: ${duplicates.join(", ")}`);
-		const answer = await ask(`Delete them so only the "${RELEASE_ENV}" environment holds these secrets? [y/N] `);
+		const answer = await ask(`Delete them so only the "${releaseEnv}" environment holds these secrets? [y/N] `);
 		if (answer.toLowerCase() === "y") {
 			for (const name of duplicates) gh(["secret", "delete", name, "-R", REPO]);
 			console.log(`Deleted ${duplicates.join(", ")} from repository secrets.`);
@@ -330,14 +351,16 @@ async function main(): Promise<void> {
 		throw new Error("Log in to GitHub CLI first: gh auth login");
 	}
 
+	const channel = await resolveChannel();
+	const releaseEnv = `release-${channel}`;
 	const onlyChrome = flags.has("--chrome");
 	const onlyFirefox = flags.has("--firefox");
 	const everything = !onlyChrome && !onlyFirefox;
 
-	if (everything) configureRepository();
+	if (everything) configureRepository(channel, releaseEnv);
 	const secrets: Secrets = {
-		...(everything || onlyChrome ? await collectChromeSecrets() : {}),
-		...(everything || onlyFirefox ? await collectFirefoxSecrets() : {}),
+		...(everything || onlyChrome ? await collectChromeSecrets(channel) : {}),
+		...(everything || onlyFirefox ? await collectFirefoxSecrets(channel) : {}),
 	};
 
 	const names = Object.keys(secrets);
@@ -345,12 +368,17 @@ async function main(): Promise<void> {
 		console.log("\nNo secrets to update.");
 		return;
 	}
-	heading(`Saving to the "${RELEASE_ENV}" environment`);
+	heading(`Saving to the "${releaseEnv}" environment`);
 	for (const [name, value] of Object.entries(secrets)) {
-		gh(["secret", "set", name, "--env", RELEASE_ENV, "-R", REPO], value);
+		gh(["secret", "set", name, "--env", releaseEnv, "-R", REPO], value);
 		console.log(`Saved ${name}`);
 	}
-	await removeRepositoryCopies(names);
+	await removeRepositoryCopies(names, releaseEnv);
+	if (channel === "stable" && tryApi("GET", `environments/${LEGACY_RELEASE_ENV}`)) {
+		console.log(
+			`\nThe legacy "${LEGACY_RELEASE_ENV}" environment is no longer used. Delete it once "${releaseEnv}" has every secret: ${LINKS.environments}`,
+		);
+	}
 }
 
 main().catch((error: Error) => {
