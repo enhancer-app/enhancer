@@ -77,6 +77,7 @@ export default class ChattersModule extends TwitchModule {
 
 	private updateInterval: NodeJS.Timeout | undefined;
 	private channelDiscoveryTimer: NodeJS.Timeout | undefined;
+	private channelDiscoveryStarted = false;
 	private lastUpdatedAt = 0;
 	private lastKnownLogins = new Set<string>();
 	private refreshingChatters = false;
@@ -114,8 +115,12 @@ export default class ChattersModule extends TwitchModule {
 
 		this.requestUpdate();
 		if (this.updateInterval) clearInterval(this.updateInterval);
-		this.updateInterval = setInterval(() => this.requestUpdate(), ChattersModule.UPDATE_INTERVAL_TIME);
+		this.updateInterval = setInterval(() => {
+			if (!document.hidden) this.requestUpdate();
+		}, ChattersModule.UPDATE_INTERVAL_TIME);
 		this.startChannelDiscovery();
+		document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+		document.addEventListener("visibilitychange", this.handleVisibilityChange);
 
 		wrappers.forEach((element) => {
 			render(
@@ -247,14 +252,20 @@ export default class ChattersModule extends TwitchModule {
 		return uniqueLogins.length > 0 ? uniqueLogins : undefined;
 	}
 
+	private readonly handleVisibilityChange = () => {
+		if (!document.hidden) void this.requestUpdate();
+	};
+
 	private startChannelDiscovery() {
-		if (this.channelDiscoveryTimer) return;
+		if (this.channelDiscoveryStarted) return;
+		this.channelDiscoveryStarted = true;
 
 		let burstChecksLeft = 4;
 		const check = async () => {
-			await this.refreshIfChannelsChanged();
+			if (!document.hidden) await this.refreshIfChannelsChanged();
 			const isBurst = burstChecksLeft > 0;
 			burstChecksLeft = Math.max(0, burstChecksLeft - 1);
+			clearTimeout(this.channelDiscoveryTimer);
 			this.channelDiscoveryTimer = setTimeout(check, isBurst ? 1000 : ChattersModule.CHANNEL_DISCOVERY_INTERVAL_TIME);
 		};
 

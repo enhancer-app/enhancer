@@ -14,7 +14,10 @@ import type {
 export default class WorkerService {
 	private readonly logger = new Logger({ context: "worker" });
 	private readonly element: HTMLElement;
-	private pendingMessages = new Map<string, { resolve: (response: any) => void; reject: (error: Error) => void }>();
+	private pendingMessages = new Map<
+		string,
+		{ resolve: (response: any) => void; reject: (error: Error) => void; timeout: number }
+	>();
 	private pingInterval: number | null = null;
 	private broadcastHandlers = new Map<string, Set<(payload: any) => void>>();
 	private restartHandlers = new Set<() => void>();
@@ -105,6 +108,7 @@ export default class WorkerService {
 			const pending = this.pendingMessages.get(messageId);
 			if (pending) {
 				this.pendingMessages.delete(messageId);
+				clearTimeout(pending.timeout);
 				if (error) {
 					pending.reject(new Error(error));
 					return;
@@ -149,7 +153,13 @@ export default class WorkerService {
 	): Promise<WorkerApiActions[T]["response"] | null> {
 		return new Promise((resolve, reject) => {
 			const messageId = crypto.randomUUID();
-			this.pendingMessages.set(messageId, { resolve, reject });
+			const timeout = window.setTimeout(() => {
+				if (this.pendingMessages.has(messageId)) {
+					this.pendingMessages.delete(messageId);
+					resolve(null);
+				}
+			}, 10000);
+			this.pendingMessages.set(messageId, { resolve, reject, timeout });
 
 			const payload = args.length > 0 ? args[0] : undefined;
 			const event = new CustomEvent<string>("enhancer-message", {
@@ -157,13 +167,6 @@ export default class WorkerService {
 			});
 
 			this.element.dispatchEvent(event);
-
-			setTimeout(() => {
-				if (this.pendingMessages.has(messageId)) {
-					this.pendingMessages.delete(messageId);
-					resolve(null);
-				}
-			}, 10000);
 		});
 	}
 

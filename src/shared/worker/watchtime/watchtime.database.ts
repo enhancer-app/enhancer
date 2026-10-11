@@ -2,7 +2,7 @@ import { Database } from "$shared/worker/database/database.ts";
 import { WatchtimeDatabaseMigrator } from "$shared/worker/watchtime/watchtime.database-migrator.ts";
 import { createWatchtimeId } from "$shared/worker/watchtime/watchtime.utils.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
-import type { WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
+import type { WatchtimeChannel, WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
 
 export class WatchtimeDatabase extends Database {
 	protected readonly dbName = "enhancer_watchtime";
@@ -27,25 +27,31 @@ export class WatchtimeDatabase extends Database {
 		return result ?? null;
 	}
 
-	async addWatchtime(platform: PlatformType, username: string, timeToAdd: number): Promise<void> {
+	addWatchtime(entries: WatchtimeChannel[], timeToAdd: number): Promise<void> {
+		const db = this.requireDatabase();
 		const now = Date.now();
-		const normalizedUsername = username.toLowerCase();
-		const id = createWatchtimeId(platform, normalizedUsername);
-		let watchtime = await this.getWatchtime(platform, normalizedUsername);
-		if (watchtime) {
-			watchtime.time += timeToAdd;
-			watchtime.lastUpdate = now;
-		} else {
-			watchtime = {
-				id,
-				platform,
-				username: normalizedUsername,
-				time: timeToAdd,
-				firstUpdate: now,
-				lastUpdate: now,
+		return new Promise((resolve, reject) => {
+			const tx = db.transaction(this.storeName, "readwrite");
+			const store = tx.objectStore(this.storeName);
+			for (const { platform, username } of entries) {
+				const normalizedUsername = username.toLowerCase();
+				const id = createWatchtimeId(platform, normalizedUsername);
+				const request = store.get(id);
+				request.onsuccess = () => {
+					const existing = request.result as WatchtimeRecord | undefined;
+					const watchtime: WatchtimeRecord = existing
+						? { ...existing, time: existing.time + timeToAdd, lastUpdate: now }
+						: { id, platform, username: normalizedUsername, time: timeToAdd, firstUpdate: now, lastUpdate: now };
+					store.put(watchtime);
+				};
+			}
+			tx.oncomplete = () => resolve();
+			tx.onerror = () => {
+				this.logger.error("Database batch update failed:", tx.error);
+				reject(tx.error);
 			};
-		}
-		await this.request<void>(this.storeName, "readwrite", (store) => store.put(watchtime));
+			tx.onabort = () => reject(tx.error);
+		});
 	}
 
 	async getAllWatchtimePaginated(platform: PlatformType, page: number, pageSize: number): Promise<WatchtimeRecord[]> {
