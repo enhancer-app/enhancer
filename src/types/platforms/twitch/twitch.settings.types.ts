@@ -14,6 +14,7 @@ export type TwitchSettings = {
 	chatMessageMenuEnabled: boolean;
 	chatMessageMenuUseAddInsteadOfSet: boolean;
 	chatMentionSoundEnabled: boolean;
+	emoteBarEnabled: boolean;
 	/**
 	 * @deprecated Use chatMentionSoundFile instead. This field is kept for backward compatibility only.
 	 */

@@ -39,6 +39,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			this.utilsRepository,
 			this.enhancerApi,
 			this.workerApi,
+			this.emotesApi,
 			this.kickUtils,
 			this.kickApi,
 		] as const;
