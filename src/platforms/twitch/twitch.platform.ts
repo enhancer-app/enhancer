@@ -33,7 +33,10 @@ import TwitchUtils from "./twitch.utils.ts";
 
 export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents, TwitchStorage, TwitchSettings> {
 	constructor() {
-		super({ type: "twitch" });
+		super({
+			type: "twitch",
+			ignoredMutationSelectors: [ChatModule.TWITCHTV_CHAT_SELECTOR, ".seventv-chat-list"],
+		});
 	}
 
 	protected readonly twitchUtils = new TwitchUtils(this.utilsRepository.reactUtils);

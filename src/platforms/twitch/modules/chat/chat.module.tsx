@@ -243,7 +243,16 @@ export default class ChatModule extends TwitchModule {
 	}
 
 	private findSevenTvMessageElement(id: string) {
-		return document.querySelector(`${ChatModule.SEVENTV_MESSAGE_SELECTOR}[msg-id="${CSS.escape(id)}"]`);
+		const root = this.getSevenTvChatElement() ?? document;
+		return root.querySelector(`${ChatModule.SEVENTV_MESSAGE_SELECTOR}[msg-id="${CSS.escape(id)}"]`);
+	}
+
+	private twitchChatElement: Element | null = null;
+
+	private getTwitchChatElement(): Element | null {
+		if (this.twitchChatElement?.isConnected) return this.twitchChatElement;
+		this.twitchChatElement = document.querySelector(ChatModule.TWITCHTV_CHAT_SELECTOR);
+		return this.twitchChatElement;
 	}
 
 	private getSevenTvMessage(element: Element) {
@@ -256,7 +265,9 @@ export default class ChatModule extends TwitchModule {
 		}
 
 		// Newest lines are appended last, so scanning backwards matches on the first few instead of the whole chat.
-		const nativeElements = document.querySelectorAll(ChatModule.TWITCHTV_MESSAGE_SELECTOR);
+		const nativeElements = (this.getTwitchChatElement() ?? document).querySelectorAll(
+			ChatModule.TWITCHTV_MESSAGE_SELECTOR,
+		);
 		for (let index = nativeElements.length - 1; index >= 0; index--) {
 			const message = this.twitchUtils().getChatMessage(nativeElements[index]);
 			if (message?.id === id) return message;

@@ -11,6 +11,7 @@ export default class StreamLatencyModule extends KickModule {
 	private updateInterval: NodeJS.Timeout | undefined;
 	private playbackRate = signal(1);
 	private latencySampler = new LatencySampler();
+	private trackedVideo: HTMLVideoElement | null = null;
 
 	readonly config: KickModuleConfig = {
 		name: "stream-latency",
@@ -34,7 +35,7 @@ export default class StreamLatencyModule extends KickModule {
 			this.logger.debug("Found multiple elements of chat room");
 		}
 
-		this.watchPlaybackRate();
+		this.watchPlaybackRate(this.getVideoElement());
 
 		if (this.updateInterval) clearInterval(this.updateInterval);
 		this.updateInterval = setInterval(() => this.updateLatency(), 1000);
@@ -57,7 +58,9 @@ export default class StreamLatencyModule extends KickModule {
 	}
 
 	private updateLatency(): void {
+		if (document.hidden) return;
 		const video = this.getVideoElement();
+		this.watchPlaybackRate(video);
 		const isLive = !!video && this.kickUtils().isLiveVideo(video);
 		this.setLive(isLive);
 		if (!video || !isLive || video.paused) {
@@ -69,12 +72,17 @@ export default class StreamLatencyModule extends KickModule {
 		this.latencyCounter.value = latency ?? -1;
 	}
 
-	private watchPlaybackRate() {
-		const video = this.getVideoElement();
-		if (!video) return;
-		video.addEventListener("ratechange", () => {
-			this.playbackRate.value = video.playbackRate;
-		});
+	private readonly handleRateChange = (event: Event) => {
+		const video = event.target as HTMLVideoElement | null;
+		if (video) this.playbackRate.value = video.playbackRate;
+	};
+
+	private watchPlaybackRate(video: HTMLVideoElement | null) {
+		if (!video || this.trackedVideo === video) return;
+		this.trackedVideo?.removeEventListener("ratechange", this.handleRateChange);
+		video.addEventListener("ratechange", this.handleRateChange);
+		this.trackedVideo = video;
+		this.playbackRate.value = video.playbackRate;
 	}
 
 	private resetPlayer(): void {
