@@ -1,12 +1,10 @@
 import { spawnSync } from "node:child_process";
-import type { ExtensionChannel } from "../src/types/shared/extension.types";
 
 export const REPO = "enhancer-app/enhancer";
-export const LEGACY_RELEASE_ENV = "release";
+export const RELEASE_ENV = "release";
 export const ANNOUNCE_ENV = "release-announce";
+export const LEGACY_RELEASE_ENVS = ["release-stable", "release-canary"];
 export const ENVIRONMENTS_URL = `https://github.com/${REPO}/settings/environments`;
-
-export const releaseEnvironment = (channel: ExtensionChannel) => `release-${channel}`;
 
 const REQUIRED_CHECKS = ["Lint & Format", "Tests", "Type Check", "Build Project", "Validate Pull Request Title"];
 
@@ -69,9 +67,10 @@ export function allowActionsToCreatePullRequests(): void {
 	console.log("Allowed GitHub Actions to create pull requests.");
 }
 
-export function configureEnvironment(name: string, branch: string, requireReviewers: boolean): void {
+function configureEnvironment(name: string, branches: string[], requireReviewers: boolean): void {
 	const current = tryApi<Environment>("GET", `environments/${name}`);
-	const template = current ?? tryApi<Environment>("GET", `environments/${LEGACY_RELEASE_ENV}`);
+	const template =
+		current ?? LEGACY_RELEASE_ENVS.map((legacy) => tryApi<Environment>("GET", `environments/${legacy}`)).find(Boolean);
 	const rules = (requireReviewers ? template : current)?.protection_rules ?? [];
 	const reviewersRule = rules.find((rule) => rule.type === "required_reviewers");
 	const waitRule = rules.find((rule) => rule.type === "wait_timer");
@@ -86,22 +85,31 @@ export function configureEnvironment(name: string, branch: string, requireReview
 		"GET",
 		`environments/${name}/deployment-branch-policies`,
 	);
-	for (const policy of policies.filter((policy) => policy.name !== branch)) {
+	for (const policy of policies.filter((candidate) => !branches.includes(candidate.name))) {
 		api("DELETE", `environments/${name}/deployment-branch-policies/${policy.id}`);
 	}
-	if (!policies.some((policy) => policy.name === branch)) {
+	for (const branch of branches.filter((candidate) => !policies.some((policy) => policy.name === candidate))) {
 		api("POST", `environments/${name}/deployment-branch-policies`, { name: branch, type: "branch" });
 	}
-	console.log(`Environment "${name}" deploys only from ${branch}.`);
+	console.log(`Environment "${name}" deploys only from ${branches.join(" and ")}.`);
 
 	if (requireReviewers && !reviewersRule?.reviewers?.length) {
 		console.warn(`Environment "${name}" has no required reviewers. Add yourself: ${ENVIRONMENTS_URL}`);
 	}
 }
 
-export function configureChannelEnvironments(channel: ExtensionChannel): void {
-	configureEnvironment(releaseEnvironment(channel), channel, true);
-	if (channel === "stable") configureEnvironment(ANNOUNCE_ENV, "stable", false);
+export function configureEnvironments(): void {
+	configureEnvironment(RELEASE_ENV, ["stable", "canary"], true);
+	configureEnvironment(ANNOUNCE_ENV, ["stable"], false);
+}
+
+export function legacyEnvironments(): string[] {
+	return LEGACY_RELEASE_ENVS.filter((name) => tryApi("GET", `environments/${name}`));
+}
+
+export function deleteEnvironment(name: string): void {
+	api("DELETE", `environments/${name}`);
+	console.log(`Deleted environment "${name}".`);
 }
 
 function defaultBranchRuleset(): Ruleset {

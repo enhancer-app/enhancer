@@ -2,9 +2,17 @@ import data from "./package.json";
 import type { ExtensionChannel } from "./src/types/shared/extension.types";
 
 export const CHANNELS = {
-	stable: { name: "Enhancer", geckoId: "{09b8dba2-ae33-4bea-8bf1-d85e50691408}" },
-	canary: { name: "Enhancer Canary", geckoId: "{e3cd2c48-15da-4b9f-b5a1-10f867857b5a}" },
-} satisfies Record<ExtensionChannel, { name: string; geckoId: string }>;
+	stable: {
+		name: "Enhancer",
+		geckoId: "{09b8dba2-ae33-4bea-8bf1-d85e50691408}",
+		chromeId: "knaodoefkjbgmmilogebghadhmnphjih",
+	},
+	canary: {
+		name: "Enhancer Canary",
+		geckoId: "{e3cd2c48-15da-4b9f-b5a1-10f867857b5a}",
+		chromeId: "lppdfejgfeffohjlllmkahfkoplnpmai",
+	},
+} satisfies Record<ExtensionChannel, { name: string; geckoId: string; chromeId: string }>;
 
 export function getChannel(): ExtensionChannel {
 	const channel = process.env.CHANNEL ?? "stable";

@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import {
 	allowActionsToCreatePullRequests,
-	configureChannelEnvironments,
+	configureEnvironments,
 	configureRulesets,
 	ensureBranch,
 	gh,
@@ -15,8 +15,8 @@ Usage:
   bun run release:setup-branches
 
 Creates the stable and canary branches from the latest v* tag if they are missing, protects them with
-merge-commit-only rulesets, allows merge commits on the default branch for the sync PR, and points the
-release-stable, release-canary and release-announce environments at their branches.`);
+merge-commit-only rulesets, allows merge commits on the default branch for the sync PR, and limits the
+release environment to stable and canary and release-announce to stable.`);
 	process.exit(0);
 }
 
@@ -42,8 +42,7 @@ function main(): void {
 	ensureBranch("stable", sha);
 	ensureBranch("canary", sha);
 	configureRulesets();
-	configureChannelEnvironments("stable");
-	configureChannelEnvironments("canary");
+	configureEnvironments();
 }
 
 try {

@@ -111,8 +111,9 @@ Always use **Create a merge commit** for PRs into `stable` and `canary`, and for
 the same changes new commit hashes, and the branches then drift apart. The rulesets on `stable` and `canary` only
 allow merge commits.
 
-One-time setup: `bun run release:setup-branches`, then `bun run release:setup-secrets --channel stable` and
-`--channel canary`.
+One-time setup: `bun run release:setup-branches`, then `bun run release:setup-secrets`. Both channels publish
+from one store account, so they share the `release` environment; `release-announce` only deploys from `stable`.
+Extension IDs are public and live in `manifest.config.ts` and the release workflows.
 
 ## Project Scripts
 

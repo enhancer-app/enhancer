@@ -180,7 +180,7 @@ jobs:
     needs: build-release
     if: needs.build-release.outputs.PUBLISH == 'true'
     runs-on: ubuntu-latest
-    environment: release-stable
+    environment: release
     permissions:
       contents: read
     steps:
@@ -198,7 +198,7 @@ jobs:
           client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
           refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
           publisher-id: ${{ secrets.CHROME_PUBLISHER_ID }}
-          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          extension-id: knaodoefkjbgmmilogebghadhmnphjih
           zip-path: 'dist/build-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
 
   publish-firefox:
@@ -206,7 +206,7 @@ jobs:
     needs: build-release
     if: needs.build-release.outputs.PUBLISH == 'true'
     runs-on: ubuntu-latest
-    environment: release-stable
+    environment: release
     permissions:
       contents: read
     steps:
@@ -219,7 +219,7 @@ jobs:
       - name: Publish to Firefox
         uses: wdzeng/firefox-addon@b78a4d0148897b072ef18aff65a6bd793e8109be
         with:
-          addon-guid: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          addon-guid: "{09b8dba2-ae33-4bea-8bf1-d85e50691408}"
           xpi-path: 'dist/build-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
           source-file-path: 'dist/source-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
           jwt-issuer: ${{ secrets.AMO_JWT_ISSUER }}
