@@ -1,3 +1,4 @@
+import { EXTENSION_NAME } from "$shared/extension.constants.ts";
 import { DiagnosticLogsComponent } from "$shared/components/diagnostic-logs/diagnostic-logs.component.tsx";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
@@ -232,7 +233,7 @@ export function EnhancerAboutComponent({ platform, workerService, icons }: Enhan
 	return (
 		<Container>
 			<Header>
-				<Title>Enhancer</Title>
+				<Title>{EXTENSION_NAME}</Title>
 				<Subtitle>Open-source extension that adds missing features to streaming platforms</Subtitle>
 				<VersionBadge>Version {__version__}</VersionBadge>
 			</Header>

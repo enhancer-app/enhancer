@@ -1,3 +1,4 @@
+import { EXTENSION_NAME } from "$shared/extension.constants.ts";
 import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { render } from "preact";
@@ -117,7 +118,7 @@ interface SettingsButtonComponentProps {
 function SettingsButtonComponent({ onClick, logoUrl }: SettingsButtonComponentProps) {
 	return (
 		<StyledSettingsButton onClick={onClick}>
-			<img src={logoUrl} alt={"Enhancer Settings"} />
+			<img src={logoUrl} alt={`${EXTENSION_NAME} Settings`} />
 		</StyledSettingsButton>
 	);
 }
