@@ -74,6 +74,9 @@ export function getManifest(isDevelopment: boolean, channel: ExtensionChannel = 
 		browser_specific_settings: {
 			gecko: {
 				id: CHANNELS[channel].geckoId,
+				data_collection_permissions: {
+					required: ["browsingActivity", "websiteContent"],
+				},
 			},
 		},
 	};
