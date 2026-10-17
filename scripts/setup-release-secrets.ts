@@ -4,11 +4,17 @@ import { createServer } from "node:http";
 import { createInterface } from "node:readline/promises";
 import { CHANNELS, getManifest } from "../manifest.config";
 import type { ExtensionChannel } from "../src/types/shared/extension.types";
+import {
+	ANNOUNCE_ENV,
+	allowActionsToCreatePullRequests,
+	configureChannelEnvironments,
+	gh,
+	LEGACY_RELEASE_ENV,
+	REPO,
+	releaseEnvironment,
+	tryApi,
+} from "./release-github";
 
-const REPO = "enhancer-app/enhancer";
-const LEGACY_RELEASE_ENV = "release";
-const ANNOUNCE_ENV = "release-announce";
-const RELEASE_BRANCH = "master";
 const CHROME_SCOPE = "https://www.googleapis.com/auth/chromewebstore";
 
 const LINKS = {
@@ -20,15 +26,6 @@ const LINKS = {
 };
 
 type Secrets = Record<string, string>;
-
-type Environment = {
-	protection_rules?: {
-		type: string;
-		wait_timer?: number;
-		prevent_self_review?: boolean;
-		reviewers?: { type: string; reviewer: { id: number } }[];
-	}[];
-};
 
 const args = process.argv.slice(2);
 const flags = new Set(args);
@@ -109,75 +106,6 @@ async function askSecret(question: string): Promise<string> {
 		process.stdin.resume();
 		process.stdin.on("data", onData);
 	});
-}
-
-function gh(args: string[], input?: string): string {
-	const result = spawnSync("gh", args, { input, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
-	if (result.status !== 0) throw new Error(`gh ${args.slice(0, 3).join(" ")} failed: ${result.stderr.trim()}`);
-	return result.stdout;
-}
-
-function api<T>(method: string, path: string, body?: object): T {
-	const args = ["api", "-X", method, `repos/${REPO}/${path}`];
-	if (body) args.push("--input", "-");
-	const output = gh(args, body ? JSON.stringify(body) : undefined);
-	return (output ? JSON.parse(output) : undefined) as T;
-}
-
-function tryApi<T>(method: string, path: string): T | undefined {
-	try {
-		return api<T>(method, path);
-	} catch {
-		return undefined;
-	}
-}
-
-function allowActionsToCreatePullRequests(): void {
-	const settings = api<{ default_workflow_permissions: string; can_approve_pull_request_reviews: boolean }>(
-		"GET",
-		"actions/permissions/workflow",
-	);
-	if (settings.can_approve_pull_request_reviews) {
-		console.log("GitHub Actions can already create pull requests.");
-		return;
-	}
-	api("PUT", "actions/permissions/workflow", {
-		default_workflow_permissions: settings.default_workflow_permissions,
-		can_approve_pull_request_reviews: true,
-	});
-	console.log("Allowed GitHub Actions to create pull requests.");
-}
-
-function restrictEnvironmentToReleaseBranch(name: string, requireReviewers: boolean): void {
-	const rules = tryApi<Environment>("GET", `environments/${name}`)?.protection_rules ?? [];
-	const reviewersRule = rules.find((rule) => rule.type === "required_reviewers");
-	const waitRule = rules.find((rule) => rule.type === "wait_timer");
-	api("PUT", `environments/${name}`, {
-		wait_timer: waitRule?.wait_timer ?? 0,
-		prevent_self_review: reviewersRule?.prevent_self_review ?? false,
-		reviewers: reviewersRule?.reviewers?.map(({ type, reviewer }) => ({ type, id: reviewer.id })) ?? null,
-		deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
-	});
-
-	const policies = api<{ branch_policies: { name: string }[] }>(
-		"GET",
-		`environments/${name}/deployment-branch-policies`,
-	);
-	if (!policies.branch_policies.some((policy) => policy.name === RELEASE_BRANCH)) {
-		api("POST", `environments/${name}/deployment-branch-policies`, { name: RELEASE_BRANCH, type: "branch" });
-	}
-	console.log(`Environment "${name}" deploys only from ${RELEASE_BRANCH}.`);
-
-	if (requireReviewers && !reviewersRule?.reviewers?.length) {
-		console.warn(`Environment "${name}" has no required reviewers. Add yourself: ${LINKS.environments}`);
-	}
-}
-
-function configureRepository(channel: ExtensionChannel, releaseEnv: string): void {
-	heading("Repository");
-	allowActionsToCreatePullRequests();
-	restrictEnvironmentToReleaseBranch(releaseEnv, true);
-	if (channel === "stable") restrictEnvironmentToReleaseBranch(ANNOUNCE_ENV, false);
 }
 
 async function getAuthorizationCode(clientId: string): Promise<{
@@ -352,12 +280,16 @@ async function main(): Promise<void> {
 	}
 
 	const channel = await resolveChannel();
-	const releaseEnv = `release-${channel}`;
+	const releaseEnv = releaseEnvironment(channel);
 	const onlyChrome = flags.has("--chrome");
 	const onlyFirefox = flags.has("--firefox");
 	const everything = !onlyChrome && !onlyFirefox;
 
-	if (everything) configureRepository(channel, releaseEnv);
+	if (everything) {
+		heading("Repository");
+		allowActionsToCreatePullRequests();
+		configureChannelEnvironments(channel);
+	}
 	const secrets: Secrets = {
 		...(everything || onlyChrome ? await collectChromeSecrets(channel) : {}),
 		...(everything || onlyFirefox ? await collectFirefoxSecrets(channel) : {}),

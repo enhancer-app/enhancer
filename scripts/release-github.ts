@@ -1,0 +1,181 @@
+import { spawnSync } from "node:child_process";
+import type { ExtensionChannel } from "../src/types/shared/extension.types";
+
+export const REPO = "enhancer-app/enhancer";
+export const LEGACY_RELEASE_ENV = "release";
+export const ANNOUNCE_ENV = "release-announce";
+export const ENVIRONMENTS_URL = `https://github.com/${REPO}/settings/environments`;
+
+export const releaseEnvironment = (channel: ExtensionChannel) => `release-${channel}`;
+
+const REQUIRED_CHECKS = ["Lint & Format", "Tests", "Type Check", "Build Project", "Validate Pull Request Title"];
+
+type Reviewer = { type: string; reviewer: { id: number } };
+
+type Environment = {
+	protection_rules?: {
+		type: string;
+		wait_timer?: number;
+		prevent_self_review?: boolean;
+		reviewers?: Reviewer[];
+	}[];
+};
+
+type Rule = { type: string; parameters?: Record<string, unknown> };
+
+type Ruleset = {
+	id: number;
+	name: string;
+	enforcement: string;
+	conditions: { ref_name: { include: string[]; exclude: string[] } };
+	rules: Rule[];
+	bypass_actors: { actor_id: number; actor_type: string; bypass_mode: string }[];
+};
+
+export function gh(args: string[], input?: string): string {
+	const result = spawnSync("gh", args, { input, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
+	if (result.status !== 0) throw new Error(`gh ${args.slice(0, 3).join(" ")} failed: ${result.stderr.trim()}`);
+	return result.stdout;
+}
+
+export function api<T>(method: string, path: string, body?: object): T {
+	const args = ["api", "-X", method, `repos/${REPO}/${path}`];
+	if (body) args.push("--input", "-");
+	const output = gh(args, body ? JSON.stringify(body) : undefined);
+	return (output ? JSON.parse(output) : undefined) as T;
+}
+
+export function tryApi<T>(method: string, path: string): T | undefined {
+	try {
+		return api<T>(method, path);
+	} catch {
+		return undefined;
+	}
+}
+
+export function allowActionsToCreatePullRequests(): void {
+	const settings = api<{ default_workflow_permissions: string; can_approve_pull_request_reviews: boolean }>(
+		"GET",
+		"actions/permissions/workflow",
+	);
+	if (settings.can_approve_pull_request_reviews) {
+		console.log("GitHub Actions can already create pull requests.");
+		return;
+	}
+	api("PUT", "actions/permissions/workflow", {
+		default_workflow_permissions: settings.default_workflow_permissions,
+		can_approve_pull_request_reviews: true,
+	});
+	console.log("Allowed GitHub Actions to create pull requests.");
+}
+
+export function configureEnvironment(name: string, branch: string, requireReviewers: boolean): void {
+	const current = tryApi<Environment>("GET", `environments/${name}`);
+	const template = current ?? tryApi<Environment>("GET", `environments/${LEGACY_RELEASE_ENV}`);
+	const rules = (requireReviewers ? template : current)?.protection_rules ?? [];
+	const reviewersRule = rules.find((rule) => rule.type === "required_reviewers");
+	const waitRule = rules.find((rule) => rule.type === "wait_timer");
+	api("PUT", `environments/${name}`, {
+		wait_timer: waitRule?.wait_timer ?? 0,
+		prevent_self_review: reviewersRule?.prevent_self_review ?? false,
+		reviewers: reviewersRule?.reviewers?.map(({ type, reviewer }) => ({ type, id: reviewer.id })) ?? null,
+		deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
+	});
+
+	const { branch_policies: policies } = api<{ branch_policies: { id: number; name: string }[] }>(
+		"GET",
+		`environments/${name}/deployment-branch-policies`,
+	);
+	for (const policy of policies.filter((policy) => policy.name !== branch)) {
+		api("DELETE", `environments/${name}/deployment-branch-policies/${policy.id}`);
+	}
+	if (!policies.some((policy) => policy.name === branch)) {
+		api("POST", `environments/${name}/deployment-branch-policies`, { name: branch, type: "branch" });
+	}
+	console.log(`Environment "${name}" deploys only from ${branch}.`);
+
+	if (requireReviewers && !reviewersRule?.reviewers?.length) {
+		console.warn(`Environment "${name}" has no required reviewers. Add yourself: ${ENVIRONMENTS_URL}`);
+	}
+}
+
+export function configureChannelEnvironments(channel: ExtensionChannel): void {
+	configureEnvironment(releaseEnvironment(channel), channel, true);
+	if (channel === "stable") configureEnvironment(ANNOUNCE_ENV, "stable", false);
+}
+
+function defaultBranchRuleset(): Ruleset {
+	const summaries = api<{ id: number }[]>("GET", "rulesets");
+	for (const { id } of summaries) {
+		const ruleset = api<Ruleset>("GET", `rulesets/${id}`);
+		if (ruleset.conditions.ref_name.include.includes("~DEFAULT_BRANCH")) return ruleset;
+	}
+	throw new Error("No ruleset protects the default branch.");
+}
+
+function upsertRuleset(existing: Ruleset[], ruleset: Omit<Ruleset, "id">): void {
+	const body = { target: "branch", ...ruleset };
+	const current = existing.find((candidate) => candidate.name === ruleset.name);
+	if (current) api("PUT", `rulesets/${current.id}`, body);
+	else api("POST", "rulesets", body);
+	console.log(`Ruleset "${ruleset.name}" is up to date.`);
+}
+
+export function configureRulesets(): void {
+	const master = defaultBranchRuleset();
+	const pullRequest = master.rules.find((rule) => rule.type === "pull_request");
+	if (!pullRequest?.parameters) throw new Error(`Ruleset "${master.name}" has no pull request rule.`);
+
+	const masterMethods = new Set([...((pullRequest.parameters.allowed_merge_methods as string[]) ?? []), "merge"]);
+	api("PUT", `rulesets/${master.id}`, {
+		name: master.name,
+		target: "branch",
+		enforcement: master.enforcement,
+		conditions: master.conditions,
+		bypass_actors: master.bypass_actors,
+		rules: master.rules.map((rule) =>
+			rule === pullRequest
+				? { ...rule, parameters: { ...rule.parameters, allowed_merge_methods: [...masterMethods] } }
+				: rule,
+		),
+	});
+	console.log(`Ruleset "${master.name}" allows merge commits for the stable sync PR.`);
+
+	const mergeOnly = { ...pullRequest, parameters: { ...pullRequest.parameters, allowed_merge_methods: ["merge"] } };
+	const protect = [{ type: "deletion" }, { type: "non_fast_forward" }];
+	const existing = api<Ruleset[]>("GET", "rulesets");
+	upsertRuleset(existing, {
+		name: "stable",
+		enforcement: "active",
+		conditions: { ref_name: { include: ["refs/heads/stable"], exclude: [] } },
+		bypass_actors: master.bypass_actors,
+		rules: [
+			...protect,
+			mergeOnly,
+			{
+				type: "required_status_checks",
+				parameters: {
+					strict_required_status_checks_policy: false,
+					do_not_enforce_on_create: true,
+					required_status_checks: REQUIRED_CHECKS.map((context) => ({ context, integration_id: 15368 })),
+				},
+			},
+		],
+	});
+	upsertRuleset(existing, {
+		name: "canary",
+		enforcement: "active",
+		conditions: { ref_name: { include: ["refs/heads/canary"], exclude: [] } },
+		bypass_actors: master.bypass_actors,
+		rules: [...protect, mergeOnly],
+	});
+}
+
+export function ensureBranch(branch: string, sha: string): void {
+	if (tryApi("GET", `git/ref/heads/${branch}`)) {
+		console.log(`Branch ${branch} already exists.`);
+		return;
+	}
+	api("POST", "git/refs", { ref: `refs/heads/${branch}`, sha });
+	console.log(`Created branch ${branch} at ${sha.slice(0, 7)}.`);
+}

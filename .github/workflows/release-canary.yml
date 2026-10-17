@@ -1,6 +1,9 @@
 name: Release Canary
 
 on:
+  push:
+    branches:
+      - canary
   workflow_dispatch:
 
 permissions:
@@ -13,7 +16,7 @@ concurrency:
 jobs:
   build-release:
     name: Build & GitHub Pre-release
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/canary'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -21,23 +24,23 @@ jobs:
       VERSION: ${{ steps.get_version.outputs.VERSION }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Determine Version
         id: get_version
-        env:
-          RUN_NUMBER: ${{ github.run_number }}
         run: |
-          VERSION="$(jq -r .version package.json).$RUN_NUMBER"
-          if git rev-parse "canary-$VERSION" >/dev/null 2>&1; then
-            echo "::error::Tag canary-$VERSION already exists."
-            exit 1
+          LAST_BUILD=$(git tag --list 'canary-*' | awk -F. '{print $NF}' | sort -n | tail -n1)
+          BUILD=$(( ${LAST_BUILD:-0} + 1 ))
+          VERSION="$(jq -r .version package.json).$BUILD"
+          if [ -n "$LAST_BUILD" ]; then
+            PREVIOUS_TAG=$(git tag --list "canary-*.$LAST_BUILD" | head -n1)
+          else
+            PREVIOUS_TAG=$(git tag --list 'v*' --sort=-v:refname | head -n1)
           fi
-          PREVIOUS_TAG=$(git tag --list 'canary-*' --sort=-v:refname | head -n1)
-          if [ -z "$PREVIOUS_TAG" ]; then PREVIOUS_TAG=$(git tag --list 'v*' --sort=-v:refname | head -n1); fi
+          echo "BUILD=$BUILD" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
 
@@ -50,7 +53,7 @@ jobs:
         env:
           ENVIRONMENT: production
           CHANNEL: canary
-          CANARY_BUILD: ${{ github.run_number }}
+          CANARY_BUILD: ${{ steps.get_version.outputs.BUILD }}
           CANARY_COMMIT: ${{ github.sha }}
         run: |
           bun install
@@ -62,30 +65,18 @@ jobs:
           name: extension-builds
           path: dist/
 
-      - name: Generate Release Notes
+      - name: Create GitHub Pre-release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.get_version.outputs.VERSION }}
           PREVIOUS_TAG: ${{ steps.get_version.outputs.PREVIOUS_TAG }}
+          TARGET_SHA: ${{ github.sha }}
         run: |
-          ARGS=(-f "tag_name=canary-$VERSION" -f "target_commitish=$GITHUB_SHA")
-          if [ -n "$PREVIOUS_TAG" ]; then ARGS+=(-f "previous_tag_name=$PREVIOUS_TAG"); fi
-          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" "${ARGS[@]}" --jq .body > release-notes.md
-
-      - name: Create GitHub Pre-release
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
-        with:
-          tag_name: canary-${{ steps.get_version.outputs.VERSION }}
-          target_commitish: ${{ github.sha }}
-          name: Canary ${{ steps.get_version.outputs.VERSION }}
-          body_path: release-notes.md
-          prerelease: true
-          make_latest: false
-          files: |
-            dist/build-${{ steps.get_version.outputs.VERSION }}.zip
-            dist/source-${{ steps.get_version.outputs.VERSION }}.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOTES_ARGS=(--generate-notes)
+          if [ -n "$PREVIOUS_TAG" ]; then NOTES_ARGS+=(--notes-start-tag "$PREVIOUS_TAG"); fi
+          gh release create "canary-$VERSION" --target "$TARGET_SHA" --title "Canary $VERSION" \
+            --prerelease --latest=false "${NOTES_ARGS[@]}" \
+            "dist/build-$VERSION.zip" "dist/source-$VERSION.zip"
 
   publish-chrome:
     name: Publish Chrome
