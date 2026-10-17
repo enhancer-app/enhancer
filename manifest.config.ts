@@ -64,9 +64,9 @@ export function getManifest(isDevelopment: boolean, channel: ExtensionChannel = 
 				resources: [
 					"index.js",
 					"index.js.map",
+					"home.html",
 					"inject.js.map",
-					"twitch.constants.js",
-					"kick.constants.js",
+					"chunks/*.js",
 					"assets/enhancer/*.svg",
 					"assets/enhancer/*.png",
 					"assets/brands/*.svg",

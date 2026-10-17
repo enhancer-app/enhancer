@@ -8,6 +8,9 @@ import ChatMessageMenuModule from "$twitch/modules/chat-message-menu/chat-messag
 import MessageMenuModule from "$twitch/modules/chat-message-menu/message-menu.module.tsx";
 import ChatNicknameCustomizationModule from "$twitch/modules/chat-nickname-customization/chat-nickname-customization.module.tsx";
 import ChattersModule from "$twitch/modules/chatters/chatters.module.tsx";
+import CrossPlatformFollowsSyncModule from "$twitch/modules/cross-platform-follows/cross-platform-follows-sync.module.ts";
+import CrossPlatformFollowsModule from "$twitch/modules/cross-platform-follows/cross-platform-follows.module.tsx";
+import FollowsHomeModule from "$twitch/modules/follows-home/follows-home.module.ts";
 import LocalWatchtimeCounterModule from "$twitch/modules/local-watchtime-counter/local-watchtime-counter.module.tsx";
 import PinStreamerModule from "$twitch/modules/pin-streamer/pin-streamer.module.tsx";
 import RealVideoTimeModule from "$twitch/modules/real-video-time/real-video-time.module.tsx";
@@ -34,7 +37,12 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 	constructor() {
 		super({
 			type: "twitch",
-			ignoredMutationSelectors: [ChatModule.TWITCHTV_CHAT_SELECTOR, ".seventv-chat-list"],
+			ignoredMutationSelectors: [
+				ChatModule.TWITCHTV_CHAT_SELECTOR,
+				".seventv-chat-list",
+				"#enhancer-cross-platform-follows",
+				"#enhancer-follows-home",
+			],
 		});
 	}
 
@@ -77,6 +85,9 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			new ChatMessageMenuModule(...dependencies),
 			new ChatMentionSoundModule(...dependencies),
 			new AdditionalFontsModule(...dependencies),
+			new CrossPlatformFollowsSyncModule(...dependencies),
+			new CrossPlatformFollowsModule(...dependencies),
+			new FollowsHomeModule(...dependencies),
 		];
 	}
 
