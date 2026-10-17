@@ -6,8 +6,14 @@ const { spawn, file, write } = Bun;
 
 const IGNORED_DIRS = new Set([".github", ".husky", ".idea", "dist", "node_modules", ".git"]);
 
-async function archiveDirectory(sourceDir: string, outPath: string, exclude: Set<string> = new Set()) {
+async function archiveDirectory(
+	sourceDir: string,
+	outPath: string,
+	exclude: Set<string> = new Set(),
+	extraFiles: Record<string, string> = {},
+) {
 	const zip = new JSZip();
+	for (const [name, content] of Object.entries(extraFiles)) zip.file(name, content);
 
 	async function traverse(currentDir: string, relativePath: string) {
 		const entries = await readdir(currentDir, { withFileTypes: true });
@@ -49,5 +55,19 @@ await archiveDirectory("dist", buildZipPath);
 console.log(`Created ${buildZipPath}`);
 
 const sourceZipPath = path.join("dist", `source-${version}.zip`);
-await archiveDirectory(".", sourceZipPath, IGNORED_DIRS);
+const sourceExtras: Record<string, string> = {};
+if (process.env.CHANNEL === "canary") {
+	sourceExtras["CANARY_BUILD.md"] = [
+		`# Enhancer Canary ${version}`,
+		"",
+		"Build this package with:",
+		"",
+		"```sh",
+		"bun install",
+		`CHANNEL=canary CANARY_BUILD=${process.env.CANARY_BUILD ?? "0"} bun run pack`,
+		"```",
+		"",
+	].join("\n");
+}
+await archiveDirectory(".", sourceZipPath, IGNORED_DIRS, sourceExtras);
 console.log(`Created ${sourceZipPath}`);

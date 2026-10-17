@@ -88,6 +88,32 @@ This command:
 3. Creates `dist/source-{version}.zip` - Source code archive (excluding node_modules, .git, and other ignored
    directories)
 
+`bun run pack:canary` builds **Enhancer Canary** instead: its own name, icons from `branding/canary/`, a separate
+Firefox ID and the version `{package.json version}.{CANARY_BUILD}`.
+
+## Releasing
+
+Enhancer has two release channels, each on its own branch:
+
+| Branch   | Channel                  | How it is released                                          |
+|----------|--------------------------|-------------------------------------------------------------|
+| `master` | development              | Feature PRs are merged here (squash)                        |
+| `canary` | Enhancer Canary          | Merge the bot PR `release(canary): vX.Y.Z.N` (master → canary) |
+| `stable` | Enhancer                 | Merge the bot PR `release(stable): vX.Y.Z` (release-next → stable) |
+
+- **Stable release:** tick patch, minor or major in the `release(stable)` PR and merge it.
+- **Hotfix:** open a PR from a branch based on `stable` into `stable`. The bot then opens a `release(stable)` PR
+  from `release-hotfix` with a patch bump. Merging it releases the hotfix.
+- **Sync:** after every stable release or hotfix the bot opens `chore(sync): merge stable into master`. Merge it
+  before the next stable release PR is updated.
+
+Always use **Create a merge commit** for PRs into `stable` and `canary`, and for the sync PR. Squash and rebase give
+the same changes new commit hashes, and the branches then drift apart. The rulesets on `stable` and `canary` only
+allow merge commits.
+
+One-time setup: `bun run release:setup-branches`, then `bun run release:setup-secrets --channel stable` and
+`--channel canary`.
+
 ## Project Scripts
 
 | Command                   | Description                      |
@@ -95,6 +121,7 @@ This command:
 | `bun run dev`             | Development mode with hot reload |
 | `bun run build`           | Production build                 |
 | `bun run pack`            | Create distribution packages     |
+| `bun run pack:canary`     | Create Canary packages           |
 | `bun run typecheck`       | Run TypeScript type checking     |
 | `bun run typecheck:watch` | Type checking in watch mode      |
 | `bun run lint`            | Run oxlint                       |

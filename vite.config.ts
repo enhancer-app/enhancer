@@ -1,13 +1,15 @@
+import { cpSync, existsSync } from "node:fs";
 import preact from "@preact/preset-vite";
 import { defineConfig } from "vite";
 import generateFilePlugin from "vite-plugin-generate-file";
 import tsconfigPaths from "vite-tsconfig-paths";
-import { getManifest } from "./manifest.config";
-import { version } from "./package.json";
+import { getChannel, getManifest, getVersion } from "./manifest.config";
 
 const isDevelopment = process.env.ENVIRONMENT === "development";
 // Classic content scripts share one global scope, so minified top-level names would collide.
 const CONTENT_SCRIPT_CHUNKS = new Set(["inject", "worker.bridge"]);
+const channel = getChannel();
+const CHANNEL_ASSETS_DIR = `branding/${channel}`;
 
 export default defineConfig({
 	server: {
@@ -20,7 +22,8 @@ export default defineConfig({
 	},
 	define: {
 		__environment__: JSON.stringify(process.env.ENVIRONMENT),
-		__version__: JSON.stringify(version),
+		__version__: JSON.stringify(getVersion(channel)),
+		__channel__: JSON.stringify(channel),
 	},
 	plugins: [
 		preact(),
@@ -28,8 +31,14 @@ export default defineConfig({
 		generateFilePlugin({
 			type: "json",
 			output: "./manifest.json",
-			data: getManifest(isDevelopment),
+			data: getManifest(isDevelopment, channel),
 		}),
+		{
+			name: "channel-assets",
+			closeBundle() {
+				if (existsSync(CHANNEL_ASSETS_DIR)) cpSync(CHANNEL_ASSETS_DIR, "dist/assets/enhancer", { recursive: true });
+			},
+		},
 	],
 	build: {
 		outDir: "dist",

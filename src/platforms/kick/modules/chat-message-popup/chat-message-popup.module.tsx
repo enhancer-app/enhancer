@@ -1,3 +1,4 @@
+import { EXTENSION_NAME } from "$shared/extension.constants.ts";
 import KickModule from "$kick/kick.module.ts";
 import type { EnhancerMessageEvent } from "$types/apis/enhancer.apis.ts";
 import type { ChatMessagePopupEvent } from "$types/platforms/twitch/twitch.events.types.ts";
@@ -34,7 +35,7 @@ export default class ChatMessagePopupModule extends KickModule {
 				? message.data.text
 				: null;
 		if (!text?.trim()) return;
-		this.render({ title: "Enhancer", content: text, autoclose: text.length > 120 ? 30 : 10 });
+		this.render({ title: EXTENSION_NAME, content: text, autoclose: text.length > 120 ? 30 : 10 });
 	}
 
 	private render(message: ChatMessagePopupEvent) {

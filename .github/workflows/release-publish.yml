@@ -1,9 +1,9 @@
-name: Release
+name: Release Stable
 
 on:
   push:
     branches:
-      - master
+      - stable
     paths:
       - package.json
   workflow_dispatch:
@@ -23,6 +23,7 @@ concurrency:
 jobs:
   build-release:
     name: Build & GitHub Release
+    if: github.ref == 'refs/heads/stable'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -95,16 +96,10 @@ jobs:
             exit 0
           fi
 
-          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
-          if [ "$CHANGED_FILES" != "package.json" ]; then
-            echo "::error::Release commit must change only package.json. Changed files: $CHANGED_FILES"
-            exit 1
-          fi
-
           RELEASE_PRS=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
-            --jq "[.[] | select(.merged_at != null and .head.ref == \"release-next\" and .head.repo.full_name == \"$GITHUB_REPOSITORY\")] | length")
+            --jq "[.[] | select(.merged_at != null and .base.ref == \"stable\" and (.head.ref == \"release-next\" or .head.ref == \"release-hotfix\") and .head.repo.full_name == \"$GITHUB_REPOSITORY\")] | length")
           if [ "$RELEASE_PRS" -lt 1 ]; then
-            echo "::error::Version change did not come from the release-next PR."
+            echo "::error::Version change did not come from a release-next or release-hotfix PR."
             exit 1
           fi
 
@@ -146,6 +141,9 @@ jobs:
           CLEAN_VER: ${{ steps.get_version.outputs.CLEAN_VER }}
           TARGET_SHA: ${{ github.sha }}
         run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 --match 'v*' "$TARGET_SHA^" 2>/dev/null || true)
+          NOTES_ARGS=(--generate-notes)
+          if [ -n "$PREVIOUS_TAG" ]; then NOTES_ARGS+=(--notes-start-tag "$PREVIOUS_TAG"); fi
           BUILD_ZIP="dist/build-${CLEAN_VER}.zip"
           SOURCE_ZIP="dist/source-${CLEAN_VER}.zip"
           for f in "$BUILD_ZIP" "$SOURCE_ZIP"; do
@@ -159,7 +157,7 @@ jobs:
             ATTEMPT=$((ATTEMPT + 1))
             echo "Creating release $VERSION (attempt $ATTEMPT/3)..."
             if gh release create "$VERSION" --target "$TARGET_SHA" \
-              --title "Release $VERSION" --generate-notes "$BUILD_ZIP" "$SOURCE_ZIP"; then
+              --title "Release $VERSION" "${NOTES_ARGS[@]}" "$BUILD_ZIP" "$SOURCE_ZIP"; then
               break
             fi
             echo "::warning::Release create/upload failed (attempt $ATTEMPT/3). Cleaning up tag."
@@ -182,7 +180,7 @@ jobs:
     needs: build-release
     if: needs.build-release.outputs.PUBLISH == 'true'
     runs-on: ubuntu-latest
-    environment: release
+    environment: release-stable
     permissions:
       contents: read
     steps:
@@ -208,7 +206,7 @@ jobs:
     needs: build-release
     if: needs.build-release.outputs.PUBLISH == 'true'
     runs-on: ubuntu-latest
-    environment: release
+    environment: release-stable
     permissions:
       contents: read
     steps:

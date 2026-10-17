@@ -53,8 +53,12 @@
     "dev": "ENVIRONMENT=development concurrently \"bun run typecheck:watch\" \"vite build --watch\" \"vite\"",
     "build": "ENVIRONMENT=production bun run check && bun run typecheck && vite build",
     "pack": "ENVIRONMENT=production bun run scripts/pack.ts",
+    "pack:canary": "CHANNEL=canary ENVIRONMENT=production bun run scripts/pack.ts",
+    "release:setup-branches": "bun run scripts/setup-release-branches.ts",
     "release:setup-secrets": "bun run scripts/setup-release-secrets.ts",
     "chrome:refresh-token": "bun run scripts/setup-release-secrets.ts --chrome",
+    "chrome:refresh-token:stable": "bun run scripts/setup-release-secrets.ts --chrome --channel stable",
+    "chrome:refresh-token:canary": "bun run scripts/setup-release-secrets.ts --chrome --channel canary",
     "prepare": "husky"
   },
   "lint-staged": {
