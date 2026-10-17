@@ -1,3 +1,4 @@
+import { EXTENSION_NAME } from "$shared/extension.constants.ts";
 import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import type { QuickAccessLink } from "$types/shared/components/settings.component.types.ts";
 import type { Signal } from "@preact/signals";
@@ -40,7 +41,7 @@ export function ChannelSectionComponent({
 			<Header>
 				<ChannelInfo>
 					<LogoContainer>
-						<img src={logoUrl} alt={"Enhancer Logo"} />
+						<img src={logoUrl} alt={`${EXTENSION_NAME} Logo`} />
 					</LogoContainer>
 					<ChannelDetails>
 						<ChannelNameRow>

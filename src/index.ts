@@ -1,5 +1,5 @@
 import KickPlatform from "$kick/kick.platform.ts";
-import type { ExtensionEnvironment, ExtensionMetadata } from "$types/shared/extension.types.ts";
+import type { ExtensionChannel, ExtensionEnvironment, ExtensionMetadata } from "$types/shared/extension.types.ts";
 import TwitchPlatform from "./platforms/twitch/twitch.platform.ts";
 
 (async () => {
@@ -8,6 +8,7 @@ import TwitchPlatform from "./platforms/twitch/twitch.platform.ts";
 	window.enhancer = {
 		version: __version__,
 		environment: __environment__,
+		channel: __channel__,
 		platform: platform.getPlatformType(),
 	};
 	if (platform.shouldStart(window.location)) await platform.start();
@@ -23,6 +24,7 @@ function getPlatform() {
 declare global {
 	const __version__: string;
 	const __environment__: ExtensionEnvironment;
+	const __channel__: ExtensionChannel;
 
 	interface Window {
 		enhancer: ExtensionMetadata;

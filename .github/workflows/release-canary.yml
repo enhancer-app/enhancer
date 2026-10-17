@@ -1,0 +1,128 @@
+name: Release Canary
+
+on:
+  push:
+    branches:
+      - canary
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-canary
+  cancel-in-progress: false
+
+jobs:
+  build-release:
+    name: Build & GitHub Pre-release
+    if: github.ref == 'refs/heads/canary'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      VERSION: ${{ steps.get_version.outputs.VERSION }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Determine Version
+        id: get_version
+        run: |
+          LAST_BUILD=$(git tag --list 'canary-*' | awk -F. '{print $NF}' | sort -n | tail -n1)
+          BUILD=$(( ${LAST_BUILD:-0} + 1 ))
+          VERSION="$(jq -r .version package.json).$BUILD"
+          if [ -n "$LAST_BUILD" ]; then
+            PREVIOUS_TAG=$(git tag --list "canary-*.$LAST_BUILD" | head -n1)
+          else
+            PREVIOUS_TAG=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+          fi
+          echo "BUILD=$BUILD" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: ".bun-version"
+
+      - name: Install & Pack
+        env:
+          ENVIRONMENT: production
+          CHANNEL: canary
+          CANARY_BUILD: ${{ steps.get_version.outputs.BUILD }}
+          CANARY_COMMIT: ${{ github.sha }}
+        run: |
+          bun install
+          bun run pack
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: extension-builds
+          path: dist/
+
+      - name: Create GitHub Pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+          PREVIOUS_TAG: ${{ steps.get_version.outputs.PREVIOUS_TAG }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          NOTES_ARGS=(--generate-notes)
+          if [ -n "$PREVIOUS_TAG" ]; then NOTES_ARGS+=(--notes-start-tag "$PREVIOUS_TAG"); fi
+          gh release create "canary-$VERSION" --target "$TARGET_SHA" --title "Canary $VERSION" \
+            --prerelease --latest=false "${NOTES_ARGS[@]}" \
+            "dist/build-$VERSION.zip" "dist/source-$VERSION.zip"
+
+  publish-chrome:
+    name: Publish Chrome
+    needs: build-release
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: extension-builds
+          path: dist
+
+      - name: Publish to Chrome Web Store
+        uses: wdzeng/chrome-extension@37f4f9cdc664959bafef36b1f4da03dec5141620
+        with:
+          action: 'publish'
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          publisher-id: ${{ secrets.CHROME_PUBLISHER_ID }}
+          extension-id: lppdfejgfeffohjlllmkahfkoplnpmai
+          zip-path: 'dist/build-${{ needs.build-release.outputs.VERSION }}.zip'
+
+  publish-firefox:
+    name: Publish Firefox
+    needs: build-release
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: extension-builds
+          path: dist
+
+      - name: Publish to Firefox
+        uses: wdzeng/firefox-addon@b78a4d0148897b072ef18aff65a6bd793e8109be
+        with:
+          addon-guid: "{e3cd2c48-15da-4b9f-b5a1-10f867857b5a}"
+          xpi-path: 'dist/build-${{ needs.build-release.outputs.VERSION }}.zip'
+          source-file-path: 'dist/source-${{ needs.build-release.outputs.VERSION }}.zip'
+          jwt-issuer: ${{ secrets.AMO_JWT_ISSUER }}
+          jwt-secret: ${{ secrets.AMO_JWT_SECRET }}
+          self-hosted: false

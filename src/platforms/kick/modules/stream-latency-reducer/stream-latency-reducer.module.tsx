@@ -46,7 +46,7 @@ export default class StreamLatencyReducerModule extends KickModule {
 
 	private changePlaybackSpeed(video: HTMLVideoElement, rate: number) {
 		this.appliedRate = rate;
-		video.playbackRate = rate;
+		if (video.playbackRate !== rate) video.playbackRate = rate;
 	}
 
 	// Only undo our own catch-up rate so a manually chosen VOD speed is left alone.

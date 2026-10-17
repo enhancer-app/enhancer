@@ -1,3 +1,4 @@
+import { EXTENSION_NAME } from "$shared/extension.constants.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import type {
 	SettingCategory,
@@ -1446,15 +1447,15 @@ const Settings = <T,>({
 		<>
 			<SettingsOverlayBackground onClick={onClose} />
 			{/* native <dialog> renders in the top layer and breaks styling inside the injected overlay */}
-			<SettingsContainer role="dialog" aria-modal="true" aria-label="Enhancer settings">
+			<SettingsContainer role="dialog" aria-modal="true" aria-label={`${EXTENSION_NAME} settings`}>
 				<Gradient />
 				<Header>
 					<Brand>
 						<LogoContainer>
-							<Logo src={logoSrc} alt="Enhancer" />
+							<Logo src={logoSrc} alt={EXTENSION_NAME} />
 						</LogoContainer>
 						<BrandText>
-							<BrandName>Enhancer</BrandName>
+							<BrandName>{EXTENSION_NAME}</BrandName>
 							<BrandMeta>{platform ? `${platform} settings` : "Settings"}</BrandMeta>
 						</BrandText>
 					</Brand>
@@ -1496,7 +1497,7 @@ const Settings = <T,>({
 							);
 						})}
 						<SidebarFooter>
-							<span>Enhancer</span>
+							<span>{EXTENSION_NAME}</span>
 							<span>v{__version__}</span>
 						</SidebarFooter>
 					</Sidebar>

@@ -2,12 +2,20 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { createInterface } from "node:readline/promises";
-import { getManifest } from "../manifest.config";
+import { CHANNELS } from "../manifest.config";
+import {
+	ANNOUNCE_ENV,
+	allowActionsToCreatePullRequests,
+	configureEnvironments,
+	deleteEnvironment,
+	gh,
+	legacyEnvironments,
+	RELEASE_ENV,
+	REPO,
+} from "./release-github";
 
-const REPO = "enhancer-app/enhancer";
-const RELEASE_ENV = "release";
-const ANNOUNCE_ENV = "release-announce";
-const RELEASE_BRANCH = "master";
+const OBSOLETE_SECRETS = ["CHROME_EXTENSION_ID", "FIREFOX_EXTENSION_ID"];
+
 const CHROME_SCOPE = "https://www.googleapis.com/auth/chromewebstore";
 
 const LINKS = {
@@ -20,16 +28,8 @@ const LINKS = {
 
 type Secrets = Record<string, string>;
 
-type Environment = {
-	protection_rules?: {
-		type: string;
-		wait_timer?: number;
-		prevent_self_review?: boolean;
-		reviewers?: { type: string; reviewer: { id: number } }[];
-	}[];
-};
-
-const flags = new Set(process.argv.slice(2));
+const args = process.argv.slice(2);
+const flags = new Set(args);
 
 if (flags.has("--help")) {
 	console.log(`Configure release environments and secrets in ${REPO}.
@@ -39,7 +39,9 @@ Usage:
   bun run release:setup-secrets --chrome   Only Chrome Web Store secrets (e.g. refresh the token)
   bun run release:setup-secrets --firefox  Only Firefox Add-ons secrets
 
-Secrets are written to the "${RELEASE_ENV}" environment. Requires an authenticated GitHub CLI with admin access.`);
+Stable and Canary share one store account, so the secrets are written once to the "${RELEASE_ENV}" environment.
+Extension IDs are not secrets; they live in manifest.config.ts and the release workflows.
+Requires an authenticated GitHub CLI with admin access.`);
 	process.exit(0);
 }
 
@@ -88,75 +90,6 @@ async function askSecret(question: string): Promise<string> {
 		process.stdin.resume();
 		process.stdin.on("data", onData);
 	});
-}
-
-function gh(args: string[], input?: string): string {
-	const result = spawnSync("gh", args, { input, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
-	if (result.status !== 0) throw new Error(`gh ${args.slice(0, 3).join(" ")} failed: ${result.stderr.trim()}`);
-	return result.stdout;
-}
-
-function api<T>(method: string, path: string, body?: object): T {
-	const args = ["api", "-X", method, `repos/${REPO}/${path}`];
-	if (body) args.push("--input", "-");
-	const output = gh(args, body ? JSON.stringify(body) : undefined);
-	return (output ? JSON.parse(output) : undefined) as T;
-}
-
-function tryApi<T>(method: string, path: string): T | undefined {
-	try {
-		return api<T>(method, path);
-	} catch {
-		return undefined;
-	}
-}
-
-function allowActionsToCreatePullRequests(): void {
-	const settings = api<{ default_workflow_permissions: string; can_approve_pull_request_reviews: boolean }>(
-		"GET",
-		"actions/permissions/workflow",
-	);
-	if (settings.can_approve_pull_request_reviews) {
-		console.log("GitHub Actions can already create pull requests.");
-		return;
-	}
-	api("PUT", "actions/permissions/workflow", {
-		default_workflow_permissions: settings.default_workflow_permissions,
-		can_approve_pull_request_reviews: true,
-	});
-	console.log("Allowed GitHub Actions to create pull requests.");
-}
-
-function restrictEnvironmentToReleaseBranch(name: string, requireReviewers: boolean): void {
-	const rules = tryApi<Environment>("GET", `environments/${name}`)?.protection_rules ?? [];
-	const reviewersRule = rules.find((rule) => rule.type === "required_reviewers");
-	const waitRule = rules.find((rule) => rule.type === "wait_timer");
-	api("PUT", `environments/${name}`, {
-		wait_timer: waitRule?.wait_timer ?? 0,
-		prevent_self_review: reviewersRule?.prevent_self_review ?? false,
-		reviewers: reviewersRule?.reviewers?.map(({ type, reviewer }) => ({ type, id: reviewer.id })) ?? null,
-		deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
-	});
-
-	const policies = api<{ branch_policies: { name: string }[] }>(
-		"GET",
-		`environments/${name}/deployment-branch-policies`,
-	);
-	if (!policies.branch_policies.some((policy) => policy.name === RELEASE_BRANCH)) {
-		api("POST", `environments/${name}/deployment-branch-policies`, { name: RELEASE_BRANCH, type: "branch" });
-	}
-	console.log(`Environment "${name}" deploys only from ${RELEASE_BRANCH}.`);
-
-	if (requireReviewers && !reviewersRule?.reviewers?.length) {
-		console.warn(`Environment "${name}" has no required reviewers. Add yourself: ${LINKS.environments}`);
-	}
-}
-
-function configureRepository(): void {
-	heading("Repository");
-	allowActionsToCreatePullRequests();
-	restrictEnvironmentToReleaseBranch(RELEASE_ENV, true);
-	restrictEnvironmentToReleaseBranch(ANNOUNCE_ENV, false);
 }
 
 async function getAuthorizationCode(clientId: string): Promise<{
@@ -231,12 +164,9 @@ async function collectChromeSecrets(): Promise<Secrets> {
 	const clientSecret = await askSecret("Client secret (hidden input): ");
 	if (!clientSecret) throw new Error("Client secret is required.");
 
-	console.log(`Publisher ID (Account page) and extension ID (item page): ${LINKS.chromeDashboard}`);
-	const publisherId = await ask("Publisher ID (Enter to keep current): ");
-	const extensionId = await ask("Extension ID (Enter to keep current): ");
-	if (Boolean(publisherId) !== Boolean(extensionId)) {
-		throw new Error("Enter both the publisher ID and the extension ID, or neither.");
-	}
+	console.log(`Publisher ID (Account page): ${LINKS.chromeDashboard}`);
+	const publisherId = await ask("Publisher ID: ");
+	if (!publisherId) throw new Error("Publisher ID is required.");
 
 	const { authorizationCode, redirectUri, codeVerifier } = await getAuthorizationCode(clientId);
 	const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -262,17 +192,18 @@ async function collectChromeSecrets(): Promise<Secrets> {
 		CHROME_CLIENT_SECRET: clientSecret,
 		CHROME_REFRESH_TOKEN: tokens.refresh_token,
 	};
-	if (!publisherId) return secrets;
 
-	const item = `publishers/${encodeURIComponent(publisherId)}/items/${encodeURIComponent(extensionId)}`;
-	const status = await fetch(`https://chromewebstore.googleapis.com/v2/${item}:fetchStatus`, {
-		headers: { Authorization: `Bearer ${tokens.access_token}` },
-	});
-	if (!status.ok) {
-		throw new Error(`Chrome Web Store rejected this publisher ID and extension ID (HTTP ${status.status}).`);
+	for (const { name, chromeId } of Object.values(CHANNELS)) {
+		const item = `publishers/${encodeURIComponent(publisherId)}/items/${chromeId}`;
+		const status = await fetch(`https://chromewebstore.googleapis.com/v2/${item}:fetchStatus`, {
+			headers: { Authorization: `Bearer ${tokens.access_token}` },
+		});
+		if (!status.ok) {
+			throw new Error(`Chrome Web Store rejected access to ${name} (${chromeId}, HTTP ${status.status}).`);
+		}
+		console.log(`Verified Chrome Web Store access to ${name}.`);
 	}
-	console.log("Verified Chrome Web Store access to the extension.");
-	return { ...secrets, CHROME_PUBLISHER_ID: publisherId, CHROME_EXTENSION_ID: extensionId };
+	return { ...secrets, CHROME_PUBLISHER_ID: publisherId };
 }
 
 function createAmoJwt(issuer: string, secret: string): string {
@@ -289,11 +220,9 @@ function createAmoJwt(issuer: string, secret: string): string {
 
 async function collectFirefoxSecrets(): Promise<Secrets> {
 	heading("Firefox Add-ons");
-	const addonId = getManifest(false).browser_specific_settings.gecko.id;
-	console.log(`Add-on ID from manifest.config.ts: ${addonId}`);
 	console.log(`API credentials (generating a new secret revokes the old one): ${LINKS.amoApiKeys}`);
-	const issuer = await ask("JWT issuer (Enter to skip API credentials): ");
-	if (!issuer) return { FIREFOX_EXTENSION_ID: addonId };
+	const issuer = await ask("JWT issuer (Enter to skip Firefox): ");
+	if (!issuer) return {};
 	const secret = await askSecret("JWT secret (hidden input): ");
 	if (!secret) throw new Error("JWT secret is required.");
 
@@ -303,17 +232,40 @@ async function collectFirefoxSecrets(): Promise<Secrets> {
 	if (!response.ok) throw new Error(`Firefox Add-ons rejected the API credentials (HTTP ${response.status}).`);
 	const profile: { username?: string } = await response.json();
 	console.log(`Verified Firefox Add-ons credentials for ${profile.username ?? "the account"}.`);
-	return { FIREFOX_EXTENSION_ID: addonId, AMO_JWT_ISSUER: issuer, AMO_JWT_SECRET: secret };
+	return { AMO_JWT_ISSUER: issuer, AMO_JWT_SECRET: secret };
 }
 
-async function removeRepositoryCopies(names: string[]): Promise<void> {
+function removeObsoleteSecrets(): void {
+	const current = new Set(
+		(JSON.parse(gh(["secret", "list", "--env", RELEASE_ENV, "-R", REPO, "--json", "name"])) as { name: string }[]).map(
+			(s) => s.name,
+		),
+	);
+	for (const name of OBSOLETE_SECRETS.filter((secret) => current.has(secret))) {
+		gh(["secret", "delete", name, "--env", RELEASE_ENV, "-R", REPO]);
+		console.log(`Deleted ${name}; extension IDs now live in manifest.config.ts and the workflows.`);
+	}
+}
+
+async function removeLegacyEnvironments(complete: boolean): Promise<void> {
+	const legacy = legacyEnvironments();
+	if (!legacy.length) return;
+	if (!complete) {
+		console.log(`\nRun without --chrome or --firefox to remove the unused ${legacy.join(", ")} environments.`);
+		return;
+	}
+	const answer = await ask(`\n${legacy.join(", ")} are no longer used. Delete them? [y/N] `);
+	if (answer.toLowerCase() === "y") for (const name of legacy) deleteEnvironment(name);
+}
+
+async function removeRepositoryCopies(names: string[], releaseEnv: string): Promise<void> {
 	const repoSecrets = new Set(
 		(JSON.parse(gh(["secret", "list", "-R", REPO, "--json", "name"])) as { name: string }[]).map((s) => s.name),
 	);
 	const duplicates = names.filter((name) => repoSecrets.has(name));
 	if (duplicates.length) {
 		console.log(`\nRepository-level copies still exist: ${duplicates.join(", ")}`);
-		const answer = await ask(`Delete them so only the "${RELEASE_ENV}" environment holds these secrets? [y/N] `);
+		const answer = await ask(`Delete them so only the "${releaseEnv}" environment holds these secrets? [y/N] `);
 		if (answer.toLowerCase() === "y") {
 			for (const name of duplicates) gh(["secret", "delete", name, "-R", REPO]);
 			console.log(`Deleted ${duplicates.join(", ")} from repository secrets.`);
@@ -334,7 +286,11 @@ async function main(): Promise<void> {
 	const onlyFirefox = flags.has("--firefox");
 	const everything = !onlyChrome && !onlyFirefox;
 
-	if (everything) configureRepository();
+	if (everything) {
+		heading("Repository");
+		allowActionsToCreatePullRequests();
+		configureEnvironments();
+	}
 	const secrets: Secrets = {
 		...(everything || onlyChrome ? await collectChromeSecrets() : {}),
 		...(everything || onlyFirefox ? await collectFirefoxSecrets() : {}),
@@ -350,7 +306,9 @@ async function main(): Promise<void> {
 		gh(["secret", "set", name, "--env", RELEASE_ENV, "-R", REPO], value);
 		console.log(`Saved ${name}`);
 	}
-	await removeRepositoryCopies(names);
+	removeObsoleteSecrets();
+	await removeRepositoryCopies(names, RELEASE_ENV);
+	await removeLegacyEnvironments(everything && names.length === 6);
 }
 
 main().catch((error: Error) => {
