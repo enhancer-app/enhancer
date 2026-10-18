@@ -2,6 +2,7 @@ import type { LogEntry, LogType, LoggerOptions } from "$types/shared/logger.type
 
 export class Logger {
 	private static readonly MAX_ENTRIES = 500;
+	private static readonly TRIM_THRESHOLD = Logger.MAX_ENTRIES * 1.25;
 	private static readonly BASE_PREFIX = "\x1B[1;38;2;145;71;255mEnhancer";
 	private static readonly LOG_TYPE_PREFIX: Record<LogType, string> = {
 		debug: "\x1B[38;2;102;204;255mDEBUG\x1B[0m",
@@ -16,6 +17,7 @@ export class Logger {
 	private static readonly SENSITIVE_QUERY =
 		/([?&](?:authorization|cookie|token|access_token|refresh_token|password|secret|api[_-]?key|credential)=)[^&#\s]*/gi;
 	private static readonly BEARER_TOKEN = /\bBearer\s+[^\s,;}]+/gi;
+	private static readonly SENSITIVE_HINT = /authorization|cookie|token|password|secret|api[_-]?key|credential|bearer/i;
 	private static readonly MAX_DATA_LENGTH = 2000;
 	private static readonly MAX_ENTRY_LENGTH = 8192;
 	private static entries: LogEntry[] = [];
@@ -75,14 +77,16 @@ export class Logger {
 			source: this.source,
 			data: normalizedData,
 		});
-		if (Logger.entries.length > Logger.MAX_ENTRIES) Logger.entries.shift();
+		if (Logger.entries.length > Logger.TRIM_THRESHOLD) {
+			Logger.entries.splice(0, Logger.entries.length - Logger.MAX_ENTRIES);
+		}
 		if (logType !== "debug" || this.IS_DEVELOPMENT) {
 			console[logType](`${this.prefix} ${Logger.LOG_TYPE_PREFIX[logType]}`, ...normalizedData);
 		}
 	}
 
 	static getLogs(): LogEntry[] {
-		return Logger.entries.map((entry) => ({ ...entry, data: [...entry.data] }));
+		return Logger.entries.slice(-Logger.MAX_ENTRIES).map((entry) => ({ ...entry, data: [...entry.data] }));
 	}
 
 	static clearLogs(): void {
@@ -119,6 +123,7 @@ export class Logger {
 	}
 
 	private static sanitize(value: string): string {
+		if (!Logger.SENSITIVE_HINT.test(value)) return value.slice(0, Logger.MAX_DATA_LENGTH);
 		return value
 			.replace(Logger.SENSITIVE_HEADER, "$1[REDACTED]")
 			.replace(Logger.BEARER_TOKEN, "Bearer [REDACTED]")

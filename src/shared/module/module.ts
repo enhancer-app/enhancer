@@ -1,3 +1,4 @@
+import type EmotesApi from "$shared/apis/emotes.api.ts";
 import type EnhancerApi from "$shared/apis/enhancer.api.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import type SettingsCache from "$shared/settings/settings.service.ts";
@@ -6,6 +7,7 @@ import type UtilsRepository from "$shared/utils/utils.repository.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { ModuleConfig } from "$types/shared/module/module.types.ts";
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import type { Emitter } from "nanoevents";
 
@@ -24,6 +26,7 @@ export default abstract class Module<
 		private readonly utilsRepository: UtilsRepository,
 		private readonly _enhancerApi: EnhancerApi,
 		private readonly _workerService: WorkerService,
+		private readonly _emotesApi: EmotesApi,
 	) {}
 
 	async setup() {
@@ -56,6 +59,14 @@ export default abstract class Module<
 		return this._settingsCache.updateKey(key, value);
 	}
 
+	protected globalSettings(): GlobalSettings {
+		return this._settingsCache.getGlobal();
+	}
+
+	protected updateGlobalSetting<K extends keyof GlobalSettings>(key: K, value: GlobalSettings[K]): Promise<void> {
+		return this._settingsCache.updateGlobal({ [key]: value });
+	}
+
 	protected commonUtils() {
 		return this.utilsRepository.commonUtils;
 	}
@@ -66,6 +77,10 @@ export default abstract class Module<
 
 	protected enhancerApi() {
 		return this._enhancerApi;
+	}
+
+	protected emotesApi() {
+		return this._emotesApi;
 	}
 
 	protected localStorage() {

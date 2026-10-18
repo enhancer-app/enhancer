@@ -337,4 +337,14 @@ export default class TwitchUtils {
 	is7TV() {
 		return document.querySelector("html")?.className.includes("seventv");
 	}
+
+	navigate(url: string): void {
+		const target = new URL(url);
+		if (target.host !== window.location.host) {
+			window.location.assign(url);
+			return;
+		}
+		window.history.pushState(window.history.state, "", `${target.pathname}${target.search}`);
+		window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
+	}
 }

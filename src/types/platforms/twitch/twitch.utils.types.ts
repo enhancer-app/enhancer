@@ -129,7 +129,7 @@ export type FollowedSectionStream = {
 export type FollowedSectionUser = {
 	__typename: string;
 	id: string;
-	login: number;
+	login: string;
 	displayName: string;
 	profileImageURL: string;
 	primaryColorHex: string | null;

@@ -3,6 +3,7 @@ import type { ExtensionMessageDetail, WorkerBroadcast } from "$types/shared/work
 
 class BridgeLogger {
 	private static readonly MAX_ENTRIES = 500;
+	private static readonly TRIM_THRESHOLD = BridgeLogger.MAX_ENTRIES * 1.25;
 	private static readonly MAX_DATA_LENGTH = 2000;
 	private static readonly MAX_ENTRY_LENGTH = 8192;
 	private static readonly SENSITIVE_KEY = /authorization|cookie|token|password|secret|api[_-]?key|credential/i;
@@ -12,6 +13,7 @@ class BridgeLogger {
 	private static readonly SENSITIVE_QUERY =
 		/([?&](?:authorization|cookie|token|access_token|refresh_token|password|secret|api[_-]?key|credential)=)[^&#\s]*/gi;
 	private static readonly BEARER_TOKEN = /\bBearer\s+[^\s,;}]+/gi;
+	private static readonly SENSITIVE_HINT = /authorization|cookie|token|password|secret|api[_-]?key|credential|bearer/i;
 	private static entries: LogEntry[] = [];
 
 	constructor(private readonly context: string) {}
@@ -25,7 +27,7 @@ class BridgeLogger {
 	}
 
 	static getLogs(): LogEntry[] {
-		return BridgeLogger.entries.map((entry) => ({ ...entry, data: [...entry.data] }));
+		return BridgeLogger.entries.slice(-BridgeLogger.MAX_ENTRIES).map((entry) => ({ ...entry, data: [...entry.data] }));
 	}
 
 	private add(level: LogEntry["level"], data: unknown[]): void {
@@ -53,7 +55,9 @@ class BridgeLogger {
 			source: "bridge",
 			data: normalizedData,
 		});
-		if (BridgeLogger.entries.length > BridgeLogger.MAX_ENTRIES) BridgeLogger.entries.shift();
+		if (BridgeLogger.entries.length > BridgeLogger.TRIM_THRESHOLD) {
+			BridgeLogger.entries.splice(0, BridgeLogger.entries.length - BridgeLogger.MAX_ENTRIES);
+		}
 		console[level](`Enhancer worker-bridge ${level.toUpperCase()}`, ...normalizedData);
 	}
 
@@ -85,6 +89,7 @@ class BridgeLogger {
 	}
 
 	private sanitize(value: string): string {
+		if (!BridgeLogger.SENSITIVE_HINT.test(value)) return value.slice(0, BridgeLogger.MAX_DATA_LENGTH);
 		return value
 			.replace(BridgeLogger.SENSITIVE_HEADER, "$1[REDACTED]")
 			.replace(BridgeLogger.BEARER_TOKEN, "Bearer [REDACTED]")
@@ -95,6 +100,7 @@ class BridgeLogger {
 }
 
 export default class WorkerBridge {
+	private static readonly ELEMENT_TAG = __channel__ === "canary" ? "enhancer-bridge-canary" : "enhancer-bridge";
 	private readonly logger = new BridgeLogger("worker-bridge");
 	private bridgeElement: HTMLElement | null = null;
 
@@ -107,7 +113,7 @@ export default class WorkerBridge {
 		const observer = new MutationObserver((mutations) => {
 			for (const mutation of mutations) {
 				for (const node of mutation.addedNodes) {
-					if (node instanceof HTMLElement && node.tagName === "ENHANCER-BRIDGE") {
+					if (node instanceof HTMLElement && node.localName === WorkerBridge.ELEMENT_TAG) {
 						this.bridgeElement = node;
 						this.setupListeners();
 						observer.disconnect();
@@ -116,7 +122,7 @@ export default class WorkerBridge {
 				}
 			}
 		});
-		this.bridgeElement = document.querySelector("enhancer-bridge");
+		this.bridgeElement = document.querySelector(WorkerBridge.ELEMENT_TAG);
 		if (this.bridgeElement) {
 			this.setupListeners();
 		} else {

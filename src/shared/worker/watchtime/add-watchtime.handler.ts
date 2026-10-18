@@ -19,6 +19,7 @@ export class AddWatchtimeHandler extends MessageHandler {
 			throw new Error("Invalid platform. Must be 'kick' or 'twitch'.");
 		}
 		this.logger.debug(`Starting to watch ${payload.platform} channel: ${payload.channel}`);
-		return await this.accumulator.watchChannel(payload.platform, payload.channel);
+		this.accumulator.watchChannel(payload.platform, payload.channel);
+		return null;
 	}
 }

@@ -37,6 +37,7 @@
     "@preact/compat": "^18.3.1",
     "@preact/signals": "^2.6.2",
     "graphql-tag": "^2.12.6",
+    "hls.js": "^1.7.3",
     "nanoevents": "^9.1.0",
     "preact": "^10.28.3",
     "preact-hooks": "^0.0.0-0.0.0",
@@ -53,6 +54,8 @@
     "dev": "ENVIRONMENT=development concurrently \"bun run typecheck:watch\" \"vite build --watch\" \"vite\"",
     "build": "ENVIRONMENT=production bun run check && bun run typecheck && vite build",
     "pack": "ENVIRONMENT=production bun run scripts/pack.ts",
+    "pack:canary": "CHANNEL=canary ENVIRONMENT=production bun run scripts/pack.ts",
+    "release:setup-branches": "bun run scripts/setup-release-branches.ts",
     "release:setup-secrets": "bun run scripts/setup-release-secrets.ts",
     "chrome:refresh-token": "bun run scripts/setup-release-secrets.ts --chrome",
     "prepare": "husky"

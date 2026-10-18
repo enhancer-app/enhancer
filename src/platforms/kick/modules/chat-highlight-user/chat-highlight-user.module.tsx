@@ -15,8 +15,11 @@ export default class ChatHighlightUserModule extends KickModule {
 		"rgba(0, 210, 211, 0.1)",
 		"rgba(255, 159, 67, 0.1)",
 	];
+	static readonly MENTION_REGEX = /@(\w+)/g;
 	private currentColorIndex = 0;
+	private highlightActive = false;
 	private readonly listenerControllers = new WeakMap<HTMLElement, AbortController>();
+	private readonly removeHighlightedUserMentionsHandler = this.removeHighlightedUserMentions.bind(this);
 
 	readonly config: KickModuleConfig = {
 		name: "chat-highlight-user",
@@ -32,28 +35,29 @@ export default class ChatHighlightUserModule extends KickModule {
 
 	private handleMessage({ message, element }: KickChatMessageEvent) {
 		const messageElement = element as HTMLElement;
-		const isHovered = messageElement.matches(":hover");
+		const mentions = message.content.includes("@")
+			? [...message.content.matchAll(ChatHighlightUserModule.MENTION_REGEX)]
+			: [];
+		const isHovered = (this.highlightActive || mentions.length > 0) && messageElement.matches(":hover");
 		if (isHovered) this.removeHighlightedUserMentions();
 		this.listenerControllers.get(messageElement)?.abort();
-		const mentionRegex = /@(\w+)/g;
-		const mentions = [...message.content.matchAll(mentionRegex)];
 		if (mentions.length === 0) return;
 
 		const mentionedUsernames = mentions.map((match) => match[1].toLowerCase());
-		this.logger.debug(`Highlighting ${mentionedUsernames.length} users: ${mentionedUsernames.join(", ")}`);
 
 		const controller = new AbortController();
 		this.listenerControllers.set(messageElement, controller);
 		messageElement.addEventListener("mouseenter", () => this.highlightUserMentions(mentionedUsernames), {
 			signal: controller.signal,
 		});
-		messageElement.addEventListener("mouseleave", this.removeHighlightedUserMentions.bind(this), {
+		messageElement.addEventListener("mouseleave", this.removeHighlightedUserMentionsHandler, {
 			signal: controller.signal,
 		});
 		if (isHovered) this.highlightUserMentions(mentionedUsernames);
 	}
 
 	private highlightUserMentions(usernames: string[]): void {
+		this.highlightActive = true;
 		const highlightedUsers = new Map<string, string>();
 		usernames.forEach((username) => {
 			if (!highlightedUsers.has(username)) {
@@ -85,7 +89,7 @@ export default class ChatHighlightUserModule extends KickModule {
 	}
 
 	private removeHighlightedUserMentions(): void {
-		this.logger.debug("Removing highlighted messages");
+		this.highlightActive = false;
 		[...document.querySelectorAll(".enhancer-highlighted-user")].forEach((element) => {
 			element.classList.remove("enhancer-highlighted-user");
 			(element as HTMLElement).style.backgroundColor = "";
