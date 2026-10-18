@@ -1,5 +1,10 @@
 import { KICK_DEFAULT_SETTINGS } from "$kick/kick.constants.ts";
 import { Logger } from "$shared/logger/logger.ts";
+import { CredentialDatabase } from "$shared/worker/credentials/credential.database.ts";
+import { getRequiredScopes } from "$shared/worker/credentials/credential.scopes.ts";
+import { CredentialVault } from "$shared/worker/credentials/credential.vault.ts";
+import { SharedDatabase } from "$shared/worker/database/shared.database.ts";
+import { CrossPlatformFollowsRefresher } from "$shared/worker/cross-platform-follows/cross-platform-follows.refresher.ts";
 import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
@@ -22,12 +27,24 @@ export default class WorkerBackground {
 	private readonly watchtimeDatabase = new WatchtimeDatabase();
 	private readonly watchtimeAccumulator = new WatchtimeAccumulator(this.watchtimeDatabase);
 	private readonly enhancerApiService = new EnhancerApiService(this.enhancerApiLogger, __version__);
+	private readonly sharedDatabase = new SharedDatabase();
+	private readonly credentialDatabase = new CredentialDatabase();
+	private readonly credentialVault = new CredentialVault(this.credentialDatabase);
+	private readonly crossPlatformFollowsRefresher = new CrossPlatformFollowsRefresher(
+		this.logger,
+		this.sharedDatabase,
+		this.watchtimeDatabase,
+		this.credentialVault,
+	);
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.settingsDatabase,
 		this.watchtimeDatabase,
 		this.watchtimeAccumulator,
 		this.enhancerApiService,
+		this.sharedDatabase,
+		this.crossPlatformFollowsRefresher,
+		this.credentialVault,
 	);
 
 	private isInitialized = false;
@@ -40,7 +57,18 @@ export default class WorkerBackground {
 	async start() {
 		this.setupMessageListener();
 
-		await Promise.all([this.settingsDatabase.initialize(), this.watchtimeDatabase.initialize()]);
+		await Promise.all([
+			this.settingsDatabase.initialize(),
+			this.watchtimeDatabase.initialize(),
+			this.sharedDatabase.initialize().catch((error) => this.logger.error("Shared database unavailable:", error)),
+			this.credentialDatabase
+				.initialize()
+				.catch((error) => this.logger.error("Credential database unavailable:", error)),
+		]);
+		await this.settingsDatabase
+			.getGlobalSettings()
+			.then((settings) => this.credentialVault.syncGrants(getRequiredScopes(settings)))
+			.catch((error) => this.logger.error("Failed to sync credential grants:", error));
 		this.watchtimeAccumulator.initialize();
 		this.isInitialized = true;
 		this.logger.info("Background worker started");

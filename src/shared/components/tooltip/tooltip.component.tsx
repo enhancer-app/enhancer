@@ -167,7 +167,7 @@ export function TooltipComponent({ children, content, position = "top", delay = 
 	useTooltipPosition(containerRef, tooltipRef, isVisible, actualPosition);
 
 	return (
-		<TooltipContainer ref={containerRef} onMouseEnter={showTooltip} onMouseLeave={hideTooltip}>
+		<TooltipContainer ref={containerRef} onMouseEnter={showTooltip} onMouseLeave={hideTooltip} onClick={hideTooltip}>
 			{children}
 			{isVisible &&
 				createPortal(

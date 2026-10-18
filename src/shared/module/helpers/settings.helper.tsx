@@ -1,17 +1,21 @@
 import Settings, { SettingsOverlay } from "$shared/components/settings/settings.component.tsx";
 import type { Logger } from "$shared/logger/logger.ts";
+import { isGlobalSettingKey } from "$shared/settings/global-settings.constants.ts";
 import type SettingsCache from "$shared/settings/settings.service.ts";
 import type CommonUtils from "$shared/utils/common.utils.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { SettingCategory, SettingDefinition } from "$types/shared/components/settings.component.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import type { Emitter } from "nanoevents";
 import { render } from "preact";
 
+type PanelSettings<TSettings> = TSettings & GlobalSettings;
+
 export class SettingsHelper<TSettings extends PlatformSettings> {
-	private settingsSignal: Signal<TSettings> | null = null;
+	private settingsSignal: Signal<PanelSettings<TSettings>> | null = null;
 	private isOpenSignal: Signal<boolean> = signal(false);
 	private settingsContainer: HTMLDivElement | null = null;
 
@@ -24,22 +28,35 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 		private readonly commonUtils: CommonUtils,
 	) {}
 
-	loadSettings(defaults: TSettings): TSettings {
+	loadSettings(defaults: TSettings): PanelSettings<TSettings> {
 		try {
-			const settings = { ...defaults, ...this.settingsCache.get() };
+			const settings = { ...defaults, ...this.settingsCache.get(), ...this.settingsCache.getGlobal() };
 			if (this.settingsSignal) {
 				this.settingsSignal.value = settings;
 			}
 			return settings;
 		} catch (error) {
 			this.logger.error("Failed to load settings:", error);
-			return defaults;
+			return defaults as PanelSettings<TSettings>;
 		}
 	}
 
-	async saveSettings(settings: TSettings, updatedKey: keyof TSettings, eventPrefix: string): Promise<void> {
+	async saveSettings(
+		settings: PanelSettings<TSettings>,
+		updatedKey: keyof PanelSettings<TSettings>,
+		eventPrefix: string,
+	): Promise<void> {
 		try {
-			await this.settingsCache.update(settings);
+			if (isGlobalSettingKey(updatedKey)) {
+				await this.settingsCache.updateGlobal({ [updatedKey]: settings[updatedKey] });
+				eventPrefix = "global:settings:";
+			} else {
+				const platformSettings: Record<string, unknown> = { ...settings };
+				for (const key of Object.keys(platformSettings)) {
+					if (isGlobalSettingKey(key)) delete platformSettings[key];
+				}
+				await this.settingsCache.update(platformSettings as TSettings);
+			}
 			if (this.settingsSignal) {
 				this.settingsSignal.value = settings;
 			}
@@ -51,12 +68,12 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 	}
 
 	async createSettingsContainer(props: {
-		defaults: TSettings;
+		defaults: PanelSettings<TSettings>;
 		categories: SettingCategory[];
-		definitions: SettingDefinition<TSettings>[];
+		definitions: SettingDefinition<PanelSettings<TSettings>>[];
 		eventPrefix: string;
 	}): Promise<{
-		settingsSignal: Signal<TSettings>;
+		settingsSignal: Signal<PanelSettings<TSettings>>;
 		isOpenSignal: Signal<boolean>;
 		openSettings: () => void;
 		closeSettings: () => void;
@@ -75,7 +92,7 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 			this.isOpenSignal.value = false;
 		};
 
-		const onSettingsChange = (newSettings: TSettings, updatedKey: keyof TSettings) => {
+		const onSettingsChange = (newSettings: PanelSettings<TSettings>, updatedKey: keyof PanelSettings<TSettings>) => {
 			this.saveSettings(newSettings, updatedKey, props.eventPrefix);
 		};
 

@@ -1,3 +1,4 @@
+import { BRIDGE_ELEMENT_TAG } from "$shared/extension.constants.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import type { LogEntry } from "$types/shared/logger.types.ts";
 import type {
@@ -27,7 +28,7 @@ export default class WorkerService {
 	private workerInstanceId: string | null = null;
 
 	constructor() {
-		this.element = document.createElement("enhancer-bridge");
+		this.element = document.createElement(BRIDGE_ELEMENT_TAG);
 		document.body.appendChild(this.element);
 		this.setupBroadcastListener();
 	}

@@ -7,6 +7,7 @@ import type UtilsRepository from "$shared/utils/utils.repository.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { ModuleConfig } from "$types/shared/module/module.types.ts";
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import type { Emitter } from "nanoevents";
 
@@ -56,6 +57,14 @@ export default abstract class Module<
 
 	protected updateSetting<K extends keyof Settings>(key: K, value: Settings[K]): Promise<void> {
 		return this._settingsCache.updateKey(key, value);
+	}
+
+	protected globalSettings(): GlobalSettings {
+		return this._settingsCache.getGlobal();
+	}
+
+	protected updateGlobalSetting<K extends keyof GlobalSettings>(key: K, value: GlobalSettings[K]): Promise<void> {
+		return this._settingsCache.updateGlobal({ [key]: value });
 	}
 
 	protected commonUtils() {

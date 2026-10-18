@@ -32,7 +32,6 @@ export type TwitchSettings = {
 	realVideoTimeEnabled: boolean;
 	realVideoTimeFormat12h: boolean;
 	realVideoTimeDateMode: RealVideoTimeDateMode;
-	pinnedStreamersEnabled: boolean;
 	xayoWatchtimeEnabled: boolean;
 	xayoWatchtimePeriod: XayoWatchtimePeriod;
 	channelSection: boolean;

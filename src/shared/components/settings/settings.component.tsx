@@ -1,3 +1,4 @@
+import { EXTENSION_NAME } from "$shared/extension.constants.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import type {
 	SettingCategory,
@@ -879,6 +880,7 @@ const ModalMessage = styled.p`
 	font-size: 12.5px;
 	margin: 0;
 	line-height: 1.6;
+	white-space: pre-line;
 `;
 
 const ModalButtonContainer = styled.div`
@@ -957,6 +959,13 @@ const CATEGORY_ICONS: Record<string, JSX.Element> = {
 			<path d="M12 7v5l3 3" />
 		</>,
 	),
+	experimental: icon(
+		<>
+			<path d="M9 3h6" />
+			<path d="M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3" />
+			<path d="M7 15h10" />
+		</>,
+	),
 	about: icon(
 		<>
 			<circle cx="12" cy="12" r="9" />
@@ -1020,7 +1029,9 @@ const Settings = <T,>({
 	const [pendingToggle, setPendingToggle] = useState<{
 		key: keyof T;
 		value: boolean;
+		confirmationTitle?: string;
 		confirmationMessage?: string;
+		confirmText?: string;
 	} | null>(null);
 	const [pendingArrayRemove, setPendingArrayRemove] = useState<{
 		key: keyof T;
@@ -1177,7 +1188,9 @@ const Settings = <T,>({
 			setPendingToggle({
 				key: setting.id as keyof T,
 				value: checked,
+				confirmationTitle: setting.confirmationTitle,
 				confirmationMessage: setting.confirmationMessage ?? "Are you sure you want to enable this setting?",
+				confirmText: setting.confirmText,
 			});
 			return;
 		}
@@ -1446,15 +1459,15 @@ const Settings = <T,>({
 		<>
 			<SettingsOverlayBackground onClick={onClose} />
 			{/* native <dialog> renders in the top layer and breaks styling inside the injected overlay */}
-			<SettingsContainer role="dialog" aria-modal="true" aria-label="Enhancer settings">
+			<SettingsContainer role="dialog" aria-modal="true" aria-label={`${EXTENSION_NAME} settings`}>
 				<Gradient />
 				<Header>
 					<Brand>
 						<LogoContainer>
-							<Logo src={logoSrc} alt="Enhancer" />
+							<Logo src={logoSrc} alt={EXTENSION_NAME} />
 						</LogoContainer>
 						<BrandText>
-							<BrandName>Enhancer</BrandName>
+							<BrandName>{EXTENSION_NAME}</BrandName>
 							<BrandMeta>{platform ? `${platform} settings` : "Settings"}</BrandMeta>
 						</BrandText>
 					</Brand>
@@ -1496,7 +1509,7 @@ const Settings = <T,>({
 							);
 						})}
 						<SidebarFooter>
-							<span>Enhancer</span>
+							<span>{EXTENSION_NAME}</span>
 							<span>v{__version__}</span>
 						</SidebarFooter>
 					</Sidebar>
@@ -1559,13 +1572,13 @@ const Settings = <T,>({
 				{pendingToggle && (
 					<ModalOverlay onClick={() => setPendingToggle(null)}>
 						<ModalContent onClick={(e) => e.stopPropagation()}>
-							<ModalHeader>Confirm action</ModalHeader>
+							<ModalHeader>{pendingToggle.confirmationTitle ?? "Confirm action"}</ModalHeader>
 							<ModalMessage>
 								{pendingToggle.confirmationMessage || "Are you sure you want to enable this setting?"}
 							</ModalMessage>
 							<ModalButtonContainer>
 								<SecondaryButton onClick={() => setPendingToggle(null)}>Cancel</SecondaryButton>
-								<PrimaryButton onClick={confirmToggle}>Confirm</PrimaryButton>
+								<PrimaryButton onClick={confirmToggle}>{pendingToggle.confirmText ?? "Confirm"}</PrimaryButton>
 							</ModalButtonContainer>
 						</ModalContent>
 					</ModalOverlay>

@@ -1,12 +1,14 @@
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import type { SettingsBroadcastPayload } from "$types/shared/worker/worker.types.ts";
 import type { Emitter } from "nanoevents";
 
 export default class SettingsCache<T extends PlatformSettings> {
 	private cache: T | null = null;
+	private globalCache: GlobalSettings | null = null;
 
 	constructor(
 		private readonly platformType: PlatformType,
@@ -14,13 +16,25 @@ export default class SettingsCache<T extends PlatformSettings> {
 		private readonly emitter: Emitter<CommonEvents>,
 	) {
 		this.workerService.onBroadcast("settings-updated", this.handleBroadcast.bind(this));
+		this.workerService.onBroadcast("global-settings-updated", this.handleGlobalBroadcast.bind(this));
 	}
 
 	async initialize(): Promise<void> {
-		const settings = await this.workerService.send("getSettings", {
-			platform: this.platformType,
-		});
+		const [settings, globalSettings] = await Promise.all([
+			this.workerService.send("getSettings", { platform: this.platformType }),
+			this.workerService.send("getGlobalSettings", {}),
+		]);
 		this.cache = settings as T;
+		this.globalCache = globalSettings;
+	}
+
+	getGlobal(): GlobalSettings {
+		if (!this.globalCache) throw new Error("Settings not initialized");
+		return this.globalCache;
+	}
+
+	async updateGlobal(changes: Partial<GlobalSettings>): Promise<void> {
+		this.globalCache = await this.workerService.send("updateGlobalSettings", { settings: changes });
 	}
 
 	get(): T {
@@ -40,6 +54,11 @@ export default class SettingsCache<T extends PlatformSettings> {
 	private handleBroadcast(payload: SettingsBroadcastPayload): void {
 		if (payload.platform !== this.platformType) return;
 		this.cache = payload.settings as T;
+		this.emitter.emit("extension:settings-refresh");
+	}
+
+	private handleGlobalBroadcast(payload: GlobalSettings): void {
+		this.globalCache = payload;
 		this.emitter.emit("extension:settings-refresh");
 	}
 }

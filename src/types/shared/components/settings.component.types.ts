@@ -27,7 +27,9 @@ export type CommonSettingDefinition<T = any> = {
 export type ToggleSettingDefinition<T = any> = {
 	type: "toggle";
 	confirmOnEnable?: boolean;
+	confirmationTitle?: string;
 	confirmationMessage?: string;
+	confirmText?: string;
 } & CommonSettingDefinition<T>;
 
 export type InputSettingDefinition<T = any> = {

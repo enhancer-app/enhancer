@@ -1,13 +1,15 @@
-name: Release
+name: Release PRs
 
 on:
   push:
     branches:
       - master
+      - stable
+      - canary
   pull_request_target:
     types: [edited]
     branches:
-      - master
+      - stable
 
 permissions:
   contents: read
@@ -18,7 +20,7 @@ concurrency:
 
 jobs:
   release-pr:
-    name: Update release PR
+    name: Update release PRs
     if: >-
       github.event_name == 'push' ||
       (github.event.pull_request.head.ref == 'release-next' &&
@@ -37,7 +39,7 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
 
-      - name: Create or update release PR
+      - name: Create or update release PRs
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
         with:
           script: |

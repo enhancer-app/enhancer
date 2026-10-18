@@ -1,8 +1,11 @@
+import { GLOBAL_DEFAULT_SETTINGS, sanitizeGlobalSettings } from "$shared/settings/global-settings.constants.ts";
 import { Database } from "$shared/worker/database/database.ts";
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { PlatformSettings, SettingsRecord } from "$types/shared/worker/settings-worker.types.ts";
 
 const STORAGE_KEY_PREFIX = "enhancer.settings";
+const GLOBAL_STORAGE_KEY = `${STORAGE_KEY_PREFIX}.global`;
 
 export class SettingsDatabase extends Database {
 	protected readonly dbName = "enhancer_settings";
@@ -10,6 +13,7 @@ export class SettingsDatabase extends Database {
 	private readonly storeName = "settings";
 
 	private cache = new Map<PlatformType, PlatformSettings>();
+	private globalCache: GlobalSettings | null = null;
 	private indexedDbAvailable = true;
 
 	constructor(private readonly defaults: Map<PlatformType, PlatformSettings>) {
@@ -75,6 +79,35 @@ export class SettingsDatabase extends Database {
 
 		this.cache.set(platform, settings);
 		this.logger.debug(`Settings updated for platform: ${platform}`);
+	}
+
+	async getGlobalSettings(): Promise<GlobalSettings> {
+		if (this.globalCache) return this.globalCache;
+
+		const stored = await chrome.storage.local.get(GLOBAL_STORAGE_KEY).catch(() => ({}) as Record<string, unknown>);
+		if (isRecord(stored[GLOBAL_STORAGE_KEY])) {
+			this.globalCache = { ...GLOBAL_DEFAULT_SETTINGS, ...sanitizeGlobalSettings(stored[GLOBAL_STORAGE_KEY]) };
+			return this.globalCache;
+		}
+
+		const settings = { ...GLOBAL_DEFAULT_SETTINGS, ...(await this.getLegacyGlobalSettings()) };
+		await chrome.storage.local.set({ [GLOBAL_STORAGE_KEY]: settings });
+		this.globalCache = settings;
+		return settings;
+	}
+
+	async updateGlobalSettings(changes: Partial<GlobalSettings>): Promise<GlobalSettings> {
+		const settings = { ...(await this.getGlobalSettings()), ...sanitizeGlobalSettings(changes) };
+		await chrome.storage.local.set({ [GLOBAL_STORAGE_KEY]: settings });
+		this.globalCache = settings;
+		return settings;
+	}
+
+	private async getLegacyGlobalSettings(): Promise<Partial<GlobalSettings>> {
+		const twitch =
+			(await this.getExtensionSettings("twitch")) ?? (await this.getIndexedDbSettings("twitch")).record?.settings;
+		const pinnedStreamersEnabled = (twitch as Record<string, unknown> | undefined)?.pinnedStreamersEnabled;
+		return typeof pinnedStreamersEnabled === "boolean" ? { pinnedStreamersEnabled } : {};
 	}
 
 	private async getExtensionSettings(platform: PlatformType): Promise<PlatformSettings | undefined> {
