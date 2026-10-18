@@ -227,15 +227,6 @@ export default class SettingsModule extends TwitchModule {
 				dependsOn: { key: "chatMessageMenuEnabled" },
 			},
 			{
-				id: "emoteBarEnabled",
-				title: "Enable Emote Bar",
-				description:
-					"Shows your most used emotes for the current channel above the chat input. Click to insert, Ctrl+Click to send, right-click twice to remove.",
-				type: "toggle",
-				categoryId: CATEGORY.CHAT,
-				requiresRefreshToDisable: true,
-			},
-			{
 				id: "chatMentionSoundEnabled",
 				title: "Enable Chat Mention Sound",
 				description: "Turn on to receive a sound notification when someone mentions you in chat.",
@@ -420,6 +411,15 @@ export default class SettingsModule extends TwitchModule {
 				type: "toggle",
 				categoryId: CATEGORY.EXPERIMENTAL,
 				dependsOn: { key: "crossPlatformFollowsSyncEnabled" },
+			},
+			{
+				id: "emoteBarEnabled",
+				title: "Enable Emote Bar",
+				description:
+					"Shows your most used emotes for the current channel above the chat input. Click to insert, Ctrl+Click to send, right-click twice to remove.",
+				type: "toggle",
+				categoryId: CATEGORY.EXPERIMENTAL,
+				requiresRefreshToDisable: true,
 			},
 			{
 				id: "about",
