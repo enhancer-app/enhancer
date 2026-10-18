@@ -41,7 +41,7 @@ export default class CrossPlatformFollowsModule extends KickModule {
 		const following = sections.find((section) => section.querySelector('[data-testid^="sidebar-following-channel"]'));
 		const toggle = following?.nextElementSibling;
 		const native = following
-			? [following, ...(toggle && toggle.tagName !== "SECTION" && toggle !== this.container ? [toggle] : [])]
+			? [following, ...(toggle?.querySelector('[data-testid="sidebar-show-more-following"]') ? [toggle] : [])]
 			: [];
 		const anchor = following ?? sections[0];
 		if (!anchor?.parentElement) return;

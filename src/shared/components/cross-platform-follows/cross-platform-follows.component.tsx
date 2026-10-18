@@ -168,6 +168,14 @@ export function CrossPlatformFollowsComponent({
 	return (
 		<Container ref={containerRef} $host={hostPlatform} $compact={compact}>
 			<Header $host={hostPlatform} $compact={compact}>
+				{compact && hostPlatform === "kick" && (
+					<svg width="16" height="16" viewBox="0 0 20 20" aria-label={title ?? "Followed Channels"}>
+						<path
+							fill="currentColor"
+							d="M17.8 3.87a5.1 5.1 0 0 0-7.22 0l-.58.59-.58-.59a5.07 5.07 0 0 0-7.21 0c-2 2-2 5.22 0 7.21l6.6 6.75c.65.67 1.72.67 2.38 0l6.6-6.75a5.1 5.1 0 0 0 0-7.2"
+						/>
+					</svg>
+				)}
 				{!compact && <HeaderTitle>{title ?? "Followed Channels"}</HeaderTitle>}
 				{!compact && staleText && (
 					<TooltipComponent content={staleText} position="top">
@@ -207,7 +215,7 @@ export function CrossPlatformFollowsComponent({
 						{notice}
 					</Notice>
 				))}
-			<List ref={listRef}>
+			<List ref={listRef} $spaced={compact && hostPlatform === "kick"}>
 				{visible.map((channel) => (
 					<ChannelRow
 						key={`${channel.platform}:${channel.login}`}
@@ -460,9 +468,10 @@ const Notice = styled.p<HostProps>`
 	color: ${({ $host }) => ($host === "kick" ? "rgba(255, 255, 255, 0.6)" : "var(--color-text-alt-2)")};
 `;
 
-const List = styled.div`
+const List = styled.div<{ $spaced: boolean }>`
 	display: flex;
 	flex-direction: column;
+	gap: ${({ $spaced }) => ($spaced ? "8px" : "0")};
 
 	& > div {
 		display: block;
