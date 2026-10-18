@@ -19,7 +19,7 @@ import type { WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
 
 const STATUS_MAX_AGE_MS = 55_000;
 const FORCED_REFRESH_MIN_INTERVAL_MS = 15_000;
-const KICK_FOLLOWS_MAX_AGE_MS = 60 * 60_000;
+const KICK_FOLLOWS_MAX_AGE_MS = 30 * 60_000;
 const KICK_FOLLOWS_RETRY_MS = 5 * 60_000;
 
 export class CrossPlatformFollowsRefresher {
