@@ -1,3 +1,4 @@
+import { isFollowsPlatformFilter } from "$shared/utils/follows-filter.utils.ts";
 import { FOLLOWS_SORT_ORDERS } from "$shared/utils/follows-sort.utils.ts";
 import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 
@@ -7,10 +8,17 @@ export const GLOBAL_DEFAULT_SETTINGS: GlobalSettings = {
 	followsHomeEnabled: false,
 	pinnedStreamersEnabled: true,
 	followsSort: "recommended",
+	followsPlatformFilter: "all",
 };
 
 export function isGlobalSettingKey(key: PropertyKey): key is keyof GlobalSettings {
 	return Object.hasOwn(GLOBAL_DEFAULT_SETTINGS, key);
+}
+
+function isValidGlobalSetting(key: keyof GlobalSettings, item: unknown): boolean {
+	if (key === "followsSort") return (FOLLOWS_SORT_ORDERS as unknown[]).includes(item);
+	if (key === "followsPlatformFilter") return isFollowsPlatformFilter(item);
+	return typeof item === "boolean";
 }
 
 export function sanitizeGlobalSettings(value: unknown): Partial<GlobalSettings> {
@@ -18,8 +26,7 @@ export function sanitizeGlobalSettings(value: unknown): Partial<GlobalSettings> 
 	const result: Record<string, unknown> = {};
 	for (const [key, item] of Object.entries(value)) {
 		if (!isGlobalSettingKey(key)) continue;
-		if (key === "followsSort" ? (FOLLOWS_SORT_ORDERS as unknown[]).includes(item) : typeof item === "boolean")
-			result[key] = item;
+		if (isValidGlobalSetting(key, item)) result[key] = item;
 	}
 	return result as Partial<GlobalSettings>;
 }

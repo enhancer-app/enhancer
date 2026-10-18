@@ -87,6 +87,8 @@ export interface GetStreamPlaybackUrlPayload {
 
 export type FollowsSortOrder = "recommended" | "viewers-desc" | "viewers-asc";
 
+export type FollowsPlatformFilter = PlatformType | "all";
+
 export interface ClearFollowsPayload {
 	platform: PlatformType;
 }

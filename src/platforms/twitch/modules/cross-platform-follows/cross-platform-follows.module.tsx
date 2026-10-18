@@ -1,7 +1,10 @@
 import { CrossPlatformFollowsComponent } from "$shared/components/cross-platform-follows/cross-platform-follows.component.tsx";
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
-import type { FollowsSortOrder } from "$types/shared/worker/cross-platform-follows-worker.types.ts";
+import type {
+	FollowsPlatformFilter,
+	FollowsSortOrder,
+} from "$types/shared/worker/cross-platform-follows-worker.types.ts";
 import { render } from "preact";
 
 const HIDDEN_ATTRIBUTE = "data-enhancer-merged-follows";
@@ -30,6 +33,7 @@ export default class CrossPlatformFollowsModule extends TwitchModule {
 	private title: string | null | undefined;
 	private pinsEnabled: boolean | undefined;
 	private sort: FollowsSortOrder | undefined;
+	private platformFilter: FollowsPlatformFilter | undefined;
 	private native: Element | null = null;
 	private anchor: Element | null = null;
 
@@ -70,11 +74,23 @@ export default class CrossPlatformFollowsModule extends TwitchModule {
 
 	private renderComponent(): void {
 		const title = this.readTitle();
-		const { pinnedStreamersEnabled: pinsEnabled, followsSort: sort } = this.globalSettings();
-		if (!this.container || (title === this.title && pinsEnabled === this.pinsEnabled && sort === this.sort)) return;
+		const {
+			pinnedStreamersEnabled: pinsEnabled,
+			followsSort: sort,
+			followsPlatformFilter: platformFilter,
+		} = this.globalSettings();
+		if (
+			!this.container ||
+			(title === this.title &&
+				pinsEnabled === this.pinsEnabled &&
+				sort === this.sort &&
+				platformFilter === this.platformFilter)
+		)
+			return;
 		this.title = title;
 		this.pinsEnabled = pinsEnabled;
 		this.sort = sort;
+		this.platformFilter = platformFilter;
 		render(
 			<CrossPlatformFollowsComponent
 				hostPlatform="twitch"
@@ -83,6 +99,8 @@ export default class CrossPlatformFollowsModule extends TwitchModule {
 				pinsEnabled={pinsEnabled}
 				sort={sort}
 				onSortChange={(next) => void this.updateGlobalSetting("followsSort", next)}
+				platformFilter={platformFilter}
+				onPlatformFilterChange={(next) => void this.updateGlobalSetting("followsPlatformFilter", next)}
 				onNavigate={(url) => this.twitchUtils().navigate(url)}
 			/>,
 			this.container,

@@ -6,6 +6,11 @@ import type { CrossPlatformFollowsRefresher } from "$shared/worker/cross-platfor
 import { GetFollowsStatusHandler } from "$shared/worker/cross-platform-follows/get-follows-status.handler.ts";
 import { GetStreamPlaybackUrlHandler } from "$shared/worker/cross-platform-follows/get-stream-playback-url.handler.ts";
 import { GetChannelPinsHandler, SetChannelPinnedHandler } from "$shared/worker/pins/channel-pins.handler.ts";
+import {
+	GetChannelLinksHandler,
+	RemoveChannelLinkHandler,
+	UpdateChannelLinkHandler,
+} from "$shared/worker/links/channel-links.handler.ts";
 import { SyncFollowsHandler } from "$shared/worker/cross-platform-follows/sync-follows.handler.ts";
 import { SyncKickSessionHandler } from "$shared/worker/cross-platform-follows/sync-kick-session.handler.ts";
 import { UpdateFollowHandler } from "$shared/worker/cross-platform-follows/update-follow.handler.ts";
@@ -125,6 +130,9 @@ export class HandlerRegistry {
 		);
 		this.handlers.set("getStreamPlaybackUrl", new GetStreamPlaybackUrlHandler(this.logger));
 		this.handlers.set("getChannelPins", new GetChannelPinsHandler(this.logger, this.sharedDatabase));
+		this.handlers.set("getChannelLinks", new GetChannelLinksHandler(this.logger, this.sharedDatabase));
+		this.handlers.set("updateChannelLink", new UpdateChannelLinkHandler(this.logger, this.sharedDatabase));
+		this.handlers.set("removeChannelLink", new RemoveChannelLinkHandler(this.logger, this.sharedDatabase));
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {

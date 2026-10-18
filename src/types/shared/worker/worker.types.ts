@@ -27,6 +27,11 @@ import type {
 	SetChannelPinnedPayload,
 } from "$types/shared/worker/pins-worker.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
+import type {
+	ChannelLinksPayload,
+	RemoveChannelLinkPayload,
+	UpdateChannelLinkPayload,
+} from "$types/shared/worker/channel-links-worker.types.ts";
 
 export type { PlatformType };
 
@@ -214,6 +219,18 @@ export interface WorkerApiActions {
 		payload: GetChannelPinsPayload;
 		response: ChannelPinsPayload;
 	};
+	getChannelLinks: {
+		payload: Record<string, never>;
+		response: ChannelLinksPayload;
+	};
+	updateChannelLink: {
+		payload: UpdateChannelLinkPayload;
+		response: ChannelLinksPayload;
+	};
+	removeChannelLink: {
+		payload: RemoveChannelLinkPayload;
+		response: ChannelLinksPayload;
+	};
 }
 
 export type WorkerAction = keyof WorkerApiActions;
@@ -230,4 +247,5 @@ export type WorkerBroadcast =
 	| { type: "enhancer-api-message"; payload: EnhancerApiMessagePayload }
 	| { type: "enhancer-api-seed-request"; payload: EnhancerApiSeedRequestPayload }
 	| { type: "cross-platform-follows-updated"; payload: CrossPlatformFollowsSnapshot }
-	| { type: "channel-pins-updated"; payload: ChannelPinsPayload };
+	| { type: "channel-pins-updated"; payload: ChannelPinsPayload }
+	| { type: "channel-links-updated"; payload: ChannelLinksPayload };

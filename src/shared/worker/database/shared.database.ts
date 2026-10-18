@@ -5,13 +5,15 @@ import type {
 	CrossPlatformFollowsRecord,
 } from "$types/shared/worker/cross-platform-follows-worker.types.ts";
 import type { ChannelPinRecord } from "$types/shared/worker/pins-worker.types.ts";
+import type { ChannelLinkRecord } from "$types/shared/worker/channel-links-worker.types.ts";
 
 export class SharedDatabase extends Database {
 	protected readonly dbName = "enhancer_shared";
-	protected readonly dbVersion = 1;
+	protected readonly dbVersion = 2;
 	private readonly followsStore = "follows";
 	private readonly statusesStore = "statuses";
 	private readonly pinsStore = "pins";
+	private readonly linksStore = "links";
 
 	constructor() {
 		super("shared-db");
@@ -28,6 +30,9 @@ export class SharedDatabase extends Database {
 		if (!db.objectStoreNames.contains(this.pinsStore)) {
 			const store = db.createObjectStore(this.pinsStore, { keyPath: "id" });
 			store.createIndex("platform", "platform", { unique: false });
+		}
+		if (!db.objectStoreNames.contains(this.linksStore)) {
+			db.createObjectStore(this.linksStore, { keyPath: "id" });
 		}
 	}
 
@@ -83,6 +88,22 @@ export class SharedDatabase extends Database {
 				else store.delete(id);
 			}
 		});
+	}
+
+	async getLinks(): Promise<ChannelLinkRecord[]> {
+		return this.request<ChannelLinkRecord[]>(this.linksStore, "readonly", (store) => store.getAll());
+	}
+
+	async putLink(record: ChannelLinkRecord, removedIds: string[]): Promise<void> {
+		await this.transaction([this.linksStore], (tx) => {
+			const store = tx.objectStore(this.linksStore);
+			for (const id of removedIds) store.delete(id);
+			store.put(record);
+		});
+	}
+
+	async deleteLink(id: string): Promise<void> {
+		await this.request(this.linksStore, "readwrite", (store) => store.delete(id));
 	}
 
 	async clear(platform: PlatformType): Promise<boolean> {

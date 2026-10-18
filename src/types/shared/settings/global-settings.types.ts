@@ -1,4 +1,7 @@
-import type { FollowsSortOrder } from "$types/shared/worker/cross-platform-follows-worker.types.ts";
+import type {
+	FollowsPlatformFilter,
+	FollowsSortOrder,
+} from "$types/shared/worker/cross-platform-follows-worker.types.ts";
 
 export type GlobalSettings = {
 	crossPlatformFollowsSyncEnabled: boolean;
@@ -6,6 +9,7 @@ export type GlobalSettings = {
 	followsHomeEnabled: boolean;
 	pinnedStreamersEnabled: boolean;
 	followsSort: FollowsSortOrder;
+	followsPlatformFilter: FollowsPlatformFilter;
 };
 
 export type GlobalSettingsEvents = {
