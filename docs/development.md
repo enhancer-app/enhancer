@@ -101,7 +101,11 @@ Enhancer has two release channels, each on its own branch:
 | `canary` | Enhancer Canary          | Merge the bot PR `release(canary): vX.Y.Z.N` (master → canary) |
 | `stable` | Enhancer                 | Merge the bot PR `release(stable): vX.Y.Z` (release-next → stable) |
 
-- **Stable release:** tick patch, minor or major in the `release(stable)` PR and merge it.
+- **Stable release:** tick patch, minor or major in the `release(stable)` PR and merge it. The PR lists every
+  change that is not on `stable` yet, all ticked by default. Untick a change to keep it out of the release:
+  - leaving out only the newest changes keeps the original commits;
+  - leaving out a change in the middle cherry-picks the ticked ones onto `stable`, so they get new hashes there;
+  - if a ticked change depends on an unticked one, the bot explains it in the PR and keeps the PR as a draft.
 - **Hotfix:** open a PR from a branch based on `stable` into `stable`. The bot then opens a `release(stable)` PR
   from `release-hotfix` with a patch bump. Merging it releases the hotfix.
 - **Sync:** after every stable release or hotfix the bot opens `chore(sync): merge stable into master`. Merge it
