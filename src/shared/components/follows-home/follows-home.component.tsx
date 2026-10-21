@@ -1,29 +1,44 @@
 import {
 	AvatarPlatformDot,
+	LinkedPlatformIcon,
 	formatAgo,
 	getFollowsComparator,
 	getFollowsSortOptions,
 	getVisibleProblem,
 	PinIcon,
-	PLATFORM_COLORS,
 	PLATFORM_NAMES,
 	PLATFORM_URLS,
 	PlatformIcon,
 } from "$shared/components/cross-platform-follows/platform.shared.tsx";
+import {
+	ChannelContextMenu,
+	LinkChannelDialog,
+} from "$shared/components/cross-platform-follows/link-channel.component.tsx";
+import { PlatformFilterComponent } from "$shared/components/platform-filter/platform-filter.component.tsx";
 import { SortMenuComponent } from "$shared/components/sort-menu/sort-menu.component.tsx";
 import { FollowsHomeTileComponent } from "$shared/components/follows-home/follows-home-tile.component.tsx";
 import { HOME_ANIMATION_KEY, useFollowsHomeAnimation } from "$shared/utils/follows-home-animation.utils.ts";
+import { useChannelLinks } from "$shared/utils/channel-links.utils.ts";
+import { filterFollowsByPlatform } from "$shared/utils/follows-filter.utils.ts";
+import { getFollowEntryKey, getPinTargets, mergeLinkedChannels } from "$shared/utils/follows-links.utils.ts";
 import { FOLLOWS_SORT_LABELS, parseFollowsSort } from "$shared/utils/follows-sort.utils.ts";
 import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type {
+	ChannelMenuState,
+	SidebarChannel,
+} from "$types/shared/components/cross-platform-follows.component.types.ts";
+import type {
 	FollowsHomeChannel,
-	FollowsHomeFilter,
 	FollowsHomeMessage,
 	FollowsHomeSnapshots,
 	FollowsHomeSort,
 } from "$types/shared/components/follows-home.component.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
-import type { CrossPlatformFollowsSnapshot } from "$types/shared/worker/cross-platform-follows-worker.types.ts";
+import type { ChannelLinksTransport } from "$types/shared/utils/channel-links.types.ts";
+import type {
+	CrossPlatformFollowsSnapshot,
+	FollowsPlatformFilter,
+} from "$types/shared/worker/cross-platform-follows-worker.types.ts";
 import type { WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import styled, { createGlobalStyle, css } from "styled-components";
@@ -46,7 +61,7 @@ function resolveBackground(): string {
 	return alpha > 0 && luminance < 0.3 ? background : fallback;
 }
 
-function setPinned(channel: FollowsHomeChannel, pinned: boolean) {
+function setPinned(channel: SidebarChannel, pinned: boolean) {
 	chrome.runtime
 		.sendMessage({
 			action: "setChannelPinned",
@@ -68,6 +83,24 @@ async function fetchSnapshot(platform: PlatformType): Promise<CrossPlatformFollo
 	}
 }
 
+const LINKS_TRANSPORT: ChannelLinksTransport = {
+	send: async (action, payload) => {
+		try {
+			const response = await chrome.runtime.sendMessage({ action, payload });
+			return response && !("__enhancerWorkerError" in response) ? response : null;
+		} catch {
+			return null;
+		}
+	},
+	subscribe: (handler) => {
+		const listener = (message: WorkerBroadcast) => {
+			if (message?.type === "channel-links-updated") handler(message.payload);
+		};
+		chrome.runtime.onMessage.addListener(listener);
+		return () => chrome.runtime.onMessage.removeListener(listener);
+	},
+};
+
 function postToHost(message: FollowsHomeMessage) {
 	window.parent.postMessage(message, "*");
 }
@@ -76,7 +109,7 @@ export function FollowsHomeComponent() {
 	const embedded = window.parent !== window;
 	const [snapshots, setSnapshots] = useState<FollowsHomeSnapshots>({});
 	const [loaded, setLoaded] = useState(false);
-	const [filter, setFilter] = useState<FollowsHomeFilter>("all");
+	const [filter, setFilter] = useState<FollowsPlatformFilter>("all");
 	const [sort, setSort] = useState<FollowsHomeSort>("recommended");
 	const [pinsEnabled, setPinsEnabled] = useState(true);
 
@@ -85,6 +118,7 @@ export function FollowsHomeComponent() {
 			if (!settings) return;
 			setPinsEnabled(settings.pinnedStreamersEnabled);
 			setSort(parseFollowsSort(settings.followsSort));
+			setFilter(settings.followsPlatformFilter);
 		};
 		chrome.runtime
 			.sendMessage({ action: "getGlobalSettings", payload: {} })
@@ -100,11 +134,21 @@ export function FollowsHomeComponent() {
 	const pageRef = useRef<HTMLElement>(null);
 	const [now, setNow] = useState(() => Date.now());
 	const [background] = useState(resolveBackground);
+	const channelLinks = useChannelLinks(LINKS_TRANSPORT);
+	const [menu, setMenu] = useState<ChannelMenuState | null>(null);
+	const [linking, setLinking] = useState<SidebarChannel | null>(null);
 
 	const changeSort = (option: FollowsHomeSort) => {
 		void switchView(() => setSort(option));
 		chrome.runtime
 			.sendMessage({ action: "updateGlobalSettings", payload: { settings: { followsSort: option } } })
+			.catch(() => {});
+	};
+
+	const changeFilter = (option: FollowsPlatformFilter) => {
+		void switchView(() => setFilter(option));
+		chrome.runtime
+			.sendMessage({ action: "updateGlobalSettings", payload: { settings: { followsPlatformFilter: option } } })
 			.catch(() => {});
 	};
 
@@ -161,27 +205,34 @@ export function FollowsHomeComponent() {
 				all.push({ ...channel, pinned: pinsEnabled && channel.pinned, platform, checkedAt: snapshot.checkedAt });
 			}
 		}
-		return all;
-	}, [snapshots, pinsEnabled]);
+		return mergeLinkedChannels(all, channelLinks.links);
+	}, [snapshots, pinsEnabled, channelLinks.links]);
 
 	const sortOptions = getFollowsSortOptions(channels);
 	const activeSort: FollowsHomeSort = sortOptions.includes(sort) ? sort : "viewers-desc";
 	const compare = getFollowsComparator(activeSort, now);
-	const visible = channels.filter((channel) => filter === "all" || channel.platform === filter);
+	const visible = filterFollowsByPlatform(channels, filter);
 	const live = visible.filter((channel) => channel.live).sort(compare);
 	const offline = visible.filter((channel) => !channel.live).sort(compare);
 	const shownOffline = offline.slice(
 		0,
 		Math.max(OFFLINE_COLLAPSED_COUNT * offlinePages, offline.filter((channel) => channel.pinned).length),
 	);
-	const liveCount = (platform: PlatformType) =>
-		channels.filter((channel) => channel.platform === platform && channel.live).length;
+	const liveCounts = {
+		all: channels.filter((channel) => channel.live).length,
+		twitch: filterFollowsByPlatform(channels, "twitch").filter((channel) => channel.live).length,
+		kick: filterFollowsByPlatform(channels, "kick").filter((channel) => channel.live).length,
+	};
+	const emptyFilterText =
+		filter !== "all" && visible.length === 0 && snapshots[filter]?.synced
+			? `You don't follow anyone on ${PLATFORM_NAMES[filter]} yet.`
+			: null;
 	const unsynced = PLATFORMS.filter((platform) => loaded && !snapshots[platform]?.synced);
 	const problems = PLATFORMS.filter((platform) => getVisibleProblem(snapshots[platform]));
 
 	const switchView = useFollowsHomeAnimation(pageRef, [
-		...live.map((channel) => `live:${channel.platform}:${channel.login}`),
-		...shownOffline.map((channel) => `offline:${channel.platform}:${channel.login}`),
+		...live.map((channel) => `live:${getFollowEntryKey(channel)}`),
+		...shownOffline.map((channel) => `offline:${getFollowEntryKey(channel)}`),
 	]);
 
 	const handleNavigate = (url: string, event: MouseEvent) => {
@@ -190,47 +241,36 @@ export function FollowsHomeComponent() {
 		postToHost({ source: "enhancer-follows-home", type: "navigate", url });
 	};
 
-	const handleTogglePin = (channel: FollowsHomeChannel) => {
+	const handleTogglePin = (channel: SidebarChannel) => {
 		const pinned = !channel.pinned;
+		const targets = getPinTargets(channel);
 		setSnapshots((previous) => {
-			const snapshot = previous[channel.platform];
-			if (!snapshot) return previous;
-			const updated = snapshot.channels.map((item) => (item.login === channel.login ? { ...item, pinned } : item));
-			return { ...previous, [channel.platform]: { ...snapshot, channels: updated } };
+			const next = { ...previous };
+			for (const target of targets) {
+				const snapshot = next[target.platform];
+				if (!snapshot) continue;
+				const updated = snapshot.channels.map((item) => (item.login === target.login ? { ...item, pinned } : item));
+				next[target.platform] = { ...snapshot, channels: updated };
+			}
+			return next;
 		});
-		setPinned(channel, pinned);
+		for (const target of targets) setPinned(target, pinned);
+	};
+
+	const openMenu = (event: MouseEvent, channel: SidebarChannel) =>
+		setMenu({ channel, anchor: event.currentTarget as Element, x: event.clientX, y: event.clientY });
+
+	const linkChannels = (source: SidebarChannel, target: SidebarChannel, primary: PlatformType) => {
+		channelLinks.link(source, target, primary);
+		setLinking(null);
 	};
 
 	return (
 		<Page ref={pageRef}>
 			<GlobalStyle $background={background} />
 			<Header>
-				<Filters role="tablist">
-					<FilterChip
-						role="tab"
-						aria-selected={filter === "all"}
-						$active={filter === "all"}
-						$accent="#ffffff"
-						onClick={() => void switchView(() => setFilter("all"))}
-					>
-						All
-						<LiveCount>{channels.filter((channel) => channel.live).length}</LiveCount>
-					</FilterChip>
-					{PLATFORMS.map((platform) => (
-						<FilterChip
-							key={platform}
-							role="tab"
-							aria-selected={filter === platform}
-							$active={filter === platform}
-							$accent={PLATFORM_COLORS[platform]}
-							onClick={() => void switchView(() => setFilter(platform))}
-							disabled={!snapshots[platform]?.synced}
-						>
-							<PlatformIcon platform={platform} size={14} />
-							{PLATFORM_NAMES[platform]}
-							<LiveCount>{liveCount(platform)}</LiveCount>
-						</FilterChip>
-					))}
+				<Filters>
+					<PlatformFilterComponent value={filter} onChange={changeFilter} theme="home" liveCounts={liveCounts} />
 					{channels.length > 0 && (
 						<SortSelect>
 							<SortMenuComponent
@@ -300,17 +340,21 @@ export function FollowsHomeComponent() {
 				</Notice>
 			))}
 
-			{loaded && live.length === 0 && channels.length > 0 && <Empty>Nobody you follow is live right now.</Empty>}
+			{loaded && emptyFilterText && <Empty>{emptyFilterText}</Empty>}
+			{loaded && !emptyFilterText && live.length === 0 && channels.length > 0 && (
+				<Empty>Nobody you follow is live right now.</Empty>
+			)}
 
 			{live.length > 0 && (
 				<Grid>
 					{live.map((channel) => (
 						<FollowsHomeTileComponent
-							key={`${channel.platform}:${channel.login}`}
+							key={getFollowEntryKey(channel)}
 							channel={channel}
 							now={now}
 							onNavigate={handleNavigate}
 							onTogglePin={pinsEnabled ? handleTogglePin : undefined}
+							onContextMenu={openMenu}
 						/>
 					))}
 				</Grid>
@@ -326,20 +370,28 @@ export function FollowsHomeComponent() {
 							const url = PLATFORM_URLS[channel.platform](channel.login);
 							return (
 								<OfflineRow
-									key={`${channel.platform}:${channel.login}`}
-									{...{ [HOME_ANIMATION_KEY]: `offline:${channel.platform}:${channel.login}` }}
+									key={getFollowEntryKey(channel)}
+									{...{ [HOME_ANIMATION_KEY]: `offline:${getFollowEntryKey(channel)}` }}
 									href={url}
 									target="_top"
 									onClick={(event) => handleNavigate(url, event)}
+									onContextMenu={(event: MouseEvent) => {
+										if (event.shiftKey) return;
+										event.preventDefault();
+										openMenu(event, channel);
+									}}
 								>
 									<OfflineAvatar>
 										{channel.avatarUrl && <img src={channel.avatarUrl} alt="" />}
 										<AvatarPlatformDot
 											$platform={channel.platform}
+											$linked={!!channel.linked}
 											$size={12}
 											$border="var(--page-background)"
-											title={PLATFORM_NAMES[channel.platform]}
-										/>
+											title={channel.linked ? "Linked Twitch and Kick channels" : PLATFORM_NAMES[channel.platform]}
+										>
+											{channel.linked && <LinkedPlatformIcon />}
+										</AvatarPlatformDot>
 									</OfflineAvatar>
 									<OfflineText>
 										<OfflineName>
@@ -375,6 +427,27 @@ export function FollowsHomeComponent() {
 						</OfflineActions>
 					)}
 				</Section>
+			)}
+			{menu && (
+				<ChannelContextMenu
+					{...menu}
+					host={HOST_PLATFORM}
+					pinsEnabled={pinsEnabled}
+					onTogglePin={handleTogglePin}
+					onLink={setLinking}
+					onPrefer={channelLinks.prefer}
+					onUnlink={channelLinks.unlink}
+					onClose={() => setMenu(null)}
+				/>
+			)}
+			{linking && (
+				<LinkChannelDialog
+					channel={linking}
+					channels={channels}
+					host={HOST_PLATFORM}
+					onLink={(target, primary) => linkChannels(linking, target, primary)}
+					onClose={() => setLinking(null)}
+				/>
 			)}
 		</Page>
 	);
@@ -430,52 +503,6 @@ const buttonBase = css`
 	font-size: 13px;
 	font-weight: 600;
 	cursor: pointer;
-`;
-
-const FilterChip = styled.button<{ $active: boolean; $accent: string }>`
-	${buttonBase};
-	gap: 8px;
-	height: 36px;
-	padding: 0 8px 0 14px;
-	border-radius: 999px;
-	background: ${(props) => (props.$active ? `${props.$accent}1f` : "rgba(255, 255, 255, 0.05)")};
-	box-shadow: inset 0 0 0 1px ${(props) => (props.$active ? `${props.$accent}8c` : "transparent")};
-	color: ${(props) => (props.$active ? "white" : "#a6a6a6")};
-	transition:
-		background 0.2s ease,
-		box-shadow 0.2s ease,
-		color 0.2s ease;
-
-	&:hover:not(:disabled) {
-		background: ${(props) => (props.$active ? `${props.$accent}29` : "rgba(255, 255, 255, 0.09)")};
-		color: white;
-	}
-
-	&:disabled {
-		opacity: 0.4;
-		cursor: default;
-	}
-`;
-
-const LiveCount = styled.span`
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-	height: 22px;
-	padding: 0 8px;
-	border-radius: 999px;
-	background: rgba(0, 0, 0, 0.35);
-	color: #e5e5e5;
-	font-size: 12px;
-	font-variant-numeric: tabular-nums;
-
-	&::before {
-		content: "";
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		background: #eb0400;
-	}
 `;
 
 const SortSelect = styled.div`

@@ -27,9 +27,9 @@ function latest(a: number | null, b: number | null): number | null {
 	return b === null ? a : Math.max(a, b);
 }
 
-export function mergeLinkedChannels(channels: SidebarChannel[], links: ChannelLink[]): SidebarChannel[] {
+export function mergeLinkedChannels<T extends SidebarChannel>(channels: T[], links: ChannelLink[]): T[] {
 	const byKey = new Map(channels.map((channel) => [`${channel.platform}:${channel.login}`, channel]));
-	const merged = new Map<string, SidebarChannel>();
+	const merged = new Map<string, T>();
 	const consumed = new Set<string>();
 
 	for (const link of links) {
@@ -49,7 +49,7 @@ export function mergeLinkedChannels(channels: SidebarChannel[], links: ChannelLi
 		});
 	}
 
-	const result: SidebarChannel[] = [];
+	const result: T[] = [];
 	for (const channel of channels) {
 		const key = `${channel.platform}:${channel.login}`;
 		const entry = merged.get(key);
@@ -82,6 +82,10 @@ export function searchLinkCandidates(
 
 export function matchesFollowsPlatform(channel: SidebarChannel, platform: PlatformType): boolean {
 	return channel.platform === platform;
+}
+
+export function getPinTargets(channel: SidebarChannel): SidebarChannel[] {
+	return channel.linked ? Object.values(channel.linked.channels) : [channel];
 }
 
 export function getFollowEntryKey(channel: SidebarChannel): string {

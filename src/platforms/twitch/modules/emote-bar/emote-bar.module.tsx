@@ -1,6 +1,7 @@
 import TwitchModule from "$twitch/twitch.module.ts";
 import type {
 	EmoteBarEntry,
+	EmoteBarSentMessage,
 	EmoteCatalog,
 	TwilightUser,
 	UsedEmote,
@@ -12,6 +13,7 @@ import { render } from "preact";
 import EmoteBarCatalog, { getProviderFromUrl } from "./emote-bar.catalog.ts";
 import { EmoteBarComponent } from "./emote-bar.component.tsx";
 import { recordUsage } from "./emote-bar.frecency.ts";
+import { buildEmoteMessage } from "./emote-bar.send.ts";
 import EmoteBarStorage from "./emote-bar.storage.ts";
 
 export default class EmoteBarModule extends TwitchModule {
@@ -26,8 +28,6 @@ export default class EmoteBarModule extends TwitchModule {
 	private static readonly EXTRACT_RETRIES = 3;
 	private static readonly EXTRACT_RETRY_DELAY = 400;
 	private static readonly CATALOG_DELAY = 10_000;
-	private static readonly DUPLICATE_WINDOW = 30_000;
-	private static readonly DUPLICATE_BYPASS = "\u034F";
 	private static readonly MAX_PROCESSED_MESSAGES = 200;
 
 	private readonly storage = new EmoteBarStorage();
@@ -38,7 +38,7 @@ export default class EmoteBarModule extends TwitchModule {
 	private catalogTimeout: ReturnType<typeof setTimeout> | undefined;
 	private channelId = "";
 	private currentUser: TwilightUser | null = null;
-	private lastSent: { name: string; at: number; bypass: boolean } | null = null;
+	private lastSent: EmoteBarSentMessage | null = null;
 
 	readonly config: TwitchModuleConfig = {
 		name: "emote-bar",
@@ -182,13 +182,32 @@ export default class EmoteBarModule extends TwitchModule {
 	}
 
 	private sendEmote(name: string) {
+		const sender = this.twitchUtils().getChatMessageSender();
+		if (!sender?.props.authToken) {
+			this.twitchUtils().addTextToChatInput(name);
+			return;
+		}
+		if (sender.disableChatConditions?.()) return;
+
+		const { props } = sender;
 		const now = Date.now();
-		const repeated = this.lastSent?.name === name && now - this.lastSent.at < EmoteBarModule.DUPLICATE_WINDOW;
-		const bypass = repeated ? !this.lastSent!.bypass : false;
-		this.lastSent = { name, at: now, bypass };
-		this.twitchUtils()
-			.getChat()
-			?.props.onSendMessage(bypass ? `${name} ${EmoteBarModule.DUPLICATE_BYPASS}` : name);
+		const message = buildEmoteMessage(name, this.getLastSentMessage(), now, !!props.emoteOnlyMode);
+		const checks =
+			props.isCurrentUserModerator || props.isCurrentUserVIP ? [] : Object.values(props.sendMessageErrorChecks ?? {});
+		if (checks.some((check) => check.check(message))) return;
+		for (const check of checks) check.onMessageSent?.(message);
+		props.onSendMessage(message);
+		this.lastSent = { message, at: now };
+	}
+
+	private getLastSentMessage(): EmoteBarSentMessage | null {
+		const state = this.twitchUtils().getChatSentMessageTracker()?.state;
+		const tracked =
+			state?.lastSentMessage && state.lastSentTimestamp
+				? { message: state.lastSentMessage, at: state.lastSentTimestamp }
+				: null;
+		if (!tracked || (this.lastSent && this.lastSent.at > tracked.at)) return this.lastSent;
+		return tracked;
 	}
 
 	private getCurrentUser(): TwilightUser {

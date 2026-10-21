@@ -18,7 +18,11 @@ export type CrossPlatformFollowsComponentProps = {
 	onNavigate: (url: string) => void;
 };
 
-export type SidebarChannel = CrossPlatformChannel & { platform: PlatformType; linked?: LinkedChannels };
+export type SidebarChannel = CrossPlatformChannel & {
+	platform: PlatformType;
+	linked?: LinkedChannels;
+	stale?: boolean;
+};
 
 export type LinkedChannels = {
 	channels: Record<PlatformType, SidebarChannel>;
@@ -43,6 +47,18 @@ export type LinkChannelDialogProps = {
 	host: PlatformType;
 	onLink: (target: SidebarChannel, primary: PlatformType) => void;
 	onClose: () => void;
+};
+
+export type ChannelTooltipContentProps = {
+	channel: SidebarChannel;
+	now: number;
+	resolvePreviewUrl: (platform: PlatformType, login: string) => Promise<string | null>;
+};
+
+export type SidebarChannelHoverProps = {
+	rowSelector: string;
+	readChannel: (row: HTMLElement) => SidebarChannel | null;
+	resolvePreviewUrl: (platform: PlatformType, login: string) => Promise<string | null>;
 };
 
 export type SidebarChannelRowProps = {

@@ -110,11 +110,8 @@ export default class CrossPlatformFollowsModule extends TwitchModule {
 	private place(): void {
 		const container = this.container;
 		if (!container) return;
-		if (!this.native) {
-			if (container.previousElementSibling !== this.anchor) this.anchor?.after(container);
-		} else if (container.nextElementSibling !== this.native) {
-			this.native.before(container);
-		}
+		const target = this.native ?? this.anchor;
+		if (target && container.nextElementSibling !== target) target.before(container);
 	}
 
 	private readTitle(): string | null {

@@ -17,6 +17,7 @@ const KICK_FOLLOWS_MAX_PAGES = 500;
 const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
 const TWITCH_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
 const TWITCH_LOGINS_PER_REQUEST = 100;
+const TWITCH_REQUEST_TIMEOUT_MS = 15_000;
 
 const TWITCH_USERS_STATUS_QUERY = `query EnhancerUsersStatus($logins: [String!]) {
 	users(logins: $logins) {
@@ -150,6 +151,7 @@ export async function fetchTwitchStatuses(channels: FollowedChannel[]): Promise<
 				method: "POST",
 				headers: { "Client-ID": TWITCH_CLIENT_ID, "Content-Type": "application/json" },
 				body: JSON.stringify({ query: TWITCH_USERS_STATUS_QUERY, variables: { logins } }),
+				signal: AbortSignal.timeout(TWITCH_REQUEST_TIMEOUT_MS),
 			});
 			if (!response.ok) throw new Error(`HTTP ${response.status}`);
 			const body = (await response.json()) as GQLResponse<UsersStatusResponse>;

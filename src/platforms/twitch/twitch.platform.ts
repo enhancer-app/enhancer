@@ -10,6 +10,7 @@ import ChatNicknameCustomizationModule from "$twitch/modules/chat-nickname-custo
 import ChattersModule from "$twitch/modules/chatters/chatters.module.tsx";
 import CrossPlatformFollowsSyncModule from "$twitch/modules/cross-platform-follows/cross-platform-follows-sync.module.ts";
 import CrossPlatformFollowsModule from "$twitch/modules/cross-platform-follows/cross-platform-follows.module.tsx";
+import SidebarChannelHoverModule from "$twitch/modules/cross-platform-follows/sidebar-channel-hover.module.tsx";
 import EmoteBarModule from "$twitch/modules/emote-bar/emote-bar.module.tsx";
 import FollowsHomeModule from "$twitch/modules/follows-home/follows-home.module.ts";
 import LocalWatchtimeCounterModule from "$twitch/modules/local-watchtime-counter/local-watchtime-counter.module.tsx";
@@ -90,6 +91,7 @@ export default class TwitchPlatform extends Platform<TwitchModule, TwitchEvents,
 			new AdditionalFontsModule(...dependencies),
 			new CrossPlatformFollowsSyncModule(...dependencies),
 			new CrossPlatformFollowsModule(...dependencies),
+			new SidebarChannelHoverModule(...dependencies),
 			new FollowsHomeModule(...dependencies),
 		];
 	}

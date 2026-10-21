@@ -416,7 +416,7 @@ export default class SettingsModule extends TwitchModule {
 				id: "emoteBarEnabled",
 				title: "Enable Emote Bar",
 				description:
-					"Shows your most used emotes for the current channel above the chat input. Click to insert, Ctrl+Click to send, right-click twice to remove.",
+					"Shows your most used emotes for the current channel above the chat input. Click to insert, Ctrl+Click (Cmd+Click on Mac) to send it as its own message, right-click twice to remove.",
 				type: "toggle",
 				categoryId: CATEGORY.EXPERIMENTAL,
 				requiresRefreshToDisable: true,

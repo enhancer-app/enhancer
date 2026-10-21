@@ -1,4 +1,5 @@
 import type {
+	EmoteBarClickAction,
 	EmoteBarEntry,
 	EmoteBarProps,
 	EmoteBarRemoval,
@@ -8,7 +9,10 @@ import type {
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
 import { EMOTE_BAR_RECENT_WINDOW, selectVisible } from "./emote-bar.frecency.ts";
+import { getEmoteClickAction, isMacPlatform } from "./emote-bar.send.ts";
 
+const IS_MAC = isMacPlatform();
+const SEND_HINT = IS_MAC ? "Cmd+Click to send" : "Ctrl+Click to send";
 const EMOTE_HEIGHT = 24;
 const BUTTON_HEIGHT = 30;
 const MAX_RATIO = 3;
@@ -72,6 +76,17 @@ export function EmoteBarComponent({ entries, catalog, onInsert, onSend, onRemove
 		onRemove(name);
 	};
 
+	const handleAction = (name: string, action: EmoteBarClickAction, removalState: EmoteBarRemovalState) => {
+		if (action === "remove") {
+			requestRemoval(name);
+			return;
+		}
+		if (action === "none") return;
+		if (removalState !== "none") setRemoval(null);
+		if (action === "send") onSend(name);
+		else onInsert(name);
+	};
+
 	const available = useMemo(
 		() => currentEntries.filter((entry) => isAvailable(entry, currentCatalog)),
 		[currentEntries, currentCatalog],
@@ -101,16 +116,14 @@ export function EmoteBarComponent({ entries, catalog, onInsert, onSend, onRemove
 						key={entry.name}
 						type="button"
 						$removal={removalState}
-						title={removalState === "none" ? entry.name : `${entry.name} (right-click again to remove)`}
+						title={
+							removalState === "none" ? `${entry.name} (${SEND_HINT})` : `${entry.name} (right-click again to remove)`
+						}
 						aria-label={entry.name}
-						onClick={(event) => {
-							if (removalState !== "none") setRemoval(null);
-							if (event.ctrlKey || event.metaKey) onSend(entry.name);
-							else onInsert(entry.name);
-						}}
+						onClick={(event) => handleAction(entry.name, getEmoteClickAction(event, IS_MAC), removalState)}
 						onContextMenu={(event) => {
 							event.preventDefault();
-							requestRemoval(entry.name);
+							handleAction(entry.name, getEmoteClickAction(event, IS_MAC), removalState);
 						}}
 					>
 						<img

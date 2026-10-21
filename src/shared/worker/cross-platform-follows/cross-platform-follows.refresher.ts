@@ -7,6 +7,7 @@ import {
 	fetchTwitchStatuses,
 } from "$shared/worker/cross-platform-follows/cross-platform-follows.fetchers.ts";
 import type { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
+import { isStatusRefreshDue } from "$shared/utils/follows-freshness.utils.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type {
 	ChannelStatusRecord,
@@ -17,13 +18,12 @@ import type {
 } from "$types/shared/worker/cross-platform-follows-worker.types.ts";
 import type { WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
 
-const STATUS_MAX_AGE_MS = 55_000;
-const FORCED_REFRESH_MIN_INTERVAL_MS = 15_000;
 const KICK_FOLLOWS_MAX_AGE_MS = 30 * 60_000;
 const KICK_FOLLOWS_RETRY_MS = 5 * 60_000;
 
 export class CrossPlatformFollowsRefresher {
 	private readonly inFlight = new Map<PlatformType, Promise<void>>();
+	private readonly attemptedAt = new Map<PlatformType, number>();
 	private kickFollowsAttemptAt = 0;
 
 	constructor(
@@ -118,10 +118,7 @@ export class CrossPlatformFollowsRefresher {
 			return;
 		}
 		if (!record) return;
-
-		const age = Date.now() - (record.statusCheckedAt ?? 0);
-		const sessionRestored = force && record.statusProblem === "session-missing";
-		if (!sessionRestored && age < (force ? FORCED_REFRESH_MIN_INTERVAL_MS : STATUS_MAX_AGE_MS)) return;
+		if (!isStatusRefreshDue(record, this.attemptedAt.get(platform) ?? 0, Date.now(), force)) return;
 		this.startRefresh(platform);
 	}
 
@@ -136,6 +133,7 @@ export class CrossPlatformFollowsRefresher {
 
 	private startRefresh(platform: PlatformType): void {
 		if (this.inFlight.has(platform)) return;
+		this.attemptedAt.set(platform, Date.now());
 		const promise = this.refresh(platform)
 			.catch((error) => this.logger.error(`Failed to refresh ${platform} follows status:`, error))
 			.finally(() => {
@@ -197,7 +195,7 @@ export class CrossPlatformFollowsRefresher {
 
 		if (!result.ok) {
 			this.logger.warn(`Status refresh for ${platform} failed: ${result.problem}`);
-			await this.updateRecordStatus(platform, now, result.problem);
+			await this.updateRecordStatus(platform, record.statusCheckedAt, result.problem);
 			return;
 		}
 
@@ -240,18 +238,15 @@ export class CrossPlatformFollowsRefresher {
 
 	private async updateRecordStatus(
 		platform: PlatformType,
-		checkedAt: number,
+		checkedAt: number | null,
 		problem: CrossPlatformFollowsSnapshot["problem"],
 		newFollows: FollowedChannel[] = [],
 	): Promise<void> {
 		const current = await this.database.getFollows(platform);
 		if (!current) return;
 		if (newFollows.length > 0) this.logger.debug(`Found ${newFollows.length} new ${platform} follows`);
-		const problemSince = problem
-			? current.statusProblem
-				? (current.statusProblemSince ?? checkedAt)
-				: checkedAt
-			: null;
+		const now = Date.now();
+		const problemSince = problem ? (current.statusProblem ? (current.statusProblemSince ?? now) : now) : null;
 		await this.database.putFollows({
 			...current,
 			channels: newFollows.length > 0 ? [...current.channels, ...newFollows] : current.channels,

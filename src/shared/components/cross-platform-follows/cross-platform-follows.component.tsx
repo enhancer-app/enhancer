@@ -1,26 +1,27 @@
 import { MarqueeTextComponent } from "$shared/components/marquee-text/marquee-text.component.tsx";
 import {
-	channelThumbnailUrl,
 	formatAgo,
 	formatViewers,
 	getFollowsComparator,
 	getFollowsSortOptions,
 	getVisibleProblem,
+	LinkedPlatformIcon,
 	PinIcon,
 	PLATFORM_COLORS,
 	PLATFORM_NAMES,
 	PLATFORM_URLS,
-	PlatformIcon,
-	PlatformLabel,
 } from "$shared/components/cross-platform-follows/platform.shared.tsx";
-import { filterFollowsByPlatform, FOLLOWS_PLATFORM_FILTERS } from "$shared/utils/follows-filter.utils.ts";
+import { filterFollowsByPlatform } from "$shared/utils/follows-filter.utils.ts";
+import { PlatformFilterComponent } from "$shared/components/platform-filter/platform-filter.component.tsx";
+import { filterFollowsBySearch } from "$shared/utils/follows-search.utils.ts";
 import { SortMenuComponent } from "$shared/components/sort-menu/sort-menu.component.tsx";
-import { StreamPreviewComponent } from "$shared/components/stream-preview/stream-preview.component.tsx";
 import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
-import { getPlaylistFetcher } from "$shared/utils/playlist-proxy.utils.ts";
+import { ChannelTooltipContent } from "$shared/components/cross-platform-follows/channel-tooltip.component.tsx";
 import { FLIP_KEY_ATTRIBUTE, useBecameTrue, useFlipAnimation } from "$shared/utils/flip-animation.utils.ts";
 import { FOLLOWS_SORT_LABELS } from "$shared/utils/follows-sort.utils.ts";
-import { getFollowEntryKey, mergeLinkedChannels } from "$shared/utils/follows-links.utils.ts";
+import { getFollowEntryKey, getPinTargets, mergeLinkedChannels } from "$shared/utils/follows-links.utils.ts";
+import { useChannelLinks } from "$shared/utils/channel-links.utils.ts";
+import { getFollowsStatusState } from "$shared/utils/follows-freshness.utils.ts";
 import {
 	ChannelContextMenu,
 	LinkChannelDialog,
@@ -32,7 +33,7 @@ import type {
 	SidebarChannelRowProps,
 } from "$types/shared/components/cross-platform-follows.component.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
-import type { ChannelLink } from "$types/shared/worker/channel-links-worker.types.ts";
+import type { ChannelLinksAction, ChannelLinksTransport } from "$types/shared/utils/channel-links.types.ts";
 import type {
 	CrossPlatformFollowsSnapshot,
 	FollowsPlatformFilter,
@@ -42,6 +43,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import styled, { css, keyframes } from "styled-components";
 
 const REFRESH_INTERVAL_MS = 60_000;
+const WAKE_CHECK_MS = 5_000;
+const WAKE_GAP_MS = 20_000;
+const RESUME_EVENTS = ["online", "focus", "pageshow"] as const;
 const COLLAPSED_COUNT = 10;
 const COMPACT_WIDTH = 120;
 const PLATFORM_SITES: Record<PlatformType, string> = { twitch: "twitch.tv", kick: "kick.com" };
@@ -58,7 +62,18 @@ export function CrossPlatformFollowsComponent({
 	onPlatformFilterChange,
 	onNavigate,
 }: CrossPlatformFollowsComponentProps) {
-	const [links, setLinks] = useState<ChannelLink[]>([]);
+	const linksTransport = useMemo<ChannelLinksTransport>(
+		() => ({
+			send: (action, payload) => workerService.send<ChannelLinksAction>(action, payload),
+			subscribe: (handler) => {
+				workerService.onBroadcast("channel-links-updated", handler);
+				return () => workerService.offBroadcast("channel-links-updated", handler);
+			},
+		}),
+		[workerService],
+	);
+	const channelLinks = useChannelLinks(linksTransport);
+	const { links } = channelLinks;
 	const [menu, setMenu] = useState<ChannelMenuState | null>(null);
 	const [linking, setLinking] = useState<SidebarChannel | null>(null);
 	const [snapshots, setSnapshots] = useState<Partial<Record<PlatformType, CrossPlatformFollowsSnapshot>>>({});
@@ -66,9 +81,14 @@ export function CrossPlatformFollowsComponent({
 	const [sort, setSort] = useState<FollowsSortOrder>(savedSort);
 	const [platformFilter, setPlatformFilter] = useState<FollowsPlatformFilter>(savedPlatformFilter);
 	const [compact, setCompact] = useState(false);
+	const [searchOpen, setSearchOpen] = useState(false);
+	const [searchMinHeight, setSearchMinHeight] = useState(0);
+	const [query, setQuery] = useState("");
 	const [now, setNow] = useState(() => Date.now());
 	const containerRef = useRef<HTMLDivElement>(null);
 	const listRef = useRef<HTMLDivElement>(null);
+	const searchInputRef = useRef<HTMLInputElement>(null);
+	const searchButtonRef = useRef<HTMLButtonElement>(null);
 	const sourcePlatform: PlatformType = hostPlatform === "twitch" ? "kick" : "twitch";
 
 	useEffect(() => {
@@ -94,30 +114,27 @@ export function CrossPlatformFollowsComponent({
 			setSnapshots((previous) => ({ ...previous, [payload.platform]: payload }));
 			setNow(Date.now());
 		};
-		const handleVisibility = () => void load();
+		const handleResume = () => void load();
+		let lastTick = Date.now();
+		const detectWake = () => {
+			const tick = Date.now();
+			if (tick - lastTick > WAKE_GAP_MS) void load();
+			lastTick = tick;
+		};
 		workerService.onBroadcast("cross-platform-follows-updated", handleBroadcast);
-		document.addEventListener("visibilitychange", handleVisibility);
+		document.addEventListener("visibilitychange", handleResume);
+		for (const event of RESUME_EVENTS) window.addEventListener(event, handleResume);
 		const interval = window.setInterval(() => void load(), REFRESH_INTERVAL_MS);
+		const wakeInterval = window.setInterval(detectWake, WAKE_CHECK_MS);
 		void load();
 
 		return () => {
 			disposed = true;
 			window.clearInterval(interval);
-			document.removeEventListener("visibilitychange", handleVisibility);
+			window.clearInterval(wakeInterval);
+			document.removeEventListener("visibilitychange", handleResume);
+			for (const event of RESUME_EVENTS) window.removeEventListener(event, handleResume);
 			workerService.offBroadcast("cross-platform-follows-updated", handleBroadcast);
-		};
-	}, [workerService]);
-
-	useEffect(() => {
-		let disposed = false;
-		const handleLinks = (payload: { links: ChannelLink[] }) => {
-			if (!disposed) setLinks(payload.links);
-		};
-		workerService.onBroadcast("channel-links-updated", handleLinks);
-		void workerService.send("getChannelLinks", {}).then((payload) => payload && handleLinks(payload));
-		return () => {
-			disposed = true;
-			workerService.offBroadcast("channel-links-updated", handleLinks);
 		};
 	}, [workerService]);
 
@@ -136,15 +153,25 @@ export function CrossPlatformFollowsComponent({
 	const hostSnapshot = snapshots[hostPlatform];
 	const sourceSnapshot = snapshots[sourcePlatform];
 
+	const hostStatus = getFollowsStatusState(hostSnapshot, now);
+	const sourceStatus = getFollowsStatusState(sourceSnapshot, now);
 	const unsorted = useMemo(() => {
 		const list: SidebarChannel[] = [];
-		for (const snapshot of [hostSnapshot, sourceSnapshot]) {
+		for (const [snapshot, status] of [
+			[hostSnapshot, hostStatus],
+			[sourceSnapshot, sourceStatus],
+		] as const) {
 			for (const channel of snapshot?.channels ?? []) {
-				list.push({ ...channel, pinned: pinsEnabled && channel.pinned, platform: snapshot!.platform });
+				list.push({
+					...channel,
+					pinned: pinsEnabled && channel.pinned,
+					platform: snapshot!.platform,
+					stale: status !== "fresh",
+				});
 			}
 		}
 		return mergeLinkedChannels(list, links);
-	}, [hostSnapshot, sourceSnapshot, pinsEnabled, links]);
+	}, [hostSnapshot, sourceSnapshot, hostStatus, sourceStatus, pinsEnabled, links]);
 	const sortOptions = getFollowsSortOptions(unsorted);
 	const activeSort = sortOptions.includes(sort) ? sort : "viewers-desc";
 	const channels = useMemo(
@@ -164,15 +191,47 @@ export function CrossPlatformFollowsComponent({
 		onPlatformFilterChange(option);
 	};
 
-	const filtered = useMemo(() => filterFollowsByPlatform(channels, platformFilter), [channels, platformFilter]);
+	const closeSearch = () => {
+		setSearchOpen(false);
+		setQuery("");
+	};
+
+	const toggleSearch = () => {
+		if (searchOpen) return closeSearch();
+		setSearchMinHeight(containerRef.current?.offsetHeight ?? 0);
+		setSearchOpen(true);
+	};
+
+	const handleSearchKeyDown = (event: KeyboardEvent) => {
+		event.stopPropagation();
+		if (event.key !== "Escape") return;
+		event.preventDefault();
+		closeSearch();
+		searchButtonRef.current?.focus();
+	};
+
+	useEffect(() => {
+		if (searchOpen) searchInputRef.current?.focus();
+	}, [searchOpen]);
+
+	const searching = searchOpen && !compact && query.trim() !== "";
+	const platformFiltered = useMemo(() => filterFollowsByPlatform(channels, platformFilter), [channels, platformFilter]);
+	const filtered = useMemo(
+		() => (searching ? filterFollowsBySearch(platformFiltered, query) : platformFiltered),
+		[platformFiltered, searching, query],
+	);
 	const pinnedCount = filtered.filter((channel) => channel.pinned).length;
 	const visible = compact
 		? channels.filter((channel) => channel.live)
-		: filtered.slice(0, Math.max(COLLAPSED_COUNT * pages, pinnedCount));
+		: searching
+			? filtered
+			: filtered.slice(0, Math.max(COLLAPSED_COUNT * pages, pinnedCount));
 	const emptyFilterText =
-		platformFilter !== "all" && filtered.length === 0 && snapshots[platformFilter]?.synced
+		platformFilter !== "all" && platformFiltered.length === 0 && snapshots[platformFilter]?.synced
 			? `You don't follow anyone on ${PLATFORM_NAMES[platformFilter]} yet.`
-			: null;
+			: searching && filtered.length === 0
+				? `No followed channels match "${query.trim()}".`
+				: null;
 	useFlipAnimation(
 		listRef,
 		visible.map((channel) => getFollowEntryKey(channel)),
@@ -188,8 +247,11 @@ export function CrossPlatformFollowsComponent({
 		notices.push("Open kick.com while logged in to refresh live status.");
 	}
 
-	const stale = [hostSnapshot, sourceSnapshot].some((snapshot) => getVisibleProblem(snapshot));
-	const staleText = stale ? "Couldn't refresh live status. Showing the last known state." : null;
+	const failed =
+		[hostStatus, sourceStatus].includes("failed") ||
+		[hostSnapshot, sourceSnapshot].some((snapshot) => getVisibleProblem(snapshot));
+	const updating = !failed && [hostStatus, sourceStatus].includes("updating");
+	const staleText = failed ? "Couldn't refresh live status. Showing the last known state." : null;
 
 	const resolvePreviewUrl = useCallback(
 		async (platform: PlatformType, login: string) =>
@@ -199,7 +261,7 @@ export function CrossPlatformFollowsComponent({
 
 	const togglePin = (channel: SidebarChannel) => {
 		const pinned = !channel.pinned;
-		const targets = channel.linked ? Object.values(channel.linked.channels) : [channel];
+		const targets = getPinTargets(channel);
 		setSnapshots((previous) => {
 			const next = { ...previous };
 			for (const target of targets) {
@@ -215,43 +277,21 @@ export function CrossPlatformFollowsComponent({
 		}
 	};
 
-	const replaceLinks = (next: ChannelLink[], request: Promise<{ links: ChannelLink[] } | null>) => {
-		setLinks(next);
-		void request.then((payload) => payload && setLinks(payload.links));
-	};
-
-	const saveLink = (link: ChannelLink) =>
-		replaceLinks(
-			[...links.filter((item) => item.twitch !== link.twitch && item.kick !== link.kick), link],
-			workerService.send("updateChannelLink", link),
-		);
-
 	const linkChannels = (source: SidebarChannel, target: SidebarChannel, primary: PlatformType) => {
-		const [twitch, kick] = source.platform === "twitch" ? [source, target] : [target, source];
-		saveLink({ twitch: twitch.login, kick: kick.login, primary });
+		channelLinks.link(source, target, primary);
 		setLinking(null);
-	};
-
-	const preferPlatform = (channel: SidebarChannel, primary: PlatformType) => {
-		if (!channel.linked) return;
-		const { twitch, kick } = channel.linked.channels;
-		saveLink({ twitch: twitch.login, kick: kick.login, primary });
-	};
-
-	const unlink = (channel: SidebarChannel) => {
-		if (!channel.linked) return;
-		const { twitch, kick } = channel.linked.channels;
-		replaceLinks(
-			links.filter((item) => item.twitch !== twitch.login || item.kick !== kick.login),
-			workerService.send("removeChannelLink", { twitch: twitch.login, kick: kick.login }),
-		);
 	};
 
 	const openMenu = (event: MouseEvent, channel: SidebarChannel) =>
 		setMenu({ channel, anchor: event.currentTarget as Element, x: event.clientX, y: event.clientY });
 
 	return (
-		<Container ref={containerRef} $host={hostPlatform} $compact={compact}>
+		<Container
+			ref={containerRef}
+			$host={hostPlatform}
+			$compact={compact}
+			style={searchOpen && !compact ? { minHeight: `${searchMinHeight}px` } : undefined}
+		>
 			<Header $host={hostPlatform} $compact={compact}>
 				{compact && hostPlatform === "kick" && (
 					<svg width="16" height="16" viewBox="0 0 20 20" aria-label={title ?? "Followed Channels"}>
@@ -262,36 +302,40 @@ export function CrossPlatformFollowsComponent({
 					</svg>
 				)}
 				{!compact && unsorted.length > 0 && (
-					<FilterBar role="group" aria-label="Filter followed channels by platform">
-						{FOLLOWS_PLATFORM_FILTERS.map((option) => {
-							const button = (
-								<FilterButton
-									key={option}
-									type="button"
-									aria-pressed={platformFilter === option}
-									aria-label={option === "all" ? undefined : PLATFORM_NAMES[option]}
-									$host={hostPlatform}
-									$active={platformFilter === option}
-									$icon={option !== "all"}
-									onClick={() => changePlatformFilter(option)}
-								>
-									{option === "all" ? "All" : <PlatformIcon platform={option} size={14} />}
-								</FilterButton>
-							);
-							return option === "all" ? (
-								button
-							) : (
-								<TooltipComponent key={option} content={PLATFORM_NAMES[option]} position="top">
-									{button}
-								</TooltipComponent>
-							);
-						})}
-					</FilterBar>
+					<PlatformFilterComponent value={platformFilter} onChange={changePlatformFilter} theme={hostPlatform}>
+						<TooltipComponent content={searchOpen ? "Close search" : "Search channels"} position="top">
+							<HeaderButton
+								ref={searchButtonRef}
+								type="button"
+								aria-label={searchOpen ? "Close search" : "Search followed channels"}
+								aria-expanded={searchOpen}
+								data-open={searchOpen || undefined}
+								$host={hostPlatform}
+								onClick={toggleSearch}
+							>
+								<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+									<path
+										d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm9 2-4.35-4.35"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									/>
+								</svg>
+							</HeaderButton>
+						</TooltipComponent>
+					</PlatformFilterComponent>
 				)}
 				{!compact && unsorted.length === 0 && <HeaderTitle>{title ?? "Followed Channels"}</HeaderTitle>}
 				{!compact && staleText && (
 					<TooltipComponent content={staleText} position="top">
 						<StaleBadge>!</StaleBadge>
+					</TooltipComponent>
+				)}
+				{!compact && updating && (
+					<TooltipComponent content="Updating live status…" position="top">
+						<UpdatingSpinner role="status" aria-label="Updating live status" $host={hostPlatform} />
 					</TooltipComponent>
 				)}
 				{!compact && unsorted.length > 0 && (
@@ -321,6 +365,24 @@ export function CrossPlatformFollowsComponent({
 					</TooltipComponent>
 				)}
 			</Header>
+			{!compact && searchOpen && unsorted.length > 0 && (
+				<SearchRow $host={hostPlatform}>
+					<SearchInput
+						ref={searchInputRef}
+						type="search"
+						value={query}
+						placeholder="Search channels"
+						aria-label="Search followed channels"
+						autoComplete="off"
+						spellcheck={false}
+						$host={hostPlatform}
+						onInput={(event: Event) => setQuery((event.currentTarget as HTMLInputElement).value)}
+						onKeyDown={handleSearchKeyDown}
+						onKeyUp={(event: KeyboardEvent) => event.stopPropagation()}
+						onKeyPress={(event: KeyboardEvent) => event.stopPropagation()}
+					/>
+				</SearchRow>
+			)}
 			{!compact &&
 				notices.map((notice) => (
 					<Notice key={notice} $host={hostPlatform}>
@@ -343,7 +405,7 @@ export function CrossPlatformFollowsComponent({
 					/>
 				))}
 			</List>
-			{!compact && (filtered.length > visible.length || pages > 1) && (
+			{!compact && !searching && (filtered.length > visible.length || pages > 1) && (
 				<ToggleRow>
 					{filtered.length > visible.length && (
 						<ToggleButton $host={hostPlatform} onClick={() => setPages(pages + 1)}>
@@ -364,8 +426,8 @@ export function CrossPlatformFollowsComponent({
 					pinsEnabled={pinsEnabled}
 					onTogglePin={togglePin}
 					onLink={setLinking}
-					onPrefer={preferPlatform}
-					onUnlink={unlink}
+					onPrefer={channelLinks.prefer}
+					onUnlink={channelLinks.unlink}
 					onClose={() => setMenu(null)}
 				/>
 			)}
@@ -393,8 +455,6 @@ function ChannelRow({
 	resolvePreviewUrl,
 }: SidebarChannelRowProps) {
 	const [hovered, setHovered] = useState(false);
-	const [previewPlaying, setPreviewPlaying] = useState(false);
-	const [previewFailed, setPreviewFailed] = useState(false);
 	const wentLive = useBecameTrue(channel.live);
 	const url = PLATFORM_URLS[channel.platform](channel.login);
 	const subtitle = channel.live
@@ -402,39 +462,7 @@ function ChannelRow({
 		: channel.lastLiveAt
 			? `Live ${formatAgo(channel.lastLiveAt, now)}`
 			: "Offline";
-	const thumbnail = channel.live ? channelThumbnailUrl(channel.platform, channel, now) : null;
-
-	const tooltip = (
-		<TooltipContent>
-			{channel.live && (
-				<TooltipPreview>
-					{thumbnail && <img src={thumbnail} alt="" />}
-					<StreamPreviewComponent
-						platform={channel.platform}
-						login={channel.login}
-						resolveUrl={resolvePreviewUrl}
-						onPlaying={() => setPreviewPlaying(true)}
-						onFailed={() => setPreviewFailed(true)}
-						playlistFetcher={getPlaylistFetcher(channel.platform)}
-					/>
-					{!previewPlaying && !previewFailed && <TooltipPreviewLoader />}
-				</TooltipPreview>
-			)}
-			<TooltipHeading>
-				<strong>{channel.displayName}</strong>
-				<PlatformLabel platform={channel.platform} />
-			</TooltipHeading>
-			{channel.live && channel.title && <TooltipTitle>{channel.title}</TooltipTitle>}
-			{channel.live ? (
-				<TooltipMeta>
-					<span>{channel.category ?? "Live"}</span>
-					<TooltipViewers>{formatViewers(channel.viewers)} viewers</TooltipViewers>
-				</TooltipMeta>
-			) : (
-				<TooltipMeta>{subtitle}</TooltipMeta>
-			)}
-		</TooltipContent>
-	);
+	const tooltip = <ChannelTooltipContent channel={channel} now={now} resolvePreviewUrl={resolvePreviewUrl} />;
 
 	const handleClick = (event: MouseEvent) => {
 		if (channel.platform !== host || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
@@ -459,11 +487,7 @@ function ChannelRow({
 				onContextMenu(event, channel);
 			}}
 			onMouseEnter={() => setHovered(true)}
-			onMouseLeave={() => {
-				setHovered(false);
-				setPreviewPlaying(false);
-				setPreviewFailed(false);
-			}}
+			onMouseLeave={() => setHovered(false)}
 			{...{ [FLIP_KEY_ATTRIBUTE]: getFollowEntryKey(channel) }}
 			$host={host}
 			$compact={compact}
@@ -472,13 +496,15 @@ function ChannelRow({
 		>
 			<Avatar $host={host} $live={channel.live}>
 				{channel.avatarUrl ? <img src={channel.avatarUrl} alt="" loading="lazy" /> : <AvatarFallback />}
-				{compact && channel.live && <CompactLiveDot $host={host} />}
+				{compact && channel.live && <CompactLiveDot $host={host} $stale={!!channel.stale} />}
 				<PlatformDot
 					$host={host}
 					$platform={channel.platform}
 					$linked={!!channel.linked}
 					title={channel.linked ? "Linked Twitch and Kick channels" : PLATFORM_NAMES[channel.platform]}
-				/>
+				>
+					{channel.linked && <LinkedPlatformIcon />}
+				</PlatformDot>
 				{!compact && onTogglePin && (
 					<PinButton
 						role="button"
@@ -501,8 +527,8 @@ function ChannelRow({
 						</Subtitle>
 					</Meta>
 					{channel.live && (
-						<Viewers $host={host}>
-							<LiveDot $host={host} />
+						<Viewers $host={host} $stale={!!channel.stale}>
+							<LiveDot $host={host} $stale={!!channel.stale} />
 							{formatViewers(channel.viewers)}
 						</Viewers>
 					)}
@@ -606,53 +632,72 @@ const SortControl = styled.span<HostProps>`
 	}
 `;
 
-const FilterBar = styled.div`
-	flex: 1;
-	display: flex;
-	align-items: center;
-	gap: 4px;
-	min-width: 0;
-`;
-
-const FilterButton = styled.button<HostProps & { $active: boolean; $icon: boolean }>`
+const HeaderButton = styled.button<HostProps>`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	flex-shrink: 0;
+	width: 28px;
 	height: 28px;
-	min-width: 28px;
-	padding: ${({ $icon }) => ($icon ? "0" : "0 10px")};
+	padding: 0;
 	border: none;
-	cursor: pointer;
+	background: ${({ $host }) => ($host === "kick" ? "rgba(255, 255, 255, 0.04)" : "none")};
 	font: inherit;
-	font-size: 12px;
-	font-weight: 600;
+	cursor: pointer;
 	border-radius: ${({ $host }) => ($host === "kick" ? "6px" : "var(--border-radius-medium)")};
+	color: ${({ $host }) => ($host === "kick" ? "rgba(255, 255, 255, 0.6)" : "var(--color-text-alt-2)")};
 
-	${({ $host, $active }) =>
+	&:hover,
+	&:focus-visible,
+	&[data-open] {
+		color: ${({ $host }) => ($host === "kick" ? "#fff" : "var(--color-text-base)")};
+		background: ${({ $host }) =>
+			$host === "kick" ? "rgba(255, 255, 255, 0.08)" : "var(--color-background-button-text-hover)"};
+	}
+`;
+
+const SearchRow = styled.div<HostProps>`
+	display: flex;
+	padding: ${({ $host }) => ($host === "kick" ? "0 0 0 6px" : "0 8px 6px")};
+`;
+
+const SearchInput = styled.input<HostProps>`
+	flex: 1;
+	min-width: 0;
+	height: 30px;
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0 10px;
+	font: inherit;
+	font-size: 13px;
+	outline: none;
+
+	${({ $host }) =>
 		$host === "kick"
 			? css`
-					color: ${$active ? "#fff" : "rgba(255, 255, 255, 0.6)"};
-					background: ${$active ? "rgba(255, 255, 255, 0.16)" : "rgba(255, 255, 255, 0.04)"};
-					&:hover {
-						color: #fff;
-						background: ${$active ? "rgba(255, 255, 255, 0.16)" : "rgba(255, 255, 255, 0.08)"};
+					color: #fff;
+					background: rgba(255, 255, 255, 0.06);
+					border: 1px solid rgba(255, 255, 255, 0.12);
+					border-radius: 6px;
+					&::placeholder {
+						color: rgba(255, 255, 255, 0.5);
+					}
+					&:focus {
+						border-color: #53fc18;
 					}
 				`
 			: css`
-					color: ${$active ? "var(--color-text-base)" : "var(--color-text-alt-2)"};
-					background: ${$active ? "var(--color-background-button-secondary-default)" : "transparent"};
-					&:hover {
-						color: var(--color-text-base);
-						background: ${
-							$active ? "var(--color-background-button-secondary-hover)" : "var(--color-background-button-text-hover)"
-						};
+					color: var(--color-text-input);
+					background: var(--color-background-input);
+					border: 1px solid var(--color-border-input);
+					border-radius: var(--input-border-radius-default, var(--border-radius-medium));
+					&::placeholder {
+						color: var(--color-text-input-placeholder);
+					}
+					&:focus {
+						border-color: var(--color-border-input-focus);
 					}
 				`}
-
-	svg {
-		display: block;
-		flex-shrink: 0;
-	}
 `;
 
 const Notice = styled.p<HostProps>`
@@ -771,22 +816,41 @@ const Subtitle = styled.span<HostProps>`
 	color: ${({ $host }) => ($host === "kick" ? "rgba(255, 255, 255, 0.6)" : "var(--color-text-alt-2)")};
 `;
 
-const Viewers = styled.span<HostProps>`
+type StaleProps = { $stale: boolean };
+
+const Viewers = styled.span<HostProps & StaleProps>`
 	display: flex;
 	align-items: center;
 	gap: 5px;
 	flex-shrink: 0;
 	align-self: flex-start;
+	opacity: ${({ $stale }) => ($stale ? 0.5 : 1)};
 	font-size: ${({ $host }) => ($host === "kick" ? "14px" : "13px")};
 	font-weight: ${({ $host }) => ($host === "kick" ? 600 : 400)};
 	color: ${({ $host }) => ($host === "kick" ? "#fff" : "var(--color-text-alt)")};
 `;
 
-const LiveDot = styled.span<HostProps>`
+const LiveDot = styled.span<HostProps & StaleProps>`
 	width: 8px;
 	height: 8px;
 	border-radius: 50%;
-	background: ${({ $host }) => ($host === "kick" ? "#53fc18" : "#eb0400")};
+	background: ${({ $host, $stale }) => ($stale ? "#8a8a8a" : $host === "kick" ? "#53fc18" : "#eb0400")};
+`;
+
+const updatingSpin = keyframes`
+	to { transform: rotate(360deg); }
+`;
+
+const UpdatingSpinner = styled.span<HostProps>`
+	display: block;
+	flex-shrink: 0;
+	box-sizing: border-box;
+	width: 14px;
+	height: 14px;
+	border: 2px solid ${({ $host }) => ($host === "kick" ? "rgba(255, 255, 255, 0.2)" : "var(--color-border-base)")};
+	border-top-color: ${({ $host }) => ($host === "kick" ? "#53fc18" : "#9147ff")};
+	border-radius: 50%;
+	animation: ${updatingSpin} 0.8s linear infinite;
 `;
 
 const CompactLiveDot = styled(LiveDot)`
@@ -816,62 +880,6 @@ const ToggleButton = styled.button<HostProps & { $end?: boolean }>`
 	}
 `;
 
-const TooltipContent = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 3px;
-	max-width: 260px;
-	white-space: normal;
-`;
-
-const TooltipHeading = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 8px;
-
-	strong {
-		min-width: 0;
-		overflow: hidden;
-		color: #fff;
-		font-size: 14px;
-		font-weight: 700;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-`;
-
-const TooltipTitle = styled.span`
-	display: -webkit-box;
-	overflow: hidden;
-	color: #dedee3;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 2;
-`;
-
-const TooltipMeta = styled.span`
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 6px;
-	color: #adadb8;
-	font-size: 12px;
-`;
-
-const TooltipViewers = styled.span`
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-	color: #dedee3;
-
-	&::before {
-		content: "";
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		background: #eb0400;
-	}
-`;
-
 const PlatformDot = styled.span<HostProps & { $platform: PlatformType; $linked: boolean }>`
 	position: absolute;
 	right: -3px;
@@ -880,11 +888,14 @@ const PlatformDot = styled.span<HostProps & { $platform: PlatformType; $linked: 
 	width: 12px;
 	height: 12px;
 	border-radius: 50%;
-	background: ${({ $platform, $linked }) =>
-		$linked
-			? `linear-gradient(90deg, ${PLATFORM_COLORS.twitch} 50%, ${PLATFORM_COLORS.kick} 50%)`
-			: PLATFORM_COLORS[$platform]};
+	background: ${({ $platform, $linked }) => ($linked ? "none" : PLATFORM_COLORS[$platform])};
 	border: 2px solid ${({ $host }) => ($host === "kick" ? "#090b0f" : "var(--color-background-base)")};
+
+	svg {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
 `;
 
 const PIN_COLORS: Record<PlatformType, { icon: string; background: string; hover: string }> = {
@@ -922,38 +933,4 @@ const twitchLiveFlash = keyframes`
 const kickLiveFlash = keyframes`
 	0% { background: rgba(83, 252, 24, 0.25); }
 	100% { background: transparent; }
-`;
-
-const previewSpin = keyframes`
-	to { transform: rotate(360deg); }
-`;
-
-const TooltipPreview = styled.div`
-	position: relative;
-	width: 260px;
-	aspect-ratio: 16 / 9;
-	margin-bottom: 6px;
-	overflow: hidden;
-	border-radius: 6px;
-	background: #161616;
-
-	img {
-		position: absolute;
-		inset: 0;
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-	}
-`;
-
-const TooltipPreviewLoader = styled.span`
-	position: absolute;
-	top: calc(50% - 11px);
-	left: calc(50% - 11px);
-	width: 22px;
-	height: 22px;
-	border: 3px solid rgba(255, 255, 255, 0.25);
-	border-top-color: white;
-	border-radius: 50%;
-	animation: ${previewSpin} 0.8s linear infinite;
 `;

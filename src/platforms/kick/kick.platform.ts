@@ -12,6 +12,7 @@ import ChatNicknameCustomizationModule from "$kick/modules/chat-nickname-customi
 import ChatModule from "$kick/modules/chat/chat.module.ts";
 import CrossPlatformFollowsSyncModule from "$kick/modules/cross-platform-follows/cross-platform-follows-sync.module.ts";
 import CrossPlatformFollowsModule from "$kick/modules/cross-platform-follows/cross-platform-follows.module.tsx";
+import SidebarChannelHoverModule from "$kick/modules/cross-platform-follows/sidebar-channel-hover.module.tsx";
 import FollowsHomeModule from "$kick/modules/follows-home/follows-home.module.ts";
 import ForceQualityModule from "$kick/modules/force-quality/force-quality.module.ts";
 import LocalWatchtimeCounterModule from "$kick/modules/local-watchtime-counter/local-watchtime-counter.module.tsx";
@@ -71,6 +72,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			new ChatFixAutoScrollModule(...dependencies),
 			new CrossPlatformFollowsSyncModule(...dependencies),
 			new CrossPlatformFollowsModule(...dependencies),
+			new SidebarChannelHoverModule(...dependencies),
 			new FollowsHomeModule(...dependencies),
 		];
 	}

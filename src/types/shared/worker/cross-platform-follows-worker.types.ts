@@ -61,6 +61,8 @@ export type CrossPlatformFollowsSnapshot = {
 	channels: CrossPlatformChannel[];
 };
 
+export type FollowsStatusState = "fresh" | "updating" | "failed";
+
 export type ChannelStatusUpdate = Omit<ChannelStatusRecord, "id" | "platform" | "lastLiveAt" | "checkedAt"> & {
 	lastLiveAt?: number | null;
 };

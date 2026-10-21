@@ -10,6 +10,7 @@ import type {
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+const REQUEST_TIMEOUT_MS = 15_000;
 
 export class CredentialVault {
 	private key: Promise<CryptoKey> | null = null;
@@ -84,6 +85,7 @@ export class CredentialVault {
 			response = await fetch(url, {
 				credentials: "omit",
 				headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+				signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
 			});
 		} catch {
 			return { ok: false, reason: "failed" };

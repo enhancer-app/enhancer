@@ -9,6 +9,8 @@ import type {
 	ChatControllerComponent,
 	ChatInfoComponent,
 	ChatInputComponent,
+	ChatMessageSenderComponent,
+	ChatSentMessageTrackerComponent,
 	CurrentLiveStatusComponent,
 	FollowedSectionComponenet,
 	MediaPlayerComponent,
@@ -147,6 +149,22 @@ export default class TwitchUtils {
 			50,
 		);
 		return node?.stateNode;
+	}
+
+	getChatMessageSender() {
+		return this.reactUtils.findReactParents<ChatMessageSenderComponent>(
+			this.reactUtils.getReactInstance(document.querySelector(".chat-input__textarea")),
+			(n) => n?.stateNode?.props?.onSendMessage && n.stateNode.props.sendMessageErrorChecks,
+			30,
+		)?.stateNode;
+	}
+
+	getChatSentMessageTracker() {
+		return this.reactUtils.findReactChildren<ChatSentMessageTrackerComponent>(
+			this.reactUtils.getReactInstance(document.querySelector(".chat-input")),
+			(n) => n?.stateNode?.props?.registerSendMessageErrorCheck && "lastSentMessage" in (n.stateNode.state ?? {}),
+			200,
+		)?.stateNode;
 	}
 
 	addCommandToChat(command: TwitchChatCommand) {

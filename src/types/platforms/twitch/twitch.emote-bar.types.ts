@@ -34,6 +34,19 @@ export type EmoteBarRemoval = {
 	armed: boolean;
 };
 
+export type EmoteBarClickAction = "insert" | "send" | "remove" | "none";
+
+export type EmoteBarPointerEvent = {
+	type: string;
+	ctrlKey: boolean;
+	metaKey: boolean;
+};
+
+export type EmoteBarSentMessage = {
+	message: string;
+	at: number;
+};
+
 export type EmoteBarProps = {
 	entries: Signal<EmoteBarEntry[]>;
 	catalog: Signal<EmoteCatalog | null>;
