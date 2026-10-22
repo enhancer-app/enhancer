@@ -25,6 +25,7 @@ export class UpdateGlobalSettingsHandler extends MessageHandler {
 		private readonly database: SettingsDatabase,
 		private readonly vault: CredentialVault,
 		private readonly onFollowsSharingDisabled: () => Promise<unknown>,
+		private readonly onApiEnvironmentChanged: (settings: GlobalSettings) => Promise<unknown> = async () => {},
 	) {
 		super(logger);
 	}
@@ -42,6 +43,7 @@ export class UpdateGlobalSettingsHandler extends MessageHandler {
 		if (previous.crossPlatformFollowsSyncEnabled && !settings.crossPlatformFollowsSyncEnabled) {
 			await this.onFollowsSharingDisabled();
 		}
+		if (previous.apiEnvironment !== settings.apiEnvironment) await this.onApiEnvironmentChanged(settings);
 		return settings;
 	}
 

@@ -1,3 +1,4 @@
+import { createAccountCategories, createAccountSettings } from "$shared/module/helpers/enhancer-account-settings.tsx";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
@@ -66,7 +67,8 @@ export default class SettingsModule extends TwitchModule {
 			{ id: CATEGORY.CHANNEL, title: "Channel", order: 2 },
 			{ id: CATEGORY.LATENCY, title: "Latency", order: 3 },
 			{ id: CATEGORY.EXPERIMENTAL, title: "Experimental", order: 4 },
-			{ id: CATEGORY.ABOUT, title: "About", order: 5 },
+			...createAccountCategories(5),
+			{ id: CATEGORY.ABOUT, title: "About", order: 6 },
 		];
 
 		const brandIcons = {
@@ -75,8 +77,10 @@ export default class SettingsModule extends TwitchModule {
 			twitter: await this.commonUtils().getAssetFile(this.workerService(), "brands/twitter.svg"),
 			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
 		} as const;
+		const enhancerLogo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo.svg");
 
 		this.SETTING_DEFINITIONS = [
+			...createAccountSettings(workerService, "twitch", enhancerLogo),
 			{
 				id: "chattersEnabled",
 				title: "Enable Chatters Counter",

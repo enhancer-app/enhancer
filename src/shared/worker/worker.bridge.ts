@@ -173,6 +173,10 @@ export default class WorkerBridge {
 	private setupBroadcastReceiving() {
 		chrome.runtime.onMessage.addListener((message: WorkerBroadcast, _sender, sendResponse) => {
 			if (!this.bridgeElement || !message.type) return;
+			if (message.type === "api-environment-changed") {
+				if (window.top === window) location.reload();
+				return;
+			}
 			if (message.type === "enhancer-api-seed-request") {
 				const requestId = message.payload.requestId;
 				const handleResponse = (event: Event) => {

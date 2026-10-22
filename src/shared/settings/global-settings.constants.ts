@@ -1,3 +1,4 @@
+import { isEnhancerApiEnvironment } from "$shared/enhancer-environment.ts";
 import { isFollowsPlatformFilter } from "$shared/utils/follows-filter.utils.ts";
 import { FOLLOWS_SORT_ORDERS } from "$shared/utils/follows-sort.utils.ts";
 import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
@@ -9,6 +10,7 @@ export const GLOBAL_DEFAULT_SETTINGS: GlobalSettings = {
 	pinnedStreamersEnabled: true,
 	followsSort: "recommended",
 	followsPlatformFilter: "all",
+	apiEnvironment: "production",
 };
 
 export function isGlobalSettingKey(key: PropertyKey): key is keyof GlobalSettings {
@@ -18,6 +20,7 @@ export function isGlobalSettingKey(key: PropertyKey): key is keyof GlobalSetting
 function isValidGlobalSetting(key: keyof GlobalSettings, item: unknown): boolean {
 	if (key === "followsSort") return (FOLLOWS_SORT_ORDERS as unknown[]).includes(item);
 	if (key === "followsPlatformFilter") return isFollowsPlatformFilter(item);
+	if (key === "apiEnvironment") return isEnhancerApiEnvironment(item);
 	return typeof item === "boolean";
 }
 

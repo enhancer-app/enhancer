@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { ENHANCER_ENDPOINTS } from "$shared/enhancer-environment.ts";
 import type { Logger } from "$shared/logger/logger.ts";
 import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import type { CachedAggregateSeed } from "$types/shared/worker/enhancer-api-worker.types.ts";
@@ -618,4 +619,29 @@ test("keeps restore availability that arrives during archive broadcasting", asyn
 
 	expect(channelRequests).toBe(2);
 	service.disconnect(7, 0, "client-a", "twitch");
+});
+
+test("switching to the test API drops production state and reconnects to the test host", async () => {
+	setupChrome();
+	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+	const requests: string[] = [];
+	globalThis.fetch = (async (input) => {
+		requests.push(input.toString());
+		return Response.json(aggregate(requests.length === 1 ? "100-0" : "5-0"));
+	}) as typeof fetch;
+
+	const service = new EnhancerApiService(logger, "5.1.41");
+	await service.initialize(7, 0, "client-a", "twitch");
+	service.setEndpoints(ENHANCER_ENDPOINTS.test);
+	const seed = await service.initialize(7, 0, "client-b", "twitch");
+
+	expect(requests).toEqual([
+		"https://api.enhancer.at/v1/channel/twitch/global/aggregate",
+		"https://test-api.enhancer.at/v1/channel/twitch/global/aggregate",
+	]);
+	expect(seed.cursor).toBe("5-0");
+	expect(FakeWebSocket.urls).toEqual([
+		"wss://api.enhancer.at/v1/ws?v=5.1.41",
+		"wss://test-api.enhancer.at/v1/ws?v=5.1.41",
+	]);
 });
