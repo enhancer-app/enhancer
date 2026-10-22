@@ -102,7 +102,7 @@ export default class WorkerBackground {
 	}
 
 	private async switchApiEnvironment(settings: GlobalSettings, reloadTabs: boolean): Promise<void> {
-		const environment = resolveApiEnvironment(settings.apiEnvironment);
+		const environment = resolveApiEnvironment(settings);
 		if (environment === this.apiEnvironment) return;
 		this.apiEnvironment = environment;
 		this.logger.info(`Using the ${environment} Enhancer API`);

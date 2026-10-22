@@ -10,6 +10,7 @@ export const GLOBAL_DEFAULT_SETTINGS: GlobalSettings = {
 	pinnedStreamersEnabled: true,
 	followsSort: "recommended",
 	followsPlatformFilter: "all",
+	developerSettingsEnabled: false,
 	apiEnvironment: "production",
 };
 

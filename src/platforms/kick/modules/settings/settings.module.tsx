@@ -1,6 +1,10 @@
 import { KICK_DEFAULT_SETTINGS } from "$kick/kick.constants.ts";
 import KickModule from "$kick/kick.module.ts";
-import { createAccountCategories, createAccountSettings } from "$shared/module/helpers/enhancer-account-settings.tsx";
+import {
+	createAccountCategories,
+	createAccountSettings,
+	createDeveloperSettings,
+} from "$shared/module/helpers/enhancer-account-settings.tsx";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
@@ -370,6 +374,7 @@ export default class SettingsModule extends KickModule {
 				categoryId: CATEGORY.EXPERIMENTAL,
 				dependsOn: { key: "crossPlatformFollowsSyncEnabled" },
 			},
+			...createDeveloperSettings<KickSettings>(CATEGORY.EXPERIMENTAL),
 			{
 				id: "about",
 				title: "About This Extension",

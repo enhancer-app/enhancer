@@ -218,10 +218,14 @@ test("logout deletes the session and revokes the refresh token", async () => {
 	expect(form(revoke).get("token")).toBe("refresh-access-1");
 });
 
-test("only preview builds can select the test API", () => {
-	expect(resolveApiEnvironment("test", true)).toBe("test");
-	expect(resolveApiEnvironment("test", false)).toBe("production");
-	expect(resolveApiEnvironment("staging", true)).toBe("production");
+test("only Canary with developer settings on can select the test API", () => {
+	const test = { developerSettingsEnabled: true, apiEnvironment: "test" } as const;
+	expect(resolveApiEnvironment(test, true)).toBe("test");
+	expect(resolveApiEnvironment(test, false)).toBe("production");
+	expect(resolveApiEnvironment({ ...test, developerSettingsEnabled: false }, true)).toBe("production");
+	expect(resolveApiEnvironment({ developerSettingsEnabled: true, apiEnvironment: "staging" as "test" }, true)).toBe(
+		"production",
+	);
 	expect(sanitizeGlobalSettings({ apiEnvironment: "test" })).toEqual({ apiEnvironment: "test" });
 	expect(sanitizeGlobalSettings({ apiEnvironment: "staging" })).toEqual({});
 });

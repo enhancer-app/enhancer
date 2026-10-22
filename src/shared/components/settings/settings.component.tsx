@@ -346,22 +346,23 @@ const Section = styled.section`
 	}
 `;
 
+const Panel = styled.div`
+	margin: 12px 0 0;
+
+	&:first-child {
+		margin-top: 0;
+	}
+`;
+
 const Card = styled.div`
 	background: var(--settings-surface);
 	border: 1px solid var(--settings-border);
 	border-radius: 12px;
 	overflow: hidden;
 
-	& + & {
+	& + &,
+	${Panel} + & {
 		margin-top: 12px;
-	}
-`;
-
-const Panel = styled.div`
-	margin: 12px 0 0;
-
-	&:first-child {
-		margin-top: 0;
 	}
 `;
 

@@ -11,6 +11,7 @@ export type GlobalSettings = {
 	pinnedStreamersEnabled: boolean;
 	followsSort: FollowsSortOrder;
 	followsPlatformFilter: FollowsPlatformFilter;
+	developerSettingsEnabled: boolean;
 	apiEnvironment: EnhancerApiEnvironment;
 };
 

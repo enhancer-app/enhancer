@@ -1,4 +1,3 @@
-import type { EnhancerApiEnvironment } from "$types/shared/enhancer-environment.types.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { EnhancerViewerBadge } from "$types/apis/enhancer-account.apis.ts";
@@ -33,6 +32,5 @@ export type LoginScreenProps = {
 	logoUrl: string;
 	busy: boolean;
 	error: string | null;
-	environment: EnhancerApiEnvironment;
 	onLogin: () => void;
 };

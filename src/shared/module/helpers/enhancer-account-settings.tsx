@@ -1,5 +1,5 @@
 import { EnhancerAccountComponent } from "$shared/components/enhancer-account/enhancer-account.component.tsx";
-import { isPreviewBuild } from "$shared/enhancer-environment.ts";
+import { canUseDeveloperSettings, isPreviewBuild } from "$shared/enhancer-environment.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { SettingCategory, SettingDefinition } from "$types/shared/components/settings.component.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
@@ -26,13 +26,27 @@ export function createAccountSettings<T>(
 			content: () => <EnhancerAccountComponent workerService={workerService} platform={platform} logoUrl={logoUrl} />,
 			hideInfo: true,
 		},
+	];
+}
+
+export function createDeveloperSettings<T>(categoryId: string): SettingDefinition<T>[] {
+	if (!canUseDeveloperSettings()) return [];
+	return [
+		{
+			id: "developerSettingsEnabled",
+			title: "Developer Settings",
+			description: "Settings for testing Enhancer itself. If you do not know what they do, leave them off.",
+			type: "toggle",
+			categoryId,
+		},
 		{
 			id: "apiEnvironment",
 			title: "Enhancer API",
 			description:
-				"Only in Canary and development builds. Chooses which Enhancer API badges, nicknames and the account use. Switching reloads your Twitch and Kick tabs.",
+				"Which Enhancer API badges, nicknames and the account use. If you do not know what this does, do not change it. Switching reloads your Twitch and Kick tabs.",
 			type: "select",
-			categoryId: ACCOUNT_CATEGORY_ID,
+			categoryId,
+			dependsOn: { key: "developerSettingsEnabled" },
 			options: [
 				{ value: "production", label: "Production (api.enhancer.at)" },
 				{ value: "test", label: "Test (test-api.enhancer.at)" },

@@ -388,14 +388,6 @@ const LoginFooter = styled.div`
 	}
 `;
 
-function TestChip() {
-	return (
-		<Chip $background="#ffb020" $color="#000000">
-			Test API
-		</Chip>
-	);
-}
-
 function formatProvider(provider: string): string {
 	return provider.charAt(0) + provider.slice(1).toLowerCase();
 }
@@ -407,13 +399,12 @@ function formatSince(iso: string): string {
 		: date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
-function LoginScreen({ logoUrl, busy, error, environment, onLogin }: LoginScreenProps) {
+function LoginScreen({ logoUrl, busy, error, onLogin }: LoginScreenProps) {
 	return (
 		<LoginScreenWrapper>
 			<LoginMain>
 				{logoUrl && <LoginLogo src={logoUrl} alt="" />}
 				<LoginTitle>Enhancer Account</LoginTitle>
-				{environment === "test" && <TestChip />}
 				<LoginSubtitle>Log in to choose which of your Enhancer badges shows next to your name in chat.</LoginSubtitle>
 				<LoginButton type="button" onClick={onLogin} disabled={busy}>
 					{logoUrl && <img src={logoUrl} alt="" />}
@@ -649,9 +640,7 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 	};
 
 	if (!account.loggedIn) {
-		return (
-			<LoginScreen logoUrl={logoUrl} busy={busy} error={error} environment={account.environment} onLogin={login} />
-		);
+		return <LoginScreen logoUrl={logoUrl} busy={busy} error={error} onLogin={login} />;
 	}
 
 	const user = profile?.user;
@@ -686,7 +675,6 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 					</RowTitle>
 					{profile && profile.identities.length > 0 && (
 						<Chips>
-							{account.environment === "test" && <TestChip />}
 							{profile.identities.map((identity) => {
 								const colors = PLATFORM_COLORS[identity.provider] ?? {
 									background: "var(--settings-control-hover)",
