@@ -5,6 +5,7 @@ import { getRequiredScopes } from "$shared/worker/credentials/credential.scopes.
 import { CredentialVault } from "$shared/worker/credentials/credential.vault.ts";
 import { SharedDatabase } from "$shared/worker/database/shared.database.ts";
 import { CrossPlatformFollowsRefresher } from "$shared/worker/cross-platform-follows/cross-platform-follows.refresher.ts";
+import { AggregateSnapshotDatabase } from "$shared/worker/enhancer-api/aggregate-snapshot.database.ts";
 import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
@@ -26,7 +27,12 @@ export default class WorkerBackground {
 	);
 	private readonly watchtimeDatabase = new WatchtimeDatabase();
 	private readonly watchtimeAccumulator = new WatchtimeAccumulator(this.watchtimeDatabase);
-	private readonly enhancerApiService = new EnhancerApiService(this.enhancerApiLogger, __version__);
+	private readonly aggregateSnapshotDatabase = new AggregateSnapshotDatabase();
+	private readonly enhancerApiService = new EnhancerApiService(
+		this.enhancerApiLogger,
+		__version__,
+		this.aggregateSnapshotDatabase,
+	);
 	private readonly sharedDatabase = new SharedDatabase();
 	private readonly credentialDatabase = new CredentialDatabase();
 	private readonly credentialVault = new CredentialVault(this.credentialDatabase);
@@ -61,6 +67,9 @@ export default class WorkerBackground {
 			this.settingsDatabase.initialize(),
 			this.watchtimeDatabase.initialize(),
 			this.sharedDatabase.initialize().catch((error) => this.logger.error("Shared database unavailable:", error)),
+			this.aggregateSnapshotDatabase
+				.initialize()
+				.catch((error) => this.logger.error("Aggregate database unavailable:", error)),
 			this.credentialDatabase
 				.initialize()
 				.catch((error) => this.logger.error("Credential database unavailable:", error)),
