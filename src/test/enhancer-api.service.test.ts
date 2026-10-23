@@ -1,30 +1,134 @@
 import { afterEach, expect, test } from "bun:test";
+import { decodeBase64, EnhancerAggregateView } from "$shared/apis/enhancer-snapshot.ts";
 import type { Logger } from "$shared/logger/logger.ts";
+import type { AggregateSnapshotDatabase } from "$shared/worker/enhancer-api/aggregate-snapshot.database.ts";
 import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
-import type { CachedAggregateSeed } from "$types/shared/worker/enhancer-api-worker.types.ts";
+import type { EnhancerAccount, EnhancerBadge } from "$types/apis/enhancer.apis.ts";
+import type { StoredAggregateSnapshot } from "$types/shared/worker/enhancer-api-worker.types.ts";
 import type { WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
 
 const originalChrome = globalThis.chrome;
 const originalFetch = globalThis.fetch;
 const originalWebSocket = globalThis.WebSocket;
 
+const badge: EnhancerBadge = { badgeId: "badge-1", sources: { "1x": "badge.webp" }, name: "Badge", priority: 1 };
+
+function varint(out: number[], value: number): void {
+	let rest = value;
+	while (rest >= 128) {
+		out.push((rest % 128) + 128);
+		rest = Math.floor(rest / 128);
+	}
+	out.push(rest);
+}
+
+function encodeSnapshot(topic: string, accounts: EnhancerAccount[], badges: EnhancerBadge[] = [badge]): Uint8Array {
+	const index = new Map(badges.map((item, position) => [item.badgeId, position]));
+	const numeric = accounts
+		.filter((account) => /^[1-9]\d{0,15}$/.test(account.externalId))
+		.sort((left, right) => Number(left.externalId) - Number(right.externalId));
+	const header = {
+		topic,
+		platform: "TWITCH",
+		channelId: topic.startsWith("channel:") ? "channel-id" : null,
+		epoch: "epoch-1",
+		seq: 0,
+		badges,
+		appearances: accounts
+			.filter((account) => account.customNickname || account.customFont || account.hasGlow)
+			.map((account) => [account.externalId, account.customNickname, account.customFont, account.hasGlow ? 1 : 0]),
+		textAccounts: accounts
+			.filter((account) => !numeric.includes(account) && account.badgesIds.length > 0)
+			.map((account) => [account.externalId, account.badgesIds.map((id) => index.get(id))]),
+	};
+	const body: number[] = [];
+	varint(body, numeric.length);
+	let previous = 0;
+	for (const account of numeric) {
+		varint(body, Number(account.externalId) - previous);
+		previous = Number(account.externalId);
+		varint(body, account.badgesIds.length);
+		for (const id of account.badgesIds) varint(body, index.get(id) as number);
+	}
+	const headerBytes = new TextEncoder().encode(JSON.stringify(header));
+	const prefix: number[] = [0x45, 0x4e, 0x48, 0x53, 1];
+	varint(prefix, headerBytes.length);
+	return Uint8Array.from([...prefix, ...headerBytes, ...body]);
+}
+
+const account = (externalId: string, overrides: Partial<EnhancerAccount> = {}): EnhancerAccount => ({
+	accountId: `account-${externalId}`,
+	externalId,
+	badgesIds: ["badge-1"],
+	customNickname: null,
+	customFont: null,
+	hasGlow: false,
+	...overrides,
+});
+
+interface FakeTopic {
+	epoch: string;
+	seq: number;
+	hash: string;
+	snapshotSeq: number;
+	bytes: Uint8Array;
+	events: any[];
+}
+
+const topics = new Map<string, FakeTopic>();
+const missing = new Set<string>();
+const fetched: string[] = [];
+
+function serveTopic(topic: string, accounts: EnhancerAccount[], hash = `${topic}-hash`): FakeTopic {
+	const entry: FakeTopic = {
+		epoch: "epoch-1",
+		seq: 0,
+		hash,
+		snapshotSeq: 0,
+		bytes: encodeSnapshot(topic, accounts),
+		events: [],
+	};
+	topics.set(topic, entry);
+	return entry;
+}
+
+function updateEvent(topic: string, seq: number, changes: Partial<Record<string, unknown>> = {}) {
+	return {
+		type: "aggregate.updated",
+		topic,
+		epoch: topics.get(topic)?.epoch ?? "epoch-1",
+		seq,
+		accountsUpsert: [],
+		accountIdsRemove: [],
+		externalIdsRemove: [],
+		badgesUpsert: [],
+		badgeIdsRemove: [],
+		cursor: `${1000 + seq}-0`,
+		...changes,
+	};
+}
+
+function pushEvent(topic: string, changes: Partial<Record<string, unknown>> = {}) {
+	const entry = topics.get(topic) as FakeTopic;
+	entry.seq++;
+	const event = updateEvent(topic, entry.seq, changes);
+	entry.events.push(event);
+	return event;
+}
+
 class FakeWebSocket extends EventTarget {
 	static readonly OPEN = 1;
 	static instance: FakeWebSocket;
 	static instances = 0;
-	static urls: string[] = [];
 	static commands: any[] = [];
-	static onSubscribe: (socket: FakeWebSocket, command: any, topic: string) => void = (socket, _command, topic) => {
-		queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic }));
-		queueMicrotask(() => socket.receive({ type: "replay.complete", topic }));
-	};
+	static aliases = new Map<string, string>();
+	static beforeHead: (socket: FakeWebSocket, topic: string) => void = () => {};
 	readonly readyState = FakeWebSocket.OPEN;
 
-	constructor(url: string) {
+	constructor(_url: string) {
 		super();
 		FakeWebSocket.instance = this;
 		FakeWebSocket.instances++;
-		FakeWebSocket.urls.push(url);
 		queueMicrotask(() => this.receive({ type: "connection.ready" }));
 	}
 
@@ -34,8 +138,34 @@ class FakeWebSocket extends EventTarget {
 		if (command.type !== "subscribe") return;
 		const { subscription } = command;
 		const suffix = subscription.externalId ? `:${subscription.externalId}` : "";
-		const topic = `${subscription.scope.toLowerCase()}:${subscription.platform}${suffix}`;
-		FakeWebSocket.onSubscribe(this, command, topic);
+		const requested = `${subscription.scope.toLowerCase()}:${subscription.platform}${suffix}`;
+		const topic = FakeWebSocket.aliases.get(requested) ?? requested;
+		queueMicrotask(() => {
+			if (missing.has(topic) || !topics.has(topic)) {
+				this.receive({ error: { code: "NOT_FOUND", message: "Channel not found" } });
+				return;
+			}
+			const entry = topics.get(topic) as FakeTopic;
+			this.receive({ type: "subscription.confirmed", topic });
+			FakeWebSocket.beforeHead(this, topic);
+			const state = command.state ?? {};
+			const resync = state.epoch !== entry.epoch || state.seq === undefined || state.seq < entry.snapshotSeq;
+			const from = resync ? entry.snapshotSeq : state.seq;
+			this.receive({
+				type: "aggregate.head",
+				topic,
+				epoch: entry.epoch,
+				seq: entry.seq,
+				snapshot: { hash: entry.hash, seq: entry.snapshotSeq, path: `/snapshot/${encodeURIComponent(topic)}` },
+				resync,
+				from,
+			});
+			for (const event of entry.events.filter((item) => item.seq > from)) {
+				const { cursor: _cursor, ...stored } = event;
+				this.receive(stored);
+			}
+			this.receive({ type: "replay.complete", topic });
+		});
 	}
 
 	close(): void {
@@ -45,19 +175,10 @@ class FakeWebSocket extends EventTarget {
 	receive(message: object): void {
 		this.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(message) }));
 	}
-
-	static reset(): void {
-		FakeWebSocket.instances = 0;
-		FakeWebSocket.urls = [];
-		FakeWebSocket.commands = [];
-		FakeWebSocket.onSubscribe = (socket, _command, topic) => {
-			queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic }));
-			queueMicrotask(() => socket.receive({ type: "replay.complete", topic }));
-		};
-	}
 }
 
 const logger = { debug() {}, info() {}, warn() {}, error() {} } as unknown as Logger;
+
 async function until(condition: () => boolean, timeoutMs = 1000): Promise<void> {
 	const deadline = Date.now() + timeoutMs;
 	while (!condition()) {
@@ -65,557 +186,232 @@ async function until(condition: () => boolean, timeoutMs = 1000): Promise<void> 
 		await new Promise((resolve) => setTimeout(resolve, 1));
 	}
 }
-const subscribedTo = (externalId: string) =>
-	FakeWebSocket.commands.some(
-		(command) => command.type === "subscribe" && command.subscription?.externalId === externalId,
-	);
-const aggregate = (cursor: string, accountId = "account-1") => ({
-	channelId: null,
-	platform: "TWITCH" as const,
-	accounts: [
-		{
-			accountId,
-			externalId: accountId,
-			badgesIds: ["badge-1"],
-			customNickname: null,
-			customFont: null,
-			hasGlow: false,
-		},
-	],
-	badges: [{ badgeId: "badge-1", sources: { "18x18": "badge.webp" }, name: "Badge", priority: 1 }],
-	cursor,
-});
 
-function setupChrome(
-	seeds = new Map<number, CachedAggregateSeed | null>(),
-	onBroadcast?: (message: WorkerBroadcast) => Promise<void>,
-) {
+function setup() {
 	const broadcasts: WorkerBroadcast[] = [];
-	let closeTab: (tabId: number) => void = () => {};
 	globalThis.chrome = {
 		tabs: {
-			onRemoved: {
-				addListener: (listener: (tabId: number) => void) => {
-					closeTab = listener;
-				},
-			},
-			query: async () => [...seeds.keys()].map((id) => ({ id })),
-			sendMessage: async (tabId: number, message: WorkerBroadcast) => {
-				if (message.type === "enhancer-api-seed-request") return seeds.get(tabId) ?? null;
+			onRemoved: { addListener: () => {} },
+			sendMessage: async (_tabId: number, message: WorkerBroadcast) => {
 				broadcasts.push(message);
-				await onBroadcast?.(message);
 			},
 		},
 	} as unknown as typeof chrome;
-	return { broadcasts, closeTab };
+	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+	globalThis.fetch = (async (input) => {
+		const url = new URL(input.toString());
+		const topic = decodeURIComponent(url.pathname.slice("/snapshot/".length));
+		fetched.push(topic);
+		const entry = topics.get(topic);
+		return entry ? new Response(entry.bytes.slice()) : new Response(null, { status: 404 });
+	}) as typeof fetch;
+	return broadcasts;
 }
+
+const subscribes = (externalId?: string) =>
+	FakeWebSocket.commands.filter(
+		(command) => command.type === "subscribe" && command.subscription.externalId === externalId,
+	);
 
 afterEach(() => {
 	globalThis.chrome = originalChrome;
 	globalThis.fetch = originalFetch;
 	globalThis.WebSocket = originalWebSocket;
-	FakeWebSocket.reset();
+	FakeWebSocket.instances = 0;
+	FakeWebSocket.commands = [];
+	FakeWebSocket.aliases.clear();
+	FakeWebSocket.beforeHead = () => {};
+	topics.clear();
+	missing.clear();
+	fetched.length = 0;
 });
 
-test("uses one HTTP snapshot and applies final patches without refetching", async () => {
-	const { broadcasts } = setupChrome();
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	const requests: URL[] = [];
-	globalThis.fetch = (async (input) => {
-		const url = new URL(input.toString());
-		requests.push(url);
-		return Response.json(aggregate("100-0"));
-	}) as typeof fetch;
+test("downloads one snapshot file for every tab and sends patches in order", async () => {
+	const broadcasts = setup();
+	serveTopic("global:TWITCH", [account("4294967297")]);
+	const service = new EnhancerApiService(logger, "6.0.0");
 
-	const service = new EnhancerApiService(logger, "5.1.41");
 	const first = await service.initialize(7, 0, "client-a", "twitch");
-	const second = await service.initialize(8, 0, "client-b", "twitch");
+	const second = await service.initialize(8, 0, "client-b", "twitch", first.hash);
 
-	expect(requests).toHaveLength(1);
-	expect(requests[0].search).toBe("");
-	expect(first.cursor).toBe("100-0");
-	expect(second.aggregate.accounts).toHaveLength(1);
-	expect(FakeWebSocket.instances).toBe(1);
-	expect(FakeWebSocket.urls).toEqual(["wss://api.enhancer.at/v1/ws?v=5.1.41"]);
-	expect(FakeWebSocket.commands.find((command) => command.type === "subscribe")?.after).toBe("100-0");
+	expect(fetched).toEqual(["global:TWITCH"]);
+	expect(subscribes()[0].state).toEqual({});
+	expect(first.bytes).toBeDefined();
+	expect(second.bytes).toBeUndefined();
+	const view = new EnhancerAggregateView(first.hash, first.seq, decodeBase64(first.bytes as string));
+	expect(view.findAccount("4294967297")?.badgesIds).toEqual(["badge-1"]);
 
-	FakeWebSocket.instance.receive({
-		type: "aggregate.updated",
-		topic: "global:TWITCH",
-		accountsUpsert: [
-			{
-				accountId: "account-2",
-				externalId: "user-2",
-				badgesIds: ["badge-2"],
-				customNickname: "new",
-				customFont: null,
-				hasGlow: true,
-			},
-		],
-		accountIdsRemove: ["account-1"],
-		badgesUpsert: [{ badgeId: "badge-2", sources: {}, name: "New", priority: 2 }],
-		badgeIdsRemove: ["badge-1"],
-		cursor: "100-1",
-	});
-	await until(() => broadcasts.filter((message) => message.type === "enhancer-api-updated").length >= 2);
-
-	const updates = broadcasts.filter((message) => message.type === "enhancer-api-updated");
-	expect(updates).toHaveLength(2);
-	expect(updates[0].payload.cursor).toBe("100-1");
-	expect(updates[0].payload.aggregate?.accounts.map((account) => account.accountId)).toEqual(["account-2"]);
-	expect(updates[0].payload.aggregate?.badges.map((badge) => badge.badgeId)).toEqual(["badge-2"]);
-	expect(requests).toHaveLength(1);
-
-	service.disconnect(7, 0, "client-a", "twitch");
-	service.disconnect(8, 0, "client-b", "twitch");
+	FakeWebSocket.instance.receive(
+		pushEvent("global:TWITCH", {
+			accountsUpsert: [account("55", { customFont: "Inter" })],
+			externalIdsRemove: ["4294967297"],
+		}),
+	);
+	await until(() => broadcasts.filter((message) => message.type === "enhancer-api-patch").length === 2);
+	const patch = broadcasts.find((message) => message.type === "enhancer-api-patch");
+	if (patch?.type !== "enhancer-api-patch") throw new Error("Missing patch");
+	expect(patch.payload.seq).toBe(1);
+	view.applyEntries(patch.payload.accounts, patch.payload.badges);
+	expect(view.findAccount("4294967297")).toBeNull();
+	expect(view.customFonts()).toEqual(["Inter"]);
+	expect(fetched).toHaveLength(1);
 });
 
-test("installs a complete snapshot before applying buffered updates", async () => {
-	const { broadcasts } = setupChrome();
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	let requests = 0;
-	globalThis.fetch = (async () => {
-		requests++;
-		return Response.json(aggregate("200-0"));
-	}) as unknown as typeof fetch;
-
+test("asks for a replay after a gap and for a fresh file after an epoch change", async () => {
+	setup();
+	serveTopic("global:TWITCH", [account("1")]);
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");
-	broadcasts.length = 0;
-	FakeWebSocket.instance.receive({ type: "sync.required", topic: "global:TWITCH" });
-	FakeWebSocket.instance.receive({
-		type: "aggregate.updated",
+
+	pushEvent("global:TWITCH");
+	const second = pushEvent("global:TWITCH");
+	FakeWebSocket.instance.receive(second);
+	await until(() => subscribes().length === 2);
+	expect(subscribes()[1].state).toEqual({ epoch: "epoch-1", seq: 0 });
+
+	FakeWebSocket.instance.receive({ ...updateEvent("global:TWITCH", 3), epoch: "epoch-2" });
+	await until(() => subscribes().length === 3);
+	expect(subscribes()[2].state).toEqual({});
+});
+
+test("buffers live events during replay and applies each seq once", async () => {
+	const broadcasts = setup();
+	serveTopic("global:TWITCH", [account("1")]);
+	const service = new EnhancerApiService(logger);
+	await service.initialize(7, 0, "client-a", "twitch");
+
+	pushEvent("global:TWITCH", { accountsUpsert: [account("2")] });
+	const second = pushEvent("global:TWITCH", { accountsUpsert: [account("3")] });
+	FakeWebSocket.beforeHead = (socket) => socket.receive(second);
+	FakeWebSocket.instance.receive(second);
+	await until(() => broadcasts.filter((message) => message.type === "enhancer-api-patch").length >= 2);
+	await new Promise((resolve) => setTimeout(resolve, 10));
+
+	const seqs = broadcasts.flatMap((message) => (message.type === "enhancer-api-patch" ? [message.payload.seq] : []));
+	expect(seqs).toEqual([1, 2]);
+});
+
+test("resumes from the stored file without downloading it again", async () => {
+	setup();
+	const entry = serveTopic("global:TWITCH", [account("1")]);
+	pushEvent("global:TWITCH", { accountsUpsert: [account("2")] });
+	const stored: StoredAggregateSnapshot = {
 		topic: "global:TWITCH",
-		accountsUpsert: [aggregate("0", "after-snapshot").accounts[0]],
-		accountIdsRemove: [],
-		badgesUpsert: [],
-		badgeIdsRemove: [],
-		cursor: "200-2",
-	});
+		formatVersion: 1,
+		scope: "GLOBAL",
+		hash: entry.hash,
+		seq: 0,
+		epoch: entry.epoch,
+		channelId: null,
+		platform: "TWITCH",
+		lastUsedAt: 0,
+		bytes: entry.bytes,
+	};
+	const puts: StoredAggregateSnapshot[] = [];
+	const store = {
+		get: async () => stored,
+		put: async (snapshot: StoredAggregateSnapshot) => void puts.push(snapshot),
+		delete: async () => {},
+	} as unknown as AggregateSnapshotDatabase;
+
+	const service = new EnhancerApiService(logger, "6.0.0", store);
+	const seed = await service.initialize(7, 0, "client-a", "twitch");
+
+	expect(subscribes()[0].state).toEqual({ epoch: "epoch-1", seq: 0 });
+	expect(fetched).toEqual([]);
+	expect(puts).toEqual([]);
+	expect(seed.seq).toBe(1);
+	expect(seed.accounts.map(([externalId]) => externalId)).toEqual(["2"]);
+});
+
+test("rejects a missing channel and loads it once it becomes available", async () => {
+	const broadcasts = setup();
+	serveTopic("global:TWITCH", [account("1")]);
+	const service = new EnhancerApiService(logger);
+	await service.initialize(7, 0, "client-a", "twitch");
+
+	expect(await service.joinChannel(7, 0, "client-a", "twitch", "fresh")).toBeNull();
+	serveTopic("channel:TWITCH:fresh", [account("2")]);
 	FakeWebSocket.instance.receive({
-		...aggregate("200-1", "snapshot-2"),
-		type: "aggregate.snapshot",
-		topic: "global:TWITCH",
-		snapshotId: "snapshot-a",
-		page: 1,
-		hasNextPage: false,
-	});
-	expect(broadcasts).toHaveLength(0);
-	FakeWebSocket.instance.receive({
-		...aggregate("200-1", "snapshot-1"),
-		type: "aggregate.snapshot",
-		topic: "global:TWITCH",
-		snapshotId: "snapshot-a",
-		page: 0,
-		hasNextPage: true,
+		type: "channel.available",
+		topic: "channel:TWITCH:fresh",
+		reason: "created",
+		cursor: "2000-0",
 	});
 	await until(() =>
-		broadcasts.some((message) => message.type === "enhancer-api-updated" && message.payload.cursor === "200-2"),
-	);
-
-	const updates = broadcasts.filter((message) => message.type === "enhancer-api-updated");
-	const last = updates.at(-1);
-	expect(last?.payload.cursor).toBe("200-2");
-	expect(last?.payload.aggregate?.accounts.map((account) => account.accountId)).toEqual([
-		"snapshot-1",
-		"snapshot-2",
-		"after-snapshot",
-	]);
-	expect(requests).toBe(1);
-	service.disconnect(7, 0, "client-a", "twitch");
-});
-
-test("moves unavailable channels through pending, restore, and canonical rename", async () => {
-	const { broadcasts } = setupChrome();
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	const requests: string[] = [];
-	let oldAvailable = false;
-	globalThis.fetch = (async (input) => {
-		const url = new URL(input.toString());
-		const externalId = decodeURIComponent(url.pathname.split("/").at(-2) as string);
-		requests.push(externalId);
-		if (externalId === "old" && !oldAvailable) return new Response(null, { status: 404 });
-		return Response.json(aggregate(`${300 + requests.length}-0`, `${externalId}-account`));
-	}) as typeof fetch;
-
-	const service = new EnhancerApiService(logger);
-	await service.initialize(7, 0, "client-a", "twitch");
-	expect(await service.joinChannel(7, 0, "client-a", "twitch", "old")).toBeNull();
-	oldAvailable = true;
-	FakeWebSocket.instance.receive({
-		type: "channel.available",
-		topic: "channel:TWITCH:old",
-		reason: "created",
-		cursor: "310-0",
-	});
-	const oldUpdates = (withAggregate: boolean) =>
-		broadcasts.filter(
+		broadcasts.some(
 			(message) =>
 				message.type === "enhancer-api-updated" &&
-				message.payload.topic === "channel:TWITCH:old" &&
-				!!message.payload.aggregate === withAggregate,
-		);
-	await until(() => oldUpdates(true).length === 1);
-	expect(subscribedTo("old")).toBe(true);
+				message.payload.topic === "channel:TWITCH:fresh" &&
+				message.payload.seed?.bytes !== undefined,
+		),
+	);
+	expect(fetched).toEqual(["global:TWITCH", "channel:TWITCH:fresh"]);
+});
 
-	FakeWebSocket.instance.receive({
-		type: "channel.unavailable",
-		topic: "channel:TWITCH:old",
-		reason: "archived",
-		cursor: "400-0",
-	});
-	await until(() => oldUpdates(false).length === 1);
+test("follows a channel rename to its replacement topic", async () => {
+	const broadcasts = setup();
+	serveTopic("global:TWITCH", [account("1")]);
+	serveTopic("channel:TWITCH:old", [account("2")]);
+	const service = new EnhancerApiService(logger);
+	await service.initialize(7, 0, "client-a", "twitch");
+	expect(await service.joinChannel(7, 0, "client-a", "twitch", "old")).not.toBeNull();
 
-	FakeWebSocket.instance.receive({
-		type: "channel.available",
-		topic: "channel:TWITCH:old",
-		reason: "restored",
-		cursor: "401-0",
-	});
-	await until(() => oldUpdates(true).length === 2);
+	serveTopic("channel:TWITCH:new", [account("3")]);
 	FakeWebSocket.instance.receive({
 		type: "channel.unavailable",
 		topic: "channel:TWITCH:old",
 		reason: "renamed",
 		replacementTopic: "channel:TWITCH:new",
-		cursor: "500-0",
-	});
-	await until(() => subscribedTo("new") && requests.includes("new"));
-
-	expect(requests.filter((externalId) => externalId === "old")).toHaveLength(3);
-	expect(requests.filter((externalId) => externalId === "new")).toHaveLength(1);
-	expect(FakeWebSocket.commands.some((command) => command.subscription?.externalId === "new")).toBe(true);
-	expect(
-		broadcasts.some(
-			(message) => message.type === "enhancer-api-updated" && message.payload.replacementTopic === "channel:TWITCH:new",
-		),
-	).toBe(true);
-	service.disconnect(7, 0, "client-a", "twitch");
-});
-
-test("chooses the newest tab seed and applies only newer buffered events after worker restart", async () => {
-	const oldest: CachedAggregateSeed = {
-		topic: "global:TWITCH",
-		aggregate: aggregate("0", "oldest"),
-		cursor: "600-0",
-	};
-	const newest: CachedAggregateSeed = {
-		topic: "global:TWITCH",
-		aggregate: aggregate("0", "newest"),
-		cursor: "600-3",
-	};
-	const { broadcasts } = setupChrome(
-		new Map<number, CachedAggregateSeed | null>([
-			[7, oldest],
-			[8, newest],
-		]),
-	);
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	globalThis.fetch = (() => {
-		throw new Error("HTTP must not run when a seed exists");
-	}) as unknown as typeof fetch;
-	FakeWebSocket.onSubscribe = (socket, _command, topic) => {
-		queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic }));
-		queueMicrotask(() =>
-			socket.receive({
-				type: "aggregate.updated",
-				topic,
-				accountsUpsert: [aggregate("0", "stale-replay").accounts[0]],
-				accountIdsRemove: [],
-				badgesUpsert: [],
-				badgeIdsRemove: [],
-				cursor: "600-2",
-			}),
-		);
-		queueMicrotask(() =>
-			socket.receive({
-				type: "aggregate.updated",
-				topic,
-				accountsUpsert: [aggregate("0", "fresh-replay").accounts[0]],
-				accountIdsRemove: [],
-				badgesUpsert: [],
-				badgeIdsRemove: [],
-				cursor: "600-4",
-			}),
-		);
-		queueMicrotask(() => socket.receive({ type: "replay.complete", topic }));
-	};
-
-	const service = new EnhancerApiService(logger);
-	const result = await service.initialize(7, 0, "client-a", "twitch", oldest);
-
-	expect(FakeWebSocket.commands.find((command) => command.type === "subscribe")?.after).toBe("600-0");
-	expect(result.cursor).toBe("600-4");
-	expect(result.aggregate.accounts.map((account) => account.accountId)).toEqual(["newest", "fresh-replay"]);
-	expect(broadcasts.filter((message) => message.type === "enhancer-api-updated")).toHaveLength(1);
-	service.disconnect(7, 0, "client-a", "twitch");
-});
-
-test("discovers an existing tab seed before falling back to HTTP", async () => {
-	const seed: CachedAggregateSeed = {
-		topic: "global:TWITCH",
-		aggregate: aggregate("0", "seeded"),
-		cursor: "700-3",
-	};
-	setupChrome(new Map([[8, seed]]));
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	globalThis.fetch = (() => {
-		throw new Error("HTTP must not run when another tab has a seed");
-	}) as unknown as typeof fetch;
-
-	const service = new EnhancerApiService(logger);
-	const result = await service.initialize(7, 0, "client-a", "twitch");
-
-	expect(result.cursor).toBe("700-3");
-	expect(result.aggregate.accounts[0].accountId).toBe("seeded");
-	expect(FakeWebSocket.commands.find((command) => command.type === "subscribe")?.after).toBe("700-3");
-	service.disconnect(7, 0, "client-a", "twitch");
-});
-
-test("retries a pending channel when availability races its initial 404", async () => {
-	setupChrome();
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	let resolveMissing: (response: Response) => void = () => {};
-	let channelRequests = 0;
-	globalThis.fetch = (async (input) => {
-		const url = new URL(input.toString());
-		if (!url.pathname.includes("/racing/")) return Response.json(aggregate("800-0"));
-		channelRequests++;
-		if (channelRequests === 1) {
-			return new Promise<Response>((resolve) => {
-				resolveMissing = resolve;
-			});
-		}
-		return Response.json(aggregate("800-2", "available"));
-	}) as typeof fetch;
-
-	const service = new EnhancerApiService(logger);
-	await service.initialize(7, 0, "client-a", "twitch");
-	const pending = service.joinChannel(7, 0, "client-a", "twitch", "racing");
-	await until(() => channelRequests > 0);
-	FakeWebSocket.instance.receive({
-		type: "channel.available",
-		topic: "channel:TWITCH:racing",
-		reason: "created",
-		cursor: "800-1",
-	});
-	resolveMissing(new Response(null, { status: 404 }));
-
-	expect(await pending).toBeNull();
-	await until(() => channelRequests >= 2);
-	expect(channelRequests).toBe(2);
-	expect(FakeWebSocket.commands.some((command) => command.subscription?.externalId === "racing")).toBe(true);
-	service.disconnect(7, 0, "client-a", "twitch");
-});
-
-test("merges an alias confirmation into an existing canonical topic", async () => {
-	const { broadcasts } = setupChrome();
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	globalThis.fetch = (async (input) => {
-		const alias = new URL(input.toString()).pathname.includes("/alias/");
-		return Response.json(aggregate(alias ? "900-3" : "900-0", alias ? "alias-account" : "canonical-account"));
-	}) as typeof fetch;
-	FakeWebSocket.onSubscribe = (socket, command, topic) => {
-		const confirmedTopic = command.subscription.externalId === "alias" ? "channel:TWITCH:canonical" : topic;
-		queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic: confirmedTopic }));
-		queueMicrotask(() => socket.receive({ type: "replay.complete", topic: confirmedTopic }));
-	};
-
-	const service = new EnhancerApiService(logger);
-	await service.initialize(7, 0, "client-a", "twitch");
-	await service.joinChannel(7, 0, "client-a", "twitch", "canonical");
-	FakeWebSocket.instance.receive({
-		type: "channel.unavailable",
-		topic: "channel:TWITCH:canonical",
-		reason: "archived",
-		cursor: "900-2",
+		cursor: "3000-0",
 	});
 	await until(() =>
 		broadcasts.some(
 			(message) =>
 				message.type === "enhancer-api-updated" &&
-				message.payload.topic === "channel:TWITCH:canonical" &&
-				!message.payload.aggregate,
+				message.payload.topic === "channel:TWITCH:new" &&
+				!!message.payload.seed,
 		),
 	);
-	await service.initialize(8, 0, "client-b", "twitch");
-	const alias = await service.joinChannel(8, 0, "client-b", "twitch", "alias");
-	expect(alias?.topic).toBe("channel:TWITCH:canonical");
-	expect(alias?.aggregate.accounts[0].accountId).toBe("alias-account");
-
-	broadcasts.length = 0;
-	FakeWebSocket.instance.receive({
-		type: "message",
-		target: { scope: "CHANNEL", platform: "TWITCH", externalId: "canonical" },
-		name: "channel.message",
-		cursor: "900-4",
-	});
-	await until(() => broadcasts.filter((message) => message.type === "enhancer-api-message").length >= 2);
-	expect(
-		broadcasts
-			.filter((message) => message.type === "enhancer-api-message")
-			.map((message) => message.payload.clientId)
-			.sort(),
-	).toEqual(["client-a", "client-b"]);
-	service.disconnect(7, 0, "client-a", "twitch");
-	service.disconnect(8, 0, "client-b", "twitch");
+	const removal = broadcasts.find(
+		(message) => message.type === "enhancer-api-updated" && message.payload.topic === "channel:TWITCH:old",
+	);
+	expect(removal?.type === "enhancer-api-updated" && removal.payload.replacementTopic).toBe("channel:TWITCH:new");
+	expect(subscribes("new")).toHaveLength(1);
 });
 
-test("ignores an unavailable event older than the selected channel seed", async () => {
-	const oldest: CachedAggregateSeed = {
-		topic: "channel:TWITCH:seeded-channel",
-		aggregate: aggregate("0", "old-channel"),
-		cursor: "1000-0",
-	};
-	const newest: CachedAggregateSeed = {
-		topic: "channel:TWITCH:seeded-channel",
-		aggregate: aggregate("0", "new-channel"),
-		cursor: "1000-3",
-	};
-	const { broadcasts } = setupChrome(new Map([[8, newest]]));
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	globalThis.fetch = (async (input) => {
-		if (new URL(input.toString()).pathname.includes("/global/")) return Response.json(aggregate("999-0"));
-		throw new Error("Channel HTTP must not run when a seed exists");
-	}) as typeof fetch;
-
+test("merges an alias confirmation into the canonical topic", async () => {
+	setup();
+	serveTopic("global:TWITCH", [account("1")]);
+	serveTopic("channel:TWITCH:canonical", [account("2")]);
+	FakeWebSocket.aliases.set("channel:TWITCH:Alias", "channel:TWITCH:canonical");
 	const service = new EnhancerApiService(logger);
 	await service.initialize(7, 0, "client-a", "twitch");
-	FakeWebSocket.onSubscribe = (socket, _command, topic) => {
-		queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic }));
-		queueMicrotask(() =>
-			socket.receive({
-				type: "channel.unavailable",
-				topic,
-				reason: "archived",
-				cursor: "1000-2",
-			}),
-		);
-		queueMicrotask(() => socket.receive({ type: "replay.complete", topic }));
-	};
 
-	const result = await service.joinChannel(7, 0, "client-a", "twitch", "seeded-channel", oldest);
-	expect(result?.cursor).toBe("1000-3");
-	expect(result?.aggregate.accounts[0].accountId).toBe("new-channel");
-	expect(
-		broadcasts.some(
-			(message) =>
-				message.type === "enhancer-api-updated" && message.payload.topic === newest.topic && !message.payload.aggregate,
-		),
-	).toBe(false);
-	service.disconnect(7, 0, "client-a", "twitch");
+	const seed = await service.joinChannel(7, 0, "client-a", "twitch", "Alias");
+	expect(seed?.topic).toBe("channel:TWITCH:canonical");
+	const again = await service.joinChannel(8, 0, "client-b", "twitch", "canonical");
+	expect(again?.topic).toBe("channel:TWITCH:canonical");
+	expect(fetched).toEqual(["global:TWITCH", "channel:TWITCH:canonical"]);
 });
 
-test("replays archive and restore availability in cursor order", async () => {
-	const seed: CachedAggregateSeed = {
-		topic: "channel:TWITCH:restored-channel",
-		aggregate: aggregate("0", "before-archive"),
-		cursor: "1100-0",
-	};
-	setupChrome(new Map([[8, seed]]));
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	let channelRequests = 0;
-	globalThis.fetch = (async (input) => {
-		if (new URL(input.toString()).pathname.includes("/global/")) return Response.json(aggregate("1099-0"));
-		channelRequests++;
-		return Response.json(aggregate("1100-3", "after-restore"));
-	}) as typeof fetch;
+test("looks up snapshot accounts past 2^32, text ids, and overlay removals", () => {
+	const bytes = encodeSnapshot("global:KICK", [
+		account("4294967297"),
+		account("9007199254740991", { badgesIds: [], customNickname: "Nick", hasGlow: true }),
+		account("kick-name"),
+		account("12", { customFont: "Lobster" }),
+	]);
+	const view = new EnhancerAggregateView("hash", 0, bytes);
 
-	const service = new EnhancerApiService(logger);
-	await service.initialize(7, 0, "client-a", "twitch");
-	let channelSubscriptions = 0;
-	FakeWebSocket.onSubscribe = (socket, command, topic) => {
-		channelSubscriptions++;
-		queueMicrotask(() => socket.receive({ type: "subscription.confirmed", topic }));
-		if (channelSubscriptions === 1) {
-			queueMicrotask(() =>
-				socket.receive({ type: "channel.unavailable", topic, reason: "archived", cursor: "1100-1" }),
-			);
-			queueMicrotask(() => socket.receive({ type: "channel.available", topic, reason: "restored", cursor: "1100-2" }));
-		}
-		queueMicrotask(() => socket.receive({ type: "replay.complete", topic }));
-	};
+	expect(view.findAccount("4294967297")?.badgesIds).toEqual(["badge-1"]);
+	expect(view.findAccount("9007199254740991")).toMatchObject({ customNickname: "Nick", hasGlow: true });
+	expect(view.findAccount("kick-name")?.badgesIds).toEqual(["badge-1"]);
+	expect(view.findAccount("13")).toBeNull();
+	expect(view.customFonts()).toEqual(["Lobster"]);
 
-	expect(await service.joinChannel(7, 0, "client-a", "twitch", "restored-channel", seed)).toBeNull();
-	await until(() => channelSubscriptions >= 2 && channelRequests >= 1);
-	expect(channelRequests).toBe(1);
-	expect(channelSubscriptions).toBe(2);
-	service.disconnect(7, 0, "client-a", "twitch");
-});
-
-test("moves to a replacement topic when rename races the initial HTTP", async () => {
-	setupChrome();
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	let resolveOld: (response: Response) => void = () => {};
-	const requests: string[] = [];
-	globalThis.fetch = (async (input) => {
-		const externalId = decodeURIComponent(new URL(input.toString()).pathname.split("/").at(-2) as string);
-		requests.push(externalId);
-		if (externalId === "old-race") {
-			return new Promise<Response>((resolve) => {
-				resolveOld = resolve;
-			});
-		}
-		return Response.json(aggregate("1200-2", "replacement"));
-	}) as typeof fetch;
-
-	const service = new EnhancerApiService(logger);
-	await service.initialize(7, 0, "client-a", "twitch");
-	const pending = service.joinChannel(7, 0, "client-a", "twitch", "old-race");
-	await until(() => requests.includes("old-race"));
-	FakeWebSocket.instance.receive({
-		type: "channel.unavailable",
-		topic: "channel:TWITCH:old-race",
-		reason: "renamed",
-		replacementTopic: "channel:TWITCH:new-race",
-		cursor: "1200-1",
-	});
-	resolveOld(new Response(null, { status: 404 }));
-
-	expect(await pending).toBeNull();
-	await until(() => subscribedTo("new-race") && requests.includes("new-race"));
-	expect(requests.filter((externalId) => externalId === "old-race")).toHaveLength(1);
-	expect(requests.filter((externalId) => externalId === "new-race")).toHaveLength(1);
-	expect(FakeWebSocket.commands.some((command) => command.subscription?.externalId === "new-race")).toBe(true);
-	service.disconnect(7, 0, "client-a", "twitch");
-});
-
-test("keeps restore availability that arrives during archive broadcasting", async () => {
-	let releaseBroadcast: () => void = () => {};
-	let archiveBroadcastStarted = false;
-	setupChrome(new Map(), async (message) => {
-		if (message.type !== "enhancer-api-updated" || message.payload.aggregate) return;
-		archiveBroadcastStarted = true;
-		await new Promise<void>((resolve) => {
-			releaseBroadcast = resolve;
-		});
-	});
-	globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
-	let channelRequests = 0;
-	globalThis.fetch = (async (input) => {
-		if (new URL(input.toString()).pathname.includes("/live-race/")) channelRequests++;
-		return Response.json(aggregate(`${1300 + channelRequests}-0`, "restored-live"));
-	}) as typeof fetch;
-
-	const service = new EnhancerApiService(logger);
-	await service.initialize(7, 0, "client-a", "twitch");
-	await service.joinChannel(7, 0, "client-a", "twitch", "live-race");
-	FakeWebSocket.instance.receive({
-		type: "channel.unavailable",
-		topic: "channel:TWITCH:live-race",
-		reason: "archived",
-		cursor: "1400-0",
-	});
-	await until(() => archiveBroadcastStarted);
-	FakeWebSocket.instance.receive({
-		type: "channel.available",
-		topic: "channel:TWITCH:live-race",
-		reason: "restored",
-		cursor: "1400-1",
-	});
-	releaseBroadcast();
-	await until(() => channelRequests >= 2);
-
-	expect(channelRequests).toBe(2);
-	service.disconnect(7, 0, "client-a", "twitch");
+	view.applyEntries([["12", null]], [["badge-1", null]]);
+	expect(view.findAccount("12")).toBeNull();
+	expect(view.findBadge("badge-1")).toBeNull();
+	expect(view.customFonts()).toEqual([]);
 });
