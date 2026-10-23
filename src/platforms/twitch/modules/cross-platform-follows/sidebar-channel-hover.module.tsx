@@ -33,8 +33,13 @@ export default class SidebarChannelHoverModule extends TwitchModule {
 	private container: HTMLElement | null = null;
 
 	initialize(): void {
+		const active = `body:has(#${this.getId()})`;
 		this.commonUtils().createGlobalStyle(
-			`body:has(#${this.getId()}) .tw-dialog-layer:has(${NATIVE_TOOLTIP}) { display: none !important; }`,
+			`${active} .tw-dialog-layer:has(${NATIVE_TOOLTIP}) { display: none !important; }
+			${active} :is(${ROW_SELECTOR}):not(#enhancer-cross-platform-follows *):hover {
+				background: var(--color-background-interactable-hover) !important;
+				border-radius: var(--border-radius-medium, 4px);
+			}`,
 		);
 	}
 
