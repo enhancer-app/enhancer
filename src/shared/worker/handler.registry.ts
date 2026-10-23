@@ -14,6 +14,10 @@ import {
 import { SyncFollowsHandler } from "$shared/worker/cross-platform-follows/sync-follows.handler.ts";
 import { SyncKickSessionHandler } from "$shared/worker/cross-platform-follows/sync-kick-session.handler.ts";
 import { UpdateFollowHandler } from "$shared/worker/cross-platform-follows/update-follow.handler.ts";
+import { EnhancerAccountHandler } from "$shared/worker/enhancer-account/enhancer-account.handler.ts";
+import type { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
+import { EnhancerProfileHandler } from "$shared/worker/enhancer-account/enhancer-profile.handler.ts";
+import type { EnhancerProfileService } from "$shared/worker/enhancer-account/enhancer-profile.service.ts";
 import { EnhancerApiHandler } from "$shared/worker/enhancer-api/enhancer-api.handler.ts";
 import type { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { AssetsFileHandler } from "$shared/worker/file/assets-file.handler.ts";
@@ -33,6 +37,7 @@ import { GetWatchtimeHandler } from "$shared/worker/watchtime/get-watchtime.hand
 import { ImportWatchtimeHandler } from "$shared/worker/watchtime/import-watchtime.handler.ts";
 import type { WatchtimeAccumulator } from "$shared/worker/watchtime/watchtime.accumulator.ts";
 import type { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { WorkerAction } from "$types/shared/worker/worker.types.ts";
 
 export class HandlerRegistry {
@@ -47,6 +52,9 @@ export class HandlerRegistry {
 		private readonly sharedDatabase: SharedDatabase,
 		private readonly crossPlatformFollowsRefresher: CrossPlatformFollowsRefresher,
 		private readonly credentialVault: CredentialVault,
+		private readonly enhancerAccountService: EnhancerAccountService,
+		private readonly enhancerProfileService: EnhancerProfileService,
+		private readonly onApiEnvironmentChanged: (settings: GlobalSettings) => Promise<unknown> = async () => {},
 	) {
 		this.registerHandlers();
 	}
@@ -104,13 +112,24 @@ export class HandlerRegistry {
 		this.handlers.set("getGlobalSettings", new GetGlobalSettingsHandler(this.logger, this.settingsDatabase));
 		this.handlers.set(
 			"updateGlobalSettings",
-			new UpdateGlobalSettingsHandler(this.logger, this.settingsDatabase, this.credentialVault, () =>
-				Promise.all([
-					clearFollowsHandler.handle({ platform: "twitch" }),
-					clearFollowsHandler.handle({ platform: "kick" }),
-				]),
+			new UpdateGlobalSettingsHandler(
+				this.logger,
+				this.settingsDatabase,
+				this.credentialVault,
+				() =>
+					Promise.all([
+						clearFollowsHandler.handle({ platform: "twitch" }),
+						clearFollowsHandler.handle({ platform: "kick" }),
+					]),
+				this.onApiEnvironmentChanged,
 			),
 		);
+		for (const action of ["getEnhancerAccount", "loginEnhancerAccount", "logoutEnhancerAccount"] as const) {
+			this.handlers.set(action, new EnhancerAccountHandler(this.logger, this.enhancerAccountService, action));
+		}
+		for (const action of ["getEnhancerProfile", "getEnhancerBadges", "saveEnhancerBadgeSlot"] as const) {
+			this.handlers.set(action, new EnhancerProfileHandler(this.logger, this.enhancerProfileService, action));
+		}
 		this.handlers.set(
 			"syncKickSession",
 			new SyncKickSessionHandler(

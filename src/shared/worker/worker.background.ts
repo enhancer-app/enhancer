@@ -5,14 +5,20 @@ import { getRequiredScopes } from "$shared/worker/credentials/credential.scopes.
 import { CredentialVault } from "$shared/worker/credentials/credential.vault.ts";
 import { SharedDatabase } from "$shared/worker/database/shared.database.ts";
 import { CrossPlatformFollowsRefresher } from "$shared/worker/cross-platform-follows/cross-platform-follows.refresher.ts";
+import { ENHANCER_ENDPOINTS, resolveApiEnvironment } from "$shared/enhancer-environment.ts";
+import { EnhancerAccountDatabase } from "$shared/worker/enhancer-account/enhancer-account.database.ts";
+import { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
+import { EnhancerProfileService } from "$shared/worker/enhancer-account/enhancer-profile.service.ts";
 import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
 import { WatchtimeAccumulator } from "$shared/worker/watchtime/watchtime.accumulator.ts";
 import { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
 import { TWITCH_DEFAULT_SETTINGS } from "$twitch/twitch.constants.ts";
+import type { EnhancerApiEnvironment } from "$types/shared/enhancer-environment.types.ts";
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
-import type { PlatformType } from "$types/shared/worker/worker.types.ts";
+import type { PlatformType, WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
 
 export default class WorkerBackground {
 	private readonly logger = new Logger({ context: "background", source: "background" });
@@ -36,6 +42,15 @@ export default class WorkerBackground {
 		this.watchtimeDatabase,
 		this.credentialVault,
 	);
+	private readonly enhancerAccountDatabase = new EnhancerAccountDatabase();
+	private readonly enhancerAccountService = new EnhancerAccountService(
+		new Logger({ context: "enhancer-account", source: "background" }),
+		this.enhancerAccountDatabase,
+	);
+	private readonly enhancerProfileService = new EnhancerProfileService(
+		new Logger({ context: "enhancer-profile", source: "background" }),
+		this.enhancerAccountService,
+	);
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.settingsDatabase,
@@ -45,8 +60,12 @@ export default class WorkerBackground {
 		this.sharedDatabase,
 		this.crossPlatformFollowsRefresher,
 		this.credentialVault,
+		this.enhancerAccountService,
+		this.enhancerProfileService,
+		(settings) => this.switchApiEnvironment(settings, true),
 	);
 
+	private apiEnvironment: EnhancerApiEnvironment = "production";
 	private isInitialized = false;
 	private messageQueue: Array<{
 		message: { action: string; payload?: any };
@@ -64,16 +83,37 @@ export default class WorkerBackground {
 			this.credentialDatabase
 				.initialize()
 				.catch((error) => this.logger.error("Credential database unavailable:", error)),
+			this.enhancerAccountDatabase
+				.initialize()
+				.catch((error) => this.logger.error("Account database unavailable:", error)),
 		]);
 		await this.settingsDatabase
 			.getGlobalSettings()
-			.then((settings) => this.credentialVault.syncGrants(getRequiredScopes(settings)))
-			.catch((error) => this.logger.error("Failed to sync credential grants:", error));
+			.then(async (settings) => {
+				await this.switchApiEnvironment(settings, false);
+				await this.credentialVault.syncGrants(getRequiredScopes(settings));
+			})
+			.catch((error) => this.logger.error("Failed to apply global settings:", error));
 		this.watchtimeAccumulator.initialize();
 		this.isInitialized = true;
 		this.logger.info("Background worker started");
 
 		await this.processQueuedMessages();
+	}
+
+	private async switchApiEnvironment(settings: GlobalSettings, reloadTabs: boolean): Promise<void> {
+		const environment = resolveApiEnvironment(settings);
+		if (environment === this.apiEnvironment) return;
+		this.apiEnvironment = environment;
+		this.logger.info(`Using the ${environment} Enhancer API`);
+		this.enhancerApiService.setEndpoints(ENHANCER_ENDPOINTS[environment]);
+		await this.enhancerAccountService.setEnvironment(environment);
+		if (!reloadTabs) return;
+		const broadcast: WorkerBroadcast = { type: "api-environment-changed", payload: environment };
+		const tabs = await chrome.tabs.query({});
+		setTimeout(() => {
+			for (const tab of tabs) if (tab.id) chrome.tabs.sendMessage(tab.id, broadcast).catch(() => {});
+		}, 500);
 	}
 
 	private setupMessageListener() {

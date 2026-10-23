@@ -1,5 +1,10 @@
 import { KICK_DEFAULT_SETTINGS } from "$kick/kick.constants.ts";
 import KickModule from "$kick/kick.module.ts";
+import {
+	createAccountCategories,
+	createAccountSettings,
+	createDeveloperSettings,
+} from "$shared/module/helpers/enhancer-account-settings.tsx";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
@@ -80,7 +85,8 @@ export default class SettingsModule extends KickModule {
 			{ id: CATEGORY.PLAYER, title: "Player", order: 3 },
 			{ id: CATEGORY.LATENCY, title: "Latency", order: 4 },
 			{ id: CATEGORY.EXPERIMENTAL, title: "Experimental", order: 5 },
-			{ id: CATEGORY.ABOUT, title: "About", order: 6 },
+			...createAccountCategories(6),
+			{ id: CATEGORY.ABOUT, title: "About", order: 7 },
 		];
 
 		const brandIcons = {
@@ -89,8 +95,10 @@ export default class SettingsModule extends KickModule {
 			twitter: await this.commonUtils().getAssetFile(this.workerService(), "brands/twitter.svg"),
 			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
 		} as const;
+		const enhancerLogo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo.svg");
 
 		this.SETTING_DEFINITIONS = [
+			...createAccountSettings(workerService, "kick", enhancerLogo),
 			{
 				id: "pinnedStreamersEnabled",
 				title: "Enable Pinning Streamers",
@@ -366,6 +374,7 @@ export default class SettingsModule extends KickModule {
 				categoryId: CATEGORY.EXPERIMENTAL,
 				dependsOn: { key: "crossPlatformFollowsSyncEnabled" },
 			},
+			...createDeveloperSettings<KickSettings>(CATEGORY.EXPERIMENTAL),
 			{
 				id: "about",
 				title: "About This Extension",

@@ -346,22 +346,23 @@ const Section = styled.section`
 	}
 `;
 
+const Panel = styled.div`
+	margin: 12px 0 0;
+
+	&:first-child {
+		margin-top: 0;
+	}
+`;
+
 const Card = styled.div`
 	background: var(--settings-surface);
 	border: 1px solid var(--settings-border);
 	border-radius: 12px;
 	overflow: hidden;
 
-	& + & {
+	& + &,
+	${Panel} + & {
 		margin-top: 12px;
-	}
-`;
-
-const Panel = styled.div`
-	margin: 12px 0 0;
-
-	&:first-child {
-		margin-top: 0;
 	}
 `;
 
@@ -964,6 +965,12 @@ const CATEGORY_ICONS: Record<string, JSX.Element> = {
 			<path d="M9 3h6" />
 			<path d="M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3" />
 			<path d="M7 15h10" />
+		</>,
+	),
+	account: icon(
+		<>
+			<circle cx="12" cy="8" r="4" />
+			<path d="M4 21a8 8 0 0 1 16 0" />
 		</>,
 	),
 	about: icon(
