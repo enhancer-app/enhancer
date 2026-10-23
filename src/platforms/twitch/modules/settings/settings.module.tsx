@@ -1,6 +1,9 @@
 import {
+	ACCOUNT_CATEGORY_ID,
 	createAccountCategories,
+	createAccountIdentity,
 	createAccountSettings,
+	createDeveloperCategories,
 	createDeveloperSettings,
 } from "$shared/module/helpers/enhancer-account-settings.tsx";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
@@ -20,6 +23,7 @@ const CATEGORY = {
 	CHANNEL: "channel",
 	LATENCY: "latency",
 	EXPERIMENTAL: "experimental",
+	DATA: "data",
 	ABOUT: "about",
 } as const;
 
@@ -71,8 +75,10 @@ export default class SettingsModule extends TwitchModule {
 			{ id: CATEGORY.CHANNEL, title: "Channel", order: 2 },
 			{ id: CATEGORY.LATENCY, title: "Latency", order: 3 },
 			{ id: CATEGORY.EXPERIMENTAL, title: "Experimental", order: 4 },
-			...createAccountCategories(5),
-			{ id: CATEGORY.ABOUT, title: "About", order: 6 },
+			{ id: CATEGORY.DATA, title: "Data", order: 5, placement: "utility" },
+			{ id: CATEGORY.ABOUT, title: "About", order: 6, placement: "utility" },
+			...createDeveloperCategories(7),
+			...createAccountCategories(8),
 		];
 
 		const brandIcons = {
@@ -304,7 +310,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Watchtime List",
 				description: "Watchtime List",
 				type: "text",
-				categoryId: CATEGORY.CHANNEL,
+				categoryId: CATEGORY.DATA,
 				content: () => {
 					return <WatchtimeListComponent platform="twitch" workerService={workerService} emitter={this.emitter} />;
 				},
@@ -315,7 +321,7 @@ export default class SettingsModule extends TwitchModule {
 				title: "Export/Import Data",
 				description: "Export and import your settings and watchtime data",
 				type: "text",
-				categoryId: CATEGORY.GENERAL,
+				categoryId: CATEGORY.DATA,
 				content: () => {
 					return <ExportImportComponent platform="twitch" workerService={workerService} emitter={this.emitter} />;
 				},
@@ -429,7 +435,6 @@ export default class SettingsModule extends TwitchModule {
 				categoryId: CATEGORY.EXPERIMENTAL,
 				requiresRefreshToDisable: true,
 			},
-			...createDeveloperSettings<TwitchSettings>(CATEGORY.EXPERIMENTAL),
 			{
 				id: "about",
 				title: "About This Extension",
@@ -441,6 +446,7 @@ export default class SettingsModule extends TwitchModule {
 				},
 				hideInfo: true,
 			},
+			...createDeveloperSettings<TwitchSettings>(CATEGORY.ABOUT),
 		];
 	}
 
@@ -452,6 +458,8 @@ export default class SettingsModule extends TwitchModule {
 			categories: this.SETTINGS_CATEGORIES,
 			definitions: this.SETTING_DEFINITIONS,
 			eventPrefix: "twitch:settings:",
+			identity: createAccountIdentity(this.workerService(), "twitch"),
+			identityCategoryId: ACCOUNT_CATEGORY_ID,
 		});
 		this.settingsSignal = result.settingsSignal;
 		this.openSettingsFn = result.openSettings;

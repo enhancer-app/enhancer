@@ -4,7 +4,11 @@ import { isGlobalSettingKey } from "$shared/settings/global-settings.constants.t
 import type SettingsCache from "$shared/settings/settings.service.ts";
 import type CommonUtils from "$shared/utils/common.utils.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
-import type { SettingCategory, SettingDefinition } from "$types/shared/components/settings.component.types.ts";
+import type {
+	SettingCategory,
+	SettingDefinition,
+	SettingsIdentityRenderer,
+} from "$types/shared/components/settings.component.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
@@ -72,6 +76,8 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 		categories: SettingCategory[];
 		definitions: SettingDefinition<PanelSettings<TSettings>>[];
 		eventPrefix: string;
+		identity?: SettingsIdentityRenderer;
+		identityCategoryId?: string;
 	}): Promise<{
 		settingsSignal: Signal<PanelSettings<TSettings>>;
 		isOpenSignal: Signal<boolean>;
@@ -104,6 +110,8 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 							logoSrc={logo}
 							platform={this.platformType}
 							isOpen={this.isOpenSignal.value}
+							identity={props.identity}
+							identityCategoryId={props.identityCategoryId}
 							categories={props.categories}
 							settingDefinitions={props.definitions}
 							settings={this.settingsSignal.value}

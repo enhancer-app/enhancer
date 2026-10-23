@@ -4,6 +4,7 @@ import type {
 	SaveBadgeSlotRequest,
 } from "$types/apis/enhancer-account.apis.ts";
 import type { BadgeSlotGroup } from "$types/shared/components/enhancer-account.component.types.ts";
+import type { PlatformType } from "$types/shared/platform.types.ts";
 
 export function groupBadgeSlots(badges: EnhancerViewerBadges): BadgeSlotGroup[] {
 	const groups = new Map<string, BadgeSlotGroup>();
@@ -66,4 +67,17 @@ export function filterSlotGroups(groups: BadgeSlotGroup[], query: string): Badge
 			group.scope === "CHANNEL" &&
 			[group.channelDisplayName, group.channelLogin].some((name) => name?.toLowerCase().includes(needle)),
 	);
+}
+
+export function filterPlatformBadges(badges: EnhancerViewerBadges, platform: PlatformType): EnhancerViewerBadges {
+	return {
+		global: badges.global.filter((badge) => badge.accountPlatform.toLowerCase() === platform),
+		channels: badges.channels.filter((badge) => badge.accountPlatform.toLowerCase() === platform),
+	};
+}
+
+export function findShownGlobalBadge(groups: BadgeSlotGroup[]): EnhancerViewerBadge | null {
+	const global = groups.find((group) => group.scope === "GLOBAL");
+	if (!global?.selectedAssignmentId) return null;
+	return global.badges.find((badge) => badge.assignmentId === global.selectedAssignmentId) ?? null;
 }

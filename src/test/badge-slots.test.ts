@@ -2,7 +2,9 @@ import { expect, test } from "bun:test";
 import {
 	buildSlotRequest,
 	cooldownMinutesLeft,
+	filterPlatformBadges,
 	filterSlotGroups,
+	findShownGlobalBadge,
 	groupBadgeSlots,
 } from "$shared/enhancer-account/badge-slots.ts";
 import { isViewerBadges, isViewerSummary } from "$shared/worker/enhancer-account/enhancer-account.guards.ts";
@@ -117,4 +119,30 @@ test("channel search matches display names and logins and hides the global slot"
 	expect(filterSlotGroups(groups, "  SUM ").map((group) => group.channelLogin)).toEqual(["summit1g"]);
 	expect(filterSlotGroups(groups, "poki").map((group) => group.channelLogin)).toEqual(["pokimane"]);
 	expect(filterSlotGroups(groups, "nope")).toEqual([]);
+});
+
+test("keeps only the badges of the current platform", () => {
+	const filtered = filterPlatformBadges(
+		{
+			global: [badge({ assignmentId: "t" }), badge({ assignmentId: "k", accountPlatform: "KICK" })],
+			channels: [badge({ assignmentId: "kc", accountPlatform: "KICK", scope: "CHANNEL", channelId: "ch" })],
+		},
+		"kick",
+	);
+	expect(filtered.global.map((item) => item.assignmentId)).toEqual(["k"]);
+	expect(filtered.channels.map((item) => item.assignmentId)).toEqual(["kc"]);
+});
+
+test("finds the global badge shown in chat and ignores channel and admin badges", () => {
+	const shown = findShownGlobalBadge(
+		groupBadgeSlots({
+			global: [
+				badge({ assignmentId: "forced", forced: true, visible: true }),
+				badge({ assignmentId: "g2", visible: true, name: "Early" }),
+			],
+			channels: [badge({ assignmentId: "c1", scope: "CHANNEL", channelId: "ch", visible: true })],
+		}),
+	);
+	expect(shown?.name).toBe("Early");
+	expect(findShownGlobalBadge(groupBadgeSlots({ global: [badge({})], channels: [] }))).toBeNull();
 });

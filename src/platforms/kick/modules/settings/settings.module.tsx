@@ -1,8 +1,11 @@
 import { KICK_DEFAULT_SETTINGS } from "$kick/kick.constants.ts";
 import KickModule from "$kick/kick.module.ts";
 import {
+	ACCOUNT_CATEGORY_ID,
 	createAccountCategories,
+	createAccountIdentity,
 	createAccountSettings,
+	createDeveloperCategories,
 	createDeveloperSettings,
 } from "$shared/module/helpers/enhancer-account-settings.tsx";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
@@ -21,6 +24,7 @@ const CATEGORY = {
 	PLAYER: "player",
 	LATENCY: "latency",
 	EXPERIMENTAL: "experimental",
+	DATA: "data",
 	ABOUT: "about",
 } as const;
 
@@ -85,8 +89,10 @@ export default class SettingsModule extends KickModule {
 			{ id: CATEGORY.PLAYER, title: "Player", order: 3 },
 			{ id: CATEGORY.LATENCY, title: "Latency", order: 4 },
 			{ id: CATEGORY.EXPERIMENTAL, title: "Experimental", order: 5 },
-			...createAccountCategories(6),
-			{ id: CATEGORY.ABOUT, title: "About", order: 7 },
+			{ id: CATEGORY.DATA, title: "Data", order: 6, placement: "utility" },
+			{ id: CATEGORY.ABOUT, title: "About", order: 7, placement: "utility" },
+			...createDeveloperCategories(8),
+			...createAccountCategories(9),
 		];
 
 		const brandIcons = {
@@ -234,7 +240,7 @@ export default class SettingsModule extends KickModule {
 				title: "Watchtime List",
 				description: "Watchtime List",
 				type: "text",
-				categoryId: CATEGORY.CHANNEL,
+				categoryId: CATEGORY.DATA,
 				content: () => {
 					return <WatchtimeListComponent platform="kick" workerService={workerService} emitter={this.emitter} />;
 				},
@@ -245,7 +251,7 @@ export default class SettingsModule extends KickModule {
 				title: "Export/Import Data",
 				description: "Export and import your settings and watchtime data",
 				type: "text",
-				categoryId: CATEGORY.GENERAL,
+				categoryId: CATEGORY.DATA,
 				content: () => {
 					return <ExportImportComponent platform="kick" workerService={workerService} emitter={this.emitter} />;
 				},
@@ -374,7 +380,6 @@ export default class SettingsModule extends KickModule {
 				categoryId: CATEGORY.EXPERIMENTAL,
 				dependsOn: { key: "crossPlatformFollowsSyncEnabled" },
 			},
-			...createDeveloperSettings<KickSettings>(CATEGORY.EXPERIMENTAL),
 			{
 				id: "about",
 				title: "About This Extension",
@@ -386,6 +391,7 @@ export default class SettingsModule extends KickModule {
 				},
 				hideInfo: true,
 			},
+			...createDeveloperSettings<KickSettings>(CATEGORY.ABOUT),
 		];
 	}
 
@@ -397,6 +403,8 @@ export default class SettingsModule extends KickModule {
 			categories: this.SETTINGS_CATEGORIES,
 			definitions: this.SETTING_DEFINITIONS,
 			eventPrefix: "kick:settings:",
+			identity: createAccountIdentity(this.workerService(), "kick"),
+			identityCategoryId: ACCOUNT_CATEGORY_ID,
 		});
 		this.settingsSignal = result.settingsSignal;
 		this.openSettingsFn = result.openSettings;

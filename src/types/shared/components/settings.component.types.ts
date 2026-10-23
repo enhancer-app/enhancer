@@ -1,11 +1,17 @@
 import type { PlatformType } from "$types/shared/platform.types.ts";
-import type { h } from "preact";
+import type { h, JSX } from "preact";
 
-export type SettingCategory = {
+export type SettingCategoryPlacement = "main" | "utility";
+
+export type SettingCategory<T = any> = {
 	id: string;
 	title: string;
 	order: number;
 	tags?: string[];
+	placement?: SettingCategoryPlacement;
+	hiddenInNav?: boolean;
+	bare?: boolean;
+	isVisible?: (settings: T) => boolean;
 };
 
 export type SettingDependency = {
@@ -30,6 +36,7 @@ export type ToggleSettingDefinition<T = any> = {
 	confirmationTitle?: string;
 	confirmationMessage?: string;
 	confirmText?: string;
+	confirmTone?: "default" | "danger";
 } & CommonSettingDefinition<T>;
 
 export type InputSettingDefinition<T = any> = {
@@ -85,10 +92,20 @@ export type SettingDefinition<T = any> =
 	| TextSettingDefinition<T>
 	| FileSettingDefinition<T>;
 
+export type SettingsIdentityProps = {
+	open: boolean;
+	active: boolean;
+	onSelect: () => void;
+};
+
+export type SettingsIdentityRenderer = (props: SettingsIdentityProps) => JSX.Element | null;
+
 export type SettingsProps<T = any> = {
 	logoSrc?: string;
 	platform?: PlatformType;
 	isOpen?: boolean;
+	identity?: SettingsIdentityRenderer;
+	identityCategoryId?: string;
 	categories: SettingCategory[];
 	settingDefinitions: SettingDefinition<T>[];
 	settings: T;
