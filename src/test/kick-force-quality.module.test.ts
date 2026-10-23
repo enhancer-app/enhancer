@@ -27,6 +27,7 @@ function setup(authenticated: boolean) {
 		{} as never,
 		{} as never,
 		{} as never,
+		{} as never,
 		{
 			getQualityController: () => ({
 				qualities,
@@ -94,5 +95,6 @@ test("keeps a quality the viewer picked manually", () => {
 		(module as any).run();
 
 		expect(applied).toEqual(["1080p60"]);
+		expect(storage.get("stream_quality")).toBe("480");
 	});
 });

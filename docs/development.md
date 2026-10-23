@@ -88,6 +88,37 @@ This command:
 3. Creates `dist/source-{version}.zip` - Source code archive (excluding node_modules, .git, and other ignored
    directories)
 
+`bun run pack:canary` builds **Enhancer Canary** instead: its own name, icons from `branding/canary/`, a separate
+Firefox ID and the version `{package.json version}.{CANARY_BUILD}`.
+
+## Releasing
+
+Enhancer has two release channels, each on its own branch:
+
+| Branch   | Channel                  | How it is released                                          |
+|----------|--------------------------|-------------------------------------------------------------|
+| `master` | development              | Feature PRs are merged here (squash)                        |
+| `canary` | Enhancer Canary          | Merge the bot PR `release(canary): vX.Y.Z.N` (master → canary) |
+| `stable` | Enhancer                 | Merge the bot PR `release(stable): vX.Y.Z` (release-next → stable) |
+
+- **Stable release:** tick patch, minor or major in the `release(stable)` PR and merge it. The PR lists every
+  change that is not on `stable` yet, all ticked by default. Untick a change to keep it out of the release:
+  - leaving out only the newest changes keeps the original commits;
+  - leaving out a change in the middle cherry-picks the ticked ones onto `stable`, so they get new hashes there;
+  - if a ticked change depends on an unticked one, the bot explains it in the PR and keeps the PR as a draft.
+- **Hotfix:** open a PR from a branch based on `stable` into `stable`. The bot then opens a `release(stable)` PR
+  from `release-hotfix` with a patch bump. Merging it releases the hotfix.
+- **Sync:** after every stable release or hotfix the bot opens `chore(sync): merge stable into master`. Merge it
+  before the next stable release PR is updated.
+
+Always use **Create a merge commit** for PRs into `stable` and `canary`, and for the sync PR. Squash and rebase give
+the same changes new commit hashes, and the branches then drift apart. The rulesets on `stable` and `canary` only
+allow merge commits.
+
+One-time setup: `bun run release:setup-branches`, then `bun run release:setup-secrets`. Both channels publish
+from one store account, so they share the `release` environment; `release-announce` only deploys from `stable`.
+Extension IDs are public and live in `manifest.config.ts` and the release workflows.
+
 ## Project Scripts
 
 | Command                   | Description                      |
@@ -95,6 +126,7 @@ This command:
 | `bun run dev`             | Development mode with hot reload |
 | `bun run build`           | Production build                 |
 | `bun run pack`            | Create distribution packages     |
+| `bun run pack:canary`     | Create Canary packages           |
 | `bun run typecheck`       | Run TypeScript type checking     |
 | `bun run typecheck:watch` | Type checking in watch mode      |
 | `bun run lint`            | Run oxlint                       |

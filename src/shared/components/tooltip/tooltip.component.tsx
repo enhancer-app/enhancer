@@ -1,138 +1,90 @@
-import type { ComponentChildren } from "preact";
+import { isSamePlacement, placeTooltip } from "$shared/utils/tooltip-placement.utils.ts";
+import type {
+	TooltipComponentProps,
+	TooltipPlacement,
+	TooltipPopoverProps,
+	TooltipPosition,
+} from "$types/shared/components/tooltip.component.types.ts";
 import { createPortal } from "preact/compat";
-import { useCallback, useEffect, useRef, useState } from "preact/hooks";
-import styled from "styled-components";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import styled, { css, keyframes } from "styled-components";
 
-interface TooltipComponentProps {
-	children: ComponentChildren;
-	content: ComponentChildren;
-	position?: "top" | "bottom" | "left" | "right";
-	delay?: number;
-}
+export function TooltipPopover({ anchor, content, position, onClose }: TooltipPopoverProps) {
+	const [placement, setPlacement] = useState<TooltipPlacement | null>(null);
+	const tooltipRef = useRef<HTMLDivElement>(null);
 
-export function useTooltipPosition(
-	containerRef: preact.RefObject<HTMLElement>,
-	tooltipRef: preact.RefObject<HTMLElement>,
-	isVisible: boolean,
-	position: string,
-) {
-	useEffect(() => {
-		if (!isVisible || !containerRef.current || !tooltipRef.current) return;
-		const container = containerRef.current.getBoundingClientRect();
+	const updatePlacement = useCallback(() => {
 		const tooltip = tooltipRef.current;
-		const spacing = 8;
-		let x = 0;
-		let y = 0;
-		switch (position) {
-			case "top":
-				x = container.left + container.width / 2;
-				y = container.top - spacing;
-				tooltip.style.left = `${x}px`;
-				tooltip.style.top = `${y}px`;
-				break;
-			case "bottom":
-				x = container.left + container.width / 2;
-				y = container.bottom + spacing;
-				tooltip.style.left = `${x}px`;
-				tooltip.style.top = `${y}px`;
-				break;
-			case "left":
-				x = container.left - spacing;
-				y = container.top + container.height / 2;
-				tooltip.style.left = `${x}px`;
-				tooltip.style.top = `${y}px`;
-				break;
-			case "right":
-				x = container.right + spacing;
-				y = container.top + container.height / 2;
-				tooltip.style.left = `${x}px`;
-				tooltip.style.top = `${y}px`;
-				break;
-		}
-		const tooltipRect = tooltip.getBoundingClientRect();
-		const viewport = {
-			width: window.innerWidth,
-			height: window.innerHeight,
+		if (!tooltip) return;
+		const next = placeTooltip(
+			anchor.getBoundingClientRect(),
+			{ width: tooltip.offsetWidth, height: tooltip.offsetHeight },
+			{ width: window.innerWidth, height: window.innerHeight },
+			position,
+		);
+		setPlacement((previous) => (isSamePlacement(previous, next) ? previous : next));
+	}, [anchor, position]);
+
+	useLayoutEffect(() => {
+		updatePlacement();
+		const tooltip = tooltipRef.current;
+		const observer = new ResizeObserver(updatePlacement);
+		if (tooltip) observer.observe(tooltip);
+		const handleScroll = (event: Event) => {
+			if (event.target instanceof Node && event.target.contains(anchor)) onClose();
 		};
-		if (tooltipRect.right > viewport.width - spacing) {
-			tooltip.style.left = `${viewport.width - tooltipRect.width - spacing}px`;
-		}
-		if (tooltipRect.left < spacing) {
-			tooltip.style.left = `${spacing}px`;
-		}
-		if (tooltipRect.bottom > viewport.height - spacing) {
-			tooltip.style.top = `${viewport.height - tooltipRect.height - spacing}px`;
-		}
-		if (tooltipRect.top < spacing) {
-			tooltip.style.top = `${spacing}px`;
-		}
-	}, [isVisible, position]);
+		let frame = 0;
+		const checkConnected = () => {
+			if (!anchor.isConnected) {
+				onClose();
+				return;
+			}
+			frame = requestAnimationFrame(checkConnected);
+		};
+		frame = requestAnimationFrame(checkConnected);
+		window.addEventListener("resize", updatePlacement);
+		document.addEventListener("scroll", handleScroll, { capture: true, passive: true });
+		return () => {
+			observer.disconnect();
+			cancelAnimationFrame(frame);
+			window.removeEventListener("resize", updatePlacement);
+			document.removeEventListener("scroll", handleScroll, { capture: true });
+		};
+	}, [anchor, updatePlacement, onClose]);
+
+	return createPortal(
+		<TooltipContent
+			ref={tooltipRef}
+			$position={placement?.position ?? position}
+			style={
+				placement
+					? { left: `${placement.left}px`, top: `${placement.top}px`, "--tooltip-arrow": `${placement.arrow}px` }
+					: { left: "0px", top: "0px", visibility: "hidden" }
+			}
+		>
+			<TooltipArrow $position={placement?.position ?? position} />
+			<TooltipInner>{content}</TooltipInner>
+		</TooltipContent>,
+		document.body,
+	);
 }
 
 export function TooltipComponent({ children, content, position = "top", delay = 300 }: TooltipComponentProps) {
-	const [isVisible, setIsVisible] = useState(false);
-	const [actualPosition, setActualPosition] = useState(position);
+	const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
-	const tooltipRef = useRef<HTMLDivElement>(null);
 	const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
-
-	const calculatePosition = useCallback(() => {
-		if (!containerRef.current || !tooltipRef.current) return;
-		const container = containerRef.current.getBoundingClientRect();
-		const tooltip = tooltipRef.current.getBoundingClientRect();
-		const viewport = {
-			width: window.innerWidth,
-			height: window.innerHeight,
-		};
-		const spacing = 8;
-		let newPosition = position;
-		const positions = {
-			top: {
-				fits:
-					container.top - tooltip.height - spacing > spacing &&
-					container.left + container.width / 2 - tooltip.width / 2 > spacing &&
-					container.left + container.width / 2 + tooltip.width / 2 < viewport.width - spacing,
-			},
-			bottom: {
-				fits:
-					container.bottom + tooltip.height + spacing < viewport.height - spacing &&
-					container.left + container.width / 2 - tooltip.width / 2 > spacing &&
-					container.left + container.width / 2 + tooltip.width / 2 < viewport.width - spacing,
-			},
-			left: {
-				fits:
-					container.left - tooltip.width - spacing > spacing &&
-					container.top + container.height / 2 - tooltip.height / 2 > spacing &&
-					container.top + container.height / 2 + tooltip.height / 2 < viewport.height - spacing,
-			},
-			right: {
-				fits:
-					container.right + tooltip.width + spacing < viewport.width - spacing &&
-					container.top + container.height / 2 - tooltip.height / 2 > spacing &&
-					container.top + container.height / 2 + tooltip.height / 2 < viewport.height - spacing,
-			},
-		};
-		if (positions[position].fits) {
-			newPosition = position;
-		} else {
-			const fallbackOrder: Array<keyof typeof positions> = ["top", "bottom", "right", "left"];
-			newPosition = fallbackOrder.find((pos) => positions[pos].fits) || position;
-		}
-		setActualPosition(newPosition);
-	}, [position]);
 
 	const showTooltip = useCallback(() => {
 		if (timeoutRef.current) clearTimeout(timeoutRef.current);
 		timeoutRef.current = setTimeout(() => {
-			if (!containerRef.current?.isConnected) return;
-			setIsVisible(true);
-			setTimeout(calculatePosition, 0);
+			const container = containerRef.current;
+			if (container?.isConnected) setAnchor(container);
 		}, delay);
-	}, [delay, calculatePosition]);
+	}, [delay]);
 
 	const hideTooltip = useCallback(() => {
 		if (timeoutRef.current) clearTimeout(timeoutRef.current);
-		setIsVisible(false);
+		setAnchor(null);
 	}, []);
 
 	useEffect(() => {
@@ -141,47 +93,38 @@ export function TooltipComponent({ children, content, position = "top", delay = 
 		};
 	}, []);
 
-	useEffect(() => {
-		if (!isVisible) return;
-		calculatePosition();
-		const handleResize = () => calculatePosition();
-		const handleScroll = () => setIsVisible(false);
-		const observer = new MutationObserver(() => {
-			if (!containerRef.current?.isConnected) setIsVisible(false);
-		});
-		observer.observe(document.body, { childList: true, subtree: true });
-		window.addEventListener("resize", handleResize);
-		window.addEventListener("scroll", handleScroll, { passive: true });
-		return () => {
-			observer.disconnect();
-			window.removeEventListener("resize", handleResize);
-			window.removeEventListener("scroll", handleScroll);
-		};
-	}, [isVisible, calculatePosition]);
-
-	useTooltipPosition(containerRef, tooltipRef, isVisible, actualPosition);
-
 	return (
-		<TooltipContainer ref={containerRef} onMouseEnter={showTooltip} onMouseLeave={hideTooltip}>
+		<TooltipContainer ref={containerRef} onMouseEnter={showTooltip} onMouseLeave={hideTooltip} onClick={hideTooltip}>
 			{children}
-			{isVisible &&
-				createPortal(
-					<TooltipContent ref={tooltipRef} position={actualPosition}>
-						<TooltipArrow position={actualPosition} />
-						<TooltipInner>{content}</TooltipInner>
-					</TooltipContent>,
-					document.body,
-				)}
+			{anchor && <TooltipPopover anchor={anchor} content={content} position={position} onClose={hideTooltip} />}
 		</TooltipContainer>
 	);
 }
+
+const fadeIn = (offset: string) => keyframes`
+	from {
+		opacity: 0;
+		transform: ${offset};
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+`;
+
+const FADE_INS: Record<TooltipPosition, ReturnType<typeof keyframes>> = {
+	top: fadeIn("translateY(4px)"),
+	bottom: fadeIn("translateY(-4px)"),
+	left: fadeIn("translateX(4px)"),
+	right: fadeIn("translateX(-4px)"),
+};
 
 const TooltipContainer = styled.div`
 	position: relative;
 	display: inline-block;
 `;
 
-const TooltipContent = styled.div<{ position: string }>`
+const TooltipContent = styled.div<{ $position: TooltipPosition }>`
 	position: fixed;
 	z-index: 99999999999;
 	background: rgba(25, 25, 28, 0.8);
@@ -190,57 +133,9 @@ const TooltipContent = styled.div<{ position: string }>`
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 	backdrop-filter: blur(8px);
 	pointer-events: none;
-	animation: tooltipFadeIn 0.2s ease-out;
+	animation: ${({ $position }) => FADE_INS[$position]} 0.2s ease-out;
 	max-width: 300px;
 	word-wrap: break-word;
-	${({ position }) => {
-		switch (position) {
-			case "top":
-				return "transform: translateX(-50%);";
-			case "bottom":
-				return "transform: translateX(-50%);";
-			case "left":
-				return "transform: translateY(-50%);";
-			case "right":
-				return "transform: translateY(-50%);";
-			default:
-				return "";
-		}
-	}};
-	@keyframes tooltipFadeIn {
-		from {
-			opacity: 0;
-			transform: ${({ position }) => {
-				switch (position) {
-					case "top":
-						return "translateX(-50%) translateY(4px)";
-					case "bottom":
-						return "translateX(-50%) translateY(-4px)";
-					case "left":
-						return "translateY(-50%) translateX(4px)";
-					case "right":
-						return "translateY(-50%) translateX(-4px)";
-					default:
-						return "translateX(-50%) translateY(4px)";
-				}
-			}};
-		}
-		to {
-			opacity: 1;
-			transform: ${({ position }) => {
-				switch (position) {
-					case "top":
-					case "bottom":
-						return "translateX(-50%) translateY(0)";
-					case "left":
-					case "right":
-						return "translateY(-50%) translateX(0)";
-					default:
-						return "translateX(-50%) translateY(0)";
-				}
-			}};
-		}
-	}
 `;
 
 const TooltipInner = styled.div`
@@ -250,50 +145,50 @@ const TooltipInner = styled.div`
 	line-height: 1.4;
 `;
 
-const TooltipArrow = styled.div<{ position: string }>`
+const ARROW_COLOR = "rgba(25, 25, 28, 0.98)";
+
+const TooltipArrow = styled.div<{ $position: TooltipPosition }>`
 	position: absolute;
 	width: 0;
 	height: 0;
-	${({ position }) => {
-		switch (position) {
+	${({ $position }) => {
+		switch ($position) {
 			case "top":
-				return `
-          top: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          border-left: 6px solid transparent;
-          border-right: 6px solid transparent;
-          border-top: 6px solid rgba(25, 25, 28, 0.98);
-        `;
+				return css`
+					top: 100%;
+					left: var(--tooltip-arrow, 50%);
+					transform: translateX(-50%);
+					border-left: 6px solid transparent;
+					border-right: 6px solid transparent;
+					border-top: 6px solid ${ARROW_COLOR};
+				`;
 			case "bottom":
-				return `
-          bottom: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          border-left: 6px solid transparent;
-          border-right: 6px solid transparent;
-          border-bottom: 6px solid rgba(25, 25, 28, 0.98);
-        `;
+				return css`
+					bottom: 100%;
+					left: var(--tooltip-arrow, 50%);
+					transform: translateX(-50%);
+					border-left: 6px solid transparent;
+					border-right: 6px solid transparent;
+					border-bottom: 6px solid ${ARROW_COLOR};
+				`;
 			case "left":
-				return `
-          left: 100%;
-          top: 50%;
-          transform: translateY(-50%);
-          border-top: 6px solid transparent;
-          border-bottom: 6px solid transparent;
-          border-left: 6px solid rgba(25, 25, 28, 0.98);
-        `;
+				return css`
+					left: 100%;
+					top: var(--tooltip-arrow, 50%);
+					transform: translateY(-50%);
+					border-top: 6px solid transparent;
+					border-bottom: 6px solid transparent;
+					border-left: 6px solid ${ARROW_COLOR};
+				`;
 			case "right":
-				return `
-          right: 100%;
-          top: 50%;
-          transform: translateY(-50%);
-          border-top: 6px solid transparent;
-          border-bottom: 6px solid transparent;
-          border-right: 6px solid rgba(25, 25, 28, 0.98);
-        `;
-			default:
-				return "";
+				return css`
+					right: 100%;
+					top: var(--tooltip-arrow, 50%);
+					transform: translateY(-50%);
+					border-top: 6px solid transparent;
+					border-bottom: 6px solid transparent;
+					border-right: 6px solid ${ARROW_COLOR};
+				`;
 		}
 	}}
 `;

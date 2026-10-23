@@ -11,6 +11,7 @@ test("keeps messages scheduled while processing the current frame", () => {
 		{} as never,
 		{} as never,
 		{} as never,
+		{} as never,
 	);
 	const originalRequestAnimationFrame = Object.getOwnPropertyDescriptor(globalThis, "requestAnimationFrame");
 	const callbacks: FrameRequestCallback[] = [];
@@ -42,6 +43,7 @@ test("keeps messages scheduled while processing the current frame", () => {
 
 test("preserves legacy and colon-containing message markers while pending", () => {
 	const chatModule = new ChatModule(
+		{} as never,
 		{} as never,
 		{} as never,
 		{} as never,

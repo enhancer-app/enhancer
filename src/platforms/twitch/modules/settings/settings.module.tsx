@@ -14,6 +14,7 @@ const CATEGORY = {
 	CHAT: "chat",
 	CHANNEL: "channel",
 	LATENCY: "latency",
+	EXPERIMENTAL: "experimental",
 	ABOUT: "about",
 } as const;
 
@@ -64,7 +65,8 @@ export default class SettingsModule extends TwitchModule {
 			{ id: CATEGORY.CHAT, title: "Chat", order: 1 },
 			{ id: CATEGORY.CHANNEL, title: "Channel", order: 2 },
 			{ id: CATEGORY.LATENCY, title: "Latency", order: 3 },
-			{ id: CATEGORY.ABOUT, title: "About", order: 4 },
+			{ id: CATEGORY.EXPERIMENTAL, title: "Experimental", order: 4 },
+			{ id: CATEGORY.ABOUT, title: "About", order: 5 },
 		];
 
 		const brandIcons = {
@@ -115,10 +117,10 @@ export default class SettingsModule extends TwitchModule {
 			{
 				id: "pinnedStreamersEnabled",
 				title: "Enable Pinning Streamers",
-				description: "Allows you to pin your favorite streamers for easy access.",
+				description:
+					"Pin your favorite streamers with ★ to keep them on top of your follow list. Pins are shared between Twitch and Kick.",
 				type: "toggle",
 				categoryId: CATEGORY.GENERAL,
-				requiresRefreshToDisable: true,
 			},
 			{
 				id: "xayoWatchtimeEnabled",
@@ -378,6 +380,46 @@ export default class SettingsModule extends TwitchModule {
 				min: 0,
 				step: 1,
 				unit: "s",
+			},
+			{
+				id: "crossPlatformFollowsSyncEnabled",
+				title: "Share Follows Between Twitch and Kick",
+				description:
+					"Combines the channels you follow on Twitch and Kick. Applies to both sites. After turning it on, open twitch.tv and kick.com once while logged in.",
+				type: "toggle",
+				categoryId: CATEGORY.EXPERIMENTAL,
+				confirmOnEnable: true,
+				confirmationTitle: "Share Follows Between Twitch and Kick",
+				confirmationMessage:
+					"Enhancer will show the channels you follow on Twitch and Kick together in one list.\n\n• What it uses: your Twitch follows are read on twitch.tv while you browse it. For Kick, Enhancer uses your Kick login to load the channels you follow and check which of them are live.\n• Only for this: this feature uses your Kick login only to load your follows and check who is live. Enhancer will always ask you before any other feature uses it.\n• Where it's kept: your follow lists and Kick login are saved on this computer. The login is encrypted and kept in a part of the extension that websites and other extensions can't access. Your Twitch login is never saved.\n• Where it's sent: only to Twitch and Kick. Nothing is sent to Enhancer's servers.\n• When it's removed: turning this off deletes your saved follow lists right away. Your Kick login is deleted as soon as no Enhancer feature you've turned on needs it. Logging out of Kick also removes it.\n\nThis is completely optional. If you're not comfortable with it, leave it off. The rest of Enhancer works the same without it.\n\nThis setting applies to both Twitch and Kick. Enable sharing?",
+				confirmText: "Turn on",
+			},
+			{
+				id: "crossPlatformFollowsDisplayEnabled",
+				title: "Merged Follow List",
+				description:
+					"Replaces the followed channels in the sidebar with one list of your Twitch and Kick follows. Pin channels to keep them on top. Applies to both sites.",
+				type: "toggle",
+				categoryId: CATEGORY.EXPERIMENTAL,
+				dependsOn: { key: "crossPlatformFollowsSyncEnabled" },
+			},
+			{
+				id: "followsHomeEnabled",
+				title: "Followed Streams Home Page",
+				description:
+					"Replaces the Twitch and Kick home pages with the live streams you follow on both sites. Hover a stream to watch a muted preview.",
+				type: "toggle",
+				categoryId: CATEGORY.EXPERIMENTAL,
+				dependsOn: { key: "crossPlatformFollowsSyncEnabled" },
+			},
+			{
+				id: "emoteBarEnabled",
+				title: "Enable Emote Bar",
+				description:
+					"Shows your most used emotes for the current channel above the chat input. Click to insert, Ctrl+Click (Cmd+Click on Mac) to send it as its own message, right-click twice to remove.",
+				type: "toggle",
+				categoryId: CATEGORY.EXPERIMENTAL,
+				requiresRefreshToDisable: true,
 			},
 			{
 				id: "about",

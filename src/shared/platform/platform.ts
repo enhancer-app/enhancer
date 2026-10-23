@@ -1,7 +1,9 @@
+import EmotesApi from "$shared/apis/emotes.api.ts";
 import EnhancerApi from "$shared/apis/enhancer.api.ts";
 import { EventEmitterFactory } from "$shared/event/event-emitter.factory.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import EventModuleApplier from "$shared/module/applier/event-module-applier.ts";
+import type ModuleApplier from "$shared/module/applier/module-applier.ts";
 import SelectorModuleApplier from "$shared/module/applier/selector-module-applier.ts";
 import type Module from "$shared/module/module.ts";
 import SettingsCache from "$shared/settings/settings.service.ts";
@@ -25,11 +27,22 @@ export default abstract class Platform<
 	protected readonly utilsRepository = new UtilsRepository();
 	protected readonly workerApi = new WorkerService();
 	protected readonly enhancerApi: EnhancerApi;
+	protected readonly emotesApi: EmotesApi;
 	protected readonly settingsCache: SettingsCache<TSettings>;
+	private readonly appliers: ModuleApplier<TEvents, TStorage, TSettings>[];
 
 	protected constructor(protected readonly config: PlatformConfig) {
 		this.enhancerApi = new EnhancerApi(config.type, this.workerApi, this.emitter);
+		this.emotesApi = new EmotesApi(config.type);
 		this.settingsCache = new SettingsCache<TSettings>(config.type, this.workerApi, this.emitter);
+		this.appliers = [
+			new SelectorModuleApplier<TEvents, TStorage, TSettings>(
+				this.logger,
+				this.emitter,
+				config.ignoredMutationSelectors,
+			),
+			new EventModuleApplier<TEvents, TStorage, TSettings>(this.logger, this.emitter),
+		];
 	}
 
 	protected async initialize(): Promise<void> {}
@@ -55,11 +68,6 @@ export default abstract class Platform<
 			}
 		}
 	}
-
-	private appliers = [
-		new SelectorModuleApplier<TEvents, TStorage, TSettings>(this.logger),
-		new EventModuleApplier<TEvents, TStorage, TSettings>(this.logger, this.emitter),
-	];
 
 	protected abstract getModules(): TModule[];
 

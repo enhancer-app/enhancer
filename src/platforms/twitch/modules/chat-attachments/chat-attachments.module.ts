@@ -6,6 +6,7 @@ import { ImageChatAttachmentConfig } from "$shared/module/chat-attachments/image
 import TwitchModule from "$twitch/twitch.module.ts";
 import type { TwitchChatMessageEvent } from "$types/platforms/twitch/twitch.events.types.ts";
 import {
+	type AttachmentHeadData,
 	type BaseChatAttachmentData,
 	type ChatAttachmentData,
 	ChatAttachmentMessageType,
@@ -18,9 +19,12 @@ export default class ChatAttachmentsModule extends TwitchModule {
 		this.twitchUtils().unstuckScroll();
 	});
 	private previousInputContent = "";
+	private lastCheckedInput = "";
 	private inputMonitoringInterval: NodeJS.Timeout | undefined;
+	private readonly attachmentDataCache = new Map<string, AttachmentHeadData>();
 
 	static readonly FFZ_RICH_EMBED_CLASS = ".ffz-card-rich";
+	private static readonly ATTACHMENT_CACHE_LIMIT = 100;
 
 	config: TwitchModuleConfig = {
 		name: "chat-attachments",
@@ -74,9 +78,7 @@ export default class ChatAttachmentsModule extends TwitchModule {
 	}
 
 	private async resolveChatAttachmentHandler(baseData: BaseChatAttachmentData) {
-		const chatAttachmentHandler = this.chatAttachmentHandlers.find((chatAttachmentHandler) =>
-			chatAttachmentHandler.validate(baseData),
-		);
+		const chatAttachmentHandler = this.chatAttachmentHandlers.find((handler) => handler.validate(baseData));
 		if (!chatAttachmentHandler) return;
 		baseData.url = chatAttachmentHandler.parseUrl(baseData.url);
 		const data = await this.getData(baseData);
@@ -109,42 +111,61 @@ export default class ChatAttachmentsModule extends TwitchModule {
 	}
 
 	private async getAttachmentData(url: URL) {
+		const cached = this.attachmentDataCache.get(url.href);
+		if (cached) return cached;
 		try {
 			const { response } = await this.httpClient.request(url.href, {
 				method: "HEAD",
 				responseType: "text",
 			});
-			return { type: response.headers.get("Content-Type"), size: response.headers.get("Content-Length") };
+			const data = { type: response.headers.get("Content-Type"), size: response.headers.get("Content-Length") };
+			if (data.type && data.size) this.cacheAttachmentData(url.href, data);
+			return data;
 		} catch (error) {
 			this.logger.warn("Couldn't get attachment data", error);
 		}
 	}
 
+	private cacheAttachmentData(href: string, data: AttachmentHeadData) {
+		if (this.attachmentDataCache.size >= ChatAttachmentsModule.ATTACHMENT_CACHE_LIMIT) {
+			const oldestKey = this.attachmentDataCache.keys().next().value;
+			if (oldestKey !== undefined) this.attachmentDataCache.delete(oldestKey);
+		}
+		this.attachmentDataCache.set(href, data);
+	}
+
 	private startInputMonitoring() {
 		if (this.inputMonitoringInterval) return;
 		this.inputMonitoringInterval = setInterval(async () => {
+			if (document.hidden) return;
 			const chatInputContent = this.twitchUtils().getChatInputContent();
-			if (!chatInputContent) return;
+			if (!chatInputContent || chatInputContent === this.lastCheckedInput) return;
+			this.lastCheckedInput = chatInputContent;
 
 			const words = chatInputContent.split(" ");
 			const firstWord = words.at(0);
 			const lastWord = words.at(-1);
 			const firstWordData = this.simulateBaseData(firstWord);
 			const lastWordData = this.simulateBaseData(lastWord);
+			if (!firstWordData && !lastWordData) return;
 
-			const attachmentResolved =
-				(firstWordData && (await this.resolveChatAttachmentHandler(firstWordData))?.applies) ||
-				(lastWordData && (await this.resolveChatAttachmentHandler(lastWordData))?.applies);
+			try {
+				const attachmentResolved =
+					(firstWordData && (await this.resolveChatAttachmentHandler(firstWordData))?.applies) ||
+					(lastWordData && (await this.resolveChatAttachmentHandler(lastWordData))?.applies);
 
-			const url = firstWordData?.url?.toString() || lastWordData?.url?.toString();
-			if (attachmentResolved && url) {
-				if (this.previousInputContent === url) return;
-				this.previousInputContent = url;
-				this.emitter.emit("twitch:chatPopupMessage", {
-					title: "Image preview",
-					autoclose: 3,
-					content: ImagePreview(url), // Later we need to get this thing from chat attachment handler, because there might be different things like audios or something else
-				});
+				const url = firstWordData?.url?.toString() || lastWordData?.url?.toString();
+				if (attachmentResolved && url) {
+					if (this.previousInputContent === url) return;
+					this.previousInputContent = url;
+					this.emitter.emit("twitch:chatPopupMessage", {
+						title: "Image preview",
+						autoclose: 3,
+						content: ImagePreview(url), // Later we need to get this thing from chat attachment handler, because there might be different things like audios or something else
+					});
+				}
+			} catch (error) {
+				this.logger.debug("Failed to resolve chat input attachment", error);
 			}
 		}, 500);
 	}

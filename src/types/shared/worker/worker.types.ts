@@ -1,6 +1,16 @@
 import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
 import type { LogEntry } from "$types/shared/logger.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
+import type {
+	ClearFollowsPayload,
+	CrossPlatformFollowsSnapshot,
+	GetFollowsStatusPayload,
+	GetStreamPlaybackUrlPayload,
+	SyncFollowsPayload,
+	SyncKickSessionPayload,
+	UpdateFollowPayload,
+} from "$types/shared/worker/cross-platform-follows-worker.types.ts";
 import type {
 	CachedAggregateSeed,
 	DisconnectEnhancerApiPayload,
@@ -11,7 +21,17 @@ import type {
 	InitializeEnhancerApiPayload,
 	JoinEnhancerChannelPayload,
 } from "$types/shared/worker/enhancer-api-worker.types.ts";
+import type {
+	ChannelPinsPayload,
+	GetChannelPinsPayload,
+	SetChannelPinnedPayload,
+} from "$types/shared/worker/pins-worker.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
+import type {
+	ChannelLinksPayload,
+	RemoveChannelLinkPayload,
+	UpdateChannelLinkPayload,
+} from "$types/shared/worker/channel-links-worker.types.ts";
 
 export type { PlatformType };
 
@@ -49,6 +69,11 @@ export interface WatchtimeRecord {
 	time: number;
 	firstUpdate: number;
 	lastUpdate: number;
+}
+
+export interface WatchtimeChannel {
+	platform: PlatformType;
+	username: string;
 }
 
 export interface AddWatchtimePayload {
@@ -94,6 +119,10 @@ export interface UpdateSettingsPayload {
 	settings: PlatformSettings;
 }
 
+export interface UpdateGlobalSettingsPayload {
+	settings: Partial<GlobalSettings>;
+}
+
 export type GetSettingsResponse = PlatformSettings;
 export type UpdateSettingsResponse = { success: true };
 
@@ -134,6 +163,14 @@ export interface WorkerApiActions {
 		payload: UpdateSettingsPayload;
 		response: UpdateSettingsResponse;
 	};
+	getGlobalSettings: {
+		payload: Record<string, never>;
+		response: GlobalSettings;
+	};
+	updateGlobalSettings: {
+		payload: UpdateGlobalSettingsPayload;
+		response: GlobalSettings;
+	};
 	initializeEnhancerApi: {
 		payload: InitializeEnhancerApiPayload;
 		response: CachedAggregateSeed;
@@ -150,6 +187,50 @@ export interface WorkerApiActions {
 		payload: DisconnectEnhancerApiPayload;
 		response: { success: true };
 	};
+	syncFollows: {
+		payload: SyncFollowsPayload;
+		response: { success: true };
+	};
+	updateFollow: {
+		payload: UpdateFollowPayload;
+		response: { success: true };
+	};
+	clearFollows: {
+		payload: ClearFollowsPayload;
+		response: { success: true };
+	};
+	syncKickSession: {
+		payload: SyncKickSessionPayload;
+		response: { success: true };
+	};
+	getFollowsStatus: {
+		payload: GetFollowsStatusPayload;
+		response: CrossPlatformFollowsSnapshot;
+	};
+	setChannelPinned: {
+		payload: SetChannelPinnedPayload;
+		response: { success: true };
+	};
+	getStreamPlaybackUrl: {
+		payload: GetStreamPlaybackUrlPayload;
+		response: { url: string | null };
+	};
+	getChannelPins: {
+		payload: GetChannelPinsPayload;
+		response: ChannelPinsPayload;
+	};
+	getChannelLinks: {
+		payload: Record<string, never>;
+		response: ChannelLinksPayload;
+	};
+	updateChannelLink: {
+		payload: UpdateChannelLinkPayload;
+		response: ChannelLinksPayload;
+	};
+	removeChannelLink: {
+		payload: RemoveChannelLinkPayload;
+		response: ChannelLinksPayload;
+	};
 }
 
 export type WorkerAction = keyof WorkerApiActions;
@@ -161,6 +242,10 @@ export interface SettingsBroadcastPayload {
 
 export type WorkerBroadcast =
 	| { type: "settings-updated"; payload: SettingsBroadcastPayload }
+	| { type: "global-settings-updated"; payload: GlobalSettings }
 	| { type: "enhancer-api-updated"; payload: EnhancerApiUpdatedPayload }
 	| { type: "enhancer-api-message"; payload: EnhancerApiMessagePayload }
-	| { type: "enhancer-api-seed-request"; payload: EnhancerApiSeedRequestPayload };
+	| { type: "enhancer-api-seed-request"; payload: EnhancerApiSeedRequestPayload }
+	| { type: "cross-platform-follows-updated"; payload: CrossPlatformFollowsSnapshot }
+	| { type: "channel-pins-updated"; payload: ChannelPinsPayload }
+	| { type: "channel-links-updated"; payload: ChannelLinksPayload };

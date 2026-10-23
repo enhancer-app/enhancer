@@ -1,3 +1,4 @@
+import { EXTENSION_NAME } from "$shared/extension.constants.ts";
 import KickModule from "$kick/kick.module.ts";
 import type { EnhancerMessageEvent } from "$types/apis/enhancer.apis.ts";
 import type { ChatMessagePopupEvent } from "$types/platforms/twitch/twitch.events.types.ts";
@@ -34,14 +35,17 @@ export default class ChatMessagePopupModule extends KickModule {
 				? message.data.text
 				: null;
 		if (!text?.trim()) return;
-		this.render({ title: "Enhancer", content: text, autoclose: text.length > 120 ? 30 : 10 });
+		this.render({ title: EXTENSION_NAME, content: text, autoclose: text.length > 120 ? 30 : 10 });
 	}
 
 	private render(message: ChatMessagePopupEvent) {
 		const contentElement = document.querySelector("#chatroom-footer");
 		if (contentElement) {
 			let wrapper = contentElement.querySelector(`.${this.getId()}`);
-			if (wrapper) wrapper.remove();
+			if (wrapper) {
+				render(null, wrapper);
+				wrapper.remove();
+			}
 
 			wrapper = document.createElement("div");
 			wrapper.classList.add(this.getId());
@@ -53,6 +57,7 @@ export default class ChatMessagePopupModule extends KickModule {
 					title={message.title}
 					autoclose={message.autoclose ?? 15}
 					onClose={() => {
+						render(null, wrapper);
 						wrapper.remove();
 						if (message.onClose) {
 							message.onClose();
@@ -139,6 +144,7 @@ export function MessagePopup({ title, content, autoclose, onClose }: ChatMessage
 	const [timeLeft, setTimeLeft] = useState(autoclose || 0);
 	const intervalRef = useRef<NodeJS.Timeout | null>(null);
 	const startTimeRef = useRef<number | null>(null);
+	const lastTimeLeftRef = useRef<number | null>(null);
 
 	useEffect(() => {
 		if (!autoclose || autoclose <= 0) {
@@ -146,6 +152,7 @@ export function MessagePopup({ title, content, autoclose, onClose }: ChatMessage
 		}
 
 		startTimeRef.current = Date.now();
+		lastTimeLeftRef.current = autoclose;
 		setTimeLeft(autoclose);
 
 		intervalRef.current = setInterval(() => {
@@ -156,7 +163,10 @@ export function MessagePopup({ title, content, autoclose, onClose }: ChatMessage
 			const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
 			const remaining = Math.max(0, autoclose - elapsed);
 
-			setTimeLeft(remaining - 1);
+			if (lastTimeLeftRef.current !== remaining - 1) {
+				lastTimeLeftRef.current = remaining - 1;
+				setTimeLeft(remaining - 1);
+			}
 
 			if (remaining === 0) {
 				if (intervalRef.current !== null) {
