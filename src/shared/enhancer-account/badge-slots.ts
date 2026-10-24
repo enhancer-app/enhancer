@@ -81,3 +81,18 @@ export function findShownGlobalBadge(groups: BadgeSlotGroup[]): EnhancerViewerBa
 	if (!global?.selectedAssignmentId) return null;
 	return global.badges.find((badge) => badge.assignmentId === global.selectedAssignmentId) ?? null;
 }
+
+export function filterAccountBadges(badges: EnhancerViewerBadges, accountId: string): EnhancerViewerBadges {
+	return {
+		global: badges.global.filter((badge) => badge.accountId === accountId),
+		channels: badges.channels.filter((badge) => badge.accountId === accountId),
+	};
+}
+
+export function sortChatAccounts<T extends { platform: "TWITCH" | "KICK" }>(
+	accounts: T[],
+	platform: PlatformType,
+): T[] {
+	const current = platform.toUpperCase();
+	return [...accounts].sort((a, b) => Number(b.platform === current) - Number(a.platform === current));
+}

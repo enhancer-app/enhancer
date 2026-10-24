@@ -5,6 +5,7 @@ import {
 	createAccountCategories,
 	createAccountIdentity,
 	createAccountSettings,
+	createCosmeticsLink,
 	createDeveloperCategories,
 	createDeveloperSettings,
 } from "$shared/module/helpers/enhancer-account-settings.tsx";
@@ -15,7 +16,7 @@ import {
 	SETTING_SECTION,
 	WATCHTIME_PERIOD_OPTIONS,
 	channelSectionSetting,
-	chatIdentitySettings,
+	cosmeticsSettings,
 	chatImagesSettings,
 	followsSettings,
 	latencySettings,
@@ -151,7 +152,8 @@ export default class SettingsModule extends KickModule {
 				requiresRefreshToDisable: true,
 			},
 			...chatImagesSettings(CATEGORY.CHAT),
-			...chatIdentitySettings(CATEGORY.CHAT),
+			...cosmeticsSettings(CATEGORY.CHAT),
+			...createCosmeticsLink(CATEGORY.CHAT),
 			quickAccessLinksSetting(CATEGORY.CHANNEL, KICK_DEFAULT_SETTINGS.quickAccessLinks),
 			{
 				id: "forceQualityEnabled",

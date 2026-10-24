@@ -1270,6 +1270,8 @@ const ReloadMarkIcon = icon(
 	13,
 );
 
+const ArrowRightIcon = icon(<path d="m9 18 6-6-6-6" />, 14);
+
 const ArrowUpIcon = icon(<path d="m18 15-6-6-6 6" />, 14);
 
 const ArrowDownIcon = icon(<path d="m6 9 6 6 6-6" />, 14);
@@ -2073,6 +2075,14 @@ const Settings = <T,>({
 						values={[Number(settings[fromKey as keyof T]), Number(settings[toKey as keyof T])]}
 						onCommit={([from, to]) => updateSettings({ [fromKey]: from, [toKey]: to } as Partial<T>)}
 					/>
+				);
+			}
+			case "action": {
+				return (
+					<SecondaryButton type="button" onClick={() => selectCategory(setting.targetCategoryId)}>
+						{setting.actionLabel}
+						{ArrowRightIcon}
+					</SecondaryButton>
 				);
 			}
 			case "choice": {

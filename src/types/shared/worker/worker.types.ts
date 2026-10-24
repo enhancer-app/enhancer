@@ -31,6 +31,10 @@ import type {
 	LogoutEnhancerAccountResponse,
 	SaveEnhancerBadgeSlotPayload,
 	SaveEnhancerBadgeSlotResponse,
+	ClearEnhancerNicknamePayload,
+	GetEnhancerBillingResponse,
+	SaveEnhancerChatStylePayload,
+	SubmitEnhancerNicknamePayload,
 } from "$types/shared/worker/enhancer-account-worker.types.ts";
 import type {
 	ChannelPinsPayload,
@@ -221,6 +225,22 @@ export interface WorkerApiActions {
 	saveEnhancerBadgeSlot: {
 		payload: SaveEnhancerBadgeSlotPayload;
 		response: SaveEnhancerBadgeSlotResponse;
+	};
+	getEnhancerBilling: {
+		payload: never;
+		response: GetEnhancerBillingResponse;
+	};
+	saveEnhancerChatStyle: {
+		payload: SaveEnhancerChatStylePayload;
+		response: GetEnhancerBillingResponse;
+	};
+	submitEnhancerNickname: {
+		payload: SubmitEnhancerNicknamePayload;
+		response: GetEnhancerBillingResponse;
+	};
+	clearEnhancerNickname: {
+		payload: ClearEnhancerNicknamePayload;
+		response: GetEnhancerBillingResponse;
 	};
 	syncFollows: {
 		payload: SyncFollowsPayload;

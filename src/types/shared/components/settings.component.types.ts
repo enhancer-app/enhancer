@@ -69,6 +69,12 @@ export type PairSettingDefinition<T = any> = {
 	orderError?: string;
 } & CommonSettingDefinition<T>;
 
+export type ActionSettingDefinition<T = any> = {
+	type: "action";
+	actionLabel: string;
+	targetCategoryId: string;
+} & CommonSettingDefinition<T>;
+
 export type ChoiceSettingDefinition<T = any> = {
 	type: "choice";
 	options: { label: string; value: Partial<T> }[];
@@ -120,7 +126,8 @@ export type SettingDefinition<T = any> =
 	| TextSettingDefinition<T>
 	| FileSettingDefinition<T>
 	| PairSettingDefinition<T>
-	| ChoiceSettingDefinition<T>;
+	| ChoiceSettingDefinition<T>
+	| ActionSettingDefinition<T>;
 
 export type SettingConfirmationFact = {
 	term: string;

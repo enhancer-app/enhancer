@@ -8,10 +8,9 @@ export const SETTING_SECTION = {
 	STREAM: "Stream & VODs",
 	SIDEBAR: "Sidebar",
 	CHANNEL: "Channel & usercards",
-	APPEARANCE: "Appearance",
 	ADVANCED: "Advanced",
 	MESSAGES: "Messages",
-	BADGES: "Badges & nicknames",
+	COSMETICS: "Cosmetics",
 	NOTIFICATIONS: "Notifications",
 } as const;
 
@@ -124,7 +123,7 @@ export function chatImagesSettings<T>(categoryId: string): SettingDefinition<T>[
 	];
 }
 
-export function chatIdentitySettings<T>(categoryId: string): SettingDefinition<T>[] {
+export function cosmeticsSettings<T>(categoryId: string): SettingDefinition<T>[] {
 	return [
 		{
 			id: "chatBadgesEnabled",
@@ -132,17 +131,28 @@ export function chatIdentitySettings<T>(categoryId: string): SettingDefinition<T
 			description: "Shows Enhancer badges next to names in chat.",
 			type: "toggle",
 			categoryId,
-			section: SETTING_SECTION.BADGES,
+			section: SETTING_SECTION.COSMETICS,
 			tags: ["Enable Chat Badges"],
 		},
 		{
 			id: "chatNicknameCustomizationEnabled",
 			title: "Custom nicknames",
-			description: "Shows nickname styles from Enhancer in chat.",
+			description: "Shows the names, glow and fonts that people set in Enhancer.",
 			type: "toggle",
 			categoryId,
-			section: SETTING_SECTION.BADGES,
+			section: SETTING_SECTION.COSMETICS,
 			tags: ["Enable Nickname Customization"],
+		},
+		{
+			id: "loadAdditionalFonts",
+			title: "Nickname fonts",
+			description: "Loads the fonts people chose for their nicknames.",
+			hint: "Fonts are loaded from fonts.enhancer.at. Turn this off to use the default font.",
+			type: "toggle",
+			categoryId,
+			tags: ["Additional fonts", "Enable Loading Additional Fonts"],
+			dependsOn: { key: "chatNicknameCustomizationEnabled" },
+			requiresRefreshToDisable: true,
 		},
 	];
 }

@@ -1,9 +1,12 @@
 import {
 	cooldownMinutesLeft,
+	filterAccountBadges,
 	filterPlatformBadges,
 	filterSlotGroups,
 	groupBadgeSlots,
+	sortChatAccounts,
 } from "$shared/enhancer-account/badge-slots.ts";
+import { ChatStyleCard } from "$shared/components/enhancer-account/chat-style.component.tsx";
 import { getEnhancerAccountStore } from "$shared/enhancer-account/enhancer-account.store.ts";
 import { pickBadgeImage } from "$shared/utils/badge-image.utils.ts";
 import type {
@@ -265,6 +268,42 @@ const Status = styled.span<{ $tone: "success" | "neutral" | "info" }>`
 const CardFooter = styled.div`
 	padding: 10px 16px;
 	border-top: 1px solid var(--settings-divider);
+`;
+
+const AccountTabs = styled.div`
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 2px;
+	padding: 3px;
+	border-radius: 9px;
+	background: var(--settings-well);
+	box-shadow: inset 0 0 0 1px var(--settings-border);
+`;
+
+const AccountTab = styled.button<{ $active: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	padding: 6px 12px;
+	border: none;
+	border-radius: 6px;
+	background: ${({ $active }) => ($active ? "var(--settings-surface-hover)" : "transparent")};
+	color: ${({ $active }) => ($active ? "var(--settings-text-primary)" : "var(--settings-text-muted)")};
+	font: inherit;
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+
+	&:hover {
+		color: var(--settings-text-primary);
+	}
+`;
+
+const PlatformDot = styled.span<{ $color: string }>`
+	width: 8px;
+	height: 8px;
+	border-radius: 2px;
+	background: ${({ $color }) => $color};
 `;
 
 const AccountPage = styled.div`
@@ -572,6 +611,7 @@ function BadgeSlotEditor({ group, onSave }: BadgeSlotEditorProps) {
 export function EnhancerAccountComponent({ workerService, platform, logoUrl }: EnhancerAccountComponentProps) {
 	const store = getEnhancerAccountStore(workerService);
 	const [query, setQuery] = useState("");
+	const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
 	useEffect(() => {
 		store.start();
@@ -587,6 +627,8 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 	const login = () => void store.login();
 	const logout = () => void store.logout();
 	const saveSlot = (group: BadgeSlotGroup, assignmentId: string | null) => store.saveSlot(group, assignmentId);
+	const billing = store.billing.value;
+	const billingFailed = store.billingFailed.value;
 
 	if (!account.loggedIn) {
 		return <LoginScreen logoUrl={logoUrl} busy={busy} error={error} onLogin={login} />;
@@ -595,8 +637,14 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 	const user = profile?.user;
 	const displayName =
 		user?.displayName ?? user?.username ?? account.displayName ?? account.username ?? "Enhancer account";
-	const platformBadges = badges ? filterPlatformBadges(badges, platform) : null;
-	const groups = platformBadges ? groupBadgeSlots(platformBadges) : [];
+	const chatAccounts = billing ? sortChatAccounts(billing.accounts, platform) : [];
+	const activeAccount = chatAccounts.find((item) => item.accountId === selectedAccountId) ?? chatAccounts[0] ?? null;
+	const scopedBadges = badges
+		? activeAccount
+			? filterAccountBadges(badges, activeAccount.accountId)
+			: filterPlatformBadges(badges, platform)
+		: null;
+	const groups = scopedBadges ? groupBadgeSlots(scopedBadges) : [];
 	const visibleGroups = filterSlotGroups(groups, query);
 	const badgeCount = badges ? badges.global.length + badges.channels.length : null;
 
@@ -644,6 +692,39 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 						{busy ? "…" : "Log out"}
 					</Button>
 				</Row>
+				{chatAccounts.length > 1 && (
+					<AccountTabs role="tablist" aria-label="Linked accounts">
+						{chatAccounts.map((item) => (
+							<AccountTab
+								key={item.accountId}
+								type="button"
+								role="tab"
+								aria-selected={item.accountId === activeAccount?.accountId}
+								$active={item.accountId === activeAccount?.accountId}
+								onClick={() => {
+									setSelectedAccountId(item.accountId);
+									setQuery("");
+								}}
+							>
+								<PlatformDot $color={PLATFORM_COLORS[item.platform]?.background ?? "var(--settings-text-muted)"} />@
+								{item.login}
+							</AccountTab>
+						))}
+					</AccountTabs>
+				)}
+				{billing && activeAccount ? (
+					<ChatStyleCard
+						key={activeAccount.accountId}
+						perks={billing.style}
+						account={activeAccount}
+						plansAvailable={billing.enabled}
+						onSaveStyle={(style) => store.saveChatStyle(style)}
+						onSubmitNickname={(accountId, nickname) => store.submitNickname(accountId, nickname)}
+						onClearNickname={(accountId) => store.clearNickname(accountId)}
+					/>
+				) : billingFailed ? (
+					<Muted $error>Could not load your chat style.</Muted>
+				) : null}
 				<HeadingRow>
 					<Heading>Badges</Heading>
 					{groups.length > 0 && (
@@ -665,7 +746,7 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 				{badges === null ? (
 					<Muted $error={badgesFailed}>{badgesFailed ? "Could not load your badges." : "Loading badges…"}</Muted>
 				) : groups.length === 0 ? (
-					<Muted>No badges on this platform yet.</Muted>
+					<Muted>{activeAccount ? "No badges on this account yet." : "No badges on this platform yet."}</Muted>
 				) : visibleGroups.length === 0 ? (
 					<Muted>No channels match "{query.trim()}".</Muted>
 				) : (

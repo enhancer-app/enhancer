@@ -127,7 +127,15 @@ export class HandlerRegistry {
 		for (const action of ["getEnhancerAccount", "loginEnhancerAccount", "logoutEnhancerAccount"] as const) {
 			this.handlers.set(action, new EnhancerAccountHandler(this.logger, this.enhancerAccountService, action));
 		}
-		for (const action of ["getEnhancerProfile", "getEnhancerBadges", "saveEnhancerBadgeSlot"] as const) {
+		for (const action of [
+			"getEnhancerProfile",
+			"getEnhancerBadges",
+			"saveEnhancerBadgeSlot",
+			"getEnhancerBilling",
+			"saveEnhancerChatStyle",
+			"submitEnhancerNickname",
+			"clearEnhancerNickname",
+		] as const) {
 			this.handlers.set(action, new EnhancerProfileHandler(this.logger, this.enhancerProfileService, action));
 		}
 		this.handlers.set(

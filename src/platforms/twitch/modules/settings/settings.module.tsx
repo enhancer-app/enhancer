@@ -3,6 +3,7 @@ import {
 	createAccountCategories,
 	createAccountIdentity,
 	createAccountSettings,
+	createCosmeticsLink,
 	createDeveloperCategories,
 	createDeveloperSettings,
 } from "$shared/module/helpers/enhancer-account-settings.tsx";
@@ -13,7 +14,7 @@ import {
 	SETTING_SECTION,
 	WATCHTIME_PERIOD_OPTIONS,
 	channelSectionSetting,
-	chatIdentitySettings,
+	cosmeticsSettings,
 	chatImagesSettings,
 	followsSettings,
 	latencySettings,
@@ -146,16 +147,6 @@ export default class SettingsModule extends TwitchModule {
 				dependsOn: { key: "xayoWatchtimeEnabled" },
 				options: WATCHTIME_PERIOD_OPTIONS,
 			},
-			{
-				id: "loadAdditionalFonts",
-				title: "Additional fonts",
-				description: "Loads additional fonts used by Enhancer.",
-				type: "toggle",
-				categoryId: CATEGORY.GENERAL,
-				section: SETTING_SECTION.APPEARANCE,
-				tags: ["Enable Loading Additional Fonts"],
-				requiresRefreshToDisable: true,
-			},
 			...chatImagesSettings(CATEGORY.CHAT),
 			{
 				id: "chatMessageMenuEnabled",
@@ -190,7 +181,8 @@ export default class SettingsModule extends TwitchModule {
 					{ label: "As link", value: { chatHideGiphyMessages: true, chatGiphyMessageMode: "link" } },
 				],
 			},
-			...chatIdentitySettings(CATEGORY.CHAT),
+			...cosmeticsSettings(CATEGORY.CHAT),
+			...createCosmeticsLink(CATEGORY.CHAT),
 			{
 				id: "chatMentionSoundEnabled",
 				title: "Mention sound",

@@ -70,3 +70,42 @@ export type SaveBadgeSlotRequest = {
 	accountId?: string;
 	visibleAssignmentIds: string[];
 };
+
+export type EnhancerChatStylePerks = {
+	glowAllowed: boolean;
+	fontAllowed: boolean;
+	nicknameAllowed: boolean;
+	nicknameCooldownDays: number;
+	fonts: string[];
+};
+
+export type EnhancerChatAccountStyle = {
+	accountId: string;
+	platform: "TWITCH" | "KICK";
+	login: string;
+	displayName: string;
+	hasGlow: boolean;
+	customFont: string | null;
+	styleCooldownUntil: string | null;
+	nickname: string | null;
+	nicknameCooldownUntil: string | null;
+	nicknamePending: string | null;
+	nicknameRejected: { nickname: string; reason: string | null } | null;
+};
+
+export type EnhancerViewerBilling = {
+	enabled: boolean;
+	style: EnhancerChatStylePerks;
+	accounts: EnhancerChatAccountStyle[];
+};
+
+export type SaveChatStyleRequest = {
+	accountId: string;
+	hasGlow: boolean;
+	customFont: string | null;
+};
+
+export type SubmitNicknameRequest = {
+	accountId: string;
+	nickname: string;
+};

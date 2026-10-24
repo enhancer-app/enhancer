@@ -44,6 +44,22 @@ export function createAccountSettings<T>(
 	];
 }
 
+export function createCosmeticsLink<T>(categoryId: string): SettingDefinition<T>[] {
+	if (!isPreviewBuild()) return [];
+	return [
+		{
+			id: "cosmeticsAccountLink",
+			title: "Your chat style",
+			description: "Change your nickname, font, glow and badges in your Enhancer Account.",
+			type: "action",
+			categoryId,
+			tags: ["nickname", "font", "glow", "badge", "cosmetics"],
+			actionLabel: "Open Account",
+			targetCategoryId: ACCOUNT_CATEGORY_ID,
+		},
+	];
+}
+
 export function createDeveloperCategories(order: number): SettingCategory<Partial<GlobalSettings>>[] {
 	if (!canUseDeveloperSettings()) return [];
 	return [

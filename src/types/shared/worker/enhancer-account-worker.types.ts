@@ -1,13 +1,23 @@
 import type { EnhancerApiEnvironment } from "$types/shared/enhancer-environment.types.ts";
 import type {
 	EnhancerViewerBadges,
+	EnhancerViewerBilling,
 	EnhancerViewerSummary,
 	SaveBadgeSlotRequest,
+	SaveChatStyleRequest,
+	SubmitNicknameRequest,
 } from "$types/apis/enhancer-account.apis.ts";
 
 export type EnhancerAccountAction = "getEnhancerAccount" | "loginEnhancerAccount" | "logoutEnhancerAccount";
 
-export type EnhancerProfileAction = "getEnhancerProfile" | "getEnhancerBadges" | "saveEnhancerBadgeSlot";
+export type EnhancerProfileAction =
+	| "getEnhancerProfile"
+	| "getEnhancerBadges"
+	| "saveEnhancerBadgeSlot"
+	| "getEnhancerBilling"
+	| "saveEnhancerChatStyle"
+	| "submitEnhancerNickname"
+	| "clearEnhancerNickname";
 
 export type EnhancerProfileResult<T> =
 	| { kind: "ok"; data: T }
@@ -21,6 +31,20 @@ export type GetEnhancerBadgesResponse = EnhancerProfileResult<EnhancerViewerBadg
 export type SaveEnhancerBadgeSlotPayload = SaveBadgeSlotRequest;
 
 export type SaveEnhancerBadgeSlotResponse = EnhancerProfileResult<null>;
+
+export type GetEnhancerBillingResponse = EnhancerProfileResult<EnhancerViewerBilling>;
+
+export type SaveEnhancerChatStylePayload = SaveChatStyleRequest;
+
+export type SubmitEnhancerNicknamePayload = SubmitNicknameRequest;
+
+export type ClearEnhancerNicknamePayload = { accountId: string };
+
+export type EnhancerProfilePayload =
+	| SaveEnhancerBadgeSlotPayload
+	| SaveEnhancerChatStylePayload
+	| SubmitEnhancerNicknamePayload
+	| ClearEnhancerNicknamePayload;
 
 export type EnhancerAccountProfile = {
 	subject: string | null;
