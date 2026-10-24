@@ -2,13 +2,19 @@ import type { Logger } from "$shared/logger/logger.ts";
 import {
 	isEnhancerApiError,
 	isViewerBadges,
+	isViewerBilling,
 	isViewerSummary,
 } from "$shared/worker/enhancer-account/enhancer-account.guards.ts";
 import type { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
-import type { SaveBadgeSlotRequest } from "$types/apis/enhancer-account.apis.ts";
+import type {
+	SaveBadgeSlotRequest,
+	SaveChatStyleRequest,
+	SubmitNicknameRequest,
+} from "$types/apis/enhancer-account.apis.ts";
 import type {
 	EnhancerProfileResult,
 	GetEnhancerBadgesResponse,
+	GetEnhancerBillingResponse,
 	GetEnhancerProfileResponse,
 	SaveEnhancerBadgeSlotResponse,
 } from "$types/shared/worker/enhancer-account-worker.types.ts";
@@ -33,6 +39,34 @@ export class EnhancerProfileService {
 			{ method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(slot) },
 			() => null,
 		);
+	}
+
+	getBilling(): Promise<GetEnhancerBillingResponse> {
+		return this.request("/v1/me/billing", { method: "GET" }, (body) => (isViewerBilling(body) ? body : undefined));
+	}
+
+	saveChatStyle(style: SaveChatStyleRequest): Promise<GetEnhancerBillingResponse> {
+		return this.request("/v1/me/billing/appearance", this.json("PUT", style), (body) =>
+			isViewerBilling(body) ? body : undefined,
+		);
+	}
+
+	submitNickname(nickname: SubmitNicknameRequest): Promise<GetEnhancerBillingResponse> {
+		return this.request("/v1/me/billing/nickname", this.json("PUT", nickname), (body) =>
+			isViewerBilling(body) ? body : undefined,
+		);
+	}
+
+	clearNickname(accountId: string): Promise<GetEnhancerBillingResponse> {
+		return this.request(
+			`/v1/me/billing/nickname?accountId=${encodeURIComponent(accountId)}`,
+			{ method: "DELETE" },
+			(body) => (isViewerBilling(body) ? body : undefined),
+		);
+	}
+
+	private json(method: "PUT", body: unknown): RequestInit {
+		return { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
 	}
 
 	private async request<T>(

@@ -24,13 +24,19 @@ import type {
 } from "$types/shared/worker/enhancer-api-worker.types.ts";
 import type {
 	EnhancerAccountBroadcastPayload,
+	EnhancerAccountCard,
 	EnhancerAccountState,
+	GetEnhancerAccountCardPayload,
 	GetEnhancerBadgesResponse,
 	GetEnhancerProfileResponse,
 	LoginEnhancerAccountResponse,
 	LogoutEnhancerAccountResponse,
 	SaveEnhancerBadgeSlotPayload,
 	SaveEnhancerBadgeSlotResponse,
+	ClearEnhancerNicknamePayload,
+	GetEnhancerBillingResponse,
+	SaveEnhancerChatStylePayload,
+	SubmitEnhancerNicknamePayload,
 } from "$types/shared/worker/enhancer-account-worker.types.ts";
 import type {
 	ChannelPinsPayload,
@@ -202,6 +208,10 @@ export interface WorkerApiActions {
 		payload: never;
 		response: EnhancerAccountState;
 	};
+	getEnhancerAccountCard: {
+		payload: GetEnhancerAccountCardPayload;
+		response: EnhancerAccountCard;
+	};
 	loginEnhancerAccount: {
 		payload: never;
 		response: LoginEnhancerAccountResponse;
@@ -221,6 +231,22 @@ export interface WorkerApiActions {
 	saveEnhancerBadgeSlot: {
 		payload: SaveEnhancerBadgeSlotPayload;
 		response: SaveEnhancerBadgeSlotResponse;
+	};
+	getEnhancerBilling: {
+		payload: never;
+		response: GetEnhancerBillingResponse;
+	};
+	saveEnhancerChatStyle: {
+		payload: SaveEnhancerChatStylePayload;
+		response: GetEnhancerBillingResponse;
+	};
+	submitEnhancerNickname: {
+		payload: SubmitEnhancerNicknamePayload;
+		response: GetEnhancerBillingResponse;
+	};
+	clearEnhancerNickname: {
+		payload: ClearEnhancerNicknamePayload;
+		response: GetEnhancerBillingResponse;
 	};
 	syncFollows: {
 		payload: SyncFollowsPayload;

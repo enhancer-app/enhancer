@@ -110,6 +110,7 @@ test("logs in against the selected realm and keeps the session encrypted", async
 			expect(url.origin + url.pathname).toBe(`${ENHANCER_ENDPOINTS.test.issuer}/protocol/openid-connect/auth`);
 			expect(url.searchParams.get("client_id")).toBe("enhancer-extension");
 			expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+			expect(url.searchParams.get("prompt")).toBe("login");
 			return approve(url);
 		}),
 	);

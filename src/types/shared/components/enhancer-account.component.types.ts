@@ -1,9 +1,16 @@
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
-import type { EnhancerViewerBadge } from "$types/apis/enhancer-account.apis.ts";
+import type {
+	EnhancerChatAccountStyle,
+	EnhancerChatStylePerks,
+	EnhancerViewerBadge,
+	SaveChatStyleRequest,
+} from "$types/apis/enhancer-account.apis.ts";
+import type { WorkerClient } from "$types/shared/worker/worker-client.types.ts";
+import type { SettingsIdentityProps } from "$types/shared/components/settings.component.types.ts";
 
 export type EnhancerAccountComponentProps = {
-	workerService: WorkerService;
+	workerService: WorkerClient;
 	platform: PlatformType;
 	logoUrl: string;
 };
@@ -33,4 +40,25 @@ export type LoginScreenProps = {
 	busy: boolean;
 	error: string | null;
 	onLogin: () => void;
+};
+
+export type EnhancerAccountIdentityProps = SettingsIdentityProps & {
+	workerService: WorkerService;
+	platform: PlatformType;
+};
+
+export type ChatStyleCardProps = {
+	perks: EnhancerChatStylePerks;
+	account: EnhancerChatAccountStyle;
+	plansAvailable: boolean;
+	onSaveStyle: (style: SaveChatStyleRequest) => Promise<string | null>;
+	onSubmitNickname: (accountId: string, nickname: string) => Promise<string | null>;
+	onClearNickname: (accountId: string) => Promise<string | null>;
+};
+
+export type ChatStyleNotice = { tone: "success" | "error"; text: string };
+
+export type EnhancerAccountFrameProps = {
+	platform: PlatformType;
+	logoUrl: string;
 };

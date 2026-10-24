@@ -58,6 +58,7 @@ export default defineConfig({
 				"worker.bridge": "src/shared/worker/worker.bridge.ts",
 				"worker.background": "src/shared/worker/worker.background.ts",
 				home: "home.html",
+				account: "account.html",
 			},
 		},
 	},

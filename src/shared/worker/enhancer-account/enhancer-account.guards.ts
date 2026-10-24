@@ -1,7 +1,9 @@
 import type { EnhancerApiError } from "$types/apis/enhancer.apis.ts";
 import type {
+	EnhancerChatAccountStyle,
 	EnhancerViewerBadge,
 	EnhancerViewerBadges,
+	EnhancerViewerBilling,
 	EnhancerViewerIdentity,
 	EnhancerViewerSummary,
 	OidcErrorResponse,
@@ -109,5 +111,40 @@ export function isViewerBadges(value: unknown): value is EnhancerViewerBadges {
 		Array.isArray(value.channels) &&
 		value.global.every(isViewerBadge) &&
 		value.channels.every(isViewerBadge)
+	);
+}
+
+function isChatAccountStyle(value: unknown): value is EnhancerChatAccountStyle {
+	return (
+		isRecord(value) &&
+		typeof value.accountId === "string" &&
+		(value.platform === "TWITCH" || value.platform === "KICK") &&
+		typeof value.login === "string" &&
+		typeof value.displayName === "string" &&
+		typeof value.hasGlow === "boolean" &&
+		isNullableString(value.customFont) &&
+		isNullableString(value.styleCooldownUntil) &&
+		isNullableString(value.nickname) &&
+		isNullableString(value.nicknameCooldownUntil) &&
+		isNullableString(value.nicknamePending) &&
+		(value.nicknameRejected === null ||
+			(isRecord(value.nicknameRejected) &&
+				typeof value.nicknameRejected.nickname === "string" &&
+				isNullableString(value.nicknameRejected.reason)))
+	);
+}
+
+export function isViewerBilling(value: unknown): value is EnhancerViewerBilling {
+	if (!isRecord(value) || !isRecord(value.style) || !Array.isArray(value.accounts)) return false;
+	const { style } = value;
+	return (
+		typeof value.enabled === "boolean" &&
+		typeof style.glowAllowed === "boolean" &&
+		typeof style.fontAllowed === "boolean" &&
+		typeof style.nicknameAllowed === "boolean" &&
+		typeof style.nicknameCooldownDays === "number" &&
+		Array.isArray(style.fonts) &&
+		style.fonts.every((font) => typeof font === "string") &&
+		value.accounts.every(isChatAccountStyle)
 	);
 }

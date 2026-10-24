@@ -2,10 +2,18 @@ import { expect, test } from "bun:test";
 import {
 	buildSlotRequest,
 	cooldownMinutesLeft,
+	filterAccountBadges,
+	filterPlatformBadges,
 	filterSlotGroups,
+	findShownGlobalBadge,
 	groupBadgeSlots,
+	sortChatAccounts,
 } from "$shared/enhancer-account/badge-slots.ts";
-import { isViewerBadges, isViewerSummary } from "$shared/worker/enhancer-account/enhancer-account.guards.ts";
+import {
+	isViewerBadges,
+	isViewerBilling,
+	isViewerSummary,
+} from "$shared/worker/enhancer-account/enhancer-account.guards.ts";
 import type { EnhancerViewerBadge } from "$types/apis/enhancer-account.apis.ts";
 
 const badge = (overrides: Partial<EnhancerViewerBadge>): EnhancerViewerBadge => ({
@@ -117,4 +125,88 @@ test("channel search matches display names and logins and hides the global slot"
 	expect(filterSlotGroups(groups, "  SUM ").map((group) => group.channelLogin)).toEqual(["summit1g"]);
 	expect(filterSlotGroups(groups, "poki").map((group) => group.channelLogin)).toEqual(["pokimane"]);
 	expect(filterSlotGroups(groups, "nope")).toEqual([]);
+});
+
+test("keeps only the badges of the current platform", () => {
+	const filtered = filterPlatformBadges(
+		{
+			global: [badge({ assignmentId: "t" }), badge({ assignmentId: "k", accountPlatform: "KICK" })],
+			channels: [badge({ assignmentId: "kc", accountPlatform: "KICK", scope: "CHANNEL", channelId: "ch" })],
+		},
+		"kick",
+	);
+	expect(filtered.global.map((item) => item.assignmentId)).toEqual(["k"]);
+	expect(filtered.channels.map((item) => item.assignmentId)).toEqual(["kc"]);
+});
+
+test("finds the global badge shown in chat and ignores channel and admin badges", () => {
+	const shown = findShownGlobalBadge(
+		groupBadgeSlots({
+			global: [
+				badge({ assignmentId: "forced", forced: true, visible: true }),
+				badge({ assignmentId: "g2", visible: true, name: "Early" }),
+			],
+			channels: [badge({ assignmentId: "c1", scope: "CHANNEL", channelId: "ch", visible: true })],
+		}),
+	);
+	expect(shown?.name).toBe("Early");
+	expect(findShownGlobalBadge(groupBadgeSlots({ global: [badge({})], channels: [] }))).toBeNull();
+});
+
+test("keeps only the badges of the selected linked account", () => {
+	const filtered = filterAccountBadges(
+		{
+			global: [badge({ assignmentId: "mine" }), badge({ assignmentId: "other", accountId: "acc-2" })],
+			channels: [badge({ assignmentId: "c", accountId: "acc-2", scope: "CHANNEL", channelId: "ch" })],
+		},
+		"acc-2",
+	);
+	expect(filtered.global.map((item) => item.assignmentId)).toEqual(["other"]);
+	expect(filtered.channels.map((item) => item.assignmentId)).toEqual(["c"]);
+});
+
+test("puts accounts from the current platform first and keeps the rest in order", () => {
+	const accounts = [
+		{ id: "t1", platform: "TWITCH" as const },
+		{ id: "k1", platform: "KICK" as const },
+		{ id: "t2", platform: "TWITCH" as const },
+		{ id: "k2", platform: "KICK" as const },
+	];
+	expect(sortChatAccounts(accounts, "kick").map((item) => item.id)).toEqual(["k1", "k2", "t1", "t2"]);
+});
+
+const billingAccount = {
+	accountId: "acc-1",
+	platform: "TWITCH",
+	login: "viewer",
+	displayName: "Viewer",
+	hasGlow: false,
+	customFont: null,
+	styleCooldownUntil: null,
+	nickname: null,
+	nicknameCooldownUntil: null,
+	nicknamePending: null,
+	nicknameRejected: null,
+};
+const billingStyle = {
+	glowAllowed: true,
+	fontAllowed: true,
+	nicknameAllowed: false,
+	nicknameCooldownDays: 30,
+	fonts: ["Bungee"],
+};
+
+test("accepts the chat style part of the billing response and rejects broken accounts", () => {
+	expect(isViewerBilling({ enabled: true, style: billingStyle, accounts: [billingAccount], tiers: [] })).toBe(true);
+	expect(
+		isViewerBilling({
+			enabled: true,
+			style: billingStyle,
+			accounts: [{ ...billingAccount, nicknameRejected: { nickname: "x", reason: null } }],
+		}),
+	).toBe(true);
+	expect(
+		isViewerBilling({ enabled: true, style: billingStyle, accounts: [{ ...billingAccount, platform: "YOUTUBE" }] }),
+	).toBe(false);
+	expect(isViewerBilling({ enabled: true, style: { ...billingStyle, fonts: [1] }, accounts: [] })).toBe(false);
 });

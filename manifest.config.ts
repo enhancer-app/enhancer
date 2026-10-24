@@ -70,6 +70,7 @@ export function getManifest(isDevelopment: boolean, channel: ExtensionChannel = 
 					"index.js",
 					"index.js.map",
 					"home.html",
+					"account.html",
 					"inject.js.map",
 					"chunks/*.js",
 					"assets/enhancer/*.svg",

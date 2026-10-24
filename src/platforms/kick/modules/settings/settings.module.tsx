@@ -1,13 +1,29 @@
 import { KICK_DEFAULT_SETTINGS } from "$kick/kick.constants.ts";
 import KickModule from "$kick/kick.module.ts";
 import {
+	ACCOUNT_CATEGORY_ID,
 	createAccountCategories,
+	createAccountIdentity,
 	createAccountSettings,
+	createCosmeticsLink,
+	createDeveloperCategories,
 	createDeveloperSettings,
 } from "$shared/module/helpers/enhancer-account-settings.tsx";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
+import {
+	SETTING_SECTION,
+	WATCHTIME_PERIOD_OPTIONS,
+	channelSectionSetting,
+	cosmeticsSettings,
+	chatImagesSettings,
+	followsSettings,
+	latencySettings,
+	pinnedStreamersSetting,
+	quickAccessLinksSetting,
+	realVideoTimeSettings,
+} from "$shared/module/helpers/common-setting-definitions.ts";
 import { SettingsHelper } from "$shared/module/helpers/settings.helper.tsx";
 import type { KickSettings } from "$types/platforms/kick/kick.settings.types.ts";
 import type { SettingCategory, SettingDefinition } from "$types/shared/components/settings.component.types.ts";
@@ -21,6 +37,7 @@ const CATEGORY = {
 	PLAYER: "player",
 	LATENCY: "latency",
 	EXPERIMENTAL: "experimental",
+	DATA: "data",
 	ABOUT: "about",
 } as const;
 
@@ -85,8 +102,10 @@ export default class SettingsModule extends KickModule {
 			{ id: CATEGORY.PLAYER, title: "Player", order: 3 },
 			{ id: CATEGORY.LATENCY, title: "Latency", order: 4 },
 			{ id: CATEGORY.EXPERIMENTAL, title: "Experimental", order: 5 },
-			...createAccountCategories(6),
-			{ id: CATEGORY.ABOUT, title: "About", order: 7 },
+			{ id: CATEGORY.DATA, title: "Data", order: 6, placement: "utility" },
+			{ id: CATEGORY.ABOUT, title: "About", order: 7, placement: "utility" },
+			...createDeveloperCategories(8),
+			...createAccountCategories(9),
 		];
 
 		const brandIcons = {
@@ -98,173 +117,59 @@ export default class SettingsModule extends KickModule {
 		const enhancerLogo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo.svg");
 
 		this.SETTING_DEFINITIONS = [
-			...createAccountSettings(workerService, "kick", enhancerLogo),
-			{
-				id: "pinnedStreamersEnabled",
-				title: "Enable Pinning Streamers",
-				description:
-					"Pin your favorite streamers with ★ to keep them on top of your follow list. Pins are shared between Twitch and Kick.",
-				type: "toggle",
-				categoryId: CATEGORY.GENERAL,
-			},
-			{
-				id: "realVideoTimeEnabled",
-				title: "Enable Real Video Time",
-				description: "Displays the real-world time of the VOD.",
-				type: "toggle",
-				categoryId: CATEGORY.GENERAL,
-				requiresRefreshToDisable: true,
-			},
-			{
-				id: "realVideoTimeFormat12h",
-				title: "Use 12-Hour Time Format",
-				description: "Display real video time in 12-hour format (AM/PM) instead of 24-hour format.",
-				type: "toggle",
-				categoryId: CATEGORY.GENERAL,
-				dependsOn: { key: "realVideoTimeEnabled" },
-			},
-			{
-				id: "realVideoTimeDateMode",
-				title: "Real Video Time Date Display",
-				description: "Choose when to show the date next to the real video time.",
-				type: "select",
-				categoryId: CATEGORY.GENERAL,
-				dependsOn: { key: "realVideoTimeEnabled" },
-				options: [
-					{ value: "hover", label: "Show date on hover (default)" },
-					{ value: "always", label: "Always show" },
-					{ value: "never", label: "Never show" },
-				],
-			},
-			{
-				id: "channelSection",
-				title: "Channel Section",
-				description: "Shows a section with watch time and quick access links.",
-				type: "toggle",
-				categoryId: CATEGORY.GENERAL,
-				requiresRefreshToDisable: true,
-			},
+			...createAccountSettings("kick", enhancerLogo),
+			...realVideoTimeSettings(CATEGORY.GENERAL),
+			pinnedStreamersSetting(CATEGORY.GENERAL),
+			channelSectionSetting(CATEGORY.GENERAL),
 			{
 				id: "xayoWatchtimeEnabled",
-				title: "Enable Usercard Watchtime",
-				description: "Displays watchtime in Kick user popups from the xayo.pl service.",
+				title: "Watchtime in user popups",
+				description: "Shows watchtime from xayo.pl in Kick user popups.",
 				type: "toggle",
 				categoryId: CATEGORY.GENERAL,
+				section: SETTING_SECTION.CHANNEL,
+				tags: ["Enable Usercard Watchtime", "xayo"],
 				requiresRefreshToDisable: true,
 			},
 			{
 				id: "xayoWatchtimePeriod",
-				title: "Xayo Watchtime Period",
-				description: "Select the time range used for Kick user popup watchtime.",
+				title: "Time range",
+				description: "The period used for user popup watchtime.",
 				type: "select",
 				categoryId: CATEGORY.GENERAL,
+				tags: ["Xayo Watchtime Period"],
 				dependsOn: { key: "xayoWatchtimeEnabled" },
-				options: [
-					{ value: "30d", label: "Last 30 days" },
-					{ value: "365d", label: "Last year" },
-					{ value: "all", label: "All time" },
-				],
+				options: WATCHTIME_PERIOD_OPTIONS,
 			},
 			{
 				id: "_disableExtensionOnDashboard",
-				title: "Disable Enhancer on Dashboard",
-				description: "Disables loading Enhancer on dashboard page (dashboard.kick.com).",
+				title: "Turn off on dashboard",
+				description: "Enhancer won't load on dashboard.kick.com.",
 				type: "toggle",
 				categoryId: CATEGORY.GENERAL,
+				section: SETTING_SECTION.ADVANCED,
+				tags: ["Disable Enhancer on Dashboard"],
 				requiresRefreshToDisable: true,
 			},
-			{
-				id: "chatImagesEnabled",
-				title: "Enable Chat Images",
-				description: "Display images sent in chat messages.",
-				type: "toggle",
-				categoryId: CATEGORY.CHAT,
-				confirmOnEnable: true,
-				confirmationMessage:
-					"Enhancer is not responsible for the content of images sent in the chat by users. By enabling this option, you can see images in the chat that may not look good. We do not moderate them in any way, we simply display them. Are you sure you want to enable this option?",
-			},
-			{
-				id: "chatImagesOnHover",
-				title: "Show Images on Hover",
-				description: "Images are hidden until you hover your mouse to reveal them.",
-				type: "toggle",
-				categoryId: CATEGORY.CHAT,
-				dependsOn: { key: "chatImagesEnabled" },
-			},
-			{
-				id: "chatImagesSize",
-				title: "Chat Image Size",
-				description: "Maximum size of images allowed in chat messages.",
-				type: "number",
-				categoryId: CATEGORY.CHAT,
-				min: 1,
-				step: 1,
-				unit: "MB",
-				dependsOn: { key: "chatImagesEnabled" },
-			},
-			{
-				id: "chatBadgesEnabled",
-				title: "Enable Chat Badges",
-				description: "Show custom chat badges from Enhancer extension.",
-				type: "toggle",
-				categoryId: CATEGORY.CHAT,
-			},
-			{
-				id: "chatNicknameCustomizationEnabled",
-				title: "Enable Nickname Customization",
-				description: "Show custom chat nickname customizations from Enhancer extension in chat.",
-				type: "toggle",
-				categoryId: CATEGORY.CHAT,
-			},
-			{
-				id: "quickAccessLinks",
-				title: "Quick Access Links",
-				description: "Manage your quick access links with custom names and URLs",
-				type: "array",
-				categoryId: CATEGORY.CHANNEL,
-				arrayItemFields: [
-					{ name: "title", placeholder: "Enter link name..." },
-					{ name: "url", placeholder: "Enter URL..." },
-				],
-				confirmOnRemove: true,
-				confirmationMessage: "Are you sure you want to remove this Quick Access Link?",
-			},
-			{
-				id: "watchtime-list",
-				title: "Watchtime List",
-				description: "Watchtime List",
-				type: "text",
-				categoryId: CATEGORY.CHANNEL,
-				content: () => {
-					return <WatchtimeListComponent platform="kick" workerService={workerService} emitter={this.emitter} />;
-				},
-				hideInfo: true,
-			},
-			{
-				id: "export-import",
-				title: "Export/Import Data",
-				description: "Export and import your settings and watchtime data",
-				type: "text",
-				categoryId: CATEGORY.GENERAL,
-				content: () => {
-					return <ExportImportComponent platform="kick" workerService={workerService} emitter={this.emitter} />;
-				},
-				hideInfo: true,
-			},
+			...chatImagesSettings(CATEGORY.CHAT),
+			...cosmeticsSettings(CATEGORY.CHAT),
+			...createCosmeticsLink(CATEGORY.CHAT),
+			quickAccessLinksSetting(CATEGORY.CHANNEL, KICK_DEFAULT_SETTINGS.quickAccessLinks),
 			{
 				id: "forceQualityEnabled",
-				title: "Force Stream Quality",
-				description:
-					"Stops the player from starting on Auto and picks a fixed quality instead. Higher quality means more latency and more buffering on a weak connection.",
+				title: "Force stream quality",
+				description: "Starts streams at a fixed quality instead of Auto.",
+				hint: "Higher quality means more delay and more buffering on a weak connection.",
 				type: "toggle",
 				categoryId: CATEGORY.PLAYER,
 				requiresRefreshToDisable: true,
 			},
 			{
 				id: "forceQualityPreferred",
-				title: "Preferred Quality",
+				title: "Preferred quality",
 				description:
-					"The quality to select on every stream. Falls back to the closest lower one when it is unavailable. Source quality is skipped while you are logged out, because Kick reserves it for logged-in viewers.",
+					"The quality to pick on every stream. Falls back to the closest lower one when it's not available.",
+				hint: "Source is skipped while you're logged out, because Kick only offers it to logged-in viewers.",
 				type: "select",
 				categoryId: CATEGORY.PLAYER,
 				dependsOn: { key: "forceQualityEnabled" },
@@ -277,108 +182,35 @@ export default class SettingsModule extends KickModule {
 					{ value: "160", label: "160p" },
 				],
 			},
+			...latencySettings(CATEGORY.LATENCY, { thresholdStep: 0.5 }),
+			...followsSettings(CATEGORY.EXPERIMENTAL),
 			{
-				id: "streamLatencyEnabled",
-				title: "Enable Stream Latency",
-				description: "Shows the current stream delay on top of the chat.",
-				type: "toggle",
-				categoryId: CATEGORY.LATENCY,
-				requiresRefreshToDisable: true,
+				id: "watchtime-list",
+				title: "Watchtime list",
+				description: "How long you've watched each channel.",
+				type: "text",
+				categoryId: CATEGORY.DATA,
+				content: () => {
+					return <WatchtimeListComponent platform="kick" workerService={workerService} emitter={this.emitter} />;
+				},
+				hideInfo: true,
 			},
 			{
-				id: "streamLatencyReducerEnabled",
-				title: "Enable Stream Latency Reducer",
-				description: "Reduces stream latency by adjusting playback rate.",
-				type: "toggle",
-				categoryId: CATEGORY.LATENCY,
-				requiresRefreshToDisable: true,
+				id: "export-import",
+				title: "Backup",
+				description: "Export and import your settings and watchtime.",
+				type: "text",
+				categoryId: CATEGORY.DATA,
+				tags: ["Export/Import Data"],
+				content: () => {
+					return <ExportImportComponent platform="kick" workerService={workerService} emitter={this.emitter} />;
+				},
+				hideInfo: true,
 			},
-			{
-				id: "streamLatencyReducerMinRate",
-				title: "Minimum Playback Rate",
-				description: "The minimum playback rate the stream will be speeded up to.",
-				type: "number",
-				categoryId: CATEGORY.LATENCY,
-				requiresRefreshToDisable: true,
-				dependsOn: { key: "streamLatencyReducerEnabled" },
-				min: 1,
-				max: 2,
-				step: 0.01,
-				unit: "x",
-			},
-			{
-				id: "streamLatencyReducerMaxRate",
-				title: "Maximum Playback Rate",
-				description: "The maximum playback rate the stream will be speeded up to.",
-				type: "number",
-				categoryId: CATEGORY.LATENCY,
-				requiresRefreshToDisable: true,
-				dependsOn: { key: "streamLatencyReducerEnabled" },
-				min: 1,
-				max: 2,
-				step: 0.01,
-				unit: "x",
-			},
-			{
-				id: "streamLatencyReducerMinThreshold",
-				title: "Minimum Latency Threshold",
-				description: "The latency at which the playback rate will be speeded up to the minimum rate.",
-				type: "number",
-				categoryId: CATEGORY.LATENCY,
-				requiresRefreshToDisable: true,
-				dependsOn: { key: "streamLatencyReducerEnabled" },
-				min: 0,
-				step: 0.5,
-				unit: "s",
-			},
-			{
-				id: "streamLatencyReducerMaxThreshold",
-				title: "Maximum Latency Threshold",
-				description: "The latency at which the playback rate will be speeded up to the maximum rate.",
-				type: "number",
-				categoryId: CATEGORY.LATENCY,
-				requiresRefreshToDisable: true,
-				dependsOn: { key: "streamLatencyReducerEnabled" },
-				min: 0,
-				step: 0.5,
-				unit: "s",
-			},
-			{
-				id: "crossPlatformFollowsSyncEnabled",
-				title: "Share Follows Between Twitch and Kick",
-				description:
-					"Combines the channels you follow on Twitch and Kick. Applies to both sites. After turning it on, open twitch.tv and kick.com once while logged in.",
-				type: "toggle",
-				categoryId: CATEGORY.EXPERIMENTAL,
-				confirmOnEnable: true,
-				confirmationTitle: "Share Follows Between Twitch and Kick",
-				confirmationMessage:
-					"Enhancer will show the channels you follow on Twitch and Kick together in one list.\n\n• What it uses: your Twitch follows are read on twitch.tv while you browse it. For Kick, Enhancer uses your Kick login to load the channels you follow and check which of them are live.\n• Only for this: this feature uses your Kick login only to load your follows and check who is live. Enhancer will always ask you before any other feature uses it.\n• Where it's kept: your follow lists and Kick login are saved on this computer. The login is encrypted and kept in a part of the extension that websites and other extensions can't access. Your Twitch login is never saved.\n• Where it's sent: only to Twitch and Kick. Nothing is sent to Enhancer's servers.\n• When it's removed: turning this off deletes your saved follow lists right away. Your Kick login is deleted as soon as no Enhancer feature you've turned on needs it. Logging out of Kick also removes it.\n\nThis is completely optional. If you're not comfortable with it, leave it off. The rest of Enhancer works the same without it.\n\nThis setting applies to both Twitch and Kick. Enable sharing?",
-				confirmText: "Turn on",
-			},
-			{
-				id: "crossPlatformFollowsDisplayEnabled",
-				title: "Merged Follow List",
-				description:
-					"Replaces the followed channels in the sidebar with one list of your Twitch and Kick follows. Pin channels to keep them on top. Applies to both sites.",
-				type: "toggle",
-				categoryId: CATEGORY.EXPERIMENTAL,
-				dependsOn: { key: "crossPlatformFollowsSyncEnabled" },
-			},
-			{
-				id: "followsHomeEnabled",
-				title: "Followed Streams Home Page",
-				description:
-					"Replaces the Twitch and Kick home pages with the live streams you follow on both sites. Hover a stream to watch a muted preview.",
-				type: "toggle",
-				categoryId: CATEGORY.EXPERIMENTAL,
-				dependsOn: { key: "crossPlatformFollowsSyncEnabled" },
-			},
-			...createDeveloperSettings<KickSettings>(CATEGORY.EXPERIMENTAL),
 			{
 				id: "about",
-				title: "About This Extension",
-				description: "Information about the extension",
+				title: "About Enhancer",
+				description: "Version, links and credits.",
 				type: "text",
 				categoryId: CATEGORY.ABOUT,
 				content: () => {
@@ -386,6 +218,7 @@ export default class SettingsModule extends KickModule {
 				},
 				hideInfo: true,
 			},
+			...createDeveloperSettings<KickSettings>(CATEGORY.ABOUT),
 		];
 	}
 
@@ -397,6 +230,8 @@ export default class SettingsModule extends KickModule {
 			categories: this.SETTINGS_CATEGORIES,
 			definitions: this.SETTING_DEFINITIONS,
 			eventPrefix: "kick:settings:",
+			identity: createAccountIdentity(this.workerService(), "kick"),
+			identityCategoryId: ACCOUNT_CATEGORY_ID,
 		});
 		this.settingsSignal = result.settingsSignal;
 		this.openSettingsFn = result.openSettings;

@@ -6,6 +6,7 @@ import { CredentialVault } from "$shared/worker/credentials/credential.vault.ts"
 import { SharedDatabase } from "$shared/worker/database/shared.database.ts";
 import { CrossPlatformFollowsRefresher } from "$shared/worker/cross-platform-follows/cross-platform-follows.refresher.ts";
 import { ENHANCER_ENDPOINTS, resolveApiEnvironment } from "$shared/enhancer-environment.ts";
+import { isActionAllowedFrom } from "$shared/worker/enhancer-account/account-access.ts";
 import { EnhancerAccountDatabase } from "$shared/worker/enhancer-account/enhancer-account.database.ts";
 import { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
 import { EnhancerProfileService } from "$shared/worker/enhancer-account/enhancer-profile.service.ts";
@@ -157,6 +158,9 @@ export default class WorkerBackground {
 		const { action, payload } = message;
 		if (!this.handlerRegistry.hasHandler(action)) {
 			throw new Error(`Unknown action: ${action}`);
+		}
+		if (!isActionAllowedFrom(action, sender.url, chrome.runtime.getURL(""))) {
+			throw new Error(`${action} is only available on Enhancer pages`);
 		}
 		const handler = this.handlerRegistry.getHandler(action);
 		return await handler.handle(payload, sender);
