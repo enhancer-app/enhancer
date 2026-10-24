@@ -11,6 +11,10 @@ const MERGE_NOTE = [
 	"> [!IMPORTANT]",
 	"> Merge with **Create a merge commit**. Squash or rebase would give these commits new hashes on this branch.",
 ].join("\n");
+const SYNC_NOTE = [
+	"> [!IMPORTANT]",
+	"> Do not merge this PR by hand. master only allows squash, so add the `merge-sync` label and the Merge Sync PR workflow merges it with a merge commit.",
+].join("\n");
 const FOOTER = "<sub>Managed by the release workflow. Manual commits to this branch are overwritten.</sub>";
 
 const bump = (version, level) => {
@@ -99,7 +103,7 @@ const renderSyncBody = (changes, conflicted) =>
 	[
 		"Brings stable releases and hotfixes back into master, so Canary and the next stable release keep the same commits.",
 		"",
-		MERGE_NOTE,
+		SYNC_NOTE,
 		...(conflicted
 			? [
 					"",
