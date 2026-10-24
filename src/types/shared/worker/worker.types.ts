@@ -24,7 +24,9 @@ import type {
 } from "$types/shared/worker/enhancer-api-worker.types.ts";
 import type {
 	EnhancerAccountBroadcastPayload,
+	EnhancerAccountCard,
 	EnhancerAccountState,
+	GetEnhancerAccountCardPayload,
 	GetEnhancerBadgesResponse,
 	GetEnhancerProfileResponse,
 	LoginEnhancerAccountResponse,
@@ -205,6 +207,10 @@ export interface WorkerApiActions {
 	getEnhancerAccount: {
 		payload: never;
 		response: EnhancerAccountState;
+	};
+	getEnhancerAccountCard: {
+		payload: GetEnhancerAccountCardPayload;
+		response: EnhancerAccountCard;
 	};
 	loginEnhancerAccount: {
 		payload: never;

@@ -1,4 +1,4 @@
-import { EnhancerAccountComponent } from "$shared/components/enhancer-account/enhancer-account.component.tsx";
+import { EnhancerAccountFrame } from "$shared/components/enhancer-account/enhancer-account-frame.component.tsx";
 import { EnhancerAccountIdentity } from "$shared/components/enhancer-account/enhancer-account-identity.component.tsx";
 import { canUseDeveloperSettings, isPreviewBuild } from "$shared/enhancer-environment.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
@@ -25,20 +25,16 @@ export function createAccountIdentity(
 	return (props) => <EnhancerAccountIdentity {...props} workerService={workerService} platform={platform} />;
 }
 
-export function createAccountSettings<T>(
-	workerService: WorkerService,
-	platform: PlatformType,
-	logoUrl: string,
-): SettingDefinition<T>[] {
+export function createAccountSettings<T>(platform: PlatformType, logoUrl: string): SettingDefinition<T>[] {
 	if (!isPreviewBuild()) return [];
 	return [
 		{
 			id: "enhancer-account",
 			title: "Enhancer Account",
-			description: "Log in to your Enhancer Account and choose which badges are shown.",
+			description: "Log in to your Enhancer Account to pick your badges and chat style.",
 			type: "text",
 			categoryId: ACCOUNT_CATEGORY_ID,
-			content: () => <EnhancerAccountComponent workerService={workerService} platform={platform} logoUrl={logoUrl} />,
+			content: () => <EnhancerAccountFrame platform={platform} logoUrl={logoUrl} />,
 			hideInfo: true,
 		},
 	];

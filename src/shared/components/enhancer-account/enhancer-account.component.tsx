@@ -464,7 +464,7 @@ function LoginScreen({ logoUrl, busy, error, onLogin }: LoginScreenProps) {
 					</LoginMark>
 				)}
 				<LoginTitle>Enhancer Account</LoginTitle>
-				<LoginSubtitle>Log in to choose which of your Enhancer badges shows next to your name in chat.</LoginSubtitle>
+				<LoginSubtitle>Log in to pick your badges and change how your name looks in chat.</LoginSubtitle>
 				<LoginButton type="button" onClick={onLogin} disabled={busy}>
 					{busy ? "Waiting for login…" : "Log in"}
 				</LoginButton>

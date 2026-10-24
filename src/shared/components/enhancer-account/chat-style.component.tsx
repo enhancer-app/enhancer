@@ -4,7 +4,7 @@ import type { ChatStyleCardProps, ChatStyleNotice } from "$types/shared/componen
 import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
 
-const SUBSCRIPTIONS_URL = "https://dashboard.enhancer.at/account/support";
+const SUBSCRIPTIONS_URL = "https://dashboard.enhancer.at/account/subscription";
 const FONT_LINK_CLASS = "enhancer-chat-style-font";
 const PLATFORM_NAMES = { TWITCH: "Twitch", KICK: "Kick" } as const;
 

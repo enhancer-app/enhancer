@@ -1,3 +1,4 @@
+import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { EnhancerApiEnvironment } from "$types/shared/enhancer-environment.types.ts";
 import type {
 	EnhancerViewerBadges,
@@ -84,6 +85,17 @@ export interface AccountSessionStore {
 }
 
 export type IdentityApi = Pick<typeof chrome.identity, "getRedirectURL" | "launchWebAuthFlow">;
+
+export type EnhancerAccountCard = {
+	loggedIn: boolean;
+	displayName: string | null;
+	avatarUrl: string | null;
+	badgesLoaded: boolean;
+	badgeName: string | null;
+	badgeImageUrl: string | null;
+};
+
+export type GetEnhancerAccountCardPayload = { platform: PlatformType };
 
 export type LoginEnhancerAccountResponse =
 	| { success: true; account: EnhancerAccountState }

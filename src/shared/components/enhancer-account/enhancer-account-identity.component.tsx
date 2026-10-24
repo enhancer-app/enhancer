@@ -1,8 +1,6 @@
-import { filterPlatformBadges, findShownGlobalBadge, groupBadgeSlots } from "$shared/enhancer-account/badge-slots.ts";
-import { getEnhancerAccountStore } from "$shared/enhancer-account/enhancer-account.store.ts";
-import { pickBadgeImage } from "$shared/utils/badge-image.utils.ts";
 import type { EnhancerAccountIdentityProps } from "$types/shared/components/enhancer-account.component.types.ts";
-import { useEffect } from "preact/hooks";
+import type { EnhancerAccountCard } from "$types/shared/worker/enhancer-account-worker.types.ts";
+import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
 
 const IdentityButton = styled.button<{ $active: boolean }>`
@@ -113,17 +111,27 @@ export function EnhancerAccountIdentity({
 	workerService,
 	platform,
 }: EnhancerAccountIdentityProps) {
-	const store = getEnhancerAccountStore(workerService);
+	const [card, setCard] = useState<EnhancerAccountCard | null>(null);
 
 	useEffect(() => {
-		if (open) store.start();
-	}, [open, store]);
+		if (!open) return;
+		let current = true;
+		const load = () =>
+			void workerService
+				.send("getEnhancerAccountCard", { platform })
+				.then((next) => {
+					if (current && next) setCard(next);
+				})
+				.catch(() => {});
+		load();
+		workerService.onBroadcast("enhancer-account-updated", load);
+		return () => {
+			current = false;
+			workerService.offBroadcast("enhancer-account-updated", load);
+		};
+	}, [open, workerService, platform]);
 
-	const account = store.account.value;
-	const profile = store.profile.value;
-	const badges = store.badges.value;
-
-	if (!account.loggedIn) {
+	if (!card?.loggedIn) {
 		return (
 			<IdentityButton type="button" $active={active} aria-current={active ? "page" : undefined} onClick={onSelect}>
 				<AvatarWrap $accent={false}>{PersonIcon}</AvatarWrap>
@@ -138,17 +146,14 @@ export function EnhancerAccountIdentity({
 		);
 	}
 
-	const user = profile?.user;
-	const displayName =
-		user?.displayName ?? user?.username ?? account.displayName ?? account.username ?? "Enhancer Account";
-	const shownBadge = badges ? findShownGlobalBadge(groupBadgeSlots(filterPlatformBadges(badges, platform))) : null;
-	const badgeImage = shownBadge ? pickBadgeImage(shownBadge.sources) : null;
-	const meta = badges ? (shownBadge?.name ?? "No badge shown") : "Enhancer Account";
+	const displayName = card.displayName ?? "Enhancer Account";
+	const badgeImage = card.badgeImageUrl;
+	const meta = card.badgesLoaded ? (card.badgeName ?? "No badge shown") : "Enhancer Account";
 
 	return (
 		<IdentityButton type="button" $active={active} aria-current={active ? "page" : undefined} onClick={onSelect}>
 			<AvatarWrap $accent>
-				{user?.avatarUrl ? <img className="avatar" src={user.avatarUrl} alt="" /> : displayName.charAt(0).toUpperCase()}
+				{card.avatarUrl ? <img className="avatar" src={card.avatarUrl} alt="" /> : displayName.charAt(0).toUpperCase()}
 				{badgeImage && (
 					<Pip>
 						<img src={badgeImage} alt="" />

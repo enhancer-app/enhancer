@@ -14,6 +14,7 @@ import {
 import { SyncFollowsHandler } from "$shared/worker/cross-platform-follows/sync-follows.handler.ts";
 import { SyncKickSessionHandler } from "$shared/worker/cross-platform-follows/sync-kick-session.handler.ts";
 import { UpdateFollowHandler } from "$shared/worker/cross-platform-follows/update-follow.handler.ts";
+import { EnhancerAccountCardHandler } from "$shared/worker/enhancer-account/enhancer-account-card.handler.ts";
 import { EnhancerAccountHandler } from "$shared/worker/enhancer-account/enhancer-account.handler.ts";
 import type { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
 import { EnhancerProfileHandler } from "$shared/worker/enhancer-account/enhancer-profile.handler.ts";
@@ -123,6 +124,10 @@ export class HandlerRegistry {
 					]),
 				this.onApiEnvironmentChanged,
 			),
+		);
+		this.handlers.set(
+			"getEnhancerAccountCard",
+			new EnhancerAccountCardHandler(this.logger, this.enhancerAccountService, this.enhancerProfileService),
 		);
 		for (const action of ["getEnhancerAccount", "loginEnhancerAccount", "logoutEnhancerAccount"] as const) {
 			this.handlers.set(action, new EnhancerAccountHandler(this.logger, this.enhancerAccountService, action));

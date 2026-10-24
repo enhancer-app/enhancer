@@ -1,5 +1,4 @@
 import { buildSlotRequest } from "$shared/enhancer-account/badge-slots.ts";
-import type WorkerService from "$shared/worker/worker.service.ts";
 import type {
 	EnhancerViewerBadges,
 	EnhancerViewerBilling,
@@ -12,6 +11,7 @@ import type {
 	EnhancerAccountState,
 	GetEnhancerBillingResponse,
 } from "$types/shared/worker/enhancer-account-worker.types.ts";
+import type { WorkerClient } from "$types/shared/worker/worker-client.types.ts";
 import { signal } from "@preact/signals";
 
 export class EnhancerAccountStore {
@@ -26,7 +26,7 @@ export class EnhancerAccountStore {
 
 	private started = false;
 
-	constructor(private readonly workerService: WorkerService) {}
+	constructor(private readonly workerService: WorkerClient) {}
 
 	start(): void {
 		if (this.started) return;
@@ -134,9 +134,9 @@ export class EnhancerAccountStore {
 	}
 }
 
-const stores = new WeakMap<WorkerService, EnhancerAccountStore>();
+const stores = new WeakMap<WorkerClient, EnhancerAccountStore>();
 
-export function getEnhancerAccountStore(workerService: WorkerService): EnhancerAccountStore {
+export function getEnhancerAccountStore(workerService: WorkerClient): EnhancerAccountStore {
 	let store = stores.get(workerService);
 	if (!store) {
 		store = new EnhancerAccountStore(workerService);

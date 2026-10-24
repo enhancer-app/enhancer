@@ -117,7 +117,7 @@ export default class SettingsModule extends KickModule {
 		const enhancerLogo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo.svg");
 
 		this.SETTING_DEFINITIONS = [
-			...createAccountSettings(workerService, "kick", enhancerLogo),
+			...createAccountSettings("kick", enhancerLogo),
 			...realVideoTimeSettings(CATEGORY.GENERAL),
 			pinnedStreamersSetting(CATEGORY.GENERAL),
 			channelSectionSetting(CATEGORY.GENERAL),

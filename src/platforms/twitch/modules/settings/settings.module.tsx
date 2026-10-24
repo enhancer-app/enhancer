@@ -104,7 +104,7 @@ export default class SettingsModule extends TwitchModule {
 		const enhancerLogo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo.svg");
 
 		this.SETTING_DEFINITIONS = [
-			...createAccountSettings(workerService, "twitch", enhancerLogo),
+			...createAccountSettings("twitch", enhancerLogo),
 			{
 				id: "chattersEnabled",
 				title: "Chatters counter",

@@ -125,6 +125,7 @@ export class EnhancerAccountService {
 		url.searchParams.set("nonce", nonce);
 		url.searchParams.set("code_challenge", pkce.challenge);
 		url.searchParams.set("code_challenge_method", "S256");
+		url.searchParams.set("prompt", "login");
 		return { url: url.toString(), state, nonce, verifier: pkce.verifier, redirectUri };
 	}
 
@@ -334,4 +335,5 @@ async function broadcastToTabs(payload: EnhancerAccountBroadcastPayload): Promis
 	for (const tab of await chrome.tabs.query({})) {
 		if (tab.id) chrome.tabs.sendMessage(tab.id, broadcast).catch(() => {});
 	}
+	chrome.runtime.sendMessage(broadcast).catch(() => {});
 }

@@ -6,10 +6,11 @@ import type {
 	EnhancerViewerBadge,
 	SaveChatStyleRequest,
 } from "$types/apis/enhancer-account.apis.ts";
+import type { WorkerClient } from "$types/shared/worker/worker-client.types.ts";
 import type { SettingsIdentityProps } from "$types/shared/components/settings.component.types.ts";
 
 export type EnhancerAccountComponentProps = {
-	workerService: WorkerService;
+	workerService: WorkerClient;
 	platform: PlatformType;
 	logoUrl: string;
 };
@@ -56,3 +57,8 @@ export type ChatStyleCardProps = {
 };
 
 export type ChatStyleNotice = { tone: "success" | "error"; text: string };
+
+export type EnhancerAccountFrameProps = {
+	platform: PlatformType;
+	logoUrl: string;
+};
