@@ -4,7 +4,11 @@ import { isGlobalSettingKey } from "$shared/settings/global-settings.constants.t
 import type SettingsCache from "$shared/settings/settings.service.ts";
 import type CommonUtils from "$shared/utils/common.utils.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
-import type { SettingCategory, SettingDefinition } from "$types/shared/components/settings.component.types.ts";
+import type {
+	SettingCategory,
+	SettingDefinition,
+	SettingsIdentityRenderer,
+} from "$types/shared/components/settings.component.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
@@ -45,6 +49,7 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 		settings: PanelSettings<TSettings>,
 		updatedKey: keyof PanelSettings<TSettings>,
 		eventPrefix: string,
+		otherKeys: (keyof PanelSettings<TSettings>)[] = [],
 	): Promise<void> {
 		try {
 			if (isGlobalSettingKey(updatedKey)) {
@@ -60,7 +65,9 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 			if (this.settingsSignal) {
 				this.settingsSignal.value = settings;
 			}
-			this.emitter.emit(`${String(eventPrefix)}${String(updatedKey)}`, settings[updatedKey]);
+			for (const key of [updatedKey, ...otherKeys]) {
+				this.emitter.emit(`${String(eventPrefix)}${String(key)}`, settings[key]);
+			}
 			this.logger.debug(`Settings changed "${String(updatedKey)}" to`, settings[updatedKey]);
 		} catch (error) {
 			this.logger.error("Failed to save settings:", error);
@@ -72,6 +79,8 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 		categories: SettingCategory[];
 		definitions: SettingDefinition<PanelSettings<TSettings>>[];
 		eventPrefix: string;
+		identity?: SettingsIdentityRenderer;
+		identityCategoryId?: string;
 	}): Promise<{
 		settingsSignal: Signal<PanelSettings<TSettings>>;
 		isOpenSignal: Signal<boolean>;
@@ -92,8 +101,12 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 			this.isOpenSignal.value = false;
 		};
 
-		const onSettingsChange = (newSettings: PanelSettings<TSettings>, updatedKey: keyof PanelSettings<TSettings>) => {
-			this.saveSettings(newSettings, updatedKey, props.eventPrefix);
+		const onSettingsChange = (
+			newSettings: PanelSettings<TSettings>,
+			updatedKey: keyof PanelSettings<TSettings>,
+			otherKeys?: (keyof PanelSettings<TSettings>)[],
+		) => {
+			this.saveSettings(newSettings, updatedKey, props.eventPrefix, otherKeys);
 		};
 
 		const renderSettings = () => {
@@ -104,6 +117,8 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 							logoSrc={logo}
 							platform={this.platformType}
 							isOpen={this.isOpenSignal.value}
+							identity={props.identity}
+							identityCategoryId={props.identityCategoryId}
 							categories={props.categories}
 							settingDefinitions={props.definitions}
 							settings={this.settingsSignal.value}

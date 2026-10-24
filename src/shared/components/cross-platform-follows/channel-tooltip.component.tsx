@@ -39,7 +39,11 @@ export function ChannelTooltipContent({ channel, now, resolvePreviewUrl }: Chann
 			{channel.live ? (
 				<TooltipMeta>
 					<span>{channel.category ?? "Live"}</span>
-					<TooltipViewers>{formatViewers(channel.viewers)} viewers</TooltipViewers>
+					{channel.viewers > 0 ? (
+						<TooltipViewers>{formatViewers(channel.viewers)} viewers</TooltipViewers>
+					) : (
+						channel.category && <TooltipViewers>Live</TooltipViewers>
+					)}
 				</TooltipMeta>
 			) : (
 				<TooltipMeta>{channel.lastLiveAt ? `Live ${formatAgo(channel.lastLiveAt, now)}` : "Offline"}</TooltipMeta>

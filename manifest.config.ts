@@ -14,6 +14,10 @@ export const CHANNELS = {
 	},
 } satisfies Record<ExtensionChannel, { name: string; geckoId: string; chromeId: string }>;
 
+// Public key only: pins unpacked development builds to fpakolililnggchpbledojdijcogodgb for the login redirect.
+const DEVELOPMENT_KEY =
+	"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApteFpShUwTMS6HyJFGUEj1NUiiOqy//kb+edGjrFXAR+5ClUJHOdLhmBS1xNcABEKDhyJkgAzp/OY3bnn6U2WLGEgxHPZztydqhCOdWLKsj3gBbToGp/85Be5OGT75ioSZbKOKfOcy52kvZBEvgNtq5f76Qy/wIS+y1yDd1WwRdNGx3izQlWk9syqR5moK5Evec2knYaZo9E6TqVE3HhIODY0AZZ0jTyvQE5ytcNQ3idxyyv5lGYuZsJfrMxNg5z2HwWi6baGrGyHBw/NcU2BNhNMWvmM2ZZ+kc1v5/kKGlCSqmzsAzUdbvrHmh5vSKpcZP0hLMGK5Dpldymtf/NPwIDAQAB";
+
 export function getChannel(): ExtensionChannel {
 	const channel = process.env.CHANNEL ?? "stable";
 	if (channel !== "stable" && channel !== "canary") throw new Error(`Unknown CHANNEL "${channel}"`);
@@ -38,7 +42,8 @@ export function getManifest(isDevelopment: boolean, channel: ExtensionChannel = 
 		description: "Enhancer is open-sourced and free extension, which adds what is missing on streaming platforms.",
 		version,
 		...(channel === "canary" && { version_name: `${version} Canary${commit ? ` (${commit})` : ""}` }),
-		permissions: ["storage", "unlimitedStorage"],
+		permissions: ["storage", "unlimitedStorage", "identity"],
+		...(isDevelopment && { key: DEVELOPMENT_KEY }),
 		action: {
 			default_icon: "assets/enhancer/logo-128.png",
 		},
@@ -65,12 +70,11 @@ export function getManifest(isDevelopment: boolean, channel: ExtensionChannel = 
 					"index.js",
 					"index.js.map",
 					"home.html",
+					"account.html",
 					"inject.js.map",
 					"chunks/*.js",
 					"assets/enhancer/*.svg",
 					"assets/enhancer/*.png",
-					"assets/brands/*.svg",
-					"assets/brands/*.png",
 					"assets/settings/*.svg",
 					"assets/settings/*.png",
 					"assets/modules/*.png",

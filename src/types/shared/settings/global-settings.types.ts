@@ -1,3 +1,4 @@
+import type { EnhancerApiEnvironment } from "$types/shared/enhancer-environment.types.ts";
 import type {
 	FollowsPlatformFilter,
 	FollowsSortOrder,
@@ -10,6 +11,8 @@ export type GlobalSettings = {
 	pinnedStreamersEnabled: boolean;
 	followsSort: FollowsSortOrder;
 	followsPlatformFilter: FollowsPlatformFilter;
+	developerSettingsEnabled: boolean;
+	apiEnvironment: EnhancerApiEnvironment;
 };
 
 export type GlobalSettingsEvents = {
