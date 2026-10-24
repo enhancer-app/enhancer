@@ -61,7 +61,7 @@ export function createDeveloperSettings<T>(aboutCategoryId: string): SettingDefi
 	if (!canUseDeveloperSettings()) return [];
 	const toggle = (categoryId: string): SettingDefinition<T> => ({
 		id: "developerSettingsEnabled",
-		title: "Developer Settings",
+		title: "Developer settings",
 		description: "Settings for testing Enhancer itself. If you do not know what they do, leave them off.",
 		type: "toggle",
 		categoryId,

@@ -1,11 +1,13 @@
 import { EXTENSION_NAME } from "$shared/extension.constants.ts";
 import { Logger } from "$shared/logger/logger.ts";
 import type {
+	ArraySettingDefinition,
+	PairSettingDefinition,
 	SettingCategory,
 	SettingDefinition,
 	SettingsProps,
 } from "$types/shared/components/settings.component.types.ts";
-import type { JSX } from "preact";
+import { Fragment, type JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import styled from "styled-components";
 
@@ -462,11 +464,26 @@ const RowDescription = styled.div`
 	text-wrap: pretty;
 `;
 
-const Row = styled.div<{ $disabled: boolean; $child: boolean }>`
+const RowHint = styled.div`
+	margin-top: 5px;
+	font-size: 12.5px;
+	line-height: 1.45;
+	color: var(--settings-text-faint);
+	text-wrap: pretty;
+`;
+
+const RefreshMark = styled.span`
+	display: inline-flex;
+	color: var(--settings-text-faint);
+	cursor: help;
+`;
+
+const Row = styled.div<{ $disabled: boolean; $child: boolean; $stack?: boolean }>`
 	display: flex;
-	align-items: center;
+	flex-direction: ${(props) => (props.$stack ? "column" : "row")};
+	align-items: ${(props) => (props.$stack ? "stretch" : "center")};
 	justify-content: space-between;
-	gap: 24px;
+	gap: ${(props) => (props.$stack ? "14px" : "24px")};
 	padding: ${(props) => (props.$child ? "12px 18px" : "14px 18px")};
 	min-height: ${(props) => (props.$child ? "0" : "60px")};
 	opacity: ${(props) => (props.$disabled ? 0.4 : 1)};
@@ -577,6 +594,10 @@ const controlStyles = `
 
 	&:focus {
 		box-shadow: inset 0 0 0 1px var(--settings-accent);
+	}
+
+	&[aria-invalid="true"] {
+		box-shadow: inset 0 0 0 1px var(--settings-danger);
 	}
 `;
 
@@ -795,24 +816,6 @@ const RadioLabel = styled.label<{ $checked: boolean }>`
 	}
 `;
 
-const ArrayContainer = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	min-width: 360px;
-`;
-
-const ArrayItem = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 8px;
-`;
-
-const ArrayInput = styled(TextInput)`
-	flex: 1;
-	min-width: 0;
-`;
-
 const ArrayEmpty = styled.div`
 	padding: 4px 0;
 	font-size: 13px;
@@ -910,6 +913,186 @@ const QuietButton = styled(Button)`
 	}
 `;
 
+const PreviewButton = styled.button`
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: var(--settings-surface-raised);
+	box-shadow: inset 0 0 0 1px var(--settings-control-border);
+	color: var(--settings-text-primary);
+	cursor: pointer;
+	transition:
+		background 0.15s ${EASE},
+		transform 0.12s ${EASE};
+
+	&:hover {
+		background: var(--settings-accent);
+	}
+
+	&:active {
+		transform: scale(0.94);
+	}
+`;
+
+const ControlColumn = styled.div`
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 6px;
+`;
+
+const PairSeparator = styled.span`
+	color: var(--settings-text-faint);
+	font-size: 13px;
+`;
+
+const FieldError = styled.div`
+	max-width: 320px;
+	font-size: 12.5px;
+	line-height: 1.4;
+	text-align: right;
+	color: var(--settings-danger);
+`;
+
+const ChoiceButton = styled.button<{ $checked: boolean }>`
+	padding: 6px 12px;
+	border: none;
+	border-radius: 6px;
+	font-family: ${FONT};
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	background: ${(props) => (props.$checked ? "var(--settings-surface-hover)" : "transparent")};
+	color: ${(props) => (props.$checked ? "var(--settings-text-primary)" : "var(--settings-text-muted)")};
+	transition:
+		background 0.15s ${EASE},
+		color 0.15s ${EASE};
+
+	&:hover {
+		color: var(--settings-text-primary);
+	}
+`;
+
+const ListContainer = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 100%;
+`;
+
+const ListItem = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+`;
+
+const ListItemRow = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+`;
+
+const ListInput = styled(TextInput)<{ $narrow: boolean }>`
+	min-width: 0;
+	flex: ${(props) => (props.$narrow ? "0 1 160px" : "1 1 0")};
+	${(props) => (props.$narrow ? "" : `font-family: ${MONO}; font-size: 12.5px;`)}
+`;
+
+const ListItemError = styled.div`
+	padding-left: 64px;
+	font-size: 12.5px;
+	color: var(--settings-danger);
+`;
+
+const MoveButtons = styled.div`
+	display: flex;
+	gap: 2px;
+`;
+
+const MoveButton = styled(IconButton)`
+	width: 26px;
+	height: 26px;
+
+	&:hover:not(:disabled) {
+		background: var(--settings-surface-raised);
+	}
+
+	&:disabled {
+		opacity: 0.3;
+		cursor: default;
+	}
+`;
+
+const ListFooter = styled.div`
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 4px;
+`;
+
+const ListFooterSpacer = styled.span`
+	flex: 1;
+`;
+
+const VariableHint = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12.5px;
+	color: var(--settings-text-faint);
+`;
+
+const VariableChip = styled.button`
+	padding: 3px 7px;
+	border: none;
+	border-radius: 6px;
+	background: var(--settings-accent-soft);
+	color: var(--settings-accent-hover);
+	font-family: ${MONO};
+	font-size: 12px;
+	cursor: pointer;
+
+	&:hover {
+		background: rgba(145, 71, 255, 0.24);
+	}
+`;
+
+const Facts = styled.dl`
+	display: grid;
+	grid-template-columns: 128px 1fr;
+	gap: 10px 16px;
+	margin: 16px 0 0;
+	padding: 14px 16px;
+	border-radius: 10px;
+	background: var(--settings-well);
+	box-shadow: inset 0 0 0 1px var(--settings-border);
+	font-size: 13px;
+	line-height: 1.5;
+
+	dt {
+		font-weight: 600;
+		color: var(--settings-text-primary);
+	}
+
+	dd {
+		margin: 0;
+		color: var(--settings-text-secondary);
+	}
+`;
+
+const ModalNote = styled.p`
+	margin: 14px 0 0;
+	font-size: 12.5px;
+	line-height: 1.5;
+	color: var(--settings-text-muted);
+`;
+
 const RefreshToast = styled.div`
 	position: absolute;
 	left: 50%;
@@ -918,6 +1101,8 @@ const RefreshToast = styled.div`
 	display: flex;
 	align-items: center;
 	gap: 12px;
+	width: max-content;
+	max-width: calc(100% - 32px);
 	padding: 8px 8px 8px 16px;
 	border-radius: 12px;
 	background: var(--settings-surface-raised);
@@ -926,9 +1111,18 @@ const RefreshToast = styled.div`
 		0 12px 32px rgba(0, 0, 0, 0.5);
 	color: var(--settings-text-secondary);
 	font-size: 13px;
-	white-space: nowrap;
+	line-height: 1.4;
 	transform: translateX(-50%);
 	animation: settings-toast-in 0.25s ${EASE};
+
+	span {
+		flex: 1;
+		min-width: 0;
+	}
+
+	button {
+		flex-shrink: 0;
+	}
 
 	svg {
 		flex-shrink: 0;
@@ -969,9 +1163,9 @@ const ModalOverlay = styled.div`
 	background: rgba(0, 0, 0, 0.55);
 `;
 
-const ModalContent = styled.div`
+const ModalContent = styled.div<{ $wide?: boolean }>`
 	width: 100%;
-	max-width: 460px;
+	max-width: ${(props) => (props.$wide ? "600px" : "460px")};
 	max-height: 100%;
 	display: flex;
 	flex-direction: column;
@@ -1000,10 +1194,13 @@ const ModalHeader = styled.h3`
 	color: var(--settings-text-primary);
 `;
 
-const ModalMessage = styled.p`
-	margin: 0;
+const ModalBody = styled.div`
 	min-height: 0;
 	overflow-y: auto;
+`;
+
+const ModalMessage = styled.p`
+	margin: 0;
 	font-size: 13.5px;
 	line-height: 1.55;
 	color: var(--settings-text-secondary);
@@ -1057,6 +1254,32 @@ const RefreshIcon = icon(
 		<path d="M20 4v7h-7" />
 	</>,
 	16,
+);
+
+const PlayIcon = (
+	<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+		<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z" />
+	</svg>
+);
+
+const ReloadMarkIcon = icon(
+	<>
+		<path d="M20 11a8 8 0 1 0-2.3 5.7" />
+		<path d="M20 4v7h-7" />
+	</>,
+	13,
+);
+
+const ArrowUpIcon = icon(<path d="m18 15-6-6-6 6" />, 14);
+
+const ArrowDownIcon = icon(<path d="m6 9 6 6 6-6" />, 14);
+
+const ResetIcon = icon(
+	<>
+		<path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+		<path d="M3 3v5h5" />
+	</>,
+	14,
 );
 
 const PlusIcon = icon(
@@ -1148,9 +1371,256 @@ function isTypingTarget(target: EventTarget | null): boolean {
 	return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
 }
 
+function isValidLink(value: string): boolean {
+	try {
+		const url = new URL(value.replaceAll("%username%", "user"));
+		return url.protocol === "https:" || url.protocol === "http:";
+	} catch {
+		return false;
+	}
+}
+
+function asRecord(item: unknown): Record<string, unknown> {
+	return typeof item === "object" && item !== null ? (item as Record<string, unknown>) : {};
+}
+
+function formatNumber(value: number): string {
+	return Number.isFinite(value) ? String(value) : "";
+}
+
+type PairControlProps = {
+	setting: PairSettingDefinition;
+	values: [number, number];
+	onCommit: (values: [number, number]) => void;
+};
+
+function PairControl({ setting, values, onCommit }: PairControlProps) {
+	const [drafts, setDrafts] = useState<[string, string]>([formatNumber(values[0]), formatNumber(values[1])]);
+	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		setDrafts([formatNumber(values[0]), formatNumber(values[1])]);
+		setError(null);
+	}, [values[0], values[1]]);
+
+	const commit = (next: [string, string]) => {
+		setDrafts(next);
+		const numbers = next.map(Number) as [number, number];
+		if (next.some((draft) => draft.trim() === "") || numbers.some((number) => !Number.isFinite(number))) {
+			setError("Enter a number in both fields.");
+			return;
+		}
+		const outOfRange = numbers.some(
+			(number) =>
+				(setting.min !== undefined && number < setting.min) || (setting.max !== undefined && number > setting.max),
+		);
+		if (outOfRange) {
+			setError(
+				setting.max !== undefined
+					? `Use values from ${setting.min ?? 0} to ${setting.max}.`
+					: `Use values of ${setting.min ?? 0} or more.`,
+			);
+			return;
+		}
+		if (numbers[0] > numbers[1]) {
+			setError(setting.orderError ?? "The first value can't be higher than the second one.");
+			return;
+		}
+		setError(null);
+		if (numbers[0] !== values[0] || numbers[1] !== values[1]) onCommit(numbers);
+	};
+
+	return (
+		<ControlColumn>
+			<NumberField>
+				{[0, 1].map((index) => (
+					<Fragment key={`${setting.id as string}-${index}`}>
+						{index === 1 ? <PairSeparator>–</PairSeparator> : null}
+						<NumberInput
+							type="number"
+							aria-label={`${setting.title} ${index === 0 ? "from" : "to"}`}
+							aria-invalid={error !== null}
+							value={drafts[index]}
+							min={setting.min}
+							max={setting.max}
+							step={setting.step}
+							onChange={(event) => {
+								const next: [string, string] = [...drafts];
+								next[index] = (event.target as HTMLInputElement).value;
+								commit(next);
+							}}
+						/>
+					</Fragment>
+				))}
+				{setting.unit ? <Unit>{setting.unit}</Unit> : null}
+			</NumberField>
+			{error ? <FieldError role="alert">{error}</FieldError> : null}
+		</ControlColumn>
+	);
+}
+
+type ListControlProps = {
+	setting: ArraySettingDefinition;
+	items: unknown[];
+	onChange: (items: unknown[]) => void;
+	onRemove: (index: number, item: unknown) => void;
+	onReset?: () => void;
+};
+
+function ListControl({ setting, items, onChange, onRemove, onReset }: ListControlProps) {
+	const fields = setting.arrayItemFields;
+	const focused = useRef<{ index: number; field: string; input: HTMLInputElement } | null>(null);
+	const itemLabel = setting.itemLabel ?? "item";
+
+	const setField = (index: number, field: string, value: string) => {
+		onChange(items.map((item, i) => (i === index ? { ...asRecord(item), [field]: value } : item)));
+	};
+
+	const move = (index: number, delta: number) => {
+		const next = [...items];
+		const [item] = next.splice(index, 1);
+		next.splice(index + delta, 0, item);
+		onChange(next);
+	};
+
+	const insertVariable = (variable: string) => {
+		const target = focused.current;
+		if (target?.input.isConnected) {
+			const { input, index, field } = target;
+			const start = input.selectionStart ?? input.value.length;
+			const end = input.selectionEnd ?? start;
+			setField(index, field, input.value.slice(0, start) + variable + input.value.slice(end));
+			requestAnimationFrame(() => {
+				input.focus();
+				input.setSelectionRange(start + variable.length, start + variable.length);
+			});
+			return;
+		}
+		if (items.length === 0) return;
+		const field = fields.find((item) => item.validate === "url")?.name ?? fields[fields.length - 1]?.name;
+		if (!field) return;
+		const index = items.length - 1;
+		setField(index, field, String(asRecord(items[index])[field] ?? "") + variable);
+	};
+
+	return (
+		<ListContainer>
+			{items.length === 0 ? <ArrayEmpty>No {itemLabel}s yet.</ArrayEmpty> : null}
+			{items.map((item, index) => {
+				const record = asRecord(item);
+				const invalidFields = fields.filter(
+					(field) =>
+						field.validate === "url" &&
+						String(record[field.name] ?? "") !== "" &&
+						!isValidLink(String(record[field.name])),
+				);
+				return (
+					<ListItem key={`list-${setting.id as string}-${index}`}>
+						<ListItemRow>
+							{setting.reorderable ? (
+								<MoveButtons>
+									<MoveButton
+										type="button"
+										title="Move up"
+										aria-label="Move up"
+										disabled={index === 0}
+										onClick={() => move(index, -1)}
+									>
+										{ArrowUpIcon}
+									</MoveButton>
+									<MoveButton
+										type="button"
+										title="Move down"
+										aria-label="Move down"
+										disabled={index === items.length - 1}
+										onClick={() => move(index, 1)}
+									>
+										{ArrowDownIcon}
+									</MoveButton>
+								</MoveButtons>
+							) : null}
+							{fields.map((field) => (
+								<ListInput
+									key={`${setting.id as string}-${index}-${field.name}`}
+									$narrow={field.width === "narrow"}
+									aria-label={field.placeholder}
+									aria-invalid={invalidFields.includes(field)}
+									value={String(record[field.name] ?? (typeof item === "object" ? "" : String(item)))}
+									placeholder={field.placeholder}
+									onFocus={(event) => {
+										focused.current = { index, field: field.name, input: event.target as HTMLInputElement };
+									}}
+									onChange={(event) => setField(index, field.name, (event.target as HTMLInputElement).value)}
+								/>
+							))}
+							<RemoveButton
+								type="button"
+								title={`Remove ${itemLabel}`}
+								aria-label={`Remove ${itemLabel}`}
+								onClick={() => onRemove(index, item)}
+							>
+								{CloseIcon(14)}
+							</RemoveButton>
+						</ListItemRow>
+						{invalidFields.length > 0 ? (
+							<ListItemError style={setting.reorderable ? undefined : { paddingLeft: 0 }}>
+								Enter a full link that starts with https://
+							</ListItemError>
+						) : null}
+					</ListItem>
+				);
+			})}
+			<ListFooter>
+				<SecondaryButton
+					type="button"
+					onClick={() => onChange([...items, Object.fromEntries(fields.map((field) => [field.name, ""]))])}
+				>
+					{PlusIcon}
+					{setting.addLabel ?? "Add item"}
+				</SecondaryButton>
+				{setting.variables && setting.variables.length > 0 ? (
+					<VariableHint>
+						Insert into the focused field:
+						{setting.variables.map((variable) => (
+							<VariableChip
+								key={variable}
+								type="button"
+								onMouseDown={(event) => event.preventDefault()}
+								onClick={() => insertVariable(variable)}
+							>
+								{variable}
+							</VariableChip>
+						))}
+					</VariableHint>
+				) : null}
+				<ListFooterSpacer />
+				{onReset ? (
+					<QuietButton type="button" onClick={onReset}>
+						{ResetIcon}
+						Reset to defaults
+					</QuietButton>
+				) : null}
+			</ListFooter>
+		</ListContainer>
+	);
+}
+
 type SettingNode<T> = { setting: SettingDefinition<T>; children: SettingDefinition<T>[] };
 
 type RenderGroup<T> = { kind: "card"; items: SettingNode<T>[] } | { kind: "panel"; item: SettingDefinition<T> };
+
+function splitSections<T>(settings: SettingDefinition<T>[]): { title?: string; settings: SettingDefinition<T>[] }[] {
+	const parts: { title?: string; settings: SettingDefinition<T>[] }[] = [];
+	for (const setting of settings) {
+		const last = parts[parts.length - 1];
+		if (!last || (setting.section !== undefined && setting.section !== last.title)) {
+			parts.push({ title: setting.section, settings: [setting] });
+		} else {
+			last.settings.push(setting);
+		}
+	}
+	return parts;
+}
 
 function groupSettings<T>(settings: SettingDefinition<T>[], nest: boolean): RenderGroup<T>[] {
 	const groups: RenderGroup<T>[] = [];
@@ -1195,12 +1665,21 @@ const Settings = <T,>({
 		confirmationMessage?: string;
 		confirmText?: string;
 		confirmTone?: "default" | "danger";
+		confirmationFacts?: { term: string; detail: string }[];
+		confirmationNote?: string;
 	} | null>(null);
 	const [pendingArrayRemove, setPendingArrayRemove] = useState<{
 		key: keyof T;
 		index: number;
 		itemTitle?: string;
+		itemLabel?: string;
+		listTitle?: string;
 		confirmationMessage?: string;
+	} | null>(null);
+	const [pendingReset, setPendingReset] = useState<{
+		key: keyof T;
+		title: string;
+		value: unknown[];
 	} | null>(null);
 	const [refreshPending, setRefreshPending] = useState<string[]>([]);
 	const [fileUploadError, setFileUploadError] = useState<string | null>(null);
@@ -1257,6 +1736,7 @@ const Settings = <T,>({
 			setSearchQuery("");
 			setPendingToggle(null);
 			setPendingArrayRemove(null);
+			setPendingReset(null);
 			setFileUploadError(null);
 			return;
 		}
@@ -1270,7 +1750,13 @@ const Settings = <T,>({
 	useEffect(() => {
 		if (!isOpen) return;
 		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "/" && !pendingToggle && !pendingArrayRemove && !isTypingTarget(event.target)) {
+			if (
+				event.key === "/" &&
+				!pendingToggle &&
+				!pendingArrayRemove &&
+				!pendingReset &&
+				!isTypingTarget(event.target)
+			) {
 				event.preventDefault();
 				event.stopPropagation();
 				searchRef.current?.focus();
@@ -1286,6 +1772,10 @@ const Settings = <T,>({
 				setPendingArrayRemove(null);
 				return;
 			}
+			if (pendingReset) {
+				setPendingReset(null);
+				return;
+			}
 			if (searchQuery) {
 				setSearchQuery("");
 				return;
@@ -1294,11 +1784,17 @@ const Settings = <T,>({
 		};
 		document.addEventListener("keydown", handleKeyDown, true);
 		return () => document.removeEventListener("keydown", handleKeyDown, true);
-	}, [isOpen, pendingToggle, pendingArrayRemove, searchQuery, onClose]);
+	}, [isOpen, pendingToggle, pendingArrayRemove, pendingReset, searchQuery, onClose]);
 
 	const updateSetting = (key: keyof T, value: unknown) => {
 		const newSettings = { ...settings, [key]: value };
 		onSettingsChange(newSettings, key);
+	};
+
+	const updateSettings = (patch: Partial<T>) => {
+		const keys = Object.keys(patch) as (keyof T)[];
+		if (keys.length === 0) return;
+		onSettingsChange({ ...settings, ...patch }, keys[0], keys.slice(1));
 	};
 
 	const updateArraySetting = (key: keyof T, index: number, value: unknown, action: "update" | "add" | "remove") => {
@@ -1350,7 +1846,12 @@ const Settings = <T,>({
 
 		const reader = new FileReader();
 		reader.onload = (e) => {
-			updateSetting(setting.id as keyof T, e.target?.result as string);
+			const result = e.target?.result as string;
+			if (setting.type === "file" && setting.fileNameKey) {
+				updateSettings({ [setting.id]: result, [setting.fileNameKey]: file.name } as Partial<T>);
+			} else {
+				updateSetting(setting.id as keyof T, result);
+			}
 		};
 		reader.onerror = () => {
 			setFileUploadError("Failed to read the selected file. Please try again.");
@@ -1359,8 +1860,12 @@ const Settings = <T,>({
 		target.value = "";
 	};
 
-	const clearFile = (settingId: keyof T) => {
-		updateSetting(settingId, "");
+	const clearFile = (setting: SettingDefinition<T>) => {
+		if (setting.type === "file" && setting.fileNameKey) {
+			updateSettings({ [setting.id]: "", [setting.fileNameKey]: "" } as Partial<T>);
+		} else {
+			updateSetting(setting.id as keyof T, "");
+		}
 		setFileUploadError(null);
 	};
 
@@ -1375,6 +1880,8 @@ const Settings = <T,>({
 				confirmationMessage: setting.confirmationMessage ?? "Are you sure you want to enable this setting?",
 				confirmText: setting.confirmText,
 				confirmTone: setting.confirmTone,
+				confirmationFacts: setting.confirmationFacts,
+				confirmationNote: setting.confirmationNote,
 			});
 			return;
 		}
@@ -1407,6 +1914,8 @@ const Settings = <T,>({
 				key: setting.id as keyof T,
 				index,
 				itemTitle,
+				itemLabel: setting.itemLabel,
+				listTitle: setting.title,
 				confirmationMessage: setting.confirmationMessage,
 			});
 			return;
@@ -1477,6 +1986,16 @@ const Settings = <T,>({
 								{(value as number) ?? 0}
 								{setting.unit ?? ""}
 							</SliderValue>
+							{setting.onPreview ? (
+								<PreviewButton
+									type="button"
+									title={setting.previewLabel ?? "Preview"}
+									aria-label={setting.previewLabel ?? "Preview"}
+									onClick={() => setting.onPreview?.(settings)}
+								>
+									{PlayIcon}
+								</PreviewButton>
+							) : null}
 						</SliderField>
 					);
 				}
@@ -1531,63 +2050,50 @@ const Settings = <T,>({
 				);
 			}
 			case "array": {
-				const arrayValue = (value as unknown[]) || [];
-				const fields = setting.arrayItemFields || [{ name: "page", placeholder: "Enter value..." }];
-
+				const defaults = setting.defaultValue;
 				return (
-					<ArrayContainer>
-						{arrayValue.length === 0 ? <ArrayEmpty>No items yet.</ArrayEmpty> : null}
-						{arrayValue.map((item, index) => (
-							<ArrayItem key={`array-item-${setting.id as string}-${index}`}>
-								{fields.map((field: { name: string; placeholder: string }) => (
-									<ArrayInput
-										key={`${setting.id as string}-${index}-${field.name}`}
-										aria-label={field.placeholder}
-										value={
-											typeof item === "object" && item !== null
-												? (item as Record<string, string>)[field.name] || ""
-												: String(item)
-										}
-										placeholder={field.placeholder}
-										onChange={(e) => {
-											const newValue =
-												typeof item === "object" && item !== null
-													? {
-															...(item as Record<string, unknown>),
-															[field.name]: (e.target as HTMLInputElement).value,
-														}
-													: { [field.name]: (e.target as HTMLInputElement).value };
-											updateArraySetting(setting.id as keyof T, index, newValue, "update");
-										}}
-									/>
-								))}
-								<RemoveButton
-									title="Remove"
-									aria-label="Remove"
-									onClick={() => handleArrayRemove(setting, index, item)}
-								>
-									{CloseIcon(14)}
-								</RemoveButton>
-							</ArrayItem>
-						))}
-						<div>
-							<SecondaryButton
-								onClick={() => {
-									const newValue = fields.reduce(
-										(acc: Record<string, string>, field: { name: string; placeholder: string }) => {
-											acc[field.name] = "";
-											return acc;
-										},
-										{},
-									);
-									updateArraySetting(setting.id as keyof T, arrayValue.length, newValue, "add");
-								}}
+					<ListControl
+						setting={setting}
+						items={(value as unknown[]) || []}
+						onChange={(items) => updateSetting(setting.id as keyof T, items)}
+						onRemove={(index, item) => handleArrayRemove(setting, index, item)}
+						onReset={
+							defaults
+								? () => setPendingReset({ key: setting.id as keyof T, title: setting.title, value: defaults })
+								: undefined
+						}
+					/>
+				);
+			}
+			case "pair": {
+				const [fromKey, toKey] = setting.keys;
+				return (
+					<PairControl
+						setting={setting}
+						values={[Number(settings[fromKey as keyof T]), Number(settings[toKey as keyof T])]}
+						onCommit={([from, to]) => updateSettings({ [fromKey]: from, [toKey]: to } as Partial<T>)}
+					/>
+				);
+			}
+			case "choice": {
+				const selected = setting.options.findIndex((option) =>
+					Object.entries(option.value).every(([key, expected]) => settings[key as keyof T] === expected),
+				);
+				return (
+					<RadioContainer role="radiogroup" aria-label={setting.title}>
+						{setting.options.map((option, index) => (
+							<ChoiceButton
+								key={option.label}
+								type="button"
+								role="radio"
+								aria-checked={index === selected}
+								$checked={index === selected}
+								onClick={() => updateSettings(option.value)}
 							>
-								{PlusIcon}
-								Add item
-							</SecondaryButton>
-						</div>
-					</ArrayContainer>
+								{option.label}
+							</ChoiceButton>
+						))}
+					</RadioContainer>
 				);
 			}
 			case "text": {
@@ -1613,13 +2119,13 @@ const Settings = <T,>({
 											<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />,
 											14,
 										)}
-										<FileName>File uploaded</FileName>
+										<FileName>
+											{(setting.fileNameKey ? String(settings[setting.fileNameKey as keyof T] ?? "") : "") ||
+												setting.uploadedLabel ||
+												"File uploaded"}
+										</FileName>
 									</FileStatus>
-									<RemoveFileButton
-										onClick={() => clearFile(setting.id as keyof T)}
-										title="Remove file"
-										aria-label="Remove file"
-									>
+									<RemoveFileButton onClick={() => clearFile(setting)} title="Remove file" aria-label="Remove file">
 										{CloseIcon(14)}
 									</RemoveFileButton>
 								</>
@@ -1654,13 +2160,27 @@ const Settings = <T,>({
 
 	const renderRow = (setting: SettingDefinition<T>, child: boolean) => {
 		const disabled = isDisabled(setting);
+		const stack = setting.type === "array";
 		return (
-			<Row key={`setting-${setting.id as string}`} $disabled={disabled} $child={child}>
+			<Row key={`setting-${setting.id as string}`} $disabled={disabled} $child={child} $stack={stack}>
 				<RowInfo>
-					<RowTitle>{setting.title}</RowTitle>
+					<RowTitle>
+						{setting.title}
+						{setting.requiresRefreshToDisable ? (
+							<RefreshMark
+								title="Turning this off takes effect after you reload the page."
+								aria-label="Turning this off takes effect after you reload the page."
+							>
+								{ReloadMarkIcon}
+							</RefreshMark>
+						) : null}
+					</RowTitle>
 					<RowDescription>{setting.description}</RowDescription>
+					{setting.hint ? <RowHint>{setting.hint}</RowHint> : null}
 				</RowInfo>
-				<RowControl $disabled={disabled}>{renderSettingControl(setting)}</RowControl>
+				<RowControl $disabled={disabled} style={stack ? { justifyContent: "stretch" } : undefined}>
+					{renderSettingControl(setting)}
+				</RowControl>
 			</Row>
 		);
 	};
@@ -1753,7 +2273,12 @@ const Settings = <T,>({
 		return (
 			<>
 				<PageTitle>{section.category.title}</PageTitle>
-				{renderGroups(section.category, section.settings)}
+				{splitSections(section.settings).map((part, index) => (
+					<Section key={`part-${section.category.id}-${part.title ?? index}`}>
+						{part.title ? <SectionTitle>{part.title}</SectionTitle> : null}
+						{renderGroups(section.category, part.settings)}
+					</Section>
+				))}
 			</>
 		);
 	};
@@ -1799,11 +2324,17 @@ const Settings = <T,>({
 					<CloseButton onClick={onClose} title="Close" aria-label="Close settings">
 						{CloseIcon(18)}
 					</CloseButton>
-					<Content ref={contentRef}>{showBare ? renderContent() : <Page>{renderContent()}</Page>}</Content>
+					<Content ref={contentRef}>
+						{showBare ? (
+							renderContent()
+						) : (
+							<Page style={refreshPending.length > 0 ? { paddingBottom: "104px" } : undefined}>{renderContent()}</Page>
+						)}
+					</Content>
 					{refreshPending.length > 0 && (
 						<RefreshToast role="status">
 							{RefreshIcon}
-							<span>Some of your changes need a page refresh to fully take effect.</span>
+							<span>Some changes take effect after you reload the page.</span>
 							<QuietButton onClick={() => setRefreshPending([])}>Dismiss</QuietButton>
 							<PrimaryButton onClick={() => window.location.reload()}>Reload page</PrimaryButton>
 						</RefreshToast>
@@ -1811,11 +2342,29 @@ const Settings = <T,>({
 				</Main>
 				{pendingToggle && (
 					<ModalOverlay onClick={() => setPendingToggle(null)}>
-						<ModalContent role="alertdialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+						<ModalContent
+							role="alertdialog"
+							aria-modal="true"
+							$wide={Boolean(pendingToggle.confirmationFacts?.length)}
+							onClick={(e) => e.stopPropagation()}
+						>
 							<ModalHeader>{pendingToggle.confirmationTitle ?? "Confirm action"}</ModalHeader>
-							<ModalMessage>
-								{pendingToggle.confirmationMessage || "Are you sure you want to enable this setting?"}
-							</ModalMessage>
+							<ModalBody>
+								<ModalMessage>
+									{pendingToggle.confirmationMessage || "Are you sure you want to enable this setting?"}
+								</ModalMessage>
+								{pendingToggle.confirmationFacts?.length ? (
+									<Facts>
+										{pendingToggle.confirmationFacts.map((fact) => (
+											<Fragment key={fact.term}>
+												<dt>{fact.term}</dt>
+												<dd>{fact.detail}</dd>
+											</Fragment>
+										))}
+									</Facts>
+								) : null}
+								{pendingToggle.confirmationNote ? <ModalNote>{pendingToggle.confirmationNote}</ModalNote> : null}
+							</ModalBody>
 							<ModalButtonContainer>
 								<SecondaryButton onClick={() => setPendingToggle(null)}>Cancel</SecondaryButton>
 								{pendingToggle.confirmTone === "danger" ? (
@@ -1827,15 +2376,35 @@ const Settings = <T,>({
 						</ModalContent>
 					</ModalOverlay>
 				)}
+				{pendingReset && (
+					<ModalOverlay onClick={() => setPendingReset(null)}>
+						<ModalContent role="alertdialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+							<ModalHeader>Reset {pendingReset.title.toLowerCase()}?</ModalHeader>
+							<ModalMessage>Your current list will be replaced with the default one.</ModalMessage>
+							<ModalButtonContainer>
+								<SecondaryButton onClick={() => setPendingReset(null)}>Cancel</SecondaryButton>
+								<DangerButton
+									onClick={() => {
+										updateSetting(pendingReset.key, pendingReset.value);
+										setPendingReset(null);
+									}}
+								>
+									Reset
+								</DangerButton>
+							</ModalButtonContainer>
+						</ModalContent>
+					</ModalOverlay>
+				)}
 				{pendingArrayRemove && (
 					<ModalOverlay onClick={() => setPendingArrayRemove(null)}>
 						<ModalContent role="alertdialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-							<ModalHeader>Confirm removal</ModalHeader>
+							<ModalHeader>
+								{pendingArrayRemove.itemLabel ? `Remove ${pendingArrayRemove.itemLabel}?` : "Confirm removal"}
+							</ModalHeader>
 							<ModalMessage>
-								{pendingArrayRemove.confirmationMessage ||
-									(pendingArrayRemove.itemTitle
-										? `Are you sure you want to remove "${pendingArrayRemove.itemTitle}"?`
-										: "Are you sure you want to remove this item?")}
+								{pendingArrayRemove.itemTitle && pendingArrayRemove.listTitle
+									? `“${pendingArrayRemove.itemTitle}” will be removed from ${pendingArrayRemove.listTitle.toLowerCase()}.`
+									: pendingArrayRemove.confirmationMessage || "Are you sure you want to remove this item?"}
 							</ModalMessage>
 							<ModalButtonContainer>
 								<SecondaryButton onClick={() => setPendingArrayRemove(null)}>Cancel</SecondaryButton>

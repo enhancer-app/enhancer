@@ -15,6 +15,7 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	emoteBarEnabled: false,
 	chatMentionSoundSource: "",
 	chatMentionSoundFile: "",
+	chatMentionSoundFileName: "",
 	chatMentionSoundVolume: 50,
 	pinnedStreamers: [],
 	quickAccessLinks: [

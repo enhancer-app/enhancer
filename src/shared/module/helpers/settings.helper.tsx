@@ -49,6 +49,7 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 		settings: PanelSettings<TSettings>,
 		updatedKey: keyof PanelSettings<TSettings>,
 		eventPrefix: string,
+		otherKeys: (keyof PanelSettings<TSettings>)[] = [],
 	): Promise<void> {
 		try {
 			if (isGlobalSettingKey(updatedKey)) {
@@ -64,7 +65,9 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 			if (this.settingsSignal) {
 				this.settingsSignal.value = settings;
 			}
-			this.emitter.emit(`${String(eventPrefix)}${String(updatedKey)}`, settings[updatedKey]);
+			for (const key of [updatedKey, ...otherKeys]) {
+				this.emitter.emit(`${String(eventPrefix)}${String(key)}`, settings[key]);
+			}
 			this.logger.debug(`Settings changed "${String(updatedKey)}" to`, settings[updatedKey]);
 		} catch (error) {
 			this.logger.error("Failed to save settings:", error);
@@ -98,8 +101,12 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 			this.isOpenSignal.value = false;
 		};
 
-		const onSettingsChange = (newSettings: PanelSettings<TSettings>, updatedKey: keyof PanelSettings<TSettings>) => {
-			this.saveSettings(newSettings, updatedKey, props.eventPrefix);
+		const onSettingsChange = (
+			newSettings: PanelSettings<TSettings>,
+			updatedKey: keyof PanelSettings<TSettings>,
+			otherKeys?: (keyof PanelSettings<TSettings>)[],
+		) => {
+			this.saveSettings(newSettings, updatedKey, props.eventPrefix, otherKeys);
 		};
 
 		const renderSettings = () => {
