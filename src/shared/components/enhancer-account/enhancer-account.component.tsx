@@ -1,19 +1,18 @@
 import {
-	buildSlotRequest,
 	cooldownMinutesLeft,
+	filterPlatformBadges,
 	filterSlotGroups,
 	groupBadgeSlots,
 } from "$shared/enhancer-account/badge-slots.ts";
+import { getEnhancerAccountStore } from "$shared/enhancer-account/enhancer-account.store.ts";
 import { pickBadgeImage } from "$shared/utils/badge-image.utils.ts";
-import type { EnhancerViewerBadges, EnhancerViewerSummary } from "$types/apis/enhancer-account.apis.ts";
 import type {
 	BadgeSlotEditorProps,
 	BadgeSlotGroup,
 	EnhancerAccountComponentProps,
 	LoginScreenProps,
 } from "$types/shared/components/enhancer-account.component.types.ts";
-import type { EnhancerAccountState } from "$types/shared/worker/enhancer-account-worker.types.ts";
-import { useCallback, useEffect, useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import styled from "styled-components";
 
 const DOCUMENTS_URL = "https://documents.enhancer.at/dashboard";
@@ -268,95 +267,105 @@ const CardFooter = styled.div`
 	border-top: 1px solid var(--settings-divider);
 `;
 
-const LoginScreenWrapper = styled.div`
+const AccountPage = styled.div`
+	width: 100%;
+	max-width: 860px;
+	margin: 0 auto;
+	padding: 32px 40px 56px;
+`;
+
+const AccountTitle = styled.h1`
+	margin: 0 0 28px;
+	padding-right: 32px;
+	font-size: 24px;
+	line-height: 1.15;
+	font-weight: 600;
+	letter-spacing: -0.03em;
+	color: var(--settings-text-primary);
+	background: linear-gradient(180deg, var(--settings-text-primary) 30%, var(--settings-text-secondary));
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+`;
+
+const LoginPage = styled.div`
 	position: relative;
-	min-height: 440px;
+	flex: 1;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	justify-content: space-between;
-	gap: 24px;
-	padding: 40px 24px 20px;
-	border-radius: 14px;
-	border: 1px solid var(--settings-border);
-	overflow: hidden;
-	background:
-		radial-gradient(600px 320px at 50% -15%, rgba(145, 71, 255, 0.22), transparent 70%), var(--settings-surface);
+	justify-content: center;
+	min-height: 100%;
+	padding: 0 40px;
+	overflow: clip;
+	text-align: center;
+	background: radial-gradient(520px 360px at 50% 34%, rgba(145, 71, 255, 0.26), transparent 70%);
 `;
 
 const LoginMain = styled.div`
-	width: 100%;
-	max-width: 360px;
-	margin: auto 0;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	text-align: center;
+	max-width: 380px;
 `;
 
-const LoginLogo = styled.img`
-	width: 48px;
-	height: 48px;
-	margin-bottom: 18px;
+const LoginMark = styled.div`
+	display: grid;
+	place-items: center;
+	width: 76px;
+	height: 76px;
+	border-radius: 22px;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+
+	img {
+		width: 48px;
+		height: 48px;
+		border-radius: 12px;
+	}
 `;
 
 const LoginTitle = styled.h2`
-	margin: 0;
-	font-size: 24px;
-	font-weight: 800;
-	letter-spacing: -0.02em;
+	margin: 24px 0 0;
+	font-size: 28px;
+	font-weight: 600;
+	letter-spacing: -0.035em;
 	color: var(--settings-text-primary);
 `;
 
 const LoginSubtitle = styled.p`
-	margin: 10px 0 26px;
-	font-size: 13px;
-	line-height: 1.6;
+	margin: 10px 0 24px;
+	max-width: 360px;
+	font-size: 14.5px;
+	line-height: 1.5;
 	color: var(--settings-text-secondary);
 `;
 
 const LoginButton = styled.button`
-	width: 100%;
-	display: flex;
+	display: inline-flex;
 	align-items: center;
-	gap: 12px;
-	min-height: 50px;
-	padding: 0 18px;
-	border-radius: 10px;
-	border: 1px solid var(--settings-control-border);
-	background: var(--settings-control-background);
-	color: var(--settings-text-primary);
-	font-size: 14px;
-	font-weight: 700;
+	justify-content: center;
+	min-width: 220px;
+	height: 46px;
+	padding: 0 24px;
+	border: none;
+	border-radius: 12px;
+	background: var(--settings-accent, #9147ff);
+	color: #ffffff;
+	font: inherit;
+	font-size: 14.5px;
+	font-weight: 600;
 	cursor: pointer;
 	transition:
-		border-color 0.15s ease,
-		background 0.15s ease;
-
-	img {
-		width: 22px;
-		height: 22px;
-	}
-
-	span {
-		flex: 1;
-		text-align: left;
-	}
-
-	svg {
-		width: 16px;
-		height: 16px;
-		color: var(--settings-text-dim);
-		transition: transform 0.15s ease;
-	}
+		background 0.12s ease,
+		transform 0.12s ease;
 
 	&:hover:not(:disabled) {
-		border-color: rgba(145, 71, 255, 0.7);
+		background: var(--settings-accent-hover, #a970ff);
 	}
 
-	&:hover:not(:disabled) svg {
-		color: var(--settings-text-primary);
-		transform: translateX(3px);
+	&:active:not(:disabled) {
+		transform: scale(0.97);
 	}
 
 	&:disabled {
@@ -366,25 +375,32 @@ const LoginButton = styled.button`
 `;
 
 const LoginHint = styled.p<{ $error?: boolean }>`
-	margin: 18px 0 0;
-	font-size: 12px;
-	line-height: 1.6;
-	color: ${({ $error }) => ($error ? "#ff4757" : "var(--settings-text-dim)")};
+	margin: 24px 0 0;
+	max-width: 320px;
+	font-size: 12.5px;
+	line-height: 1.5;
+	color: ${({ $error }) => ($error ? "var(--settings-danger, #ff4757)" : "var(--settings-text-faint)")};
 `;
 
 const LoginFooter = styled.div`
-	font-size: 12px;
-	color: var(--settings-text-dim);
-	text-align: center;
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	justify-content: center;
+	gap: 8px;
+	padding: 20px 0 22px;
+	font-size: 12.5px;
+	color: var(--settings-text-faint);
 
 	a {
-		color: var(--settings-text-secondary);
+		color: var(--settings-text-muted);
 		text-decoration: none;
 	}
 
 	a:hover {
 		color: var(--settings-text-primary);
-		text-decoration: underline;
 	}
 `;
 
@@ -401,24 +417,17 @@ function formatSince(iso: string): string {
 
 function LoginScreen({ logoUrl, busy, error, onLogin }: LoginScreenProps) {
 	return (
-		<LoginScreenWrapper>
+		<LoginPage>
 			<LoginMain>
-				{logoUrl && <LoginLogo src={logoUrl} alt="" />}
+				{logoUrl && (
+					<LoginMark>
+						<img src={logoUrl} alt="" />
+					</LoginMark>
+				)}
 				<LoginTitle>Enhancer Account</LoginTitle>
 				<LoginSubtitle>Log in to choose which of your Enhancer badges shows next to your name in chat.</LoginSubtitle>
 				<LoginButton type="button" onClick={onLogin} disabled={busy}>
-					{logoUrl && <img src={logoUrl} alt="" />}
-					<span>{busy ? "Waiting for login…" : "Continue with Enhancer"}</span>
-					<svg viewBox="0 0 16 16" aria-hidden="true">
-						<path
-							d="M6 3l5 5-5 5"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.6"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-					</svg>
+					{busy ? "Waiting for login…" : "Log in"}
 				</LoginButton>
 				<LoginHint $error={error !== null}>
 					{error ?? "Optional. The rest of Enhancer works the same without an account."}
@@ -428,16 +437,16 @@ function LoginScreen({ logoUrl, busy, error, onLogin }: LoginScreenProps) {
 				<a href={`${DOCUMENTS_URL}/terms-of-service`} target="_blank" rel="noopener noreferrer">
 					Terms of Service
 				</a>
-				{" · "}
+				<span>·</span>
 				<a href={`${DOCUMENTS_URL}/privacy-policy`} target="_blank" rel="noopener noreferrer">
 					Privacy Policy
 				</a>
-				{" · "}
+				<span>·</span>
 				<a href={`${DOCUMENTS_URL}/cookie-policy`} target="_blank" rel="noopener noreferrer">
 					Cookie Policy
 				</a>
 			</LoginFooter>
-		</LoginScreenWrapper>
+		</LoginPage>
 	);
 }
 
@@ -561,83 +570,23 @@ function BadgeSlotEditor({ group, onSave }: BadgeSlotEditorProps) {
 }
 
 export function EnhancerAccountComponent({ workerService, platform, logoUrl }: EnhancerAccountComponentProps) {
-	const [account, setAccount] = useState<EnhancerAccountState>({ loggedIn: false, environment: "production" });
-	const [profile, setProfile] = useState<EnhancerViewerSummary | null>(null);
-	const [badges, setBadges] = useState<EnhancerViewerBadges | null>(null);
-	const [badgesFailed, setBadgesFailed] = useState(false);
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const store = getEnhancerAccountStore(workerService);
 	const [query, setQuery] = useState("");
 
 	useEffect(() => {
-		let active = true;
-		void workerService.send("getEnhancerAccount").then((state) => {
-			if (active && state) setAccount(state);
-		});
-		const handleUpdate = (payload: { account: EnhancerAccountState; error?: string }) => {
-			if (!active) return;
-			setAccount(payload.account);
-			if (payload.error) setError(payload.error);
-		};
-		workerService.onBroadcast("enhancer-account-updated", handleUpdate);
-		return () => {
-			active = false;
-			workerService.offBroadcast("enhancer-account-updated", handleUpdate);
-		};
-	}, [workerService]);
+		store.start();
+		void store.refresh();
+	}, [store]);
 
-	const loadBadges = useCallback(async () => {
-		const result = await workerService.send("getEnhancerBadges");
-		setBadgesFailed(result?.kind !== "ok");
-		if (result?.kind === "ok") setBadges(result.data);
-		else if (result?.kind === "error") setError(result.message);
-	}, [workerService]);
-
-	useEffect(() => {
-		if (!account.loggedIn) {
-			setProfile(null);
-			setBadges(null);
-			return;
-		}
-		void workerService.send("getEnhancerProfile").then((result) => {
-			if (result?.kind === "ok") setProfile(result.data);
-			else if (result?.kind === "error") setError(result.message);
-		});
-		void loadBadges();
-	}, [account.loggedIn, account.environment, workerService, loadBadges]);
-
-	const login = async () => {
-		setBusy(true);
-		setError(null);
-		try {
-			const response = await workerService.send("loginEnhancerAccount");
-			if (!response) return;
-			if (response.success) setAccount(response.account);
-			else if (response.reason === "failed") setError(response.message);
-		} finally {
-			setBusy(false);
-		}
-	};
-
-	const logout = async () => {
-		setBusy(true);
-		setError(null);
-		try {
-			await workerService.send("logoutEnhancerAccount");
-			setAccount((current) => ({ loggedIn: false, environment: current.environment }));
-		} finally {
-			setBusy(false);
-		}
-	};
-
-	const saveSlot = async (group: BadgeSlotGroup, assignmentId: string | null): Promise<string | null> => {
-		const result = await workerService.send("saveEnhancerBadgeSlot", buildSlotRequest(group, assignmentId));
-		if (!result) return "Request timed out.";
-		if (result.kind === "unauthenticated") return "Your session expired. Log in again.";
-		if (result.kind === "error") return result.message;
-		await loadBadges();
-		return null;
-	};
+	const account = store.account.value;
+	const profile = store.profile.value;
+	const badges = store.badges.value;
+	const badgesFailed = store.badgesFailed.value;
+	const busy = store.busy.value;
+	const error = store.error.value;
+	const login = () => void store.login();
+	const logout = () => void store.logout();
+	const saveSlot = (group: BadgeSlotGroup, assignmentId: string | null) => store.saveSlot(group, assignmentId);
 
 	if (!account.loggedIn) {
 		return <LoginScreen logoUrl={logoUrl} busy={busy} error={error} onLogin={login} />;
@@ -646,85 +595,83 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 	const user = profile?.user;
 	const displayName =
 		user?.displayName ?? user?.username ?? account.displayName ?? account.username ?? "Enhancer account";
-	const platformBadges = badges
-		? {
-				global: badges.global.filter((badge) => badge.accountPlatform.toLowerCase() === platform),
-				channels: badges.channels.filter((badge) => badge.accountPlatform.toLowerCase() === platform),
-			}
-		: null;
+	const platformBadges = badges ? filterPlatformBadges(badges, platform) : null;
 	const groups = platformBadges ? groupBadgeSlots(platformBadges) : [];
 	const visibleGroups = filterSlotGroups(groups, query);
 	const badgeCount = badges ? badges.global.length + badges.channels.length : null;
 
 	return (
-		<Container>
-			<Row>
-				{user?.avatarUrl ? (
-					<Avatar $size={48} src={user.avatarUrl} alt="" />
-				) : (
-					<AvatarFallback $size={48}>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
-				)}
-				<RowMain>
-					<RowTitle>
-						{displayName}
-						{badgeCount !== null && (
-							<TitleCount>
-								· {badgeCount} {badgeCount === 1 ? "badge" : "badges"} collected
-							</TitleCount>
-						)}
-					</RowTitle>
-					{profile && profile.identities.length > 0 && (
-						<Chips>
-							{profile.identities.map((identity) => {
-								const colors = PLATFORM_COLORS[identity.provider] ?? {
-									background: "var(--settings-control-hover)",
-									color: "var(--settings-text)",
-								};
-								return (
-									<Chip
-										key={`${identity.provider}:${identity.providerUsername ?? ""}`}
-										$background={colors.background}
-										$color={colors.color}
-									>
-										{formatProvider(identity.provider)}
-									</Chip>
-								);
-							})}
-						</Chips>
+		<AccountPage>
+			<AccountTitle>Account</AccountTitle>
+			<Container>
+				<Row>
+					{user?.avatarUrl ? (
+						<Avatar $size={48} src={user.avatarUrl} alt="" />
+					) : (
+						<AvatarFallback $size={48}>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
 					)}
-					{error && <Muted $error>{error}</Muted>}
-				</RowMain>
-				<Button type="button" onClick={logout} disabled={busy}>
-					{busy ? "…" : "Log out"}
-				</Button>
-			</Row>
-			<HeadingRow>
-				<Heading>Badges</Heading>
-				{groups.length > 0 && (
-					<Search>
-						<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-							<circle cx="7" cy="7" r="4.5" />
-							<path d="M10.5 10.5L14 14" />
-						</svg>
-						<input
-							type="search"
-							placeholder="Search channels"
-							aria-label="Search channels"
-							value={query}
-							onInput={(event) => setQuery(event.currentTarget.value)}
-						/>
-					</Search>
+					<RowMain>
+						<RowTitle>
+							{displayName}
+							{badgeCount !== null && (
+								<TitleCount>
+									· {badgeCount} {badgeCount === 1 ? "badge" : "badges"} collected
+								</TitleCount>
+							)}
+						</RowTitle>
+						{profile && profile.identities.length > 0 && (
+							<Chips>
+								{profile.identities.map((identity) => {
+									const colors = PLATFORM_COLORS[identity.provider] ?? {
+										background: "var(--settings-control-hover)",
+										color: "var(--settings-text)",
+									};
+									return (
+										<Chip
+											key={`${identity.provider}:${identity.providerUsername ?? ""}`}
+											$background={colors.background}
+											$color={colors.color}
+										>
+											{formatProvider(identity.provider)}
+										</Chip>
+									);
+								})}
+							</Chips>
+						)}
+						{error && <Muted $error>{error}</Muted>}
+					</RowMain>
+					<Button type="button" onClick={logout} disabled={busy}>
+						{busy ? "…" : "Log out"}
+					</Button>
+				</Row>
+				<HeadingRow>
+					<Heading>Badges</Heading>
+					{groups.length > 0 && (
+						<Search>
+							<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+								<circle cx="7" cy="7" r="4.5" />
+								<path d="M10.5 10.5L14 14" />
+							</svg>
+							<input
+								type="search"
+								placeholder="Search channels"
+								aria-label="Search channels"
+								value={query}
+								onInput={(event) => setQuery(event.currentTarget.value)}
+							/>
+						</Search>
+					)}
+				</HeadingRow>
+				{badges === null ? (
+					<Muted $error={badgesFailed}>{badgesFailed ? "Could not load your badges." : "Loading badges…"}</Muted>
+				) : groups.length === 0 ? (
+					<Muted>No badges on this platform yet.</Muted>
+				) : visibleGroups.length === 0 ? (
+					<Muted>No channels match "{query.trim()}".</Muted>
+				) : (
+					visibleGroups.map((group) => <BadgeSlotEditor key={group.key} group={group} onSave={saveSlot} />)
 				)}
-			</HeadingRow>
-			{badges === null ? (
-				<Muted $error={badgesFailed}>{badgesFailed ? "Could not load your badges." : "Loading badges…"}</Muted>
-			) : groups.length === 0 ? (
-				<Muted>No badges on this platform yet.</Muted>
-			) : visibleGroups.length === 0 ? (
-				<Muted>No channels match "{query.trim()}".</Muted>
-			) : (
-				visibleGroups.map((group) => <BadgeSlotEditor key={group.key} group={group} onSave={saveSlot} />)
-			)}
-		</Container>
+			</Container>
+		</AccountPage>
 	);
 }

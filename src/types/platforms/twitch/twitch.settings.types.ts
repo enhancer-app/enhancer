@@ -20,6 +20,7 @@ export type TwitchSettings = {
 	 */
 	chatMentionSoundSource: string;
 	chatMentionSoundFile: string;
+	chatMentionSoundFileName: string;
 	chatMentionSoundVolume: number;
 	quickAccessLinks: QuickAccessLink[];
 	pinnedStreamers: string[];
