@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { ENHANCER_ENDPOINTS, resolveApiEnvironment } from "$shared/enhancer-environment.ts";
+import { canUseDeveloperSettings, ENHANCER_ENDPOINTS, resolveApiEnvironment } from "$shared/enhancer-environment.ts";
 import { sanitizeGlobalSettings } from "$shared/settings/global-settings.constants.ts";
 import type { Logger } from "$shared/logger/logger.ts";
 import { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
@@ -219,7 +219,13 @@ test("logout deletes the session and revokes the refresh token", async () => {
 	expect(form(revoke).get("token")).toBe("refresh-access-1");
 });
 
-test("only Canary with developer settings on can select the test API", () => {
+test("developer settings are available in Canary and development builds, not in stable releases", () => {
+	expect(canUseDeveloperSettings("canary", "production")).toBe(true);
+	expect(canUseDeveloperSettings("stable", "development")).toBe(true);
+	expect(canUseDeveloperSettings("stable", "production")).toBe(false);
+});
+
+test("only builds with developer settings on can select the test API", () => {
 	const test = { developerSettingsEnabled: true, apiEnvironment: "test" } as const;
 	expect(resolveApiEnvironment(test, true)).toBe("test");
 	expect(resolveApiEnvironment(test, false)).toBe("production");

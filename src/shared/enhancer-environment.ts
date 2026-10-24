@@ -28,8 +28,11 @@ export function isEnhancerApiEnvironment(value: unknown): value is EnhancerApiEn
 	return (ENHANCER_API_ENVIRONMENTS as unknown[]).includes(value);
 }
 
-export function canUseDeveloperSettings(channel: ExtensionChannel = __channel__): boolean {
-	return channel === "canary";
+export function canUseDeveloperSettings(
+	channel: ExtensionChannel = __channel__,
+	environment: ExtensionEnvironment = __environment__,
+): boolean {
+	return channel === "canary" || environment === "development";
 }
 
 export function resolveApiEnvironment(
