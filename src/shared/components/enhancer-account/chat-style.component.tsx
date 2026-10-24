@@ -1,4 +1,6 @@
+import { SETTINGS_FONT } from "$shared/components/settings/settings-theme.ts";
 import { AdditionalFontsHelper } from "$shared/module/helpers/additional-fonts.helper.ts";
+import { fontFamilyWithFallback } from "$shared/utils/font-family.utils.ts";
 import { nicknameFeedback } from "$shared/utils/nickname.utils.ts";
 import type { ChatStyleCardProps, ChatStyleNotice } from "$types/shared/components/enhancer-account.component.types.ts";
 import { useEffect, useState } from "preact/hooks";
@@ -259,22 +261,25 @@ function dateOf(value: string): string {
 }
 
 function fontFamily(font: string): string {
-	return `'${font}', inherit`;
+	return fontFamilyWithFallback(font, SETTINGS_FONT);
 }
 
 function useChatStyleFonts(fonts: string[], enabled: boolean) {
+	const key = fonts.join("|");
 	useEffect(() => {
-		if (!enabled) return;
-		for (const font of fonts) {
-			const href = AdditionalFontsHelper.fontUrl(font);
-			if (document.head.querySelector(`link.${FONT_LINK_CLASS}[href="${href}"]`)) continue;
+		if (!enabled || fonts.length === 0) return;
+		const links = fonts.map((font) => {
 			const link = document.createElement("link");
 			link.rel = "stylesheet";
-			link.href = href;
+			link.href = AdditionalFontsHelper.fontUrl(font);
 			link.classList.add(FONT_LINK_CLASS);
 			document.head.append(link);
-		}
-	}, [enabled, fonts.join("|")]);
+			return link;
+		});
+		return () => {
+			for (const link of links) link.remove();
+		};
+	}, [enabled, key]);
 }
 
 export function ChatStyleCard(props: ChatStyleCardProps) {
