@@ -75,8 +75,6 @@ export function getManifest(isDevelopment: boolean, channel: ExtensionChannel = 
 					"chunks/*.js",
 					"assets/enhancer/*.svg",
 					"assets/enhancer/*.png",
-					"assets/brands/*.svg",
-					"assets/brands/*.png",
 					"assets/settings/*.svg",
 					"assets/settings/*.png",
 					"assets/modules/*.png",

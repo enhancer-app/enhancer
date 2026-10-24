@@ -108,12 +108,6 @@ export default class SettingsModule extends KickModule {
 			...createAccountCategories(9),
 		];
 
-		const brandIcons = {
-			website: await this.commonUtils().getAssetFile(this.workerService(), "brands/website.svg"),
-			github: await this.commonUtils().getAssetFile(this.workerService(), "brands/github.svg"),
-			twitter: await this.commonUtils().getAssetFile(this.workerService(), "brands/twitter.svg"),
-			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
-		} as const;
 		const enhancerLogo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo.svg");
 
 		this.SETTING_DEFINITIONS = [
@@ -159,7 +153,7 @@ export default class SettingsModule extends KickModule {
 				id: "forceQualityEnabled",
 				title: "Force stream quality",
 				description: "Starts streams at a fixed quality instead of Auto.",
-				hint: "Higher quality means more delay and more buffering on a weak connection.",
+				hint: "Higher quality can add delay.",
 				type: "toggle",
 				categoryId: CATEGORY.PLAYER,
 				requiresRefreshToDisable: true,
@@ -169,7 +163,7 @@ export default class SettingsModule extends KickModule {
 				title: "Preferred quality",
 				description:
 					"The quality to pick on every stream. Falls back to the closest lower one when it's not available.",
-				hint: "Source is skipped while you're logged out, because Kick only offers it to logged-in viewers.",
+				hint: "Source needs a Kick login.",
 				type: "select",
 				categoryId: CATEGORY.PLAYER,
 				dependsOn: { key: "forceQualityEnabled" },
@@ -214,7 +208,7 @@ export default class SettingsModule extends KickModule {
 				type: "text",
 				categoryId: CATEGORY.ABOUT,
 				content: () => {
-					return <EnhancerAboutComponent icons={brandIcons} platform="kick" workerService={workerService} />;
+					return <EnhancerAboutComponent logoUrl={enhancerLogo} platform="kick" workerService={workerService} />;
 				},
 				hideInfo: true,
 			},

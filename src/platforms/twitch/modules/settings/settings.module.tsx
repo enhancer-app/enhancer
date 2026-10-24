@@ -95,12 +95,6 @@ export default class SettingsModule extends TwitchModule {
 			...createAccountCategories(8),
 		];
 
-		const brandIcons = {
-			website: await this.commonUtils().getAssetFile(this.workerService(), "brands/website.svg"),
-			github: await this.commonUtils().getAssetFile(this.workerService(), "brands/github.svg"),
-			twitter: await this.commonUtils().getAssetFile(this.workerService(), "brands/twitter.svg"),
-			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
-		} as const;
 		const enhancerLogo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo.svg");
 
 		this.SETTING_DEFINITIONS = [
@@ -170,7 +164,7 @@ export default class SettingsModule extends TwitchModule {
 				id: "chatGiphyMessages",
 				title: "Giphy messages",
 				description: "What to do with Giphy messages in chat.",
-				hint: "As link replaces the GIF with a text link. Changes apply to new messages; refresh the page to update older ones.",
+				hint: "Applies to new messages.",
 				type: "choice",
 				categoryId: CATEGORY.CHAT,
 				section: SETTING_SECTION.MESSAGES,
@@ -230,7 +224,7 @@ export default class SettingsModule extends TwitchModule {
 				id: "emoteBarEnabled",
 				title: "Emote bar",
 				description: "Shows your most used emotes for this channel above the chat input.",
-				hint: "Click to insert, Ctrl+Click (Cmd+Click on Mac) to send it as its own message, right-click twice to remove.",
+				hint: "Click to insert, Ctrl+Click to send, right-click twice to remove.",
 				type: "toggle",
 				categoryId: CATEGORY.EXPERIMENTAL,
 				tags: ["Enable Emote Bar"],
@@ -266,7 +260,7 @@ export default class SettingsModule extends TwitchModule {
 				type: "text",
 				categoryId: CATEGORY.ABOUT,
 				content: () => {
-					return <EnhancerAboutComponent icons={brandIcons} platform="twitch" workerService={workerService} />;
+					return <EnhancerAboutComponent logoUrl={enhancerLogo} platform="twitch" workerService={workerService} />;
 				},
 				hideInfo: true,
 			},

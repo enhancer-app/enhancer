@@ -71,12 +71,13 @@ export function createDeveloperCategories(order: number): SettingCategory<Partia
 
 export function createDeveloperSettings<T>(aboutCategoryId: string): SettingDefinition<T>[] {
 	if (!canUseDeveloperSettings()) return [];
-	const toggle = (categoryId: string): SettingDefinition<T> => ({
+	const toggle = (categoryId: string, section?: string): SettingDefinition<T> => ({
 		id: "developerSettingsEnabled",
 		title: "Developer settings",
-		description: "Settings for testing Enhancer itself. If you do not know what they do, leave them off.",
+		description: "For testing Enhancer. Leave them off if you're not sure.",
 		type: "toggle",
 		categoryId,
+		section,
 		confirmOnEnable: true,
 		confirmationTitle: "Turn on developer settings?",
 		confirmationMessage:
@@ -85,13 +86,13 @@ export function createDeveloperSettings<T>(aboutCategoryId: string): SettingDefi
 		confirmTone: "danger",
 	});
 	return [
-		toggle(aboutCategoryId),
+		toggle(aboutCategoryId, "Advanced"),
 		toggle(DEVELOPER_CATEGORY_ID),
 		{
 			id: "apiEnvironment",
 			title: "Enhancer API",
-			description:
-				"Which Enhancer API badges, nicknames and the account use. If you do not know what this does, do not change it. Switching reloads your Twitch and Kick tabs.",
+			description: "Which API badges, nicknames and the account use.",
+			hint: "Switching reloads your Twitch and Kick tabs.",
 			type: "select",
 			categoryId: DEVELOPER_CATEGORY_ID,
 			dependsOn: { key: "developerSettingsEnabled" },
