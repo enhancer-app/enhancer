@@ -10,6 +10,7 @@ import { isActionAllowedFrom } from "$shared/worker/enhancer-account/account-acc
 import { EnhancerAccountDatabase } from "$shared/worker/enhancer-account/enhancer-account.database.ts";
 import { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
 import { EnhancerProfileService } from "$shared/worker/enhancer-account/enhancer-profile.service.ts";
+import { AggregateSnapshotDatabase } from "$shared/worker/enhancer-api/aggregate-snapshot.database.ts";
 import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
 import { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
@@ -33,7 +34,12 @@ export default class WorkerBackground {
 	);
 	private readonly watchtimeDatabase = new WatchtimeDatabase();
 	private readonly watchtimeAccumulator = new WatchtimeAccumulator(this.watchtimeDatabase);
-	private readonly enhancerApiService = new EnhancerApiService(this.enhancerApiLogger, __version__);
+	private readonly aggregateSnapshotDatabase = new AggregateSnapshotDatabase();
+	private readonly enhancerApiService = new EnhancerApiService(
+		this.enhancerApiLogger,
+		__version__,
+		this.aggregateSnapshotDatabase,
+	);
 	private readonly sharedDatabase = new SharedDatabase();
 	private readonly credentialDatabase = new CredentialDatabase();
 	private readonly credentialVault = new CredentialVault(this.credentialDatabase);
@@ -81,6 +87,9 @@ export default class WorkerBackground {
 			this.settingsDatabase.initialize(),
 			this.watchtimeDatabase.initialize(),
 			this.sharedDatabase.initialize().catch((error) => this.logger.error("Shared database unavailable:", error)),
+			this.aggregateSnapshotDatabase
+				.initialize()
+				.catch((error) => this.logger.error("Aggregate database unavailable:", error)),
 			this.credentialDatabase
 				.initialize()
 				.catch((error) => this.logger.error("Credential database unavailable:", error)),
@@ -110,6 +119,9 @@ export default class WorkerBackground {
 		this.enhancerApiService.setEndpoints(ENHANCER_ENDPOINTS[environment]);
 		await this.enhancerAccountService.setEnvironment(environment);
 		if (!reloadTabs) return;
+		await this.aggregateSnapshotDatabase
+			.clear()
+			.catch((error) => this.logger.warn("Failed to clear stored aggregates:", error));
 		const broadcast: WorkerBroadcast = { type: "api-environment-changed", payload: environment };
 		const tabs = await chrome.tabs.query({});
 		setTimeout(() => {

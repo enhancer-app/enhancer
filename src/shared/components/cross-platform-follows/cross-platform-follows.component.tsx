@@ -5,20 +5,22 @@ import {
 	getFollowsComparator,
 	getFollowsSortOptions,
 	getVisibleProblem,
+	LinkedPlatformIcon,
 	PinIcon,
 	PLATFORM_COLORS,
 	PLATFORM_NAMES,
 	PLATFORM_URLS,
-	PlatformIcon,
 } from "$shared/components/cross-platform-follows/platform.shared.tsx";
-import { filterFollowsByPlatform, FOLLOWS_PLATFORM_FILTERS } from "$shared/utils/follows-filter.utils.ts";
+import { filterFollowsByPlatform } from "$shared/utils/follows-filter.utils.ts";
+import { PlatformFilterComponent } from "$shared/components/platform-filter/platform-filter.component.tsx";
 import { filterFollowsBySearch } from "$shared/utils/follows-search.utils.ts";
 import { SortMenuComponent } from "$shared/components/sort-menu/sort-menu.component.tsx";
 import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
 import { ChannelTooltipContent } from "$shared/components/cross-platform-follows/channel-tooltip.component.tsx";
 import { FLIP_KEY_ATTRIBUTE, useBecameTrue, useFlipAnimation } from "$shared/utils/flip-animation.utils.ts";
 import { FOLLOWS_SORT_LABELS } from "$shared/utils/follows-sort.utils.ts";
-import { getFollowEntryKey, mergeLinkedChannels } from "$shared/utils/follows-links.utils.ts";
+import { getFollowEntryKey, getPinTargets, mergeLinkedChannels } from "$shared/utils/follows-links.utils.ts";
+import { useChannelLinks } from "$shared/utils/channel-links.utils.ts";
 import { getFollowsStatusState } from "$shared/utils/follows-freshness.utils.ts";
 import {
 	ChannelContextMenu,
@@ -31,7 +33,7 @@ import type {
 	SidebarChannelRowProps,
 } from "$types/shared/components/cross-platform-follows.component.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
-import type { ChannelLink } from "$types/shared/worker/channel-links-worker.types.ts";
+import type { ChannelLinksAction, ChannelLinksTransport } from "$types/shared/utils/channel-links.types.ts";
 import type {
 	CrossPlatformFollowsSnapshot,
 	FollowsPlatformFilter,
@@ -60,7 +62,18 @@ export function CrossPlatformFollowsComponent({
 	onPlatformFilterChange,
 	onNavigate,
 }: CrossPlatformFollowsComponentProps) {
-	const [links, setLinks] = useState<ChannelLink[]>([]);
+	const linksTransport = useMemo<ChannelLinksTransport>(
+		() => ({
+			send: (action, payload) => workerService.send<ChannelLinksAction>(action, payload),
+			subscribe: (handler) => {
+				workerService.onBroadcast("channel-links-updated", handler);
+				return () => workerService.offBroadcast("channel-links-updated", handler);
+			},
+		}),
+		[workerService],
+	);
+	const channelLinks = useChannelLinks(linksTransport);
+	const { links } = channelLinks;
 	const [menu, setMenu] = useState<ChannelMenuState | null>(null);
 	const [linking, setLinking] = useState<SidebarChannel | null>(null);
 	const [snapshots, setSnapshots] = useState<Partial<Record<PlatformType, CrossPlatformFollowsSnapshot>>>({});
@@ -122,19 +135,6 @@ export function CrossPlatformFollowsComponent({
 			document.removeEventListener("visibilitychange", handleResume);
 			for (const event of RESUME_EVENTS) window.removeEventListener(event, handleResume);
 			workerService.offBroadcast("cross-platform-follows-updated", handleBroadcast);
-		};
-	}, [workerService]);
-
-	useEffect(() => {
-		let disposed = false;
-		const handleLinks = (payload: { links: ChannelLink[] }) => {
-			if (!disposed) setLinks(payload.links);
-		};
-		workerService.onBroadcast("channel-links-updated", handleLinks);
-		void workerService.send("getChannelLinks", {}).then((payload) => payload && handleLinks(payload));
-		return () => {
-			disposed = true;
-			workerService.offBroadcast("channel-links-updated", handleLinks);
 		};
 	}, [workerService]);
 
@@ -261,7 +261,7 @@ export function CrossPlatformFollowsComponent({
 
 	const togglePin = (channel: SidebarChannel) => {
 		const pinned = !channel.pinned;
-		const targets = channel.linked ? Object.values(channel.linked.channels) : [channel];
+		const targets = getPinTargets(channel);
 		setSnapshots((previous) => {
 			const next = { ...previous };
 			for (const target of targets) {
@@ -277,36 +277,9 @@ export function CrossPlatformFollowsComponent({
 		}
 	};
 
-	const replaceLinks = (next: ChannelLink[], request: Promise<{ links: ChannelLink[] } | null>) => {
-		setLinks(next);
-		void request.then((payload) => payload && setLinks(payload.links));
-	};
-
-	const saveLink = (link: ChannelLink) =>
-		replaceLinks(
-			[...links.filter((item) => item.twitch !== link.twitch && item.kick !== link.kick), link],
-			workerService.send("updateChannelLink", link),
-		);
-
 	const linkChannels = (source: SidebarChannel, target: SidebarChannel, primary: PlatformType) => {
-		const [twitch, kick] = source.platform === "twitch" ? [source, target] : [target, source];
-		saveLink({ twitch: twitch.login, kick: kick.login, primary });
+		channelLinks.link(source, target, primary);
 		setLinking(null);
-	};
-
-	const preferPlatform = (channel: SidebarChannel, primary: PlatformType) => {
-		if (!channel.linked) return;
-		const { twitch, kick } = channel.linked.channels;
-		saveLink({ twitch: twitch.login, kick: kick.login, primary });
-	};
-
-	const unlink = (channel: SidebarChannel) => {
-		if (!channel.linked) return;
-		const { twitch, kick } = channel.linked.channels;
-		replaceLinks(
-			links.filter((item) => item.twitch !== twitch.login || item.kick !== kick.login),
-			workerService.send("removeChannelLink", { twitch: twitch.login, kick: kick.login }),
-		);
 	};
 
 	const openMenu = (event: MouseEvent, channel: SidebarChannel) =>
@@ -329,30 +302,7 @@ export function CrossPlatformFollowsComponent({
 					</svg>
 				)}
 				{!compact && unsorted.length > 0 && (
-					<FilterBar role="group" aria-label="Filter followed channels by platform">
-						{FOLLOWS_PLATFORM_FILTERS.map((option) => {
-							const button = (
-								<FilterButton
-									key={option}
-									type="button"
-									aria-pressed={platformFilter === option}
-									aria-label={option === "all" ? undefined : PLATFORM_NAMES[option]}
-									$host={hostPlatform}
-									$active={platformFilter === option}
-									$icon={option !== "all"}
-									onClick={() => changePlatformFilter(option)}
-								>
-									{option === "all" ? "All" : <PlatformIcon platform={option} size={14} />}
-								</FilterButton>
-							);
-							return option === "all" ? (
-								button
-							) : (
-								<TooltipComponent key={option} content={PLATFORM_NAMES[option]} position="top">
-									{button}
-								</TooltipComponent>
-							);
-						})}
+					<PlatformFilterComponent value={platformFilter} onChange={changePlatformFilter} theme={hostPlatform}>
 						<TooltipComponent content={searchOpen ? "Close search" : "Search channels"} position="top">
 							<HeaderButton
 								ref={searchButtonRef}
@@ -375,7 +325,7 @@ export function CrossPlatformFollowsComponent({
 								</svg>
 							</HeaderButton>
 						</TooltipComponent>
-					</FilterBar>
+					</PlatformFilterComponent>
 				)}
 				{!compact && unsorted.length === 0 && <HeaderTitle>{title ?? "Followed Channels"}</HeaderTitle>}
 				{!compact && staleText && (
@@ -476,8 +426,8 @@ export function CrossPlatformFollowsComponent({
 					pinsEnabled={pinsEnabled}
 					onTogglePin={togglePin}
 					onLink={setLinking}
-					onPrefer={preferPlatform}
-					onUnlink={unlink}
+					onPrefer={channelLinks.prefer}
+					onUnlink={channelLinks.unlink}
 					onClose={() => setMenu(null)}
 				/>
 			)}
@@ -553,14 +503,7 @@ function ChannelRow({
 					$linked={!!channel.linked}
 					title={channel.linked ? "Linked Twitch and Kick channels" : PLATFORM_NAMES[channel.platform]}
 				>
-					{channel.linked && (
-						<svg viewBox="0 0 2 2" aria-hidden="true">
-							<g transform="rotate(-45 1 1)">
-								<path d="M0 1a1 1 0 0 1 2 0z" fill={PLATFORM_COLORS.twitch} />
-								<path d="M0 1a1 1 0 0 0 2 0z" fill={PLATFORM_COLORS.kick} />
-							</g>
-						</svg>
-					)}
+					{channel.linked && <LinkedPlatformIcon />}
 				</PlatformDot>
 				{!compact && onTogglePin && (
 					<PinButton
@@ -755,55 +698,6 @@ const SearchInput = styled.input<HostProps>`
 						border-color: var(--color-border-input-focus);
 					}
 				`}
-`;
-
-const FilterBar = styled.div`
-	flex: 1;
-	display: flex;
-	align-items: center;
-	gap: 4px;
-	min-width: 0;
-`;
-
-const FilterButton = styled.button<HostProps & { $active: boolean; $icon: boolean }>`
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	height: 28px;
-	min-width: 28px;
-	padding: ${({ $icon }) => ($icon ? "0" : "0 10px")};
-	border: none;
-	cursor: pointer;
-	font: inherit;
-	font-size: 12px;
-	font-weight: 600;
-	border-radius: ${({ $host }) => ($host === "kick" ? "6px" : "var(--border-radius-medium)")};
-
-	${({ $host, $active }) =>
-		$host === "kick"
-			? css`
-					color: ${$active ? "#fff" : "rgba(255, 255, 255, 0.6)"};
-					background: ${$active ? "rgba(255, 255, 255, 0.16)" : "rgba(255, 255, 255, 0.04)"};
-					&:hover {
-						color: #fff;
-						background: ${$active ? "rgba(255, 255, 255, 0.16)" : "rgba(255, 255, 255, 0.08)"};
-					}
-				`
-			: css`
-					color: ${$active ? "var(--color-text-base)" : "var(--color-text-alt-2)"};
-					background: ${$active ? "var(--color-background-button-secondary-default)" : "transparent"};
-					&:hover {
-						color: var(--color-text-base);
-						background: ${
-							$active ? "var(--color-background-button-secondary-hover)" : "var(--color-background-button-text-hover)"
-						};
-					}
-				`}
-
-	svg {
-		display: block;
-		flex-shrink: 0;
-	}
 `;
 
 const Notice = styled.p<HostProps>`

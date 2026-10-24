@@ -13,10 +13,10 @@ import type {
 	UpdateFollowPayload,
 } from "$types/shared/worker/cross-platform-follows-worker.types.ts";
 import type {
-	CachedAggregateSeed,
+	AggregateSeed,
 	DisconnectEnhancerApiPayload,
 	EnhancerApiMessagePayload,
-	EnhancerApiSeedRequestPayload,
+	EnhancerApiPatchPayload,
 	EnhancerApiUpdatedPayload,
 	GetEnhancerWatchTimePayload,
 	InitializeEnhancerApiPayload,
@@ -190,11 +190,11 @@ export interface WorkerApiActions {
 	};
 	initializeEnhancerApi: {
 		payload: InitializeEnhancerApiPayload;
-		response: CachedAggregateSeed;
+		response: AggregateSeed;
 	};
 	joinEnhancerChannel: {
 		payload: JoinEnhancerChannelPayload;
-		response: { seed: CachedAggregateSeed | null };
+		response: { seed: AggregateSeed | null };
 	};
 	getEnhancerWatchTime: {
 		payload: GetEnhancerWatchTimePayload;
@@ -306,7 +306,7 @@ export type WorkerBroadcast =
 	| { type: "global-settings-updated"; payload: GlobalSettings }
 	| { type: "enhancer-api-updated"; payload: EnhancerApiUpdatedPayload }
 	| { type: "enhancer-api-message"; payload: EnhancerApiMessagePayload }
-	| { type: "enhancer-api-seed-request"; payload: EnhancerApiSeedRequestPayload }
+	| { type: "enhancer-api-patch"; payload: EnhancerApiPatchPayload }
 	| { type: "cross-platform-follows-updated"; payload: CrossPlatformFollowsSnapshot }
 	| { type: "channel-pins-updated"; payload: ChannelPinsPayload }
 	| { type: "channel-links-updated"; payload: ChannelLinksPayload }

@@ -1,16 +1,13 @@
+import type { SidebarChannel } from "$types/shared/components/cross-platform-follows.component.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type {
-	CrossPlatformChannel,
 	CrossPlatformFollowsSnapshot,
 	FollowsSortOrder,
 } from "$types/shared/worker/cross-platform-follows-worker.types.ts";
 
-export type FollowsHomeChannel = CrossPlatformChannel & {
-	platform: PlatformType;
+export type FollowsHomeChannel = SidebarChannel & {
 	checkedAt: number | null;
 };
-
-export type FollowsHomeFilter = PlatformType | "all";
 
 export type FollowsHomeSort = FollowsSortOrder;
 
@@ -21,6 +18,7 @@ export interface FollowsHomeTileProps {
 	now: number;
 	onNavigate: (url: string, event: MouseEvent) => void;
 	onTogglePin?: (channel: FollowsHomeChannel) => void;
+	onContextMenu: (event: MouseEvent, channel: FollowsHomeChannel) => void;
 }
 
 export type FollowsHomeMessage =

@@ -7,6 +7,7 @@ import type { PlatformType } from "$types/shared/platform.types.ts";
 import { render } from "preact";
 
 const ROW_SELECTOR = '#sidebar-wrapper a[data-testid^="sidebar-recommended-channel"]';
+const NATIVE_TOOLTIP = "[data-radix-popper-content-wrapper]";
 
 export default class SidebarChannelHoverModule extends KickModule {
 	readonly config: KickModuleConfig = {
@@ -30,6 +31,12 @@ export default class SidebarChannelHoverModule extends KickModule {
 	};
 
 	private container: HTMLElement | null = null;
+
+	initialize(): void {
+		this.commonUtils().createGlobalStyle(
+			`body:has(#${this.getId()}):has(${ROW_SELECTOR}[aria-describedby]) ${NATIVE_TOOLTIP}:has([role="tooltip"]) { display: none !important; }`,
+		);
+	}
 
 	private mount(): void {
 		if (this.container?.isConnected) return;
@@ -68,16 +75,22 @@ export default class SidebarChannelHoverModule extends KickModule {
 
 function readKickSidebarChannel(row: HTMLElement): SidebarChannel | null {
 	const login = getLoginFromHref(row.getAttribute("href"));
-	const viewers = row.querySelector("span[title]");
-	if (!login || !viewers) return null;
+	if (!login) return null;
+	const describedBy = row.getAttribute("aria-describedby");
+	const tooltip = describedBy ? document.getElementById(describedBy)?.closest(NATIVE_TOOLTIP) : null;
 	const image = row.querySelector("img");
-	const [name, category] = [...row.querySelectorAll("span.truncate")].map((span) => span.textContent?.trim() || null);
+	const labels = row.querySelector("span.truncate") ? row : tooltip;
+	const [name, category] = [...(labels?.querySelectorAll("span.truncate") ?? [])].map(
+		(span) => span.textContent?.trim() || null,
+	);
+	const viewers = row.querySelector("span[title]") ?? tooltip?.querySelector("span[title]");
 	return createSidebarChannel("kick", {
 		login,
 		displayName: name ?? image?.getAttribute("alt") ?? login,
 		avatarUrl: image?.getAttribute("src") ?? null,
 		live: true,
-		viewers: parseViewerCount(viewers.getAttribute("title")),
+		viewers: parseViewerCount(viewers?.getAttribute("title")),
+		title: tooltip?.querySelector("div[title]")?.getAttribute("title") ?? null,
 		category: category ?? null,
 		thumbnailUrl: null,
 	});

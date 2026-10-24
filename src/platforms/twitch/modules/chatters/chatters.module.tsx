@@ -56,11 +56,10 @@ export default class ChattersModule extends TwitchModule {
 			},
 			{
 				type: "selector",
-				selectors: [".tw-dialog-layer .tw-transition .tw-balloon"],
+				selectors: [".tw-dialog-layer .tw-channel-status-indicator"],
 				callback: this.createIndividualChattersComponents.bind(this),
 				key: "shared-chatters",
 				validateUrl: ChattersModule.URL_CONFIG,
-				useParent: true,
 				once: true,
 			},
 			{
@@ -103,12 +102,6 @@ export default class ChattersModule extends TwitchModule {
 		];
 	}
 
-	private getFilteredIndicators(root: Element): Element[] {
-		return Array.from(root.querySelectorAll(".tw-channel-status-indicator")).filter(
-			(el) => !el.closest(".online-side-nav-channel-tooltip__body"),
-		);
-	}
-
 	private async createTotalChattersComponent(elements: Element[], key: string) {
 		if (!(await this.isModuleEnabled())) return;
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), elements, "span");
@@ -143,28 +136,23 @@ export default class ChattersModule extends TwitchModule {
 
 	private async createIndividualChattersComponents(elements: Element[]) {
 		if (!(await this.isModuleEnabled())) return;
-		await this.commonUtils().delay(300);
-		elements.forEach((root) => {
-			const indicators = this.getFilteredIndicators(root);
-
-			indicators.forEach((indicator) => {
+		elements
+			.filter((indicator) => !indicator.closest(".online-side-nav-channel-tooltip__body"))
+			.forEach((indicator) => {
 				const username = this.findUsernameFromStatusIndicator(indicator)?.toLowerCase();
-				if (!username) return;
+				if (!username || !indicator.parentElement) return;
 
 				const counter = this.getOrCreateCounter(username, ChattersModule.LOADING_VALUE);
-				if (counter !== undefined && indicator.parentElement) {
-					let existing = indicator.parentElement.querySelector(
-						`.${ChattersModule.INDIVIDUAL_CHATTERS_COMPONENT_WRAPPER_CLASS}`,
-					);
-					if (!existing) {
-						existing = document.createElement("span");
-						existing.className = ChattersModule.INDIVIDUAL_CHATTERS_COMPONENT_WRAPPER_CLASS;
-						indicator.parentElement.appendChild(existing);
-					}
-					render(<ChattersComponent click={this.refreshChatters.bind(this)} counter={counter} />, existing);
+				let existing = indicator.parentElement.querySelector(
+					`.${ChattersModule.INDIVIDUAL_CHATTERS_COMPONENT_WRAPPER_CLASS}`,
+				);
+				if (!existing) {
+					existing = document.createElement("span");
+					existing.className = ChattersModule.INDIVIDUAL_CHATTERS_COMPONENT_WRAPPER_CLASS;
+					indicator.parentElement.appendChild(existing);
 				}
+				render(<ChattersComponent click={this.refreshChatters.bind(this)} counter={counter} />, existing);
 			});
-		});
 
 		const loadingLogins = Object.keys(this.chattersCounters).filter(
 			(login) => this.chattersCounters[login].value === ChattersModule.LOADING_VALUE,

@@ -8,23 +8,12 @@ export type EnhancerBadge = {
 };
 
 export type EnhancerAccount = {
-	accountId: string;
+	accountId?: string;
 	externalId: string;
 	badgesIds: string[];
 	customNickname: string | null;
 	hasGlow: boolean;
 	customFont: string | null;
-};
-
-export type EnhancerChannelDto = {
-	channelId: string | null;
-	platform: Uppercase<PlatformType>;
-	accounts: EnhancerAccount[];
-	badges: EnhancerBadge[];
-};
-
-export type EnhancerAggregateResponse = EnhancerChannelDto & {
-	cursor: string;
 };
 
 export type EnhancerGlobalTopic = `global:${Uppercase<PlatformType>}`;
@@ -46,20 +35,37 @@ export type EnhancerMessageEvent = {
 export type EnhancerAggregateUpdatedEvent = {
 	type: "aggregate.updated";
 	topic: EnhancerAggregateTopic;
+	epoch: string;
+	seq: number;
 	accountsUpsert: EnhancerAccount[];
 	accountIdsRemove: string[];
+	externalIdsRemove: string[];
 	badgesUpsert: EnhancerBadge[];
 	badgeIdsRemove: string[];
-	cursor: string;
+	cursor?: string;
 };
 
-export type EnhancerAggregateSnapshotEvent = EnhancerChannelDto & {
-	type: "aggregate.snapshot";
+export type EnhancerAggregateHeadEvent = {
+	type: "aggregate.head";
 	topic: EnhancerAggregateTopic;
-	snapshotId: string;
-	page: number;
-	hasNextPage: boolean;
-	cursor: string;
+	epoch: string;
+	seq: number;
+	snapshot: { hash: string; seq: number; path: string };
+	resync: boolean;
+	from: number;
+};
+
+export type EnhancerSnapshotAppearance = [customNickname: string | null, customFont: string | null, hasGlow: boolean];
+
+export type EnhancerSnapshotHeader = {
+	topic: EnhancerAggregateTopic;
+	platform: Uppercase<PlatformType>;
+	channelId: string | null;
+	epoch: string;
+	seq: number;
+	badges: EnhancerBadge[];
+	appearances: [string, string | null, string | null, number][];
+	textAccounts: [string, number[]][];
 };
 
 export type EnhancerChannelAvailableEvent = {
@@ -79,7 +85,7 @@ export type EnhancerChannelUnavailableEvent = {
 
 export type EnhancerStateEvent =
 	| EnhancerAggregateUpdatedEvent
-	| EnhancerAggregateSnapshotEvent
+	| EnhancerAggregateHeadEvent
 	| EnhancerChannelAvailableEvent
 	| EnhancerChannelUnavailableEvent;
 
@@ -91,7 +97,6 @@ export type EnhancerWebSocketMessage =
 	| { type: "subscription.confirmed" | "subscription.removed" | "replay.complete"; topic: EnhancerAggregateTopic }
 	| { type: "pong" }
 	| { type: "error"; code: string }
-	| { type: "sync.required"; topic: EnhancerAggregateTopic }
 	| { error: { code: string; message: string } }
 	| EnhancerMessageEvent
 	| EnhancerStateEvent;

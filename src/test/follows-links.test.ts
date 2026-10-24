@@ -3,6 +3,7 @@ import { getFollowsComparator } from "$shared/components/cross-platform-follows/
 import {
 	getChannelLinkId,
 	getConflictingLinkIds,
+	getPinTargets,
 	matchesFollowsPlatform,
 	mergeLinkedChannels,
 	pickLinkedPlatform,
@@ -145,4 +146,23 @@ test("a linked streamer matches the platform filter of the platform it shows", (
 
 	expect(matchesFollowsPlatform(entry, "kick")).toBe(true);
 	expect(matchesFollowsPlatform(entry, "twitch")).toBe(false);
+});
+
+test("the home page keeps each entry's refresh time when it merges a linked pair", () => {
+	const channels = [
+		{ ...channel("twitch", "a"), checkedAt: 1 },
+		{ ...channel("kick", "a", { live: true }), checkedAt: 2 },
+	];
+
+	const [entry] = mergeLinkedChannels(channels, [link("a", "a")]);
+
+	expect(entry.platform).toBe("kick");
+	expect(entry.checkedAt).toBe(2);
+});
+
+test("pinning a linked streamer pins both of their channels", () => {
+	const [entry] = mergeLinkedChannels([channel("twitch", "a"), channel("kick", "b")], [link("a", "b")]);
+
+	expect(keys(getPinTargets(entry))).toEqual(["twitch:a", "kick:b"]);
+	expect(keys(getPinTargets(channel("kick", "solo")))).toEqual(["kick:solo"]);
 });

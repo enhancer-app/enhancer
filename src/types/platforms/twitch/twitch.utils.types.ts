@@ -189,6 +189,33 @@ export type ChatInputComponent = {
 	};
 };
 
+export type ChatSendMessageErrorCheck = {
+	check: (message: string) => boolean;
+	onMessageSent?: (message: string) => void;
+};
+
+export type ChatMessageSenderComponent = {
+	props: {
+		authToken?: string;
+		emoteOnlyMode?: boolean;
+		isCurrentUserModerator?: boolean;
+		isCurrentUserVIP?: boolean;
+		onSendMessage: (message: string, additionalMetadata?: unknown) => unknown;
+		sendMessageErrorChecks?: Record<string, ChatSendMessageErrorCheck>;
+	};
+	disableChatConditions?: () => boolean;
+};
+
+export type ChatSentMessageTrackerComponent = {
+	props: {
+		registerSendMessageErrorCheck: unknown;
+	};
+	state: {
+		lastSentMessage?: string;
+		lastSentTimestamp?: number | null;
+	};
+};
+
 export type ScrollableChatComponent = {
 	props: {
 		currentUserLogin: string;

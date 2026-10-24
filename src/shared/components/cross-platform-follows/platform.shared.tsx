@@ -64,7 +64,21 @@ const PlatformLabelBox = styled.span<{ $platform: PlatformType }>`
 	}
 `;
 
-export const AvatarPlatformDot = styled.span<{ $platform: PlatformType; $size: number; $border: string }>`
+export const LinkedPlatformIcon = () => (
+	<svg viewBox="0 0 2 2" aria-hidden="true">
+		<g transform="rotate(-45 1 1)">
+			<path d="M0 1a1 1 0 0 1 2 0z" fill={PLATFORM_COLORS.twitch} />
+			<path d="M0 1a1 1 0 0 0 2 0z" fill={PLATFORM_COLORS.kick} />
+		</g>
+	</svg>
+);
+
+export const AvatarPlatformDot = styled.span<{
+	$platform: PlatformType;
+	$size: number;
+	$border: string;
+	$linked?: boolean;
+}>`
 	position: absolute;
 	right: -2px;
 	bottom: -2px;
@@ -72,8 +86,14 @@ export const AvatarPlatformDot = styled.span<{ $platform: PlatformType; $size: n
 	width: ${(props) => props.$size}px;
 	height: ${(props) => props.$size}px;
 	border-radius: 50%;
-	background: ${(props) => PLATFORM_COLORS[props.$platform]};
+	background: ${(props) => (props.$linked ? "none" : PLATFORM_COLORS[props.$platform])};
 	border: 2px solid ${(props) => props.$border};
+
+	svg {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
 `;
 
 export function formatViewers(viewers: number): string {

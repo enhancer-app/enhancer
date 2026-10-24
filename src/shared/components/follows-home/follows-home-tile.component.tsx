@@ -2,6 +2,7 @@ import { MarqueeTextComponent } from "$shared/components/marquee-text/marquee-te
 import { StreamPreviewComponent } from "$shared/components/stream-preview/stream-preview.component.tsx";
 import {
 	AvatarPlatformDot,
+	LinkedPlatformIcon,
 	channelThumbnailUrl,
 	formatUptime,
 	formatViewers,
@@ -10,6 +11,7 @@ import {
 	PLATFORM_NAMES,
 	PLATFORM_URLS,
 } from "$shared/components/cross-platform-follows/platform.shared.tsx";
+import { getFollowEntryKey } from "$shared/utils/follows-links.utils.ts";
 import { HOME_ANIMATION_KEY, HOME_LIVE_BADGE } from "$shared/utils/follows-home-animation.utils.ts";
 import { getPlaylistFetcher } from "$shared/utils/playlist-proxy.utils.ts";
 import type { FollowsHomeTileProps } from "$types/shared/components/follows-home.component.types.ts";
@@ -24,7 +26,13 @@ async function resolvePreviewUrl(platform: PlatformType, login: string): Promise
 	return typeof response?.url === "string" ? response.url : null;
 }
 
-export function FollowsHomeTileComponent({ channel, now, onNavigate, onTogglePin }: FollowsHomeTileProps) {
+export function FollowsHomeTileComponent({
+	channel,
+	now,
+	onNavigate,
+	onTogglePin,
+	onContextMenu,
+}: FollowsHomeTileProps) {
 	const [hovered, setHovered] = useState(false);
 	const [pointerInside, setPointerInside] = useState(false);
 	const [playing, setPlaying] = useState(false);
@@ -56,8 +64,13 @@ export function FollowsHomeTileComponent({ channel, now, onNavigate, onTogglePin
 
 	return (
 		<Tile
-			{...{ [HOME_ANIMATION_KEY]: `live:${channel.platform}:${channel.login}` }}
+			{...{ [HOME_ANIMATION_KEY]: `live:${getFollowEntryKey(channel)}` }}
 			$accent={PLATFORM_COLORS[channel.platform]}
+			onContextMenu={(event: MouseEvent) => {
+				if (event.shiftKey) return;
+				event.preventDefault();
+				onContextMenu(event, channel);
+			}}
 			onMouseEnter={() => setPointerInside(true)}
 			onMouseLeave={() => setPointerInside(false)}
 		>
@@ -112,10 +125,13 @@ export function FollowsHomeTileComponent({ channel, now, onNavigate, onTogglePin
 					</Avatar>
 					<AvatarPlatformDot
 						$platform={channel.platform}
+						$linked={!!channel.linked}
 						$size={14}
 						$border="var(--page-background)"
-						title={PLATFORM_NAMES[channel.platform]}
-					/>
+						title={channel.linked ? "Linked Twitch and Kick channels" : PLATFORM_NAMES[channel.platform]}
+					>
+						{channel.linked && <LinkedPlatformIcon />}
+					</AvatarPlatformDot>
 				</AvatarWrap>
 				<Text>
 					<Title>
