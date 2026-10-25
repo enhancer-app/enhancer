@@ -15,8 +15,8 @@ Usage:
   bun run release:setup-branches
 
 Creates the stable and canary branches from the latest v* tag if they are missing, protects them with
-merge-commit-only rulesets, allows merge commits on the default branch for the sync PR, and limits the
-release environment to stable and canary and release-announce to stable.`);
+merge-commit-only rulesets, allows only squash on the default branch (the enhancer-release app bypasses it
+to merge the sync PR), and limits the release environment to stable and canary and release-announce to stable.`);
 	process.exit(0);
 }
 

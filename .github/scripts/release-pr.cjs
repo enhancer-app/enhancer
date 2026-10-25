@@ -1,6 +1,6 @@
 const STABLE = "stable";
 const CANARY = "canary";
-const RELEASE_BRANCH = "release-next";
+const RELEASE_BRANCH = "release-stable";
 const HOTFIX_BRANCH = "release-hotfix";
 const SYNC_BRANCH = "sync-stable";
 const LEVELS = ["patch", "minor", "major"];
