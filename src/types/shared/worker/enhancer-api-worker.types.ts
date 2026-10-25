@@ -86,6 +86,8 @@ export interface SubscriptionState {
 	eventBuffer: EnhancerBufferedEvent[];
 	confirmationRetry: ReturnType<typeof setTimeout> | null;
 	confirmationWaiters: Set<() => void>;
+	retryTimer: ReturnType<typeof setTimeout> | null;
+	retryAttempt: number;
 	syncWaiters: Set<() => void>;
 	seenCursors: Set<string>;
 	processing: Promise<void>;

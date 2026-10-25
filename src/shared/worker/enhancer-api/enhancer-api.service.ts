@@ -31,6 +31,7 @@ import type { WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
 
 export class EnhancerApiService {
 	private static readonly CONFIRMATION_TIMEOUT_MS = 5000;
+	private static readonly CHANNEL_RETRY_DELAYS_MS = [30_000, 60_000, 300_000];
 	private static readonly HEARTBEAT_INTERVAL_MS = 25_000;
 	private static readonly MAX_SEEN_CURSORS = 1000;
 	private static readonly MAX_SUBSCRIPTIONS = 32;
@@ -134,6 +135,7 @@ export class EnhancerApiService {
 		this.closeConnection();
 		for (const state of this.subscriptions.values()) {
 			state.active = false;
+			this.clearChannelRetry(state);
 			this.releaseSubscription(state);
 		}
 		this.clients.clear();
@@ -203,6 +205,8 @@ export class EnhancerApiService {
 				eventBuffer: [],
 				confirmationRetry: null,
 				confirmationWaiters: new Set(),
+				retryTimer: null,
+				retryAttempt: 0,
 				syncWaiters: new Set(),
 				seenCursors: new Set(),
 				processing: Promise.resolve(),
@@ -227,6 +231,7 @@ export class EnhancerApiService {
 		if (state.subscribers.size > 0) return;
 		if (this.pendingSubscription === state && !state.confirmed) this.closeConnection();
 		state.active = false;
+		this.clearChannelRetry(state);
 		this.unsubscribe(state);
 		this.releaseSubscription(state);
 		this.subscriptions.delete(state.topic);
@@ -260,6 +265,7 @@ export class EnhancerApiService {
 		if (root.bootstrapPromise) return root.bootstrapPromise;
 		if (root.aggregate && root.confirmed && !root.replaying) return root;
 		if (root.aggregate === null && root.rejected) return null;
+		if (root.rejected && root.retryTimer) return root.aggregate ? root : null;
 
 		root.bootstrapPromise = (async () => {
 			if (!root.aggregate) await this.restoreStored(root);
@@ -270,8 +276,15 @@ export class EnhancerApiService {
 
 			await this.waitForConfirmation(current);
 			current = this.resolveState(current);
-			if (current.rejected) return null;
-			if (!current.confirmed) throw new Error(`Enhancer subscription confirmation timed out for ${current.topic}`);
+			while (current.scope === "CHANNEL" && current.active && current.requested && !current.confirmed) {
+				await this.waitForConfirmation(current);
+				current = this.resolveState(current);
+			}
+			if (current.rejected) return current.aggregate ? current : null;
+			if (!current.confirmed) {
+				if (current.scope === "CHANNEL") return current.aggregate ? current : null;
+				throw new Error(`Enhancer subscription confirmation timed out for ${current.topic}`);
+			}
 			if (current.replaying) await this.waitForSynchronization(current);
 			current = this.resolveState(current);
 			return current.aggregate ? current : null;
@@ -373,6 +386,7 @@ export class EnhancerApiService {
 		}
 
 		if (message.type === "subscription.confirmed") {
+			if (this.subscriptions.get(message.topic)?.retryTimer) return;
 			const requestedState = this.pendingSubscription ?? this.subscriptions.get(message.topic) ?? undefined;
 			if (!requestedState) return;
 			const requestedTopic = requestedState.topic;
@@ -380,6 +394,7 @@ export class EnhancerApiService {
 				requestedState.topic === message.topic ? requestedState : this.renameTopic(requestedState, message.topic);
 			state.confirmed = true;
 			state.rejected = false;
+			state.retryAttempt = 0;
 			this.pendingSubscriptions.delete(requestedTopic);
 			this.pendingSubscriptions.delete(message.topic);
 			if (this.pendingSubscription === requestedState) this.pendingSubscription = null;
@@ -704,6 +719,10 @@ export class EnhancerApiService {
 
 	private activatePendingChannel(state: SubscriptionState, topic: EnhancerAggregateTopic): void {
 		const current = this.resolveState(state);
+		if (current.retryTimer) {
+			this.retryChannel(current);
+			return;
+		}
 		if (!current.active || current.bootstrapPromise || current.aggregate !== null || !current.rejected) return;
 		current.aggregate = undefined;
 		current.rejected = false;
@@ -898,10 +917,43 @@ export class EnhancerApiService {
 		state.confirmationRetry = setTimeout(() => {
 			state.confirmationRetry = null;
 			if (!state.active || state.confirmed || !this.serverReady) return;
+			if (state.scope === "CHANNEL") {
+				this.deferChannel(state);
+				return;
+			}
 			this.releaseSubscription(state);
 			if (this.pendingSubscription === state) this.pendingSubscription = null;
 			this.closeConnection();
 		}, EnhancerApiService.CONFIRMATION_TIMEOUT_MS);
+	}
+
+	private deferChannel(state: SubscriptionState): void {
+		const delays = EnhancerApiService.CHANNEL_RETRY_DELAYS_MS;
+		const delay = delays[Math.min(state.retryAttempt, delays.length - 1)];
+		this.logger.warn(`No reply for ${state.topic}, retrying in ${delay / 1000}s`);
+		this.unsubscribe(state);
+		state.rejected = true;
+		this.releaseSubscription(state);
+		state.retryAttempt++;
+		state.retryTimer = setTimeout(() => this.retryChannel(state), delay);
+		this.sendNextSubscription();
+	}
+
+	private retryChannel(state: SubscriptionState): void {
+		this.clearChannelRetry(state);
+		const current = this.resolveState(state);
+		if (!current.active || !current.rejected || current.bootstrapPromise) return;
+		current.rejected = false;
+		void this.bootstrap(current)
+			.then((ready) => {
+				if (ready?.confirmed) return this.broadcastSeed(ready);
+			})
+			.catch((error) => this.logger.warn(`Failed to retry ${current.topic}:`, error));
+	}
+
+	private clearChannelRetry(state: SubscriptionState): void {
+		if (state.retryTimer) clearTimeout(state.retryTimer);
+		state.retryTimer = null;
 	}
 
 	private waitForConfirmation(state: SubscriptionState): Promise<void> {
