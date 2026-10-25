@@ -21,6 +21,7 @@ jobs:
       github.event.pull_request.head.ref == 'sync-stable' &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    environment: release-sync
     permissions:
       contents: read
       pull-requests: read
@@ -28,12 +29,55 @@ jobs:
       - name: Check permissions
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ACTOR: ${{ github.actor }}
+          ACTORS: ${{ github.actor }} ${{ github.triggering_actor }}
         run: |
-          ROLE=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$ACTOR/permission" --jq .role_name)
-          if [ "$ROLE" != "admin" ] && [ "$ROLE" != "maintain" ]; then
-            echo "::error::$ACTOR ($ROLE) cannot merge the sync PR."
+          for ACTOR in $ACTORS; do
+            ROLE=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$ACTOR/permission" --jq .role_name || true)
+            if [ "$ROLE" != "admin" ] && [ "$ROLE" != "maintain" ]; then
+              echo "::error::$ACTOR (${ROLE:-unknown}) cannot merge the sync PR."
+              exit 1
+            fi
+          done
+
+      - name: Checkout master
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: master
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify sync branch
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch origin "$HEAD_SHA"
+          STABLE=$(git rev-parse origin/stable)
+          read -r _ FIRST SECOND EXTRA <<< "$(git rev-list --parents -n 1 "$HEAD_SHA")"
+          if [ -z "$SECOND" ] || [ -n "$EXTRA" ]; then
+            echo "::error::sync-stable must end with a single merge of stable and master. Wait for the release workflow to rebuild it."
             exit 1
+          fi
+          if [ "$SECOND" = "$STABLE" ]; then OTHER=$FIRST
+          elif [ "$FIRST" = "$STABLE" ]; then OTHER=$SECOND
+          else
+            echo "::error::sync-stable does not merge the current stable. Wait for the release workflow to rebuild it."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$OTHER" origin/master; then
+            echo "::error::sync-stable merges commits that are not on master."
+            exit 1
+          fi
+          if ! RESULT=$(git merge-tree --write-tree --no-messages origin/master "$HEAD_SHA"); then
+            echo "::error::sync-stable conflicts with master. Wait for the release workflow to rebuild it."
+            exit 1
+          fi
+          if EXPECTED=$(git merge-tree --write-tree --no-messages origin/master origin/stable); then
+            if [ "$RESULT" != "$EXPECTED" ]; then
+              echo "::error::sync-stable changes more than merging stable into master would."
+              exit 1
+            fi
+          else
+            echo "::warning::stable conflicts with master, so the conflict resolution in sync-stable was merged as reviewed."
           fi
 
       - name: Create App Token
@@ -43,32 +87,15 @@ jobs:
           client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           permission-contents: write
+          permission-pull-requests: write
           permission-workflows: write
 
-      - name: Checkout master
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: master
-          fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
-
-      - name: Configure bot identity
+      - name: Merge
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
-        run: |
-          USER_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
-          git config user.name "${APP_SLUG}[bot]"
-          git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
-
-      - name: Merge and push
-        env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          git fetch origin "$HEAD_SHA"
-          if ! git merge-base --is-ancestor origin/stable "$HEAD_SHA"; then
-            echo "::error::sync-stable does not contain stable. Wait for the release workflow to update it."
-            exit 1
-          fi
-          git merge --no-edit -m "chore(sync): merge stable into master" "$HEAD_SHA"
-          git push origin HEAD:master
+          gh api -X PUT "repos/$GITHUB_REPOSITORY/pulls/$NUMBER/merge" \
+            -f merge_method=merge -f sha="$HEAD_SHA" \
+            -f commit_title="chore(sync): merge stable into master (#$NUMBER)"

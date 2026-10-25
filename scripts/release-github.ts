@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 export const REPO = "enhancer-app/enhancer";
 export const RELEASE_ENV = "release";
 export const ANNOUNCE_ENV = "release-announce";
+export const SYNC_ENV = "release-sync";
 export const LEGACY_RELEASE_ENVS = ["release-stable", "release-canary"];
 export const ENVIRONMENTS_URL = `https://github.com/${REPO}/settings/environments`;
 export const RELEASE_APP_SLUG = "enhancer-release";
@@ -103,6 +104,7 @@ function configureEnvironment(name: string, branches: string[], requireReviewers
 export function configureEnvironments(): void {
 	configureEnvironment(RELEASE_ENV, ["stable", "canary"], true);
 	configureEnvironment(ANNOUNCE_ENV, ["stable"], false);
+	configureEnvironment(SYNC_ENV, ["master"], false);
 }
 
 export function legacyEnvironments(): string[] {
@@ -124,7 +126,7 @@ function defaultBranchRuleset(): Ruleset {
 	throw new Error("No ruleset protects the default branch.");
 }
 
-function upsertRuleset(existing: Ruleset[], ruleset: Omit<Ruleset, "id">): void {
+function upsertRuleset(existing: Ruleset[], ruleset: Omit<Ruleset, "id"> & { target?: "branch" | "tag" }): void {
 	const body = { target: "branch", ...ruleset };
 	const current = existing.find((candidate) => candidate.name === ruleset.name);
 	if (current) api("PUT", `rulesets/${current.id}`, body);
@@ -139,7 +141,7 @@ function releaseAppActor(): Ruleset["bypass_actors"][number] {
 	} catch {
 		throw new Error(`Create the ${RELEASE_APP_SLUG} GitHub App and install it on ${REPO} first.`);
 	}
-	return { actor_id: id, actor_type: "Integration", bypass_mode: "always" };
+	return { actor_id: id, actor_type: "Integration", bypass_mode: "pull_request" };
 }
 
 const methodOnly = (methods: string[]): Rule => ({
@@ -159,13 +161,14 @@ export function configureRulesets(): void {
 	const master = defaultBranchRuleset();
 	const pullRequest = master.rules.find((rule) => rule.type === "pull_request");
 	if (!pullRequest?.parameters) throw new Error(`Ruleset "${master.name}" has no pull request rule.`);
+	const maintainers = master.bypass_actors.filter((actor) => actor.actor_id !== app.actor_id);
 
 	api("PUT", `rulesets/${master.id}`, {
 		name: master.name,
 		target: "branch",
 		enforcement: master.enforcement,
 		conditions: master.conditions,
-		bypass_actors: [...master.bypass_actors.filter((actor) => actor.actor_id !== app.actor_id), app],
+		bypass_actors: [...maintainers, app],
 		rules: master.rules.map((rule) =>
 			rule === pullRequest ? { ...rule, parameters: { ...rule.parameters, allowed_merge_methods: ["squash"] } } : rule,
 		),
@@ -193,7 +196,7 @@ export function configureRulesets(): void {
 		name: "stable",
 		enforcement: "active",
 		conditions: { ref_name: { include: ["refs/heads/stable"], exclude: [] } },
-		bypass_actors: master.bypass_actors,
+		bypass_actors: maintainers,
 		rules: [
 			...protect,
 			mergeOnly,
@@ -211,9 +214,20 @@ export function configureRulesets(): void {
 		name: "canary",
 		enforcement: "active",
 		conditions: { ref_name: { include: ["refs/heads/canary"], exclude: [] } },
-		bypass_actors: master.bypass_actors,
+		bypass_actors: maintainers,
 		rules: [...protect, mergeOnly],
 	});
+	upsertRuleset(existing, {
+		name: "release-tags",
+		target: "tag",
+		enforcement: "active",
+		conditions: { ref_name: { include: ["refs/tags/v*", "refs/tags/canary-*"], exclude: [] } },
+		bypass_actors: maintainers,
+		rules: [{ type: "update" }, ...protect],
+	});
+
+	api("PUT", "immutable-releases");
+	console.log("Immutable releases are enabled.");
 }
 
 export function ensureBranch(branch: string, sha: string): void {
