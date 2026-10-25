@@ -1,6 +1,6 @@
 const STABLE = "stable";
 const CANARY = "canary";
-const RELEASE_BRANCH = "release-next";
+const RELEASE_BRANCH = "release-stable";
 const HOTFIX_BRANCH = "release-hotfix";
 const SYNC_BRANCH = "sync-stable";
 const LEVELS = ["patch", "minor", "major"];
@@ -10,6 +10,10 @@ const BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com";
 const MERGE_NOTE = [
 	"> [!IMPORTANT]",
 	"> Merge with **Create a merge commit**. Squash or rebase would give these commits new hashes on this branch.",
+].join("\n");
+const SYNC_NOTE = [
+	"> [!IMPORTANT]",
+	"> Do not merge this PR by hand. master only allows squash, so add the `merge-sync` label and the Merge Sync PR workflow merges it with a merge commit. It refuses the branch if it holds anything beyond the merge of stable.",
 ].join("\n");
 const FOOTER = "<sub>Managed by the release workflow. Manual commits to this branch are overwritten.</sub>";
 
@@ -99,12 +103,12 @@ const renderSyncBody = (changes, conflicted) =>
 	[
 		"Brings stable releases and hotfixes back into master, so Canary and the next stable release keep the same commits.",
 		"",
-		MERGE_NOTE,
+		SYNC_NOTE,
 		...(conflicted
 			? [
 					"",
 					"> [!WARNING]",
-					`> stable conflicts with master. Merge master into \`${SYNC_BRANCH}\` and resolve the conflicts there, never on stable.`,
+					`> stable conflicts with master. Merge master into \`${SYNC_BRANCH}\` and resolve the conflicts there, never on stable. The workflow cannot verify a conflict resolution, so review the merge commit before adding the label.`,
 				]
 			: []),
 		"",

@@ -3,8 +3,11 @@ import { spawnSync } from "node:child_process";
 export const REPO = "enhancer-app/enhancer";
 export const RELEASE_ENV = "release";
 export const ANNOUNCE_ENV = "release-announce";
+export const SYNC_ENV = "release-sync";
 export const LEGACY_RELEASE_ENVS = ["release-stable", "release-canary"];
 export const ENVIRONMENTS_URL = `https://github.com/${REPO}/settings/environments`;
+export const RELEASE_APP_SLUG = "enhancer-release";
+const MERGE_METHOD_SUFFIX = "-merge-method";
 
 const REQUIRED_CHECKS = ["Lint & Format", "Tests", "Type Check", "Build Project", "Validate Pull Request Title"];
 
@@ -101,6 +104,7 @@ function configureEnvironment(name: string, branches: string[], requireReviewers
 export function configureEnvironments(): void {
 	configureEnvironment(RELEASE_ENV, ["stable", "canary"], true);
 	configureEnvironment(ANNOUNCE_ENV, ["stable"], false);
+	configureEnvironment(SYNC_ENV, ["master"], false);
 }
 
 export function legacyEnvironments(): string[] {
@@ -116,12 +120,13 @@ function defaultBranchRuleset(): Ruleset {
 	const summaries = api<{ id: number }[]>("GET", "rulesets");
 	for (const { id } of summaries) {
 		const ruleset = api<Ruleset>("GET", `rulesets/${id}`);
+		if (ruleset.name.endsWith(MERGE_METHOD_SUFFIX)) continue;
 		if (ruleset.conditions.ref_name.include.includes("~DEFAULT_BRANCH")) return ruleset;
 	}
 	throw new Error("No ruleset protects the default branch.");
 }
 
-function upsertRuleset(existing: Ruleset[], ruleset: Omit<Ruleset, "id">): void {
+function upsertRuleset(existing: Ruleset[], ruleset: Omit<Ruleset, "id"> & { target?: "branch" | "tag" }): void {
 	const body = { target: "branch", ...ruleset };
 	const current = existing.find((candidate) => candidate.name === ruleset.name);
 	if (current) api("PUT", `rulesets/${current.id}`, body);
@@ -129,34 +134,69 @@ function upsertRuleset(existing: Ruleset[], ruleset: Omit<Ruleset, "id">): void 
 	console.log(`Ruleset "${ruleset.name}" is up to date.`);
 }
 
+function releaseAppActor(): Ruleset["bypass_actors"][number] {
+	let id: number;
+	try {
+		id = (JSON.parse(gh(["api", `apps/${RELEASE_APP_SLUG}`])) as { id: number }).id;
+	} catch {
+		throw new Error(`Create the ${RELEASE_APP_SLUG} GitHub App and install it on ${REPO} first.`);
+	}
+	return { actor_id: id, actor_type: "Integration", bypass_mode: "pull_request" };
+}
+
+const methodOnly = (methods: string[]): Rule => ({
+	type: "pull_request",
+	parameters: {
+		allowed_merge_methods: methods,
+		dismiss_stale_reviews_on_push: false,
+		require_code_owner_review: false,
+		require_last_push_approval: false,
+		required_approving_review_count: 0,
+		required_review_thread_resolution: false,
+	},
+});
+
 export function configureRulesets(): void {
+	const app = releaseAppActor();
 	const master = defaultBranchRuleset();
 	const pullRequest = master.rules.find((rule) => rule.type === "pull_request");
 	if (!pullRequest?.parameters) throw new Error(`Ruleset "${master.name}" has no pull request rule.`);
+	const maintainers = master.bypass_actors.filter((actor) => actor.actor_id !== app.actor_id);
 
-	const masterMethods = new Set([...((pullRequest.parameters.allowed_merge_methods as string[]) ?? []), "merge"]);
 	api("PUT", `rulesets/${master.id}`, {
 		name: master.name,
 		target: "branch",
 		enforcement: master.enforcement,
 		conditions: master.conditions,
-		bypass_actors: master.bypass_actors,
+		bypass_actors: [...maintainers, app],
 		rules: master.rules.map((rule) =>
-			rule === pullRequest
-				? { ...rule, parameters: { ...rule.parameters, allowed_merge_methods: [...masterMethods] } }
-				: rule,
+			rule === pullRequest ? { ...rule, parameters: { ...rule.parameters, allowed_merge_methods: ["squash"] } } : rule,
 		),
 	});
-	console.log(`Ruleset "${master.name}" allows merge commits for the stable sync PR.`);
+	console.log(`Ruleset "${master.name}" lets ${RELEASE_APP_SLUG} merge the stable sync PR.`);
 
 	const mergeOnly = { ...pullRequest, parameters: { ...pullRequest.parameters, allowed_merge_methods: ["merge"] } };
 	const protect = [{ type: "deletion" }, { type: "non_fast_forward" }];
 	const existing = api<Ruleset[]>("GET", "rulesets");
 	upsertRuleset(existing, {
+		name: `master${MERGE_METHOD_SUFFIX}`,
+		enforcement: "active",
+		conditions: { ref_name: { include: ["~DEFAULT_BRANCH"], exclude: [] } },
+		bypass_actors: [app],
+		rules: [methodOnly(["squash"])],
+	});
+	upsertRuleset(existing, {
+		name: `release${MERGE_METHOD_SUFFIX}`,
+		enforcement: "active",
+		conditions: { ref_name: { include: ["refs/heads/stable", "refs/heads/canary"], exclude: [] } },
+		bypass_actors: [],
+		rules: [methodOnly(["merge"])],
+	});
+	upsertRuleset(existing, {
 		name: "stable",
 		enforcement: "active",
 		conditions: { ref_name: { include: ["refs/heads/stable"], exclude: [] } },
-		bypass_actors: master.bypass_actors,
+		bypass_actors: maintainers,
 		rules: [
 			...protect,
 			mergeOnly,
@@ -174,9 +214,20 @@ export function configureRulesets(): void {
 		name: "canary",
 		enforcement: "active",
 		conditions: { ref_name: { include: ["refs/heads/canary"], exclude: [] } },
-		bypass_actors: master.bypass_actors,
+		bypass_actors: maintainers,
 		rules: [...protect, mergeOnly],
 	});
+	upsertRuleset(existing, {
+		name: "release-tags",
+		target: "tag",
+		enforcement: "active",
+		conditions: { ref_name: { include: ["refs/tags/v*", "refs/tags/canary-*"], exclude: [] } },
+		bypass_actors: maintainers,
+		rules: [{ type: "update" }, ...protect],
+	});
+
+	api("PUT", "immutable-releases");
+	console.log("Immutable releases are enabled.");
 }
 
 export function ensureBranch(branch: string, sha: string): void {

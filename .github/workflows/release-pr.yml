@@ -23,7 +23,7 @@ jobs:
     name: Update release PRs
     if: >-
       github.event_name == 'push' ||
-      (github.event.pull_request.head.ref == 'release-next' &&
+      (github.event.pull_request.head.ref == 'release-stable' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.changes.body)
     runs-on: ubuntu-latest

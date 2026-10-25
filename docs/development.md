@@ -99,24 +99,35 @@ Enhancer has two release channels, each on its own branch:
 |----------|--------------------------|-------------------------------------------------------------|
 | `master` | development              | Feature PRs are merged here (squash)                        |
 | `canary` | Enhancer Canary          | Merge the bot PR `release(canary): vX.Y.Z.N` (master → canary) |
-| `stable` | Enhancer                 | Merge the bot PR `release(stable): vX.Y.Z` (release-next → stable) |
+| `stable` | Enhancer                 | Merge the bot PR `release(stable): vX.Y.Z` (release-stable → stable) |
 
 - **Stable release:** tick patch, minor or major in the `release(stable)` PR and merge it. The PR lists every
   change that is not on `stable` yet, all ticked by default. Untick a change to keep it out of the release:
   - leaving out only the newest changes keeps the original commits;
   - leaving out a change in the middle cherry-picks the ticked ones onto `stable`, so they get new hashes there;
   - if a ticked change depends on an unticked one, the bot explains it in the PR and keeps the PR as a draft.
-- **Hotfix:** open a PR from a branch based on `stable` into `stable`. The bot then opens a `release(stable)` PR
-  from `release-hotfix` with a patch bump. Merging it releases the hotfix.
-- **Sync:** after every stable release or hotfix the bot opens `chore(sync): merge stable into master`. Merge it
-  before the next stable release PR is updated.
+- **Hotfix:** merge the fix into `master` like any other change. In the `release(stable)` PR, untick every other
+  change and tick patch. The bot cherry-picks only the fix onto `stable`.
+- **Sync:** after every stable release the bot opens `chore(sync): merge stable into master`. Do not merge it by
+  hand: add the `merge-sync` label and the `enhancer-release` app merges it with a merge commit. Do this before the
+  next stable release PR is updated. The workflow only merges `sync-stable` when it is a single merge of the
+  current `stable` and gives the same result as merging `stable` into `master`. If you resolved conflicts there,
+  review that merge commit before adding the label; the workflow cannot verify it. If the run fails, remove and
+  re-add the label after the bot rebuilds the branch.
 
-Always use **Create a merge commit** for PRs into `stable` and `canary`, and for the sync PR. Squash and rebase give
-the same changes new commit hashes, and the branches then drift apart. The rulesets on `stable` and `canary` only
-allow merge commits.
+Never open PRs into `stable` or `canary` yourself; they only take the bot PRs above. The `master-merge-method`
+ruleset only allows squash on `master`; only the `enhancer-release` app can bypass it, and only to merge a PR.
+`release-merge-method` only allows merge commits on `stable` and `canary`, and nobody can bypass it. A review
+bypass therefore cannot pick the wrong method. Squash or rebase on a release branch would give the same changes
+new commit hashes, and the branches would drift apart. The `release-tags` ruleset and immutable releases keep
+`v*` and `canary-*` tags and release assets from being moved, deleted or replaced.
 
-One-time setup: `bun run release:setup-branches`, then `bun run release:setup-secrets`. Both channels publish
-from one store account, so they share the `release` environment; `release-announce` only deploys from `stable`.
+One-time setup: create the `enhancer-release` GitHub App (contents, pull requests and workflows write) and install
+it on this repository only, run `bun run release:setup-branches`, then store the app's client ID in the
+`RELEASE_APP_CLIENT_ID` repository variable and its private key in the `RELEASE_APP_PRIVATE_KEY` secret of the
+`release-sync` environment (never as a repository secret: every workflow could read it). Finally run
+`bun run release:setup-secrets`. Both channels publish from one store account, so they share the `release`
+environment; `release-announce` only deploys from `stable` and `release-sync` only from `master`.
 Extension IDs are public and live in `manifest.config.ts` and the release workflows.
 
 ## Project Scripts

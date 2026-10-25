@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, jest, test } from "bun:test";
 import { decodeBase64, EnhancerAggregateView } from "$shared/apis/enhancer-snapshot.ts";
 import { ENHANCER_ENDPOINTS } from "$shared/enhancer-environment.ts";
 import type { Logger } from "$shared/logger/logger.ts";
@@ -78,6 +78,7 @@ interface FakeTopic {
 
 const topics = new Map<string, FakeTopic>();
 const missing = new Set<string>();
+const silent = new Set<string>();
 const fetched: string[] = [];
 const fetchedOrigins: string[] = [];
 
@@ -144,6 +145,7 @@ class FakeWebSocket extends EventTarget {
 		const suffix = subscription.externalId ? `:${subscription.externalId}` : "";
 		const requested = `${subscription.scope.toLowerCase()}:${subscription.platform}${suffix}`;
 		const topic = FakeWebSocket.aliases.get(requested) ?? requested;
+		if (silent.has(topic)) return;
 		queueMicrotask(() => {
 			if (missing.has(topic) || !topics.has(topic)) {
 				this.receive({ error: { code: "NOT_FOUND", message: "Channel not found" } });
@@ -184,10 +186,10 @@ class FakeWebSocket extends EventTarget {
 const logger = { debug() {}, info() {}, warn() {}, error() {} } as unknown as Logger;
 
 async function until(condition: () => boolean, timeoutMs = 1000): Promise<void> {
-	const deadline = Date.now() + timeoutMs;
+	const deadline = performance.now() + timeoutMs;
 	while (!condition()) {
-		if (Date.now() > deadline) throw new Error("Timed out waiting for condition");
-		await new Promise((resolve) => setTimeout(resolve, 1));
+		if (performance.now() > deadline) throw new Error("Timed out waiting for condition");
+		await new Promise((resolve) => setImmediate(resolve));
 	}
 }
 
@@ -219,6 +221,8 @@ const subscribes = (externalId?: string) =>
 	);
 
 afterEach(() => {
+	jest.useRealTimers();
+	silent.clear();
 	globalThis.chrome = originalChrome;
 	globalThis.fetch = originalFetch;
 	globalThis.WebSocket = originalWebSocket;
@@ -438,4 +442,54 @@ test("switching to the test API drops production state and reconnects to the tes
 		"wss://api.enhancer.at/v1/ws?v=6.0.0",
 		"wss://test-api.enhancer.at/v1/ws?v=6.0.0",
 	]);
+});
+
+test("retries a channel the server does not answer without dropping the connection", async () => {
+	const broadcasts = setup();
+	serveTopic("global:TWITCH", [account("1")]);
+	const service = new EnhancerApiService(logger);
+	await service.initialize(7, 0, "client-a", "twitch");
+	silent.add("channel:TWITCH:quiet");
+	jest.useFakeTimers();
+
+	const joined = service.joinChannel(7, 0, "client-a", "twitch", "quiet");
+	await until(() => subscribes("quiet").length === 1);
+	jest.advanceTimersByTime(5000);
+	expect(await joined).toBeNull();
+	expect(FakeWebSocket.instances).toBe(1);
+	expect(FakeWebSocket.commands.at(-1)).toMatchObject({ type: "unsubscribe", subscription: { externalId: "quiet" } });
+
+	silent.delete("channel:TWITCH:quiet");
+	serveTopic("channel:TWITCH:quiet", [account("2")]);
+	jest.advanceTimersByTime(29_000);
+	expect(subscribes("quiet")).toHaveLength(1);
+	jest.advanceTimersByTime(1000);
+	await until(() =>
+		broadcasts.some(
+			(message) => message.type === "enhancer-api-updated" && message.payload.topic === "channel:TWITCH:quiet",
+		),
+	);
+	expect(subscribes("quiet")).toHaveLength(2);
+	expect(FakeWebSocket.instances).toBe(1);
+});
+
+test("a channel queued behind an unanswered one does not fail its join", async () => {
+	setup();
+	serveTopic("global:TWITCH", [account("1")]);
+	const service = new EnhancerApiService(logger);
+	await service.initialize(7, 0, "client-a", "twitch");
+	silent.add("channel:TWITCH:first");
+	silent.add("channel:TWITCH:second");
+	jest.useFakeTimers();
+
+	const first = service.joinChannel(7, 0, "client-a", "twitch", "first");
+	const second = service.joinChannel(8, 0, "client-b", "twitch", "second");
+	await until(() => subscribes("first").length === 1);
+	jest.advanceTimersByTime(5000);
+	await until(() => subscribes("second").length === 1);
+	jest.advanceTimersByTime(5000);
+
+	expect(await first).toBeNull();
+	expect(await second).toBeNull();
+	expect(FakeWebSocket.instances).toBe(1);
 });

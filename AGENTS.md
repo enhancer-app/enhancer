@@ -331,6 +331,14 @@ Categories: `correctness` errors, `suspicious` warnings. Key rules off: `typescr
 `react/react-in-jsx-scope`, `react-hooks/exhaustive-deps`, `eslint/no-underscore-dangle`,
 `unicorn/consistent-function-scoping`. `eslint/no-unused-vars` ignores `_`-prefixed identifiers.
 
+## Git Workflow
+
+- Every change goes through a PR into `master` and is merged with **Squash and merge**.
+- Never open PRs into `stable` or `canary` and never push to them. They only take the bot release PRs (`release-stable`, `release-hotfix`, `master` → `canary`), merged with **Create a merge commit**.
+- Hotfixes also go through `master`: untick every other change in the `release(stable)` PR and pick patch, so the bot cherry-picks only the fix onto `stable`.
+- Never merge the `sync-stable` → `master` PR by hand. Add the `merge-sync` label and the `enhancer-release` app merges it.
+- See `docs/development.md` → Releasing for the full flow.
+
 ## Critical Rules
 
 1. **Never remove the bridge readiness gate.** `WorkerService.start()` must await `enhancer-bridge-ready` before `settingsCache.initialize()` sends the first message.
