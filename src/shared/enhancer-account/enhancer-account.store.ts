@@ -23,6 +23,7 @@ export class EnhancerAccountStore {
 	readonly billingFailed = signal(false);
 	readonly error = signal<string | null>(null);
 	readonly busy = signal(false);
+	readonly ready = signal(false);
 
 	private started = false;
 
@@ -31,6 +32,12 @@ export class EnhancerAccountStore {
 	start(): void {
 		if (this.started) return;
 		this.started = true;
+		void this.workerService.send("getEnhancerAccountCache").then((snapshot) => {
+			if (!snapshot) return;
+			this.profile.value ??= snapshot.profile ?? null;
+			this.badges.value ??= snapshot.badges ?? null;
+			this.billing.value ??= snapshot.billing ?? null;
+		});
 		void this.workerService.send("getEnhancerAccount").then((state) => {
 			if (state) this.setAccount(state);
 		});
@@ -94,8 +101,11 @@ export class EnhancerAccountStore {
 		}
 	}
 
-	async saveSlot(group: BadgeSlotGroup, assignmentId: string | null): Promise<string | null> {
-		const result = await this.workerService.send("saveEnhancerBadgeSlot", buildSlotRequest(group, assignmentId));
+	async saveSlot(group: BadgeSlotGroup, visibleAssignmentIds: string[]): Promise<string | null> {
+		const result = await this.workerService.send(
+			"saveEnhancerBadgeSlot",
+			buildSlotRequest(group, visibleAssignmentIds),
+		);
 		if (!result) return "Request timed out.";
 		if (result.kind === "unauthenticated") return "Your session expired. Log in again.";
 		if (result.kind === "error") return result.message;
@@ -105,7 +115,9 @@ export class EnhancerAccountStore {
 
 	private setAccount(state: EnhancerAccountState): void {
 		const previous = this.account.value;
+		const firstState = !this.ready.value;
 		this.account.value = state;
+		this.ready.value = true;
 		if (!state.loggedIn) {
 			this.profile.value = null;
 			this.badges.value = null;
@@ -114,7 +126,7 @@ export class EnhancerAccountStore {
 			this.billingFailed.value = false;
 			return;
 		}
-		const changed = !previous.loggedIn || previous.environment !== state.environment;
+		const changed = firstState || !previous.loggedIn || previous.environment !== state.environment;
 		if (changed || !this.profile.value) void this.refresh();
 	}
 

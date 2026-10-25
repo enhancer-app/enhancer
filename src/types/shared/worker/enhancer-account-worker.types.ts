@@ -18,7 +18,8 @@ export type EnhancerProfileAction =
 	| "getEnhancerBilling"
 	| "saveEnhancerChatStyle"
 	| "submitEnhancerNickname"
-	| "clearEnhancerNickname";
+	| "clearEnhancerNickname"
+	| "getEnhancerAccountCache";
 
 export type EnhancerProfileResult<T> =
 	| { kind: "ok"; data: T }
@@ -128,3 +129,18 @@ export type AuthorizedRequestResult =
 	| { kind: "response"; response: Response }
 	| { kind: "unauthenticated" }
 	| { kind: "network-error"; message: string };
+
+export type EnhancerAccountSnapshot = {
+	profile?: EnhancerViewerSummary;
+	badges?: EnhancerViewerBadges;
+	billing?: EnhancerViewerBilling;
+	updatedAt: number;
+};
+
+export type StoredAccountSnapshot = EnhancerAccountSnapshot & { owner: string };
+
+export type AccountCacheStorage = {
+	get(key: string): Promise<unknown>;
+	set(key: string, value: unknown): Promise<void>;
+	remove(key: string): Promise<void>;
+};

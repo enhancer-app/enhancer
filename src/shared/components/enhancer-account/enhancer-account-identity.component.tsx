@@ -92,6 +92,16 @@ const Meta = styled.span<{ $cta: boolean }>`
 	color: ${({ $cta }) => ($cta ? "var(--settings-accent-hover)" : "var(--settings-text-muted)")};
 `;
 
+const SkeletonLine = styled.span<{ $width: number }>`
+	display: block;
+	width: ${({ $width }) => $width}px;
+	max-width: 100%;
+	height: 10px;
+	margin: 4px 0;
+	border-radius: 5px;
+	background: var(--settings-surface-raised);
+`;
+
 const Chevron = styled.svg`
 	flex-shrink: 0;
 	color: var(--settings-text-faint);
@@ -131,7 +141,19 @@ export function EnhancerAccountIdentity({
 		};
 	}, [open, workerService, platform]);
 
-	if (!card?.loggedIn) {
+	if (!card) {
+		return (
+			<IdentityButton type="button" $active={active} aria-current={active ? "page" : undefined} onClick={onSelect}>
+				<AvatarWrap $accent={false} />
+				<Who aria-label="Enhancer Account">
+					<SkeletonLine $width={110} />
+					<SkeletonLine $width={70} />
+				</Who>
+			</IdentityButton>
+		);
+	}
+
+	if (!card.loggedIn) {
 		return (
 			<IdentityButton type="button" $active={active} aria-current={active ? "page" : undefined} onClick={onSelect}>
 				<AvatarWrap $accent={false}>{PersonIcon}</AvatarWrap>

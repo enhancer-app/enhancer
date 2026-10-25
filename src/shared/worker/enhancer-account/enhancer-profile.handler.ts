@@ -30,6 +30,8 @@ export class EnhancerProfileHandler extends MessageHandler {
 
 	async handle(payload?: EnhancerProfilePayload): Promise<WorkerApiActions[EnhancerProfileAction]["response"]> {
 		switch (this.action) {
+			case "getEnhancerAccountCache":
+				return this.service.getCached();
 			case "getEnhancerProfile":
 				return this.service.getProfile();
 			case "getEnhancerBadges":

@@ -7,7 +7,9 @@ import {
 	filterSlotGroups,
 	findShownGlobalBadge,
 	groupBadgeSlots,
+	pickSlotBadge,
 	sortChatAccounts,
+	toggleSlotBadge,
 } from "$shared/enhancer-account/badge-slots.ts";
 import {
 	isViewerBadges,
@@ -57,22 +59,56 @@ test("groups badges by account, scope and channel with the visible regular badge
 	expect(groups[1]?.selectedAssignmentId).toBeNull();
 });
 
-test("slot request keeps forced badges visible and adds the chosen one", () => {
+test("slot request sends exactly the visible badges of the slot", () => {
 	const [group] = groupBadgeSlots({
 		global: [],
 		channels: [
 			badge({ assignmentId: "c1", scope: "CHANNEL", channelId: "ch-1" }),
 			badge({ assignmentId: "c2", scope: "CHANNEL", channelId: "ch-1", forced: true, visible: true }),
-			badge({ assignmentId: "c3", scope: "CHANNEL", channelId: "ch-1", forced: true, hidden: true }),
 		],
 	});
-	expect(group && buildSlotRequest(group, "c1")).toEqual({
+	if (!group) throw new Error("Missing group");
+	expect(buildSlotRequest(group, ["c1", "c2", "other"])).toEqual({
 		scope: "CHANNEL",
 		accountId: "acc-1",
 		channelId: "ch-1",
-		visibleAssignmentIds: ["c2", "c1"],
+		visibleAssignmentIds: ["c1", "c2"],
 	});
-	expect(group && buildSlotRequest(group, null).visibleAssignmentIds).toEqual(["c2"]);
+	expect(buildSlotRequest(group, []).visibleAssignmentIds).toEqual([]);
+});
+
+test("admin extras toggle freely next to one regular badge", () => {
+	const [group] = groupBadgeSlots({
+		global: [
+			badge({ assignmentId: "patron", hidden: true }),
+			badge({ assignmentId: "founder", hidden: true }),
+			badge({ assignmentId: "developer", forced: true, visible: true }),
+			badge({ assignmentId: "tester", forced: true, hidden: true }),
+		],
+		channels: [],
+	});
+	if (!group) throw new Error("Missing group");
+	expect(group.multi).toBe(true);
+	const start = new Set(group.visibleAssignmentIds);
+	expect([...start]).toEqual(["developer"]);
+
+	const withTester = toggleSlotBadge(group, start, "tester");
+	const withPatron = toggleSlotBadge(group, withTester, "patron");
+	expect([...withPatron].sort()).toEqual(["developer", "patron", "tester"]);
+
+	const swapped = toggleSlotBadge(group, withPatron, "founder");
+	expect([...swapped].sort()).toEqual(["developer", "founder", "tester"]);
+	expect([...toggleSlotBadge(group, swapped, "developer")].sort()).toEqual(["founder", "tester"]);
+});
+
+test("a slot without admin extras stays single choice", () => {
+	const [group] = groupBadgeSlots({
+		global: [badge({ assignmentId: "g1", visible: true }), badge({ assignmentId: "g2" })],
+		channels: [],
+	});
+	if (!group) throw new Error("Missing group");
+	expect(group.multi).toBe(false);
+	expect([...pickSlotBadge(group, new Set(["g1"]), "g2")]).toEqual(["g2"]);
 });
 
 test("cooldown minutes round up and ignore past dates", () => {

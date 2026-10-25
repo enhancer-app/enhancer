@@ -140,6 +140,7 @@ export class HandlerRegistry {
 			"saveEnhancerChatStyle",
 			"submitEnhancerNickname",
 			"clearEnhancerNickname",
+			"getEnhancerAccountCache",
 		] as const) {
 			this.handlers.set(action, new EnhancerProfileHandler(this.logger, this.enhancerProfileService, action));
 		}

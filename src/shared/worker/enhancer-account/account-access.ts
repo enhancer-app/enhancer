@@ -12,6 +12,7 @@ const EXTENSION_PAGE_ACTIONS: ReadonlySet<WorkerAction> = new Set<WorkerAction>(
 	"saveEnhancerChatStyle",
 	"submitEnhancerNickname",
 	"clearEnhancerNickname",
+	"getEnhancerAccountCache",
 ]);
 
 export function isActionAllowedFrom(
