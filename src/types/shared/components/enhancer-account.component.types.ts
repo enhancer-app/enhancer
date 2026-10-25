@@ -27,12 +27,14 @@ export type BadgeSlotGroup = {
 	channelAvatarUrl: string | null;
 	badges: EnhancerViewerBadge[];
 	selectedAssignmentId: string | null;
+	visibleAssignmentIds: string[];
+	multi: boolean;
 	cooldownUntil: string | null;
 };
 
 export type BadgeSlotEditorProps = {
 	group: BadgeSlotGroup;
-	onSave: (group: BadgeSlotGroup, assignmentId: string | null) => Promise<string | null>;
+	onSave: (group: BadgeSlotGroup, visibleAssignmentIds: string[]) => Promise<string | null>;
 };
 
 export type LoginScreenProps = {

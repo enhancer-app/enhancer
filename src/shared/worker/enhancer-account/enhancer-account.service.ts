@@ -62,6 +62,16 @@ export class EnhancerAccountService {
 		return this.toState(await this.readSession());
 	}
 
+	async getCacheOwner(): Promise<string | null> {
+		const session = await this.readSession();
+		if (!session) return null;
+		return `${this.environment}:${session.profile.subject ?? session.profile.username ?? ""}`;
+	}
+
+	async notifyAccountChanged(): Promise<void> {
+		await this.broadcast({ account: await this.getAccount() });
+	}
+
 	login(): Promise<LoginEnhancerAccountResponse> {
 		if (!this.loginPromise) {
 			this.loginPromise = this.performLogin().finally(() => {

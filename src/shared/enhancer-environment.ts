@@ -9,11 +9,13 @@ export const ENHANCER_ENDPOINTS: Record<EnhancerApiEnvironment, EnhancerEndpoint
 		api: "https://api.enhancer.at",
 		websocket: "wss://api.enhancer.at/v1/ws",
 		issuer: "https://auth.enhancer.at/realms/enhancer",
+		dashboard: "https://dashboard.enhancer.at",
 	},
 	test: {
 		api: "https://test-api.enhancer.at",
 		websocket: "wss://test-api.enhancer.at/v1/ws",
 		issuer: "https://auth.enhancer.at/realms/enhancer-test",
+		dashboard: "https://test-dashboard.enhancer.at",
 	},
 };
 

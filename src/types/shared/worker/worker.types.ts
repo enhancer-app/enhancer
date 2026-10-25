@@ -25,6 +25,7 @@ import type {
 import type {
 	EnhancerAccountBroadcastPayload,
 	EnhancerAccountCard,
+	EnhancerAccountSnapshot,
 	EnhancerAccountState,
 	GetEnhancerAccountCardPayload,
 	GetEnhancerBadgesResponse,
@@ -227,6 +228,10 @@ export interface WorkerApiActions {
 	getEnhancerBadges: {
 		payload: never;
 		response: GetEnhancerBadgesResponse;
+	};
+	getEnhancerAccountCache: {
+		payload: never;
+		response: EnhancerAccountSnapshot;
 	};
 	saveEnhancerBadgeSlot: {
 		payload: SaveEnhancerBadgeSlotPayload;

@@ -24,12 +24,16 @@ export function groupBadgeSlots(badges: EnhancerViewerBadges): BadgeSlotGroup[] 
 				channelAvatarUrl: badge.channelAvatarUrl,
 				badges: [],
 				selectedAssignmentId: null,
+				visibleAssignmentIds: [],
+				multi: false,
 				cooldownUntil: null,
 			};
 			groups.set(key, group);
 		}
 		group.badges.push(badge);
 		if (!badge.forced && badge.visible) group.selectedAssignmentId = badge.assignmentId;
+		if (badge.visible) group.visibleAssignmentIds.push(badge.assignmentId);
+		if (badge.forced) group.multi = true;
 		if (badge.cooldownUntil) group.cooldownUntil = badge.cooldownUntil;
 	}
 	return [...groups.values()].sort(
@@ -40,16 +44,35 @@ export function groupBadgeSlots(badges: EnhancerViewerBadges): BadgeSlotGroup[] 
 	);
 }
 
-export function buildSlotRequest(group: BadgeSlotGroup, selectedAssignmentId: string | null): SaveBadgeSlotRequest {
-	const forcedVisible = group.badges
-		.filter((badge: EnhancerViewerBadge) => badge.forced && !badge.hidden)
-		.map((badge) => badge.assignmentId);
+export function buildSlotRequest(group: BadgeSlotGroup, visibleAssignmentIds: Iterable<string>): SaveBadgeSlotRequest {
+	const visible = new Set(visibleAssignmentIds);
 	return {
 		scope: group.scope,
 		accountId: group.accountId,
 		...(group.scope === "CHANNEL" && group.channelId ? { channelId: group.channelId } : {}),
-		visibleAssignmentIds: selectedAssignmentId ? [...forcedVisible, selectedAssignmentId] : forcedVisible,
+		visibleAssignmentIds: group.badges.map((badge) => badge.assignmentId).filter((id) => visible.has(id)),
 	};
+}
+
+export function pickSlotBadge(group: BadgeSlotGroup, current: ReadonlySet<string>, assignmentId: string): Set<string> {
+	const forced = new Set(group.badges.filter((badge) => badge.forced).map((badge) => badge.assignmentId));
+	const next = new Set([...current].filter((id) => forced.has(id)));
+	next.add(assignmentId);
+	return next;
+}
+
+export function toggleSlotBadge(
+	group: BadgeSlotGroup,
+	current: ReadonlySet<string>,
+	assignmentId: string,
+): Set<string> {
+	if (current.has(assignmentId)) {
+		const next = new Set(current);
+		next.delete(assignmentId);
+		return next;
+	}
+	const badge = group.badges.find((item) => item.assignmentId === assignmentId);
+	return badge?.forced ? new Set([...current, assignmentId]) : pickSlotBadge(group, current, assignmentId);
 }
 
 export function cooldownMinutesLeft(cooldownUntil: string | null, now = Date.now()): number {
@@ -78,8 +101,9 @@ export function filterPlatformBadges(badges: EnhancerViewerBadges, platform: Pla
 
 export function findShownGlobalBadge(groups: BadgeSlotGroup[]): EnhancerViewerBadge | null {
 	const global = groups.find((group) => group.scope === "GLOBAL");
-	if (!global?.selectedAssignmentId) return null;
-	return global.badges.find((badge) => badge.assignmentId === global.selectedAssignmentId) ?? null;
+	const shownId = global?.selectedAssignmentId ?? global?.visibleAssignmentIds[0];
+	if (!global || !shownId) return null;
+	return global.badges.find((badge) => badge.assignmentId === shownId) ?? null;
 }
 
 export function filterAccountBadges(badges: EnhancerViewerBadges, accountId: string): EnhancerViewerBadges {

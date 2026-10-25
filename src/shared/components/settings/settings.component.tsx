@@ -308,7 +308,7 @@ const Page = styled.div`
 	width: 100%;
 	max-width: 860px;
 	margin: 0 auto;
-	padding: 32px 40px 56px;
+	padding: 32px 56px 56px;
 `;
 
 const BarePage = styled.div`

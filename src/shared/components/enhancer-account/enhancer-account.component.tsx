@@ -4,9 +4,12 @@ import {
 	filterPlatformBadges,
 	filterSlotGroups,
 	groupBadgeSlots,
+	pickSlotBadge,
 	sortChatAccounts,
+	toggleSlotBadge,
 } from "$shared/enhancer-account/badge-slots.ts";
 import { ChatStyleCard } from "$shared/components/enhancer-account/chat-style.component.tsx";
+import { ENHANCER_ENDPOINTS } from "$shared/enhancer-environment.ts";
 import { getEnhancerAccountStore } from "$shared/enhancer-account/enhancer-account.store.ts";
 import { pickBadgeImage } from "$shared/utils/badge-image.utils.ts";
 import type {
@@ -188,6 +191,32 @@ const Button = styled.button<{ $primary?: boolean }>`
 	}
 `;
 
+const RowActions = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 8px;
+`;
+
+const LinkButton = styled.a`
+	display: inline-flex;
+	align-items: center;
+	height: 30px;
+	padding: 0 12px;
+	border: 1px solid var(--settings-control-border);
+	border-radius: 8px;
+	background: var(--settings-control-background);
+	color: var(--settings-text);
+	font-size: 12px;
+	font-weight: 600;
+	text-decoration: none;
+	white-space: nowrap;
+
+	&:hover {
+		border-color: var(--settings-text-faint);
+	}
+`;
+
 const Card = styled.div`
 	background: var(--settings-surface);
 	border: 1px solid var(--settings-border);
@@ -265,6 +294,12 @@ const Status = styled.span<{ $tone: "success" | "neutral" | "info" }>`
 	}
 `;
 
+const StatusList = styled.span`
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 4px 12px;
+`;
+
 const CardFooter = styled.div`
 	padding: 10px 16px;
 	border-top: 1px solid var(--settings-divider);
@@ -310,7 +345,7 @@ const AccountPage = styled.div`
 	width: 100%;
 	max-width: 860px;
 	margin: 0 auto;
-	padding: 32px 40px 56px;
+	padding: 32px 56px 56px;
 `;
 
 const AccountTitle = styled.h1`
@@ -335,7 +370,7 @@ const LoginPage = styled.div`
 	align-items: center;
 	justify-content: center;
 	min-height: 100%;
-	padding: 0 40px;
+	padding: 0 56px;
 	overflow: clip;
 	text-align: center;
 	background: radial-gradient(520px 360px at 50% 34%, rgba(145, 71, 255, 0.26), transparent 70%);
@@ -489,28 +524,39 @@ function LoginScreen({ logoUrl, busy, error, onLogin }: LoginScreenProps) {
 	);
 }
 
+function sameIds(left: ReadonlySet<string>, right: readonly string[]): boolean {
+	return left.size === right.length && right.every((id) => left.has(id));
+}
+
 function BadgeSlotEditor({ group, onSave }: BadgeSlotEditorProps) {
-	const [selected, setSelected] = useState(group.selectedAssignmentId);
+	const [visible, setVisible] = useState<ReadonlySet<string>>(() => new Set(group.visibleAssignmentIds));
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const cooldown = cooldownMinutesLeft(group.cooldownUntil);
-	const dirty = selected !== group.selectedAssignmentId;
+	const dirty = !sameIds(visible, group.visibleAssignmentIds);
 	const locked = cooldown > 0 || saving;
 	const channelName = group.channelDisplayName ?? group.channelLogin ?? "Channel";
 	const title = group.scope === "GLOBAL" ? "Global badges" : channelName;
-	const description =
-		group.scope === "GLOBAL"
+	const description = group.multi
+		? "Extras from admin can be shown next to one regular badge."
+		: group.scope === "GLOBAL"
 			? "One global badge is shown in chat."
 			: `One badge from ${channelName} is shown on that channel.`;
 	const rows = [...group.badges].sort((a, b) => a.name.localeCompare(b.name));
-	const radioName = `slot-${group.key}`;
+	const inputName = `slot-${group.key}`;
+	const inputType = group.multi ? "checkbox" : "radio";
 
-	useEffect(() => setSelected(group.selectedAssignmentId), [group.selectedAssignmentId]);
+	useEffect(() => setVisible(new Set(group.visibleAssignmentIds)), [group.visibleAssignmentIds.join("|")]);
+
+	const choose = (assignmentId: string) =>
+		setVisible((current) =>
+			group.multi ? toggleSlotBadge(group, current, assignmentId) : pickSlotBadge(group, current, assignmentId),
+		);
 
 	const save = async () => {
 		setSaving(true);
 		setError(null);
-		setError(await onSave(group, selected));
+		setError(await onSave(group, [...visible]));
 		setSaving(false);
 	};
 
@@ -550,30 +596,27 @@ function BadgeSlotEditor({ group, onSave }: BadgeSlotEditorProps) {
 				<tbody>
 					{rows.map((badge) => {
 						const image = pickBadgeImage(badge.sources);
-						const shown = badge.forced ? !badge.hidden : selected === badge.assignmentId;
+						const shown = visible.has(badge.assignmentId);
 						return (
 							<tr key={badge.assignmentId}>
 								<td>
-									<BadgeCell $disabled={locked || badge.forced}>
+									<BadgeCell $disabled={locked}>
 										<input
-											type="radio"
-											name={radioName}
+											type={inputType}
+											name={inputName}
 											checked={shown}
-											disabled={locked || badge.forced}
-											onChange={() => setSelected(badge.assignmentId)}
+											disabled={locked}
+											onChange={() => choose(badge.assignmentId)}
 										/>
 										{image && <img src={image} alt="" />}
 										{badge.name}
 									</BadgeCell>
 								</td>
 								<td>
-									{badge.forced ? (
-										<Status $tone="info">Extra from admin</Status>
-									) : shown ? (
-										<Status $tone="success">Shown</Status>
-									) : (
-										<Status $tone="neutral">Hidden</Status>
-									)}
+									<StatusList>
+										{shown ? <Status $tone="success">Shown</Status> : <Status $tone="neutral">Hidden</Status>}
+										{badge.forced && <Status $tone="info">Extra from admin</Status>}
+									</StatusList>
 								</td>
 								<td>
 									<Muted>{formatSince(badge.createdAt)}</Muted>
@@ -585,16 +628,16 @@ function BadgeSlotEditor({ group, onSave }: BadgeSlotEditorProps) {
 						<td>
 							<BadgeCell $disabled={locked}>
 								<input
-									type="radio"
-									name={radioName}
-									checked={selected === null}
+									type={inputType}
+									name={inputName}
+									checked={visible.size === 0}
 									disabled={locked}
-									onChange={() => setSelected(null)}
+									onChange={() => setVisible(new Set())}
 								/>
 								None
 							</BadgeCell>
 						</td>
-						<td>{selected === null && <Status $tone="neutral">No badge shown</Status>}</td>
+						<td>{visible.size === 0 && <Status $tone="neutral">No badge shown</Status>}</td>
 						<td>
 							<Muted>—</Muted>
 						</td>
@@ -626,9 +669,12 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 	const error = store.error.value;
 	const login = () => void store.login();
 	const logout = () => void store.logout();
-	const saveSlot = (group: BadgeSlotGroup, assignmentId: string | null) => store.saveSlot(group, assignmentId);
+	const saveSlot = (group: BadgeSlotGroup, visibleAssignmentIds: string[]) =>
+		store.saveSlot(group, visibleAssignmentIds);
 	const billing = store.billing.value;
 	const billingFailed = store.billingFailed.value;
+
+	if (!store.ready.value) return null;
 
 	if (!account.loggedIn) {
 		return <LoginScreen logoUrl={logoUrl} busy={busy} error={error} onLogin={login} />;
@@ -688,9 +734,18 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 						)}
 						{error && <Muted $error>{error}</Muted>}
 					</RowMain>
-					<Button type="button" onClick={logout} disabled={busy}>
-						{busy ? "…" : "Log out"}
-					</Button>
+					<RowActions>
+						<LinkButton
+							href={`${ENHANCER_ENDPOINTS[account.environment].dashboard}/account`}
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							Manage account
+						</LinkButton>
+						<Button type="button" onClick={logout} disabled={busy}>
+							{busy ? "…" : "Log out"}
+						</Button>
+					</RowActions>
 				</Row>
 				{chatAccounts.length > 1 && (
 					<AccountTabs role="tablist" aria-label="Linked accounts">
