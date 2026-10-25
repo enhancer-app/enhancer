@@ -1,6 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import JSZip from "jszip";
+import { getChannel, getManifest } from "../manifest.config";
 
 const { spawn, file, write } = Bun;
 
@@ -13,7 +14,6 @@ async function archiveDirectory(
 	extraFiles: Record<string, string> = {},
 ) {
 	const zip = new JSZip();
-	for (const [name, content] of Object.entries(extraFiles)) zip.file(name, content);
 
 	async function traverse(currentDir: string, relativePath: string) {
 		const entries = await readdir(currentDir, { withFileTypes: true });
@@ -33,6 +33,7 @@ async function archiveDirectory(
 	}
 
 	await traverse(sourceDir, "");
+	for (const [name, content] of Object.entries(extraFiles)) zip.file(name, content);
 	await write(outPath, await zip.generateAsync({ type: "uint8array" }));
 }
 
@@ -50,9 +51,19 @@ if (exitCode !== 0) {
 const manifest = await file("dist/manifest.json").json();
 const version = manifest.version;
 
-const buildZipPath = path.join("dist", `build-${version}.zip`);
+const buildZipName = `build-${version}.zip`;
+const buildZipPath = path.join("dist", buildZipName);
 await archiveDirectory("dist", buildZipPath);
 console.log(`Created ${buildZipPath}`);
+
+const chromeManifest = getManifest(process.env.ENVIRONMENT === "development", getChannel(), "chrome");
+if (chromeManifest.version !== version)
+	throw new Error(`Chrome manifest version ${chromeManifest.version} != ${version}`);
+const chromeZipPath = path.join("dist", `build-chrome-${version}.zip`);
+await archiveDirectory("dist", chromeZipPath, new Set([buildZipName]), {
+	"manifest.json": `${JSON.stringify(chromeManifest, null, 2)}\n`,
+});
+console.log(`Created ${chromeZipPath}`);
 
 const sourceZipPath = path.join("dist", `source-${version}.zip`);
 const sourceExtras: Record<string, string> = {};

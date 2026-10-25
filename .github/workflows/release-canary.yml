@@ -76,7 +76,7 @@ jobs:
           if [ -n "$PREVIOUS_TAG" ]; then NOTES_ARGS+=(--notes-start-tag "$PREVIOUS_TAG"); fi
           gh release create "canary-$VERSION" --target "$TARGET_SHA" --title "Canary $VERSION" \
             --prerelease --latest=false "${NOTES_ARGS[@]}" \
-            "dist/build-$VERSION.zip" "dist/source-$VERSION.zip"
+            "dist/build-$VERSION.zip" "dist/build-chrome-$VERSION.zip" "dist/source-$VERSION.zip"
 
   publish-chrome:
     name: Publish Chrome
@@ -101,7 +101,7 @@ jobs:
           refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
           publisher-id: ${{ secrets.CHROME_PUBLISHER_ID }}
           extension-id: lppdfejgfeffohjlllmkahfkoplnpmai
-          zip-path: 'dist/build-${{ needs.build-release.outputs.VERSION }}.zip'
+          zip-path: 'dist/build-chrome-${{ needs.build-release.outputs.VERSION }}.zip'
 
   publish-firefox:
     name: Publish Firefox
