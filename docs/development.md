@@ -110,18 +110,24 @@ Enhancer has two release channels, each on its own branch:
   change and tick patch. The bot cherry-picks only the fix onto `stable`.
 - **Sync:** after every stable release the bot opens `chore(sync): merge stable into master`. Do not merge it by
   hand: add the `merge-sync` label and the `enhancer-release` app merges it with a merge commit. Do this before the
-  next stable release PR is updated.
+  next stable release PR is updated. The workflow only merges `sync-stable` when it is a single merge of the
+  current `stable` and gives the same result as merging `stable` into `master`. If you resolved conflicts there,
+  review that merge commit before adding the label; the workflow cannot verify it. If the run fails, remove and
+  re-add the label after the bot rebuilds the branch.
 
 Never open PRs into `stable` or `canary` yourself; they only take the bot PRs above. The `master-merge-method`
-ruleset only allows squash on `master`, and `release-merge-method` only allows merge commits on `stable` and
-`canary`. Neither can be bypassed, so a review bypass cannot pick the wrong method. Squash or rebase on a release
-branch would give the same changes new commit hashes, and the branches would drift apart.
+ruleset only allows squash on `master`; only the `enhancer-release` app can bypass it, and only to merge a PR.
+`release-merge-method` only allows merge commits on `stable` and `canary`, and nobody can bypass it. A review
+bypass therefore cannot pick the wrong method. Squash or rebase on a release branch would give the same changes
+new commit hashes, and the branches would drift apart. The `release-tags` ruleset and immutable releases keep
+`v*` and `canary-*` tags and release assets from being moved, deleted or replaced.
 
-One-time setup: create the `enhancer-release` GitHub App (contents and workflows write) and install it on this
-repository, store its client ID in the `RELEASE_APP_CLIENT_ID` variable and its private key in the
-`RELEASE_APP_PRIVATE_KEY` secret, then run `bun run release:setup-branches` and `bun run release:setup-secrets`.
-Both channels publish from one store account, so they share the `release` environment; `release-announce` only
-deploys from `stable`.
+One-time setup: create the `enhancer-release` GitHub App (contents, pull requests and workflows write) and install
+it on this repository only, run `bun run release:setup-branches`, then store the app's client ID in the
+`RELEASE_APP_CLIENT_ID` repository variable and its private key in the `RELEASE_APP_PRIVATE_KEY` secret of the
+`release-sync` environment (never as a repository secret: every workflow could read it). Finally run
+`bun run release:setup-secrets`. Both channels publish from one store account, so they share the `release`
+environment; `release-announce` only deploys from `stable` and `release-sync` only from `master`.
 Extension IDs are public and live in `manifest.config.ts` and the release workflows.
 
 ## Project Scripts
