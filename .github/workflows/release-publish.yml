@@ -72,10 +72,11 @@ jobs:
         run: |
           if git rev-parse "$VERSION" >/dev/null 2>&1; then
             BUILD_ZIP="build-${CLEAN_VER}.zip"
+            CHROME_ZIP="build-chrome-${CLEAN_VER}.zip"
             SOURCE_ZIP="source-${CLEAN_VER}.zip"
             if gh release view "$VERSION" --json assets \
-              --jq -e --arg b "$BUILD_ZIP" --arg s "$SOURCE_ZIP" \
-              '.assets | map(.name) | contains([$b, $s])' >/dev/null 2>&1; then
+              --jq -e --arg b "$BUILD_ZIP" --arg c "$CHROME_ZIP" --arg s "$SOURCE_ZIP" \
+              '.assets | map(.name) | contains([$b, $c, $s])' >/dev/null 2>&1; then
               echo "Release $VERSION already complete. Skipping."
               echo "publish=false" >> $GITHUB_OUTPUT
               exit 0
@@ -145,8 +146,9 @@ jobs:
           NOTES_ARGS=(--generate-notes)
           if [ -n "$PREVIOUS_TAG" ]; then NOTES_ARGS+=(--notes-start-tag "$PREVIOUS_TAG"); fi
           BUILD_ZIP="dist/build-${CLEAN_VER}.zip"
+          CHROME_ZIP="dist/build-chrome-${CLEAN_VER}.zip"
           SOURCE_ZIP="dist/source-${CLEAN_VER}.zip"
-          for f in "$BUILD_ZIP" "$SOURCE_ZIP"; do
+          for f in "$BUILD_ZIP" "$CHROME_ZIP" "$SOURCE_ZIP"; do
             if [ ! -f "$f" ]; then
               echo "::error::Missing asset: $f. Did 'bun run pack' succeed?"
               exit 1
@@ -157,7 +159,7 @@ jobs:
             ATTEMPT=$((ATTEMPT + 1))
             echo "Creating release $VERSION (attempt $ATTEMPT/3)..."
             if gh release create "$VERSION" --target "$TARGET_SHA" \
-              --title "Release $VERSION" "${NOTES_ARGS[@]}" "$BUILD_ZIP" "$SOURCE_ZIP"; then
+              --title "Release $VERSION" "${NOTES_ARGS[@]}" "$BUILD_ZIP" "$CHROME_ZIP" "$SOURCE_ZIP"; then
               break
             fi
             echo "::warning::Release create/upload failed (attempt $ATTEMPT/3). Cleaning up tag."
@@ -169,8 +171,8 @@ jobs:
             sleep 5
           done
           COUNT=$(gh release view "$VERSION" --json assets --jq '.assets | length')
-          if [ "$COUNT" -lt 2 ]; then
-            echo "::error::Release $VERSION is missing assets (found $COUNT, expected 2). Cleaning up tag."
+          if [ "$COUNT" -lt 3 ]; then
+            echo "::error::Release $VERSION is missing assets (found $COUNT, expected 3). Cleaning up tag."
             gh release delete "$VERSION" --yes --cleanup-tag || true
             exit 1
           fi
@@ -199,7 +201,7 @@ jobs:
           refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
           publisher-id: ${{ secrets.CHROME_PUBLISHER_ID }}
           extension-id: knaodoefkjbgmmilogebghadhmnphjih
-          zip-path: 'dist/build-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
+          zip-path: 'dist/build-chrome-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
 
   publish-firefox:
     name: Publish Firefox

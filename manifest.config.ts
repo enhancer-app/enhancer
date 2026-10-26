@@ -1,5 +1,5 @@
 import data from "./package.json";
-import type { ExtensionChannel } from "./src/types/shared/extension.types";
+import type { ExtensionBrowser, ExtensionChannel } from "./src/types/shared/extension.types";
 
 export const CHANNELS = {
 	stable: {
@@ -31,7 +31,11 @@ export function getVersion(channel: ExtensionChannel): string {
 	return `${data.version}.${Number(build)}`;
 }
 
-export function getManifest(isDevelopment: boolean, channel: ExtensionChannel = getChannel()) {
+export function getManifest(
+	isDevelopment: boolean,
+	channel: ExtensionChannel = getChannel(),
+	browser: ExtensionBrowser = "firefox",
+) {
 	let name = CHANNELS[channel].name;
 	if (isDevelopment) name += " (development)";
 	const version = getVersion(channel);
@@ -59,7 +63,7 @@ export function getManifest(isDevelopment: boolean, channel: ExtensionChannel = 
 			},
 		],
 		background: {
-			scripts: ["worker.background.js"],
+			...(browser === "firefox" && { scripts: ["worker.background.js"] }),
 			service_worker: "worker.background.js",
 			type: "module",
 		},

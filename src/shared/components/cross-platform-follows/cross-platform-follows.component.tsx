@@ -222,7 +222,7 @@ export function CrossPlatformFollowsComponent({
 	);
 	const pinnedCount = filtered.filter((channel) => channel.pinned).length;
 	const visible = compact
-		? channels.filter((channel) => channel.live)
+		? platformFiltered.filter((channel) => channel.live)
 		: searching
 			? filtered
 			: filtered.slice(0, Math.max(COLLAPSED_COUNT * pages, pinnedCount));
