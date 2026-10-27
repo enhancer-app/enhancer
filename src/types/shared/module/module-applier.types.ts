@@ -18,6 +18,12 @@ export type SelectorModuleApplierConfig = {
 	useParent?: boolean;
 } & CommonModuleApplierConfig;
 
+export type SelectorModuleApplierRunner = {
+	config: SelectorModuleApplierConfig;
+	enabled?: () => boolean;
+	lastCheckedAt: number;
+};
+
 export type EventModuleApplierConfig<Events extends CommonEvents> = {
 	[K in keyof Events]: {
 		type: "event";

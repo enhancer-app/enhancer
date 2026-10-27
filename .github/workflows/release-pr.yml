@@ -1,13 +1,15 @@
-name: Release
+name: Release PRs
 
 on:
   push:
     branches:
       - master
+      - stable
+      - canary
   pull_request_target:
     types: [edited]
     branches:
-      - master
+      - stable
 
 permissions:
   contents: read
@@ -18,10 +20,10 @@ concurrency:
 
 jobs:
   release-pr:
-    name: Update release PR
+    name: Update release PRs
     if: >-
       github.event_name == 'push' ||
-      (github.event.pull_request.head.ref == 'release-next' &&
+      (github.event.pull_request.head.ref == 'release-stable' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.changes.body)
     runs-on: ubuntu-latest
@@ -32,12 +34,12 @@ jobs:
       checks: write
     steps:
       - name: Checkout default branch
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
 
-      - name: Create or update release PR
+      - name: Create or update release PRs
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
         with:
           script: |

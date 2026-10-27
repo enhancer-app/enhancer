@@ -48,7 +48,9 @@ export default class StreamLatencyModule extends TwitchModule {
 		this.updateLatency();
 
 		if (this.updateInterval) clearInterval(this.updateInterval);
-		this.updateInterval = setInterval(() => this.updateLatency(), 1000);
+		this.updateInterval = setInterval(() => {
+			if (!document.hidden) this.updateLatency();
+		}, 1000);
 
 		wrappers.forEach((element: HTMLElement) => {
 			const header = document.querySelector("#chat-room-header-label") as HTMLElement | null;

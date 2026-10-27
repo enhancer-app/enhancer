@@ -1,9 +1,9 @@
-name: Release
+name: Release Stable
 
 on:
   push:
     branches:
-      - master
+      - stable
     paths:
       - package.json
   workflow_dispatch:
@@ -23,6 +23,7 @@ concurrency:
 jobs:
   build-release:
     name: Build & GitHub Release
+    if: github.ref == 'refs/heads/stable'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -33,7 +34,7 @@ jobs:
       PUBLISH: ${{ steps.check_release.outputs.publish }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -71,10 +72,11 @@ jobs:
         run: |
           if git rev-parse "$VERSION" >/dev/null 2>&1; then
             BUILD_ZIP="build-${CLEAN_VER}.zip"
+            CHROME_ZIP="build-chrome-${CLEAN_VER}.zip"
             SOURCE_ZIP="source-${CLEAN_VER}.zip"
             if gh release view "$VERSION" --json assets \
-              --jq -e --arg b "$BUILD_ZIP" --arg s "$SOURCE_ZIP" \
-              '.assets | map(.name) | contains([$b, $s])' >/dev/null 2>&1; then
+              --jq -e --arg b "$BUILD_ZIP" --arg c "$CHROME_ZIP" --arg s "$SOURCE_ZIP" \
+              '.assets | map(.name) | contains([$b, $c, $s])' >/dev/null 2>&1; then
               echo "Release $VERSION already complete. Skipping."
               echo "publish=false" >> $GITHUB_OUTPUT
               exit 0
@@ -95,16 +97,10 @@ jobs:
             exit 0
           fi
 
-          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
-          if [ "$CHANGED_FILES" != "package.json" ]; then
-            echo "::error::Release commit must change only package.json. Changed files: $CHANGED_FILES"
-            exit 1
-          fi
-
           RELEASE_PRS=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
-            --jq "[.[] | select(.merged_at != null and .head.ref == \"release-next\" and .head.repo.full_name == \"$GITHUB_REPOSITORY\")] | length")
+            --jq "[.[] | select(.merged_at != null and .base.ref == \"stable\" and (.head.ref == \"release-stable\" or .head.ref == \"release-hotfix\") and .head.repo.full_name == \"$GITHUB_REPOSITORY\")] | length")
           if [ "$RELEASE_PRS" -lt 1 ]; then
-            echo "::error::Version change did not come from the release-next PR."
+            echo "::error::Version change did not come from a release-stable or release-hotfix PR."
             exit 1
           fi
 
@@ -146,9 +142,13 @@ jobs:
           CLEAN_VER: ${{ steps.get_version.outputs.CLEAN_VER }}
           TARGET_SHA: ${{ github.sha }}
         run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 --match 'v*' "$TARGET_SHA^" 2>/dev/null || true)
+          NOTES_ARGS=(--generate-notes)
+          if [ -n "$PREVIOUS_TAG" ]; then NOTES_ARGS+=(--notes-start-tag "$PREVIOUS_TAG"); fi
           BUILD_ZIP="dist/build-${CLEAN_VER}.zip"
+          CHROME_ZIP="dist/build-chrome-${CLEAN_VER}.zip"
           SOURCE_ZIP="dist/source-${CLEAN_VER}.zip"
-          for f in "$BUILD_ZIP" "$SOURCE_ZIP"; do
+          for f in "$BUILD_ZIP" "$CHROME_ZIP" "$SOURCE_ZIP"; do
             if [ ! -f "$f" ]; then
               echo "::error::Missing asset: $f. Did 'bun run pack' succeed?"
               exit 1
@@ -159,7 +159,7 @@ jobs:
             ATTEMPT=$((ATTEMPT + 1))
             echo "Creating release $VERSION (attempt $ATTEMPT/3)..."
             if gh release create "$VERSION" --target "$TARGET_SHA" \
-              --title "Release $VERSION" --generate-notes "$BUILD_ZIP" "$SOURCE_ZIP"; then
+              --title "Release $VERSION" "${NOTES_ARGS[@]}" "$BUILD_ZIP" "$CHROME_ZIP" "$SOURCE_ZIP"; then
               break
             fi
             echo "::warning::Release create/upload failed (attempt $ATTEMPT/3). Cleaning up tag."
@@ -171,8 +171,8 @@ jobs:
             sleep 5
           done
           COUNT=$(gh release view "$VERSION" --json assets --jq '.assets | length')
-          if [ "$COUNT" -lt 2 ]; then
-            echo "::error::Release $VERSION is missing assets (found $COUNT, expected 2). Cleaning up tag."
+          if [ "$COUNT" -lt 3 ]; then
+            echo "::error::Release $VERSION is missing assets (found $COUNT, expected 3). Cleaning up tag."
             gh release delete "$VERSION" --yes --cleanup-tag || true
             exit 1
           fi
@@ -200,8 +200,8 @@ jobs:
           client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
           refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
           publisher-id: ${{ secrets.CHROME_PUBLISHER_ID }}
-          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
-          zip-path: 'dist/build-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
+          extension-id: knaodoefkjbgmmilogebghadhmnphjih
+          zip-path: 'dist/build-chrome-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
 
   publish-firefox:
     name: Publish Firefox
@@ -221,7 +221,7 @@ jobs:
       - name: Publish to Firefox
         uses: wdzeng/firefox-addon@b78a4d0148897b072ef18aff65a6bd793e8109be
         with:
-          addon-guid: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          addon-guid: "{09b8dba2-ae33-4bea-8bf1-d85e50691408}"
           xpi-path: 'dist/build-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
           source-file-path: 'dist/source-${{ needs.build-release.outputs.CLEAN_VER }}.zip'
           jwt-issuer: ${{ secrets.AMO_JWT_ISSUER }}
@@ -239,7 +239,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Checkout scripts
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           sparse-checkout: .github/scripts
           persist-credentials: false

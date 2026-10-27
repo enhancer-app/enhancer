@@ -63,6 +63,7 @@ type ExportedLogs = {
 		platform: PlatformType;
 		hostname: string;
 		environment: string;
+		channel: string;
 		exportedAt: string;
 		sources: {
 			main: boolean;
@@ -103,6 +104,7 @@ export function DiagnosticLogsComponent({ platform, workerService }: DiagnosticL
 					platform,
 					hostname: window.location.hostname,
 					environment: window.enhancer.environment,
+					channel: window.enhancer.channel,
 					exportedAt: new Date().toISOString(),
 					sources: {
 						main: true,

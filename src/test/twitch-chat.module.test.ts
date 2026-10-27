@@ -83,7 +83,8 @@ test("intercepts messages before 7TV suppresses the Twitch handler", () => {
 	Object.defineProperty(globalThis, "document", {
 		configurable: true,
 		value: {
-			querySelector: (selector: string) => (selector === ChatModule.SEVENTV_CHAT_SELECTOR ? {} : null),
+			querySelector: (selector: string) =>
+				selector === ChatModule.SEVENTV_CHAT_SELECTOR ? { querySelector: () => null } : null,
 		},
 	});
 	Object.defineProperty(globalThis, "CSS", {

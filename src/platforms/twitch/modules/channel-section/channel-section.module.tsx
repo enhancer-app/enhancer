@@ -181,11 +181,11 @@ export default class ChannelSectionModule extends TwitchModule {
 		if (!("value" in this.watchtimeCounter)) {
 			this.watchtimeCounter = signal(0);
 		}
-		if (this.watchtimeInterval) {
-			clearInterval(this.watchtimeInterval);
-		}
+		clearInterval(this.watchtimeInterval);
 		await this.updateWatchtime();
+		clearInterval(this.watchtimeInterval);
 		this.watchtimeInterval = setInterval(async () => {
+			if (document.hidden) return;
 			await this.updateWatchtime();
 		}, 1000);
 	}
