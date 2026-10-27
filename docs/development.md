@@ -108,15 +108,20 @@ Enhancer has two release channels, each on its own branch:
   - if a ticked change depends on an unticked one, the bot explains it in the PR and keeps the PR as a draft.
 - **Hotfix:** merge the fix into `master` like any other change. In the `release(stable)` PR, untick every other
   change and tick patch. The bot cherry-picks only the fix onto `stable`.
-- **Sync:** after every stable release the bot opens `chore(sync): merge stable into master`. Do not merge it by
-  hand: add the `merge-sync` label and the `enhancer-release` app merges it with a merge commit. Do this before the
-  next stable release PR is updated. The workflow only merges `sync-stable` when it is a single merge of the
-  current `stable` and gives the same result as merging `stable` into `master`. If you resolved conflicts there,
-  review that merge commit before adding the label; the workflow cannot verify it. If the run fails, remove and
-  re-add the label after the bot rebuilds the branch.
+- **Sync:** after every stable release the bot opens `chore(sync): merge stable into master` and the
+  `enhancer-release` app merges it with a merge commit on its own. Do not merge it by hand.
+  - The bot only does this when every commit on `stable` that is not on `master` is a cherry-pick of a `master`
+    commit with the same changes, a `release(stable): vX.Y.Z` commit that only changes the version, or a merge
+    that adds nothing. Conflicts from cherry-picks are then resolved to `master`'s side, so merging the PR only
+    changes the version in `package.json`. The workflow checks all of this again before merging.
+  - Otherwise the workflow comments on the PR. Resolve the conflicts on `sync-stable` if needed (merge `master`
+    into it, never touch `stable`), review the branch and add the `merge-sync` label. The label path only merges
+    a single merge of the current `stable`; a conflict resolution cannot be verified, so review it first. If the
+    labelled run fails, remove and re-add the label after the bot rebuilds the branch.
 
 Never open PRs into `stable` or `canary` yourself; they only take the bot PRs above. The `master-merge-method`
-ruleset only allows squash on `master`; only the `enhancer-release` app can bypass it, and only to merge a PR.
+ruleset only allows squash on `master`; only the `enhancer-release` app can bypass it. GitHub rejects the app's
+merge commit unless its bypass is `always`, so its key only lives in the `release-sync` environment.
 `release-merge-method` only allows merge commits on `stable` and `canary`, and nobody can bypass it. A review
 bypass therefore cannot pick the wrong method. Squash or rebase on a release branch would give the same changes
 new commit hashes, and the branches would drift apart. The `release-tags` ruleset and immutable releases keep
