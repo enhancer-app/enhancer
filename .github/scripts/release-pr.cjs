@@ -228,8 +228,19 @@ module.exports = async ({ github, context, core, exec }) => {
 		const changes = (await changesBetween(masterRef, stableRef)) || "- Merge commits only";
 
 		await git("switch", "--detach", masterRef);
-		const merged = await succeeds("merge", "--no-ff", "--no-edit", "-m", title, stableRef);
-		if (!merged) await git("merge", "--abort");
+		const merged = await succeeds(
+			"-c",
+			`user.name=${BOT_NAME}`,
+			"-c",
+			`user.email=${BOT_EMAIL}`,
+			"merge",
+			"--no-ff",
+			"--no-edit",
+			"-m",
+			title,
+			stableRef,
+		);
+		if (!merged) await run(["merge", "--abort"]);
 		const upToDate = merged
 			? (await contains(masterRef)) && (await contains(stableRef))
 			: await contains(stableRef);
