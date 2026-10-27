@@ -13,8 +13,9 @@ const MERGE_NOTE = [
 ].join("\n");
 const SYNC_NOTE = [
 	"> [!IMPORTANT]",
-	"> Do not merge this PR by hand. master only allows squash, so add the `merge-sync` label and the Merge Sync PR workflow merges it with a merge commit. It refuses the branch if it holds anything beyond the merge of stable.",
+	"> Do not merge this PR by hand. The Merge Sync PR workflow merges it with a merge commit on its own when it only brings stable's changes, and comments here when it cannot. Then review the branch and add the `merge-sync` label.",
 ].join("\n");
+const PROVENANCE_SCRIPT = ".github/scripts/sync-provenance.sh";
 const FOOTER = "<sub>Managed by the release workflow. Manual commits to this branch are overwritten.</sub>";
 
 const bump = (version, level) => {
@@ -240,18 +241,58 @@ module.exports = async ({ github, context, core, exec }) => {
 			title,
 			stableRef,
 		);
-		if (!merged) await run(["merge", "--abort"]);
-		const upToDate = merged
+		let resolved = false;
+		if (!merged) {
+			await run(["merge", "--abort"]);
+			const provenance = await exec.getExecOutput("bash", [PROVENANCE_SCRIPT, masterRef, stableRef], {
+				silent: true,
+				ignoreReturnCode: true,
+			});
+			if (provenance.exitCode === 0) {
+				await git(
+					"-c",
+					`user.name=${BOT_NAME}`,
+					"-c",
+					`user.email=${BOT_EMAIL}`,
+					"merge",
+					"-s",
+					"ours",
+					"--no-commit",
+					stableRef,
+				);
+				await exec.exec("npm", [
+					"version",
+					await versionAt(stableRef),
+					"--no-git-tag-version",
+					"--allow-same-version",
+				]);
+				await git("add", "package.json");
+				await git("-c", `user.name=${BOT_NAME}`, "-c", `user.email=${BOT_EMAIL}`, "commit", "--no-edit", "-m", title);
+				resolved = true;
+			} else {
+				core.notice(`Sync needs a manual conflict resolution: ${provenance.stderr.trim()}`);
+			}
+		}
+		const automatic = merged || resolved;
+		const upToDate = automatic
 			? (await contains(masterRef)) && (await contains(stableRef))
 			: await contains(stableRef);
 		if (!upToDate) {
-			if (!merged) await git("switch", "--detach", stableRef);
+			if (!automatic) await git("switch", "--detach", stableRef);
 			await publishBranch(SYNC_BRANCH, title, {
 				lint: `This branch only merges ${STABLE} into ${master}, and both are already checked.`,
 			});
 		}
-		const number = await upsertPr({ head: SYNC_BRANCH, base: master, title, body: renderSyncBody(changes, !merged) });
-		core.notice(merged ? `Sync PR #${number} is ready.` : `Sync PR #${number} has conflicts to resolve.`);
+		const number = await upsertPr({
+			head: SYNC_BRANCH,
+			base: master,
+			title,
+			body: renderSyncBody(changes, !automatic),
+		});
+		if (automatic) {
+			await github.rest.actions.createWorkflowDispatch({ owner, repo, workflow_id: "release-sync.yml", ref: master });
+		}
+		core.notice(automatic ? `Sync PR #${number} is merged automatically.` : `Sync PR #${number} has conflicts to resolve.`);
 		return number;
 	};
 

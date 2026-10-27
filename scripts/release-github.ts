@@ -141,7 +141,8 @@ function releaseAppActor(): Ruleset["bypass_actors"][number] {
 	} catch {
 		throw new Error(`Create the ${RELEASE_APP_SLUG} GitHub App and install it on ${REPO} first.`);
 	}
-	return { actor_id: id, actor_type: "Integration", bypass_mode: "pull_request" };
+	// GitHub rejects the app's merge commits on master unless its bypass is "always".
+	return { actor_id: id, actor_type: "Integration", bypass_mode: "always" };
 }
 
 const methodOnly = (methods: string[]): Rule => ({
