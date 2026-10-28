@@ -14,10 +14,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: release-pr
-  cancel-in-progress: true
-
 jobs:
   release-pr:
     name: Update release PRs
@@ -28,6 +24,9 @@ jobs:
       github.event.changes.body &&
       github.event.sender.type != 'Bot')
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-pr
+      cancel-in-progress: true
     environment: release-bot
     permissions:
       contents: read
