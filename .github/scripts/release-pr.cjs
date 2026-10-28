@@ -13,9 +13,11 @@ const MERGE_NOTE = [
 ].join("\n");
 const SYNC_NOTE = [
 	"> [!IMPORTANT]",
-	"> Do not merge this PR by hand. master only allows squash, so add the `merge-sync` label and the Merge Sync PR workflow merges it with a merge commit. It refuses the branch if it holds anything beyond the merge of stable.",
+	"> Do not merge this PR by hand. The Merge Sync PR workflow merges it with a merge commit on its own when it only brings stable's changes, and comments here when it cannot. Then review the branch and add the `merge-sync` label.",
 ].join("\n");
-const FOOTER = "<sub>Managed by the release workflow. Manual commits to this branch are overwritten.</sub>";
+const PROVENANCE_SCRIPT = ".github/scripts/sync-provenance.sh";
+const FOOTER =
+	"<sub>Managed by the release workflow. Only the release app and maintainers can push to this branch.</sub>";
 
 const bump = (version, level) => {
 	const [major, minor, patch] = version.split(".").map(Number);
@@ -38,9 +40,7 @@ const PLAN_PATTERN = /<!-- release-plan:([^ ]+) -->/;
 const PICKED_PATTERN = /\(cherry picked from commit ([0-9a-f]{40})\)/g;
 
 const uncheckedCommits = (body) =>
-	new Set(
-		[...(body ?? "").matchAll(COMMIT_PATTERN)].filter((match) => match[1] === " ").map((match) => match[2]),
-	);
+	new Set([...(body ?? "").matchAll(COMMIT_PATTERN)].filter((match) => match[1] === " ").map((match) => match[2]));
 
 const renderStableBody = ({ current, level, candidates, selected, mode, warning, plan }) =>
 	[
@@ -48,7 +48,11 @@ const renderStableBody = ({ current, level, candidates, selected, mode, warning,
 		"",
 		MERGE_NOTE,
 		...(warning
-			? ["", "> [!WARNING]", `> ${warning} The branch still holds the previous selection, so this PR stays a draft until then.`]
+			? [
+					"",
+					"> [!WARNING]",
+					`> ${warning} The branch still holds the previous selection, so this PR stays a draft until then.`,
+				]
 			: []),
 		"",
 		"### Release type",
@@ -119,7 +123,7 @@ const renderSyncBody = (changes, conflicted) =>
 		FOOTER,
 	].join("\n");
 
-module.exports = async ({ github, context, core, exec }) => {
+module.exports = async ({ github, app, context, core, exec }) => {
 	const { owner, repo } = context.repo;
 	const master = context.payload.repository.default_branch;
 	const isEdit = context.eventName === "pull_request_target";
@@ -158,22 +162,22 @@ module.exports = async ({ github, context, core, exec }) => {
 	const upsertPr = async ({ head, base, title, body }) => {
 		const existing = await findPr(head, head === master ? base : undefined);
 		if (existing) {
-			await github.rest.pulls.update({ owner, repo, pull_number: existing.number, title, body, base });
+			await app.rest.pulls.update({ owner, repo, pull_number: existing.number, title, body, base });
 			return existing.number;
 		}
-		const { data } = await github.rest.pulls.create({ owner, repo, head, base, title, body });
+		const { data } = await app.rest.pulls.create({ owner, repo, head, base, title, body });
 		return data.number;
 	};
 	const closePr = async (head, base, deleteBranch) => {
 		const existing = await findPr(head, base);
-		if (existing) await github.rest.pulls.update({ owner, repo, pull_number: existing.number, state: "closed" });
-		if (deleteBranch) await github.rest.git.deleteRef({ owner, repo, ref: `heads/${head}` }).catch(() => {});
+		if (existing) await app.rest.pulls.update({ owner, repo, pull_number: existing.number, state: "closed" });
+		if (deleteBranch) await app.rest.git.deleteRef({ owner, repo, ref: `heads/${head}` }).catch(() => {});
 	};
 	const setDraft = async (number, draft) => {
-		const { data } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+		const { data } = await app.rest.pulls.get({ owner, repo, pull_number: number });
 		if (data.draft === draft) return;
 		const mutation = draft ? "convertPullRequestToDraft" : "markPullRequestReadyForReview";
-		await github.graphql(`mutation($id: ID!) { ${mutation}(input: { pullRequestId: $id }) { clientMutationId } }`, {
+		await app.graphql(`mutation($id: ID!) { ${mutation}(input: { pullRequestId: $id }) { clientMutationId } }`, {
 			id: data.node_id,
 		});
 	};
@@ -181,26 +185,7 @@ module.exports = async ({ github, context, core, exec }) => {
 		if (!(await succeeds("fetch", "origin", branch))) return null;
 		return git("rev-parse", `origin/${branch}`);
 	};
-	const publishBranch = async (branch, title, summaries) => {
-		await git("push", "--force", "origin", `HEAD:refs/heads/${branch}`);
-		const headSha = await git("rev-parse", "HEAD");
-		const checks = {
-			"Validate Pull Request Title": `Generated title \`${title}\` follows the release convention.`,
-			"Lint & Format": summaries.lint,
-		};
-		for (const [name, summary] of Object.entries(checks)) {
-			await github.rest.checks.create({
-				owner,
-				repo,
-				name,
-				head_sha: headSha,
-				status: "completed",
-				conclusion: "success",
-				output: { title: name, summary },
-			});
-		}
-		await github.rest.actions.createWorkflowDispatch({ owner, repo, workflow_id: "ci-pipeline.yml", ref: branch });
-	};
+	const publishBranch = (branch) => git("push", "--force", "origin", `HEAD:refs/heads/${branch}`);
 
 	const updateCanary = async () => {
 		const changes = await changesBetween(canaryRef, masterRef);
@@ -228,19 +213,63 @@ module.exports = async ({ github, context, core, exec }) => {
 		const changes = (await changesBetween(masterRef, stableRef)) || "- Merge commits only";
 
 		await git("switch", "--detach", masterRef);
-		const merged = await succeeds("merge", "--no-ff", "--no-edit", "-m", title, stableRef);
-		if (!merged) await git("merge", "--abort");
-		const upToDate = merged
-			? (await contains(masterRef)) && (await contains(stableRef))
-			: await contains(stableRef);
-		if (!upToDate) {
-			if (!merged) await git("switch", "--detach", stableRef);
-			await publishBranch(SYNC_BRANCH, title, {
-				lint: `This branch only merges ${STABLE} into ${master}, and both are already checked.`,
+		const merged = await succeeds(
+			"-c",
+			`user.name=${BOT_NAME}`,
+			"-c",
+			`user.email=${BOT_EMAIL}`,
+			"merge",
+			"--no-ff",
+			"--no-edit",
+			"-m",
+			title,
+			stableRef,
+		);
+		let resolved = false;
+		if (!merged) {
+			await run(["merge", "--abort"]);
+			const provenance = await exec.getExecOutput("bash", [PROVENANCE_SCRIPT, masterRef, stableRef], {
+				silent: true,
+				ignoreReturnCode: true,
 			});
+			if (provenance.exitCode === 0) {
+				await git(
+					"-c",
+					`user.name=${BOT_NAME}`,
+					"-c",
+					`user.email=${BOT_EMAIL}`,
+					"merge",
+					"-s",
+					"ours",
+					"--no-commit",
+					stableRef,
+				);
+				await exec.exec("npm", ["version", await versionAt(stableRef), "--no-git-tag-version", "--allow-same-version"]);
+				await git("add", "package.json");
+				await git("-c", `user.name=${BOT_NAME}`, "-c", `user.email=${BOT_EMAIL}`, "commit", "--no-edit", "-m", title);
+				resolved = true;
+			} else {
+				core.notice(`Sync needs a manual conflict resolution: ${provenance.stderr.trim()}`);
+			}
 		}
-		const number = await upsertPr({ head: SYNC_BRANCH, base: master, title, body: renderSyncBody(changes, !merged) });
-		core.notice(merged ? `Sync PR #${number} is ready.` : `Sync PR #${number} has conflicts to resolve.`);
+		const automatic = merged || resolved;
+		const upToDate = automatic ? (await contains(masterRef)) && (await contains(stableRef)) : await contains(stableRef);
+		if (!upToDate) {
+			if (!automatic) await git("switch", "--detach", stableRef);
+			await publishBranch(SYNC_BRANCH);
+		}
+		const number = await upsertPr({
+			head: SYNC_BRANCH,
+			base: master,
+			title,
+			body: renderSyncBody(changes, !automatic),
+		});
+		if (automatic) {
+			await github.rest.actions.createWorkflowDispatch({ owner, repo, workflow_id: "release-sync.yml", ref: master });
+		}
+		core.notice(
+			automatic ? `Sync PR #${number} is merged automatically.` : `Sync PR #${number} has conflicts to resolve.`,
+		);
 		return number;
 	};
 
@@ -257,16 +286,12 @@ module.exports = async ({ github, context, core, exec }) => {
 		const title = `release(stable): v${next}`;
 		const remote = await remoteSha(HOTFIX_BRANCH);
 		const upToDate =
-			remote !== null &&
-			(await git("rev-parse", `${remote}^`)) === stableSha &&
-			(await versionAt(remote)) === next;
+			remote !== null && (await git("rev-parse", `${remote}^`)) === stableSha && (await versionAt(remote)) === next;
 		if (!upToDate) {
 			await git("switch", "--detach", stableRef);
 			await exec.exec("npm", ["version", next, "--no-git-tag-version"]);
 			await commit(title, "package.json");
-			await publishBranch(HOTFIX_BRANCH, title, {
-				lint: `Only package.json differs from ${STABLE}, so src/ matches the already checked base.`,
-			});
+			await publishBranch(HOTFIX_BRANCH);
 		}
 		await upsertPr({ head: HOTFIX_BRANCH, base: STABLE, title, body: renderHotfixBody(current, next, changes) });
 		core.notice(`Hotfix PR targets v${next}.`);
@@ -327,12 +352,7 @@ module.exports = async ({ github, context, core, exec }) => {
 		}
 		await exec.exec("npm", ["version", next, "--no-git-tag-version", "--allow-same-version"]);
 		await commit(title, "package.json");
-		await publishBranch(RELEASE_BRANCH, title, {
-			lint:
-				mode === "merge"
-					? `The selected changes keep their original, already checked commits.`
-					: `Selected changes are cherry-picked; Build Project runs the lint and format check on this branch.`,
-		});
+		await publishBranch(RELEASE_BRANCH);
 		return null;
 	};
 

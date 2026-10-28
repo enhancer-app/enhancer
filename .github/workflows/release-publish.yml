@@ -32,6 +32,7 @@ jobs:
       VERSION: ${{ steps.get_version.outputs.VERSION }}
       CLEAN_VER: ${{ steps.get_version.outputs.CLEAN_VER }}
       PUBLISH: ${{ steps.check_release.outputs.publish }}
+      PREVIOUS_TAG: ${{ steps.previous.outputs.TAG }}
     steps:
       - name: Checkout code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -134,6 +135,27 @@ jobs:
           name: extension-builds
           path: dist/
 
+      - name: Find previous release
+        id: previous
+        if: steps.check_release.outputs.publish == 'true'
+        env:
+          TARGET_SHA: ${{ github.sha }}
+        run: echo "TAG=$(git describe --tags --abbrev=0 --match 'v*' "$TARGET_SHA^" 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+
+      - name: Write release notes
+        if: steps.check_release.outputs.publish == 'true'
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+        env:
+          PREVIOUS_TAG: ${{ steps.previous.outputs.TAG }}
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+          TARGET_SHA: ${{ github.sha }}
+        with:
+          script: |
+            const { collectChanges, formatNotes } = require("./.github/scripts/release-changes.cjs");
+            const { PREVIOUS_TAG: fromTag, VERSION: toTag, TARGET_SHA: to } = process.env;
+            const changes = fromTag ? await collectChanges({ github, context, from: fromTag, to }) : [];
+            require("node:fs").writeFileSync("release-notes.md", formatNotes({ changes, context, fromTag, toTag }));
+
       - name: Create GitHub Release
         if: steps.check_release.outputs.publish == 'true'
         env:
@@ -142,9 +164,7 @@ jobs:
           CLEAN_VER: ${{ steps.get_version.outputs.CLEAN_VER }}
           TARGET_SHA: ${{ github.sha }}
         run: |
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 --match 'v*' "$TARGET_SHA^" 2>/dev/null || true)
-          NOTES_ARGS=(--generate-notes)
-          if [ -n "$PREVIOUS_TAG" ]; then NOTES_ARGS+=(--notes-start-tag "$PREVIOUS_TAG"); fi
+          NOTES_ARGS=(--notes-file release-notes.md)
           BUILD_ZIP="dist/build-${CLEAN_VER}.zip"
           CHROME_ZIP="dist/build-chrome-${CLEAN_VER}.zip"
           SOURCE_ZIP="dist/source-${CLEAN_VER}.zip"
@@ -251,6 +271,8 @@ jobs:
           LLM_GATEWAY_API_KEY: ${{ secrets.LLM_GATEWAY_API_KEY }}
           LLM_GATEWAY_MODEL: ${{ vars.LLM_GATEWAY_MODEL }}
           VERSION: ${{ needs.build-release.outputs.VERSION }}
+          TAG: ${{ needs.build-release.outputs.VERSION }}
+          PREVIOUS_TAG: ${{ needs.build-release.outputs.PREVIOUS_TAG }}
         with:
           script: |
             const run = require("./.github/scripts/announce-discord.cjs");

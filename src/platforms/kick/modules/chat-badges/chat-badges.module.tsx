@@ -22,12 +22,17 @@ export default class ChatBadgesModule extends KickModule {
 		if (!(await this.isModuleEnabled())) return;
 		const ntvBadgesContainer = element.querySelector(".ntv__chat-message__badges");
 		const kickUsername = element.querySelector('button[data-prevent-expand="true"]');
-		const kickBadgesContainer = kickUsername?.parentElement?.querySelector(":scope > div");
+		const userBadges = this.enhancerApi().findUserBadgesForCurrentChannel(message.sender.id.toString()) ?? [];
+		const badgeIds = new Set(userBadges.map((badge) => badge.badgeId));
+		let kickBadgesContainer = kickUsername?.parentElement?.querySelector<HTMLElement>(":scope > div") ?? null;
+		if (!kickBadgesContainer && !isUsingNTV && kickUsername && userBadges.length > 0) {
+			kickBadgesContainer = document.createElement("div");
+			kickBadgesContainer.className = "enhancer-badges-container flex items-center gap-1 self-center pr-1";
+			kickUsername.before(kickBadgesContainer);
+		}
 		const badgesContainer = isUsingNTV ? ntvBadgesContainer : kickBadgesContainer;
 		if (!badgesContainer) return;
 
-		const userBadges = this.enhancerApi().findUserBadgesForCurrentChannel(message.sender.id.toString()) ?? [];
-		const badgeIds = new Set(userBadges.map((badge) => badge.badgeId));
 		for (const container of [ntvBadgesContainer, kickBadgesContainer]) {
 			container?.querySelectorAll<HTMLElement>(".enhancer-badges").forEach((badge) => {
 				if (
@@ -48,6 +53,12 @@ export default class ChatBadgesModule extends KickModule {
 					badge.remove();
 				}
 			});
+		}
+		if (
+			kickBadgesContainer?.classList.contains("enhancer-badges-container") &&
+			(kickBadgesContainer !== badgesContainer || badgeIds.size === 0)
+		) {
+			kickBadgesContainer.remove();
 		}
 
 		for (const badge of userBadges) {

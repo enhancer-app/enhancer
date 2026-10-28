@@ -14,10 +14,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: release-pr
-  cancel-in-progress: true
-
 jobs:
   release-pr:
     name: Update release PRs
@@ -25,23 +21,41 @@ jobs:
       github.event_name == 'push' ||
       (github.event.pull_request.head.ref == 'release-stable' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.changes.body)
+      github.event.changes.body &&
+      github.event.sender.type != 'Bot')
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-pr
+      cancel-in-progress: true
+    environment: release-bot
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+      pull-requests: read
       actions: write
-      checks: write
     steps:
+      - name: Create App Token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+
       - name: Checkout default branch
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Create or update release PRs
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           script: |
             const run = require("./.github/scripts/release-pr.cjs");
-            await run({ github, context, core, exec });
+            const app = new github.constructor({ auth: process.env.APP_TOKEN });
+            await run({ github, app, context, core, exec });

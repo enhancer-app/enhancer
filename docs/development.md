@@ -108,15 +108,26 @@ Enhancer has two release channels, each on its own branch:
   - if a ticked change depends on an unticked one, the bot explains it in the PR and keeps the PR as a draft.
 - **Hotfix:** merge the fix into `master` like any other change. In the `release(stable)` PR, untick every other
   change and tick patch. The bot cherry-picks only the fix onto `stable`.
-- **Sync:** after every stable release the bot opens `chore(sync): merge stable into master`. Do not merge it by
-  hand: add the `merge-sync` label and the `enhancer-release` app merges it with a merge commit. Do this before the
-  next stable release PR is updated. The workflow only merges `sync-stable` when it is a single merge of the
-  current `stable` and gives the same result as merging `stable` into `master`. If you resolved conflicts there,
-  review that merge commit before adding the label; the workflow cannot verify it. If the run fails, remove and
-  re-add the label after the bot rebuilds the branch.
+- **Sync:** after every stable release the bot opens `chore(sync): merge stable into master` and the
+  `enhancer-release` app merges it with a merge commit on its own. Do not merge it by hand.
+  - The bot only does this when every commit on `stable` that is not on `master` is a cherry-pick of a `master`
+    commit with the same changes, a `release(stable): vX.Y.Z` commit that only changes the version, or a merge
+    that adds nothing. Conflicts from cherry-picks are then resolved to `master`'s side, so merging the PR only
+    changes the version in `package.json`. The workflow checks all of this again before merging.
+  - Otherwise the workflow comments on the PR. Resolve the conflicts on `sync-stable` if needed (merge `master`
+    into it, never touch `stable`), review the branch and add the `merge-sync` label. The label path only merges
+    a single merge of the current `stable`; a conflict resolution cannot be verified, so review it first. If the
+    labelled run fails, remove and re-add the label after the bot rebuilds the branch.
 
 Never open PRs into `stable` or `canary` yourself; they only take the bot PRs above. The `master-merge-method`
-ruleset only allows squash on `master`; only the `enhancer-release` app can bypass it, and only to merge a PR.
+ruleset only allows squash on `master`; only the `enhancer-release` app can bypass it. GitHub rejects the app's
+merge commit unless its bypass is `always`, so its key only lives in environments that deploy from protected
+branches.
+
+The bot branches `release-stable`, `release-hotfix` and `sync-stable` are protected by the `release-bot-branches`
+ruleset: only the `enhancer-release` app and maintainers can create, push to or delete them. The bot pushes and
+opens its PRs as the app, so the real CI runs on them. When a maintainer pushes a conflict resolution to
+`sync-stable`, the workflow comments with `git show --remerge-diff`, which shows only what was changed by hand.
 `release-merge-method` only allows merge commits on `stable` and `canary`, and nobody can bypass it. A review
 bypass therefore cannot pick the wrong method. Squash or rebase on a release branch would give the same changes
 new commit hashes, and the branches would drift apart. The `release-tags` ruleset and immutable releases keep
@@ -124,10 +135,17 @@ new commit hashes, and the branches would drift apart. The `release-tags` rulese
 
 One-time setup: create the `enhancer-release` GitHub App (contents, pull requests and workflows write) and install
 it on this repository only, run `bun run release:setup-branches`, then store the app's client ID in the
-`RELEASE_APP_CLIENT_ID` repository variable and its private key in the `RELEASE_APP_PRIVATE_KEY` secret of the
-`release-sync` environment (never as a repository secret: every workflow could read it). Finally run
-`bun run release:setup-secrets`. Both channels publish from one store account, so they share the `release`
-environment; `release-announce` only deploys from `stable` and `release-sync` only from `master`.
+`RELEASE_APP_CLIENT_ID` repository variable and its private key in the `RELEASE_APP_PRIVATE_KEY` secret of both
+the `release-sync` and `release-bot` environments (never as a repository secret: every workflow could read it).
+Finally run `bun run release:setup-secrets`. Both channels publish from one store account, so they share the
+`release` environment; `release-announce` only deploys from `stable`, `release-sync` only from `master`, and
+`release-bot` only from `master`, `stable` and `canary`. Canary changelogs go to a separate Discord channel: store
+its webhook as `DISCORD_CHANGELOG_WEBHOOK` in the `release-announce-canary` environment, which only deploys from
+`canary`.
+
+Release notes and Discord changelogs list the pull requests merged into `master` since the previous tag of the same
+channel. Cherry-picked commits are traced back to their original pull request through their `cherry picked from
+commit` line, so a release with unticked changes still lists them correctly.
 Extension IDs are public and live in `manifest.config.ts` and the release workflows.
 
 ## Project Scripts
