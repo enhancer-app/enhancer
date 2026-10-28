@@ -17,7 +17,16 @@ const compareCommits = async (github, owner, repo, from, to) => {
 	}
 };
 
-const collectChanges = async ({ github, context, from, to }) => {
+const associatedPulls = async (github, owner, repo, sha) => {
+	try {
+		const { data } = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner, repo, commit_sha: sha });
+		return data;
+	} catch {
+		return null;
+	}
+};
+
+const collectChanges = async ({ github, context, from, to, followPicks = true }) => {
 	const { owner, repo } = context.repo;
 	const master = context.payload.repository.default_branch;
 	const changes = [];
@@ -27,13 +36,16 @@ const collectChanges = async ({ github, context, from, to }) => {
 		if (commit.parents.length > 1) continue;
 		const message = commit.commit.message;
 		const subject = message.split("\n")[0];
-		const source = message.match(PICKED_PATTERN)?.[1] ?? commit.sha;
-		const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-			owner,
-			repo,
-			commit_sha: source,
-		});
-		const merged = pulls.filter((pull) => pull.merged_at);
+		if (RELEASE_PATTERN.test(subject)) continue;
+		const picked = message.match(PICKED_PATTERN)?.[1];
+		if (picked && !followPicks) continue;
+		let source = picked ?? commit.sha;
+		let pulls = await associatedPulls(github, owner, repo, source);
+		if (!pulls && source !== commit.sha) {
+			source = commit.sha;
+			pulls = await associatedPulls(github, owner, repo, source);
+		}
+		const merged = (pulls ?? []).filter((pull) => pull.merged_at);
 		const pull = merged.find((candidate) => candidate.base.ref === master) ?? merged[0];
 
 		if (pull) {
@@ -46,7 +58,7 @@ const collectChanges = async ({ github, context, from, to }) => {
 				url: pull.html_url,
 				body: pull.body ?? "",
 			});
-		} else if (!RELEASE_PATTERN.test(subject)) {
+		} else {
 			changes.push({ title: subject, sha: source, body: "" });
 		}
 	}

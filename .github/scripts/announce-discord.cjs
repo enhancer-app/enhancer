@@ -62,7 +62,9 @@ const fallbackNotes = (changes) => {
 
 const summarize = async (changes, version, core) => {
 	const input = changes
-		.map((change) => (change.description ? `- ${change.title}\n  Description: ${change.description}` : `- ${change.title}`))
+		.map((change) =>
+			change.description ? `- ${change.title}\n  Description: ${change.description}` : `- ${change.title}`,
+		)
 		.join("\n");
 
 	const response = await fetch("https://api.llmgateway.io/v1/chat/completions", {
@@ -112,7 +114,13 @@ module.exports = async ({ github, context, core }) => {
 	const version = process.env.VERSION;
 	const previousTag = process.env.PREVIOUS_TAG;
 	const found = previousTag
-		? await collectChanges({ github, context, from: previousTag, to: process.env.TAG })
+		? await collectChanges({
+				github,
+				context,
+				from: previousTag,
+				to: process.env.TAG,
+				followPicks: process.env.CHANNEL !== "canary",
+			})
 		: [];
 	const changes = found.map((change) => ({
 		...parseTitle(change.title),

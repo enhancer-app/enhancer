@@ -77,7 +77,7 @@ jobs:
           script: |
             const { collectChanges, formatNotes } = require("./.github/scripts/release-changes.cjs");
             const { PREVIOUS_TAG: fromTag, VERSION: version, TARGET_SHA: to } = process.env;
-            const changes = fromTag ? await collectChanges({ github, context, from: fromTag, to }) : [];
+            const changes = fromTag ? await collectChanges({ github, context, from: fromTag, to, followPicks: false }) : [];
             const notes = formatNotes({ changes, context, fromTag, toTag: `canary-${version}` });
             require("node:fs").writeFileSync("release-notes.md", notes);
 
