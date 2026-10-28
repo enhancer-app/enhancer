@@ -1,3 +1,5 @@
+const { collectChanges } = require("./release-changes.cjs");
+
 const USER_FACING_TYPES = new Set(["feat", "fix", "bugfix"]);
 const PLATFORM_SCOPES = { twitch: "Twitch", kick: "Kick" };
 const TITLE_PATTERN = /^(\w+)(?:\(([^)]+)\))?!?:\s*(.+)$/;
@@ -98,7 +100,7 @@ const summarize = async (changes, version, core) => {
 };
 
 module.exports = async ({ github, context, core }) => {
-	for (const name of ["DISCORD_CHANGELOG_WEBHOOK", "LLM_GATEWAY_API_KEY", "LLM_GATEWAY_MODEL", "VERSION"]) {
+	for (const name of ["DISCORD_CHANGELOG_WEBHOOK", "LLM_GATEWAY_API_KEY", "LLM_GATEWAY_MODEL", "VERSION", "TAG"]) {
 		if (!process.env[name]) {
 			core.setFailed(`Missing required environment variable: ${name}`);
 			return;
@@ -107,22 +109,21 @@ module.exports = async ({ github, context, core }) => {
 	core.setSecret(process.env.DISCORD_CHANGELOG_WEBHOOK);
 	core.setSecret(process.env.LLM_GATEWAY_API_KEY);
 
-	const { owner, repo } = context.repo;
 	const version = process.env.VERSION;
-	const release = await github.rest.repos.getReleaseByTag({ owner, repo, tag: version });
-	const pullNumbers = [...new Set([...(release.data.body ?? "").matchAll(/\/pull\/(\d+)/g)].map((m) => Number(m[1])))];
-
-	const changes = [];
-	for (const pull_number of pullNumbers) {
-		const { data } = await github.rest.pulls.get({ owner, repo, pull_number });
-		const parsed = parseTitle(data.title);
-		if (parsed.type === "release") continue;
-		changes.push({ ...parsed, title: data.title, description: extractDescription(data.body) });
-	}
-	core.info(`Summarizing ${changes.length} pull requests.`);
+	const previousTag = process.env.PREVIOUS_TAG;
+	const found = previousTag
+		? await collectChanges({ github, context, from: previousTag, to: process.env.TAG })
+		: [];
+	const changes = found.map((change) => ({
+		...parseTitle(change.title),
+		title: change.title,
+		description: extractDescription(change.body),
+	}));
+	core.info(`Summarizing ${changes.length} changes since ${previousTag || "the first release"}.`);
 
 	const notes = (changes.length && (await summarize(changes, version, core))) || fallbackNotes(changes);
-	let message = `**Changelog ${version}**\n\n${notes}`;
+	const heading = process.env.CHANNEL === "canary" ? `Enhancer Canary changelog ${version}` : `Changelog ${version}`;
+	let message = `**${heading}**\n\n${notes}`;
 	if (message.length > MAX_MESSAGE_LENGTH) message = `${message.slice(0, MAX_MESSAGE_LENGTH - 3)}...`;
 	core.info(message);
 

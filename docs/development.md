@@ -132,7 +132,13 @@ it on this repository only, run `bun run release:setup-branches`, then store the
 `RELEASE_APP_CLIENT_ID` repository variable and its private key in the `RELEASE_APP_PRIVATE_KEY` secret of the
 `release-sync` environment (never as a repository secret: every workflow could read it). Finally run
 `bun run release:setup-secrets`. Both channels publish from one store account, so they share the `release`
-environment; `release-announce` only deploys from `stable` and `release-sync` only from `master`.
+environment; `release-announce` only deploys from `stable` and `release-sync` only from `master`. Canary
+changelogs go to a separate Discord channel: store its webhook as `DISCORD_CHANGELOG_WEBHOOK` in the
+`release-announce-canary` environment, which only deploys from `canary`.
+
+Release notes and Discord changelogs list the pull requests merged into `master` since the previous tag of the same
+channel. Cherry-picked commits are traced back to their original pull request through their `cherry picked from
+commit` line, so a release with unticked changes still lists them correctly.
 Extension IDs are public and live in `manifest.config.ts` and the release workflows.
 
 ## Project Scripts
