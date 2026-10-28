@@ -12,8 +12,10 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	chatMessageMenuEnabled: true,
 	chatMessageMenuUseAddInsteadOfSet: false,
 	chatMentionSoundEnabled: false,
+	emoteBarEnabled: false,
 	chatMentionSoundSource: "",
 	chatMentionSoundFile: "",
+	chatMentionSoundFileName: "",
 	chatMentionSoundVolume: 50,
 	pinnedStreamers: [],
 	quickAccessLinks: [
@@ -30,7 +32,6 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	realVideoTimeEnabled: true,
 	realVideoTimeFormat12h: false,
 	realVideoTimeDateMode: "hover",
-	pinnedStreamersEnabled: true,
 	xayoWatchtimeEnabled: true,
 	xayoWatchtimePeriod: "365d",
 	channelSection: true,

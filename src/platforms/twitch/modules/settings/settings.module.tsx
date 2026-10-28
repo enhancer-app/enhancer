@@ -1,6 +1,27 @@
+import {
+	ACCOUNT_CATEGORY_ID,
+	createAccountCategories,
+	createAccountIdentity,
+	createAccountSettings,
+	createCosmeticsLink,
+	createDeveloperCategories,
+	createDeveloperSettings,
+} from "$shared/module/helpers/enhancer-account-settings.tsx";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
+import {
+	SETTING_SECTION,
+	WATCHTIME_PERIOD_OPTIONS,
+	channelSectionSetting,
+	cosmeticsSettings,
+	chatImagesSettings,
+	followsSettings,
+	latencySettings,
+	pinnedStreamersSetting,
+	quickAccessLinksSetting,
+	realVideoTimeSettings,
+} from "$shared/module/helpers/common-setting-definitions.ts";
 import { SettingsHelper } from "$shared/module/helpers/settings.helper.tsx";
 import { TWITCH_DEFAULT_SETTINGS } from "$twitch/twitch.constants.ts";
 import TwitchModule from "$twitch/twitch.module.ts";
@@ -14,6 +35,8 @@ const CATEGORY = {
 	CHAT: "chat",
 	CHANNEL: "channel",
 	LATENCY: "latency",
+	EXPERIMENTAL: "experimental",
+	DATA: "data",
 	ABOUT: "about",
 } as const;
 
@@ -47,6 +70,7 @@ export default class SettingsModule extends TwitchModule {
 	private SETTING_DEFINITIONS: SettingDefinition<TwitchSettings>[] = [];
 	private settingsSignal: Signal<TwitchSettings> | null = null;
 	private openSettingsFn: (() => void) | null = null;
+	private previewAudio: HTMLAudioElement | null = null;
 
 	async initialize() {
 		this.settingsHelper = new SettingsHelper<TwitchSettings>(
@@ -64,237 +88,154 @@ export default class SettingsModule extends TwitchModule {
 			{ id: CATEGORY.CHAT, title: "Chat", order: 1 },
 			{ id: CATEGORY.CHANNEL, title: "Channel", order: 2 },
 			{ id: CATEGORY.LATENCY, title: "Latency", order: 3 },
-			{ id: CATEGORY.ABOUT, title: "About", order: 4 },
+			{ id: CATEGORY.EXPERIMENTAL, title: "Experimental", order: 4 },
+			{ id: CATEGORY.DATA, title: "Data", order: 5, placement: "utility" },
+			{ id: CATEGORY.ABOUT, title: "About", order: 6, placement: "utility" },
+			...createDeveloperCategories(7),
+			...createAccountCategories(8),
 		];
 
-		const brandIcons = {
-			website: await this.commonUtils().getAssetFile(this.workerService(), "brands/website.svg"),
-			github: await this.commonUtils().getAssetFile(this.workerService(), "brands/github.svg"),
-			twitter: await this.commonUtils().getAssetFile(this.workerService(), "brands/twitter.svg"),
-			discord: await this.commonUtils().getAssetFile(this.workerService(), "brands/discord.svg"),
-		} as const;
+		const enhancerLogo = await this.commonUtils().getAssetFile(this.workerService(), "enhancer/logo.svg");
 
 		this.SETTING_DEFINITIONS = [
+			...createAccountSettings("twitch", enhancerLogo),
 			{
 				id: "chattersEnabled",
-				title: "Enable Chatters Counter",
-				description: "Shows the number of chatters (users connected to chat) next to the viewer count.",
+				title: "Chatters counter",
+				description: "Shows how many people are connected to chat, next to the viewer count.",
 				type: "toggle",
 				categoryId: CATEGORY.GENERAL,
+				section: SETTING_SECTION.STREAM,
+				tags: ["Enable Chatters Counter"],
 				requiresRefreshToDisable: true,
 			},
+			...realVideoTimeSettings(CATEGORY.GENERAL),
+			pinnedStreamersSetting(CATEGORY.GENERAL),
 			{
-				id: "realVideoTimeEnabled",
-				title: "Enable Real Video Time",
-				description: "Displays the real-world time of the VOD.",
+				id: "hideStories",
+				title: "Hide Stories",
+				description: "Hides Stories and the Save Your Streak prompt in the left sidebar.",
 				type: "toggle",
 				categoryId: CATEGORY.GENERAL,
-				requiresRefreshToDisable: true,
+				section: SETTING_SECTION.SIDEBAR,
 			},
-			{
-				id: "realVideoTimeFormat12h",
-				title: "12-Hour Time Format",
-				description: "Display real video time in 12-hour format (AM/PM) instead of 24-hour format.",
-				type: "toggle",
-				categoryId: CATEGORY.GENERAL,
-				dependsOn: { key: "realVideoTimeEnabled" },
-			},
-			{
-				id: "realVideoTimeDateMode",
-				title: "Real Video Time Date Display",
-				description: "Choose when to show the date next to the real video time.",
-				type: "select",
-				categoryId: CATEGORY.GENERAL,
-				dependsOn: { key: "realVideoTimeEnabled" },
-				options: [
-					{ value: "hover", label: "Show date on hover (default)" },
-					{ value: "always", label: "Always show" },
-					{ value: "never", label: "Never show" },
-				],
-			},
-			{
-				id: "pinnedStreamersEnabled",
-				title: "Enable Pinning Streamers",
-				description: "Allows you to pin your favorite streamers for easy access.",
-				type: "toggle",
-				categoryId: CATEGORY.GENERAL,
-				requiresRefreshToDisable: true,
-			},
+			channelSectionSetting(CATEGORY.GENERAL),
 			{
 				id: "xayoWatchtimeEnabled",
-				title: "Enabled Usercard Watchtime",
-				description:
-					"Displays watchtime in usercards and via the /watchtime command for Polish channels by xayo.pl service.",
+				title: "Watchtime in usercards",
+				description: "Shows watchtime from xayo.pl in usercards and in the /watchtime command.",
+				hint: "Polish channels only.",
 				type: "toggle",
 				categoryId: CATEGORY.GENERAL,
+				section: SETTING_SECTION.CHANNEL,
+				tags: ["Enabled Usercard Watchtime", "xayo"],
 				requiresRefreshToDisable: true,
 			},
 			{
 				id: "xayoWatchtimePeriod",
-				title: "Xayo Watchtime Period",
-				description: "Select the time range used for usercard watchtime and the /watchtime command.",
+				title: "Time range",
+				description: "The period used for usercards and /watchtime.",
 				type: "select",
 				categoryId: CATEGORY.GENERAL,
+				tags: ["Xayo Watchtime Period"],
 				dependsOn: { key: "xayoWatchtimeEnabled" },
-				options: [
-					{ value: "30d", label: "Last 30 days" },
-					{ value: "365d", label: "Last year" },
-					{ value: "all", label: "All time" },
-				],
+				options: WATCHTIME_PERIOD_OPTIONS,
 			},
-			{
-				id: "channelSection",
-				title: "Channel Section",
-				description: "Shows a section with watch time and quick access links.",
-				type: "toggle",
-				categoryId: CATEGORY.GENERAL,
-				requiresRefreshToDisable: true,
-			},
-			{
-				id: "hideStories",
-				title: "Hide Stories",
-				description: "Hides the Stories section and the Save Your Streak prompt in the left sidebar.",
-				type: "toggle",
-				categoryId: CATEGORY.GENERAL,
-			},
-			{
-				id: "loadAdditionalFonts",
-				title: "Enable Loading Additional Fonts",
-				description: "Loads additional font assets used by Enhancer for enhanced visual variety.",
-				type: "toggle",
-				categoryId: CATEGORY.GENERAL,
-				requiresRefreshToDisable: true,
-			},
-			{
-				id: "chatImagesEnabled",
-				title: "Enable Chat Images",
-				description: "Display images sent in chat messages.",
-				type: "toggle",
-				categoryId: CATEGORY.CHAT,
-				confirmOnEnable: true,
-				confirmationMessage:
-					"Enhancer is not responsible for the content of images sent in the chat by users. By enabling this option, you can see images in the chat that may not look good. We do not moderate them in any way, we simply display them. Are you sure you want to enable this option?",
-			},
-			{
-				id: "chatImagesOnHover",
-				title: "Show Images on Hover",
-				description: "Images are hidden until you hover your mouse to reveal them.",
-				type: "toggle",
-				categoryId: CATEGORY.CHAT,
-				dependsOn: { key: "chatImagesEnabled" },
-			},
-			{
-				id: "chatImagesSize",
-				title: "Chat Image Size",
-				description: "Maximum size of images allowed in chat messages.",
-				type: "number",
-				categoryId: CATEGORY.CHAT,
-				min: 1,
-				step: 1,
-				unit: "MB",
-				dependsOn: { key: "chatImagesEnabled" },
-			},
-			{
-				id: "chatBadgesEnabled",
-				title: "Enable Chat Badges",
-				description: "Show custom chat badges from Enhancer extension.",
-				type: "toggle",
-				categoryId: CATEGORY.CHAT,
-			},
-			{
-				id: "chatNicknameCustomizationEnabled",
-				title: "Enable Nickname Customization",
-				description: "Show custom chat nickname customizations from Enhancer extension in chat.",
-				type: "toggle",
-				categoryId: CATEGORY.CHAT,
-			},
+			...chatImagesSettings(CATEGORY.CHAT),
 			{
 				id: "chatMessageMenuEnabled",
-				title: "Enable Chat Message Menu",
-				description: "Show a menu with message options when you right-click a chat message.",
+				title: "Message menu",
+				description: "Right-click a chat message to see more options.",
 				type: "toggle",
 				categoryId: CATEGORY.CHAT,
+				section: SETTING_SECTION.MESSAGES,
+				tags: ["Enable Chat Message Menu"],
 			},
 			{
 				id: "chatMessageMenuUseAddInsteadOfSet",
-				title: "Appending Content via Chat Message Menu",
-				description:
-					"When using the chat message menu, new content will be added to the message in chat input instead of replacing it.",
+				title: "Add to chat input",
+				description: "Adds content to what you're typing instead of replacing it.",
 				type: "toggle",
 				categoryId: CATEGORY.CHAT,
+				tags: ["Appending Content via Chat Message Menu"],
 				dependsOn: { key: "chatMessageMenuEnabled" },
 			},
 			{
+				id: "chatGiphyMessages",
+				title: "Giphy messages",
+				description: "What to do with Giphy messages in chat.",
+				hint: "Applies to new messages.",
+				type: "choice",
+				categoryId: CATEGORY.CHAT,
+				section: SETTING_SECTION.MESSAGES,
+				tags: ["Filter Giphy Messages", "Giphy Message Behavior", "gif"],
+				options: [
+					{ label: "Show", value: { chatHideGiphyMessages: false } },
+					{ label: "Hide", value: { chatHideGiphyMessages: true, chatGiphyMessageMode: "hide" } },
+					{ label: "As link", value: { chatHideGiphyMessages: true, chatGiphyMessageMode: "link" } },
+				],
+			},
+			...cosmeticsSettings(CATEGORY.CHAT),
+			...createCosmeticsLink(CATEGORY.CHAT),
+			{
 				id: "chatMentionSoundEnabled",
-				title: "Enable Chat Mention Sound",
-				description: "Turn on to receive a sound notification when someone mentions you in chat.",
+				title: "Mention sound",
+				description: "Plays a sound when someone mentions you in chat.",
 				type: "toggle",
 				categoryId: CATEGORY.CHAT,
+				section: SETTING_SECTION.NOTIFICATIONS,
+				tags: ["Enable Chat Mention Sound"],
 			},
 			{
 				id: "chatMentionSoundFile",
-				title: "Custom Mention Sound File",
-				description:
-					"Upload a custom audio file to play when you are mentioned in chat. Leave empty to use the default sound.",
+				title: "Custom sound",
+				description: "Upload your own audio file, or leave empty for the default sound.",
 				type: "file",
 				categoryId: CATEGORY.CHAT,
+				tags: ["Custom Mention Sound File"],
 				validTypes: ["audio/mpeg", "audio/mp3", "audio/ogg", "audio/wav", "audio/webm", "audio/aac", "audio/flac"],
+				fileNameKey: "chatMentionSoundFileName",
+				uploadedLabel: "Custom sound",
 				dependsOn: { key: "chatMentionSoundEnabled" },
 			},
 			{
 				id: "chatMentionSoundVolume",
-				title: "Mention Sound Volume",
-				description: "Adjust the volume level for your mention notification sound.",
+				title: "Volume",
+				description: "Press ▶ to hear how loud it is.",
 				type: "number",
 				min: 0,
 				max: 100,
 				step: 1,
 				unit: "%",
 				slider: true,
+				onPreview: (settings) => void this.previewMentionSound(settings),
+				previewLabel: "Play mention sound",
 				categoryId: CATEGORY.CHAT,
+				tags: ["Mention Sound Volume"],
 				dependsOn: { key: "chatMentionSoundEnabled" },
 			},
+			quickAccessLinksSetting(CATEGORY.CHANNEL, TWITCH_DEFAULT_SETTINGS.quickAccessLinks),
+			...latencySettings(CATEGORY.LATENCY, {
+				reducerHint: "Works only with Low Latency Mode turned on.",
+				thresholdStep: 1,
+			}),
+			...followsSettings(CATEGORY.EXPERIMENTAL),
 			{
-				id: "chatHideGiphyMessages",
-				title: "Filter Giphy Messages",
-				description:
-					"Hide Giphy messages or replace GIFs with text links. Changes apply to newly processed messages; refresh the page to update existing messages.",
+				id: "emoteBarEnabled",
+				title: "Emote bar",
+				description: "Shows your most used emotes for this channel above the chat input.",
+				hint: "Click to insert, Ctrl+Click to send, right-click twice to remove.",
 				type: "toggle",
-				categoryId: CATEGORY.CHAT,
-				hideInfo: false,
-			},
-			{
-				id: "chatGiphyMessageMode",
-				title: "Giphy Message Behavior",
-				description: "Choose whether to hide the entire message or display the GIF description as a clickable link.",
-				type: "radio",
-				categoryId: CATEGORY.CHAT,
-				dependsOn: { key: "chatHideGiphyMessages" },
-				options: [
-					{ value: "hide", label: "Hide entire message" },
-					{ value: "link", label: "Replace GIF with a text link" },
-				],
-			},
-			{
-				id: "quickAccessLinks",
-				title: "Quick Access Links",
-				description:
-					"Manage your quick access links. Use %username% in the URL to dynamically include the streamer's name.",
-				type: "array",
-				categoryId: CATEGORY.CHANNEL,
-				arrayItemFields: [
-					{ name: "title", placeholder: "Enter link name..." },
-					{ name: "url", placeholder: "Enter URL..." },
-				],
-				confirmOnRemove: true,
-				confirmationMessage: "Are you sure you want to remove this Quick Access Link?",
+				categoryId: CATEGORY.EXPERIMENTAL,
+				tags: ["Enable Emote Bar"],
+				requiresRefreshToDisable: true,
 			},
 			{
 				id: "watchtime-list",
-				title: "Watchtime List",
-				description: "Watchtime List",
+				title: "Watchtime list",
+				description: "How long you've watched each channel.",
 				type: "text",
-				categoryId: CATEGORY.CHANNEL,
+				categoryId: CATEGORY.DATA,
 				content: () => {
 					return <WatchtimeListComponent platform="twitch" workerService={workerService} emitter={this.emitter} />;
 				},
@@ -302,95 +243,44 @@ export default class SettingsModule extends TwitchModule {
 			},
 			{
 				id: "export-import",
-				title: "Export/Import Data",
-				description: "Export and import your settings and watchtime data",
+				title: "Backup",
+				description: "Export and import your settings and watchtime.",
 				type: "text",
-				categoryId: CATEGORY.GENERAL,
+				categoryId: CATEGORY.DATA,
+				tags: ["Export/Import Data"],
 				content: () => {
 					return <ExportImportComponent platform="twitch" workerService={workerService} emitter={this.emitter} />;
 				},
 				hideInfo: true,
 			},
 			{
-				id: "streamLatencyEnabled",
-				title: "Enable Stream Latency",
-				description: "Shows the current stream delay on top of the chat.",
-				type: "toggle",
-				categoryId: CATEGORY.LATENCY,
-				requiresRefreshToDisable: true,
-			},
-			{
-				id: "streamLatencyReducerEnabled",
-				title: "Enable Stream Latency Reducer",
-				description: "Reduces stream latency by adjusting playback rate. (Disabled without Low Latency Mode)",
-				type: "toggle",
-				categoryId: CATEGORY.LATENCY,
-				requiresRefreshToDisable: true,
-			},
-			{
-				id: "streamLatencyReducerMinRate",
-				title: "Minimum Playback Rate",
-				description: "The minimum playback rate the stream will be speeded up to.",
-				type: "number",
-				categoryId: CATEGORY.LATENCY,
-				requiresRefreshToDisable: true,
-				dependsOn: { key: "streamLatencyReducerEnabled" },
-				min: 1,
-				max: 2,
-				step: 0.01,
-				unit: "x",
-			},
-			{
-				id: "streamLatencyReducerMaxRate",
-				title: "Maximum Playback Rate",
-				description: "The maximum playback rate the stream will be speeded up to.",
-				type: "number",
-				categoryId: CATEGORY.LATENCY,
-				requiresRefreshToDisable: true,
-				dependsOn: { key: "streamLatencyReducerEnabled" },
-				min: 1,
-				max: 2,
-				step: 0.01,
-				unit: "x",
-			},
-			{
-				id: "streamLatencyReducerMinThreshold",
-				title: "Minimum Latency Threshold",
-				description:
-					"The latency threshold (in seconds) at which the playback rate will be speeded up to the minimum rate.",
-				type: "number",
-				categoryId: CATEGORY.LATENCY,
-				requiresRefreshToDisable: true,
-				dependsOn: { key: "streamLatencyReducerEnabled" },
-				min: 0,
-				step: 1,
-				unit: "s",
-			},
-			{
-				id: "streamLatencyReducerMaxThreshold",
-				title: "Maximum Latency Threshold",
-				description:
-					"The latency threshold (in seconds) at which the playback rate will be speeded up to the maximum rate.",
-				type: "number",
-				categoryId: CATEGORY.LATENCY,
-				requiresRefreshToDisable: true,
-				dependsOn: { key: "streamLatencyReducerEnabled" },
-				min: 0,
-				step: 1,
-				unit: "s",
-			},
-			{
 				id: "about",
-				title: "About This Extension",
-				description: "Information about the extension",
+				title: "About Enhancer",
+				description: "Version, links and credits.",
 				type: "text",
 				categoryId: CATEGORY.ABOUT,
 				content: () => {
-					return <EnhancerAboutComponent icons={brandIcons} platform="twitch" workerService={workerService} />;
+					return <EnhancerAboutComponent logoUrl={enhancerLogo} platform="twitch" workerService={workerService} />;
 				},
 				hideInfo: true,
 			},
+			...createDeveloperSettings<TwitchSettings>(CATEGORY.ABOUT),
 		];
+	}
+
+	private async previewMentionSound(settings: TwitchSettings) {
+		const file = settings.chatMentionSoundFile;
+		const legacyUrl = settings.chatMentionSoundSource;
+		const source = file?.startsWith("data:")
+			? file
+			: legacyUrl && legacyUrl.length > 3 && this.commonUtils().isValidUrl(legacyUrl)
+				? legacyUrl
+				: await this.commonUtils().getAssetFile(this.workerService(), "modules/mention-sound.ogg", "");
+		if (!source) return;
+		this.previewAudio?.pause();
+		this.previewAudio = new Audio(source);
+		this.previewAudio.volume = (settings.chatMentionSoundVolume ?? 50) / 100;
+		this.previewAudio.play().catch((error) => this.logger.warn("Failed to preview mention sound:", error));
 	}
 
 	private async run() {
@@ -401,6 +291,8 @@ export default class SettingsModule extends TwitchModule {
 			categories: this.SETTINGS_CATEGORIES,
 			definitions: this.SETTING_DEFINITIONS,
 			eventPrefix: "twitch:settings:",
+			identity: createAccountIdentity(this.workerService(), "twitch"),
+			identityCategoryId: ACCOUNT_CATEGORY_ID,
 		});
 		this.settingsSignal = result.settingsSignal;
 		this.openSettingsFn = result.openSettings;

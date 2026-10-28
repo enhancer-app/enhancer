@@ -10,6 +10,10 @@ import ChatHighlightUserModule from "$kick/modules/chat-highlight-user/chat-high
 import ChatMessagePopupModule from "$kick/modules/chat-message-popup/chat-message-popup.module.tsx";
 import ChatNicknameCustomizationModule from "$kick/modules/chat-nickname-customization/chat-nickname-customization.module.ts";
 import ChatModule from "$kick/modules/chat/chat.module.ts";
+import CrossPlatformFollowsSyncModule from "$kick/modules/cross-platform-follows/cross-platform-follows-sync.module.ts";
+import CrossPlatformFollowsModule from "$kick/modules/cross-platform-follows/cross-platform-follows.module.tsx";
+import SidebarChannelHoverModule from "$kick/modules/cross-platform-follows/sidebar-channel-hover.module.tsx";
+import FollowsHomeModule from "$kick/modules/follows-home/follows-home.module.ts";
 import ForceQualityModule from "$kick/modules/force-quality/force-quality.module.ts";
 import LocalWatchtimeCounterModule from "$kick/modules/local-watchtime-counter/local-watchtime-counter.module.tsx";
 import RealVideoTimeModule from "$kick/modules/real-video-time/real-video-time.module.tsx";
@@ -25,7 +29,10 @@ import type { KickStorage } from "$types/platforms/kick/kick.storage.types.ts";
 
 export default class KickPlatform extends Platform<KickModule, KickEvents, KickStorage, KickSettings> {
 	constructor() {
-		super({ type: "kick", ignoredMutationSelectors: ["#chatroom-messages"] });
+		super({
+			type: "kick",
+			ignoredMutationSelectors: ["#chatroom-messages", "#enhancer-cross-platform-follows", "#enhancer-follows-home"],
+		});
 	}
 
 	private readonly kickUtils = new KickUtils(this.utilsRepository.reactUtils, this.utilsRepository.commonUtils);
@@ -39,6 +46,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			this.utilsRepository,
 			this.enhancerApi,
 			this.workerApi,
+			this.emotesApi,
 			this.kickUtils,
 			this.kickApi,
 		] as const;
@@ -62,6 +70,10 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			// new ChatMessageMenuModule(...dependencies),
 			new AdditionalFontsModule(...dependencies),
 			new ChatFixAutoScrollModule(...dependencies),
+			new CrossPlatformFollowsSyncModule(...dependencies),
+			new CrossPlatformFollowsModule(...dependencies),
+			new SidebarChannelHoverModule(...dependencies),
+			new FollowsHomeModule(...dependencies),
 		];
 	}
 

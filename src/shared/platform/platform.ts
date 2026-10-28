@@ -1,3 +1,4 @@
+import EmotesApi from "$shared/apis/emotes.api.ts";
 import EnhancerApi from "$shared/apis/enhancer.api.ts";
 import { EventEmitterFactory } from "$shared/event/event-emitter.factory.ts";
 import { Logger } from "$shared/logger/logger.ts";
@@ -26,11 +27,13 @@ export default abstract class Platform<
 	protected readonly utilsRepository = new UtilsRepository();
 	protected readonly workerApi = new WorkerService();
 	protected readonly enhancerApi: EnhancerApi;
+	protected readonly emotesApi: EmotesApi;
 	protected readonly settingsCache: SettingsCache<TSettings>;
 	private readonly appliers: ModuleApplier<TEvents, TStorage, TSettings>[];
 
 	protected constructor(protected readonly config: PlatformConfig) {
 		this.enhancerApi = new EnhancerApi(config.type, this.workerApi, this.emitter);
+		this.emotesApi = new EmotesApi(config.type);
 		this.settingsCache = new SettingsCache<TSettings>(config.type, this.workerApi, this.emitter);
 		this.appliers = [
 			new SelectorModuleApplier<TEvents, TStorage, TSettings>(

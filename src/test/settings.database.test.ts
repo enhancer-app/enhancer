@@ -88,3 +88,36 @@ test("reports a failed save and keeps serving the last persisted settings", asyn
 	).rejects.toThrow("Failed to persist settings for platform: twitch");
 	expect((await database.getSettings("twitch")) as unknown).toEqual({ existing: "saved" });
 });
+
+test("carries the existing Twitch pinning toggle over to global settings once", async () => {
+	setupExtensionStorage(
+		new Map<string, unknown>([
+			["enhancer.settings.twitch", { ...TWITCH_DEFAULT_SETTINGS, pinnedStreamersEnabled: false }],
+		]),
+	);
+
+	const database = createDatabase();
+	await database.initialize();
+	expect((await database.getGlobalSettings()).pinnedStreamersEnabled).toBe(false);
+
+	await database.updateGlobalSettings({ pinnedStreamersEnabled: true });
+	const restarted = createDatabase();
+	await restarted.initialize();
+	expect((await restarted.getGlobalSettings()).pinnedStreamersEnabled).toBe(true);
+});
+
+test("ignores unknown keys and invalid values in global settings updates", async () => {
+	setupExtensionStorage();
+	const database = createDatabase();
+	await database.initialize();
+
+	const settings = await database.updateGlobalSettings({
+		followsSort: "viewers-asc",
+		followsHomeEnabled: "yes",
+		unknown: true,
+	} as never);
+
+	expect(settings.followsSort).toBe("viewers-asc");
+	expect(settings.followsHomeEnabled).toBe(false);
+	expect("unknown" in settings).toBe(false);
+});

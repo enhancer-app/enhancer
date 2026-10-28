@@ -1,37 +1,41 @@
+import { encodeBase64, readSnapshotHeader, SNAPSHOT_FORMAT_VERSION } from "$shared/apis/enhancer-snapshot.ts";
+import { ENHANCER_ENDPOINTS } from "$shared/enhancer-environment.ts";
 import type { Logger } from "$shared/logger/logger.ts";
+import type { AggregateSnapshotDatabase } from "$shared/worker/enhancer-api/aggregate-snapshot.database.ts";
 import type {
-	EnhancerAggregateResponse,
-	EnhancerAggregateSnapshotEvent,
+	EnhancerAggregateHeadEvent,
 	EnhancerAggregateTopic,
 	EnhancerAggregateUpdatedEvent,
-	EnhancerApiError,
+	EnhancerBufferedEvent,
 	EnhancerChannelAvailableEvent,
-	EnhancerChannelDto,
 	EnhancerChannelUnavailableEvent,
-	EnhancerDataEvent,
 	EnhancerMessageEvent,
 	EnhancerStreamerWatchTimeData,
 	EnhancerSubscription,
 	EnhancerWebSocketMessage,
 	XayoWatchtimePeriod,
 } from "$types/apis/enhancer.apis.ts";
+import type { EnhancerEndpoints } from "$types/shared/enhancer-environment.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type {
-	AggregateMaps,
+	AggregateAccountEntry,
+	AggregateBadgeEntry,
+	AggregateData,
 	AggregateScope,
-	CachedAggregateSeed,
+	AggregateSeed,
+	AggregateSnapshotFile,
 	EnhancerApiClient,
 	SubscriptionState,
 } from "$types/shared/worker/enhancer-api-worker.types.ts";
 import type { WorkerBroadcast } from "$types/shared/worker/worker.types.ts";
 
 export class EnhancerApiService {
-	private static readonly HTTP_BASE_URL = "https://api.enhancer.at";
-	private static readonly WEBSOCKET_URL = "wss://api.enhancer.at/v1/ws";
 	private static readonly CONFIRMATION_TIMEOUT_MS = 5000;
+	private static readonly CHANNEL_RETRY_DELAYS_MS = [30_000, 60_000, 300_000];
 	private static readonly HEARTBEAT_INTERVAL_MS = 25_000;
 	private static readonly MAX_SEEN_CURSORS = 1000;
 	private static readonly MAX_SUBSCRIPTIONS = 32;
+	private static readonly MAX_OVERLAY_ENTRIES = 20_000;
 
 	private readonly clients = new Map<string, EnhancerApiClient>();
 	private readonly subscriptions = new Map<EnhancerAggregateTopic, SubscriptionState>();
@@ -49,6 +53,8 @@ export class EnhancerApiService {
 	constructor(
 		private readonly logger: Logger,
 		private readonly version = "unknown",
+		private readonly store?: AggregateSnapshotDatabase,
+		private endpoints: EnhancerEndpoints = ENHANCER_ENDPOINTS.production,
 	) {
 		chrome.tabs.onRemoved.addListener((tabId) => this.removeTabClients(tabId));
 	}
@@ -58,14 +64,16 @@ export class EnhancerApiService {
 		frameId: number,
 		clientId: string,
 		platform: PlatformType,
-		seed?: CachedAggregateSeed,
-	): Promise<CachedAggregateSeed> {
+		knownHash?: string,
+	): Promise<AggregateSeed> {
 		this.logger.debug("Initializing client", { tabId, frameId, clientId, platform });
 		const client = this.registerClient(tabId, frameId, clientId, platform);
-		const state = this.subscribeClient(client, "GLOBAL");
-		const aggregate = await this.bootstrap(state, seed);
-		if (!aggregate) throw new Error(`Global ${platform} aggregate was not found`);
-		return aggregate;
+		const topic = this.getTopic(platform, "GLOBAL");
+		this.rememberKnownHash(client, topic, knownHash);
+		const state = await this.awaitSeed(client, "GLOBAL", () => this.bootstrap(this.subscribeClient(client, "GLOBAL")));
+		const seed = state ? this.createSeed(state, client) : null;
+		if (!seed) throw new Error(`Global ${platform} aggregate was not found`);
+		return seed;
 	}
 
 	async joinChannel(
@@ -74,16 +82,31 @@ export class EnhancerApiService {
 		clientId: string,
 		platform: PlatformType,
 		externalId: string,
-		seed?: CachedAggregateSeed,
-	): Promise<CachedAggregateSeed | null> {
+		knownHash?: string,
+	): Promise<AggregateSeed | null> {
 		if (!externalId) throw new Error("Channel external ID is required");
 		this.logger.debug("Joining channel", { tabId, frameId, clientId, platform, externalId });
 		const client = this.registerClient(tabId, frameId, clientId, platform);
 		const topic = this.getTopic(platform, "CHANNEL", externalId);
 		if (client.channelTopic && client.channelTopic !== topic) this.unsubscribeClient(client, client.channelTopic);
-		const state = this.subscribeClient(client, "CHANNEL", externalId);
-		client.channelTopic = state.topic;
-		return this.bootstrap(state, seed);
+		this.rememberKnownHash(client, topic, knownHash);
+		const subscribed = this.subscribeClient(client, "CHANNEL", externalId);
+		client.channelTopic = subscribed.topic;
+		const state = await this.awaitSeed(client, "CHANNEL", () => this.bootstrap(subscribed));
+		return state ? this.createSeed(state, client) : null;
+	}
+
+	private async awaitSeed(
+		client: EnhancerApiClient,
+		scope: AggregateScope,
+		load: () => Promise<SubscriptionState | null>,
+	): Promise<SubscriptionState | null> {
+		client.awaitingScopes.add(scope);
+		try {
+			return await load();
+		} finally {
+			client.awaitingScopes.delete(scope);
+		}
 	}
 
 	async getWatchTime(
@@ -106,6 +129,27 @@ export class EnhancerApiService {
 		this.unregisterClient(clientId);
 	}
 
+	setEndpoints(endpoints: EnhancerEndpoints): void {
+		if (endpoints.api === this.endpoints.api && endpoints.websocket === this.endpoints.websocket) return;
+		this.logger.info("Switching Enhancer API", endpoints.api);
+		this.closeConnection();
+		for (const state of this.subscriptions.values()) {
+			state.active = false;
+			this.clearChannelRetry(state);
+			this.releaseSubscription(state);
+		}
+		this.clients.clear();
+		this.subscriptions.clear();
+		this.pendingSubscriptions.clear();
+		this.reconnectAttempt = 0;
+		this.endpoints = endpoints;
+	}
+
+	private rememberKnownHash(client: EnhancerApiClient, topic: EnhancerAggregateTopic, knownHash?: string): void {
+		if (knownHash) client.sentHashes.set(topic, knownHash);
+		else client.sentHashes.delete(topic);
+	}
+
 	private registerClient(tabId: number, frameId: number, clientId: string, platform: PlatformType): EnhancerApiClient {
 		const existing = this.clients.get(clientId);
 		if (existing) {
@@ -126,6 +170,8 @@ export class EnhancerApiService {
 			platform,
 			topics: new Set(),
 			generation: ++this.clientGeneration,
+			sentHashes: new Map(),
+			awaitingScopes: new Set(),
 		};
 		this.clients.set(clientId, client);
 		return client;
@@ -151,11 +197,16 @@ export class EnhancerApiService {
 				active: true,
 				replaying: false,
 				replayComplete: false,
-				seedCollecting: false,
+				restoring: false,
 				transitioning: false,
+				snapshotChanged: false,
+				forceFresh: false,
+				generation: 0,
 				eventBuffer: [],
 				confirmationRetry: null,
 				confirmationWaiters: new Set(),
+				retryTimer: null,
+				retryAttempt: 0,
 				syncWaiters: new Set(),
 				seenCursors: new Set(),
 				processing: Promise.resolve(),
@@ -173,12 +224,14 @@ export class EnhancerApiService {
 	private unsubscribeClient(client: EnhancerApiClient, topic: EnhancerAggregateTopic): void {
 		const state = this.subscriptions.get(topic);
 		client.topics.delete(topic);
+		client.sentHashes.delete(topic);
 		if (client.channelTopic === topic) client.channelTopic = undefined;
 		if (!state) return;
 		state.subscribers.delete(client.clientId);
 		if (state.subscribers.size > 0) return;
 		if (this.pendingSubscription === state && !state.confirmed) this.closeConnection();
 		state.active = false;
+		this.clearChannelRetry(state);
 		this.unsubscribe(state);
 		this.releaseSubscription(state);
 		this.subscriptions.delete(state.topic);
@@ -207,73 +260,61 @@ export class EnhancerApiService {
 		) as EnhancerAggregateTopic;
 	}
 
-	private async bootstrap(state: SubscriptionState, seed?: CachedAggregateSeed): Promise<CachedAggregateSeed | null> {
+	private async bootstrap(state: SubscriptionState): Promise<SubscriptionState | null> {
 		const root = this.resolveState(state);
 		if (root.bootstrapPromise) return root.bootstrapPromise;
-		if (root.aggregate && root.confirmed && !root.replaying && !root.snapshot) return this.createSeed(root);
-		if (root.aggregate === null && root.rejected && !seed) return null;
+		if (root.aggregate && root.confirmed && !root.replaying) return root;
+		if (root.aggregate === null && root.rejected) return null;
+		if (root.rejected && root.retryTimer) return root.aggregate ? root : null;
 
 		root.bootstrapPromise = (async () => {
-			root.seedCollecting = true;
-			if (seed) {
-				this.installSeed(root, seed);
-				const current = this.resolveState(root);
-				await this.ensureConnection();
-				if (!current.active) return null;
-				if (!current.confirmed) this.sendSubscription(current);
-			}
-
-			const currentSeed = this.createSeed(this.resolveState(root));
-			const seeds = await this.requestSeeds(this.resolveState(root).topic);
-			const newest = [seed, currentSeed, ...seeds]
-				.filter((candidate): candidate is CachedAggregateSeed => candidate !== null && candidate !== undefined)
-				.sort((left, right) => this.compareCursors(right.cursor, left.cursor))[0];
-			if (newest) this.installSeed(root, newest);
-
+			if (!root.aggregate) await this.restoreStored(root);
 			let current = this.resolveState(root);
-			if (!current.aggregate) {
-				const fetchTopic = current.topic;
-				const response = await this.fetchAggregate(
-					current.platform,
-					current.scope === "GLOBAL" ? "global" : (current.externalId as string),
-				);
-				current = this.resolveState(root);
-				if (current.topic !== fetchTopic || current.rejected) {
-					current.seedCollecting = false;
-					return null;
-				}
-				if (!response) {
-					current.aggregate = null;
-					current.rejected = true;
-					current.seedCollecting = false;
-					this.pendingSubscriptions.set(current.topic, current);
-					return null;
-				}
-				this.installAggregate(current, response, response.cursor);
-			}
-
-			current = this.resolveState(root);
-			current.seedCollecting = false;
-			current.rejected = false;
 			await this.ensureConnection();
 			if (!current.active) return null;
 			if (!current.confirmed) this.sendSubscription(current);
-			if (current.snapshot && this.isSnapshotComplete(current.snapshot))
-				void this.installSnapshot(current, current.snapshot);
-			else if (current.replayComplete && !current.snapshot) void this.finishReplay(current);
 
 			await this.waitForConfirmation(current);
 			current = this.resolveState(current);
-			if (current.rejected) return null;
-			if (!current.confirmed) throw new Error(`Enhancer subscription confirmation timed out for ${current.topic}`);
-			if (current.replaying || current.snapshot || current.seedCollecting) await this.waitForSynchronization(current);
-			return this.createSeed(this.resolveState(current));
+			while (current.scope === "CHANNEL" && current.active && current.requested && !current.confirmed) {
+				await this.waitForConfirmation(current);
+				current = this.resolveState(current);
+			}
+			if (current.rejected) return current.aggregate ? current : null;
+			if (!current.confirmed) {
+				if (current.scope === "CHANNEL") return current.aggregate ? current : null;
+				throw new Error(`Enhancer subscription confirmation timed out for ${current.topic}`);
+			}
+			if (current.replaying) await this.waitForSynchronization(current);
+			current = this.resolveState(current);
+			return current.aggregate ? current : null;
 		})().finally(() => {
-			root.seedCollecting = false;
 			root.bootstrapPromise = undefined;
 		});
 
 		return root.bootstrapPromise;
+	}
+
+	private async restoreStored(state: SubscriptionState): Promise<void> {
+		if (!this.store) return;
+		state.restoring = true;
+		try {
+			const stored = await this.store.get(state.topic);
+			if (!stored || state.aggregate || stored.platform !== state.platform.toUpperCase()) return;
+			state.aggregate = {
+				channelId: stored.channelId,
+				platform: stored.platform,
+				epoch: stored.epoch,
+				seq: stored.seq,
+				snapshot: { hash: stored.hash, seq: stored.seq, bytes: stored.bytes },
+				accounts: new Map(),
+				badges: new Map(),
+			};
+		} catch (error) {
+			this.logger.warn(`Failed to read stored aggregate for ${state.topic}:`, error);
+		} finally {
+			state.restoring = false;
+		}
 	}
 
 	private ensureConnection(): Promise<void> {
@@ -285,7 +326,7 @@ export class EnhancerApiService {
 		}
 
 		this.connectionPromise = new Promise<void>((resolve, reject) => {
-			const socket = new WebSocket(`${EnhancerApiService.WEBSOCKET_URL}?v=${encodeURIComponent(this.version)}`);
+			const socket = new WebSocket(`${this.endpoints.websocket}?v=${encodeURIComponent(this.version)}`);
 			this.socket = socket;
 			let settled = false;
 			const timeout = setTimeout(() => {
@@ -345,6 +386,7 @@ export class EnhancerApiService {
 		}
 
 		if (message.type === "subscription.confirmed") {
+			if (this.subscriptions.get(message.topic)?.retryTimer) return;
 			const requestedState = this.pendingSubscription ?? this.subscriptions.get(message.topic) ?? undefined;
 			if (!requestedState) return;
 			const requestedTopic = requestedState.topic;
@@ -352,6 +394,7 @@ export class EnhancerApiService {
 				requestedState.topic === message.topic ? requestedState : this.renameTopic(requestedState, message.topic);
 			state.confirmed = true;
 			state.rejected = false;
+			state.retryAttempt = 0;
 			this.pendingSubscriptions.delete(requestedTopic);
 			this.pendingSubscriptions.delete(message.topic);
 			if (this.pendingSubscription === requestedState) this.pendingSubscription = null;
@@ -362,31 +405,28 @@ export class EnhancerApiService {
 			return;
 		}
 
+		if (message.type === "aggregate.head") {
+			const state = this.subscriptions.get(message.topic);
+			if (!state?.active || !state.replaying) return;
+			state.loading = this.loadHead(state, message, state.generation);
+			return;
+		}
+
 		if (message.type === "replay.complete") {
 			const state = this.subscriptions.get(message.topic);
 			if (!state) return;
 			state.replayComplete = true;
-			if (!state.seedCollecting && !state.snapshot) void this.finishReplay(state);
+			void this.finishReplay(state, state.generation);
 			return;
 		}
 
-		if (message.type === "sync.required") {
-			const state = this.subscriptions.get(message.topic);
-			if (state) {
-				state.replaying = true;
-				state.replayComplete = false;
-				state.snapshot = undefined;
-			}
+		if (message.type === "aggregate.updated") {
+			this.handleAggregateEvent(message);
 			return;
 		}
 
-		if (message.type === "aggregate.snapshot") {
-			this.handleSnapshot(message);
-			return;
-		}
-
-		if (message.type === "aggregate.updated" || message.type === "message") {
-			this.handleDataEvent(message);
+		if (message.type === "message") {
+			this.handleMessageEvent(message);
 			return;
 		}
 
@@ -410,15 +450,7 @@ export class EnhancerApiService {
 		const previousTopic = state.topic;
 		const existing = this.subscriptions.get(topic);
 		if (existing && existing !== state) {
-			if (
-				state.aggregate &&
-				(!existing.aggregate ||
-					!existing.cursor ||
-					(state.cursor && this.compareCursors(state.cursor, existing.cursor) > 0))
-			) {
-				existing.aggregate = state.aggregate;
-				existing.cursor = state.cursor;
-			}
+			if (state.aggregate && !existing.aggregate) existing.aggregate = state.aggregate;
 			this.subscriptions.delete(previousTopic);
 			this.pendingSubscriptions.delete(previousTopic);
 			state.topic = topic;
@@ -427,13 +459,13 @@ export class EnhancerApiService {
 			state.aggregate = existing.aggregate;
 			state.cursor = existing.cursor;
 			state.replaying = false;
-			state.snapshot = undefined;
 			for (const clientId of state.subscribers) {
 				existing.subscribers.add(clientId);
 				const client = this.clients.get(clientId);
 				if (!client) continue;
 				client.topics.delete(previousTopic);
 				client.topics.add(topic);
+				client.sentHashes.delete(previousTopic);
 				if (client.channelTopic === previousTopic) client.channelTopic = topic;
 			}
 			return existing;
@@ -456,6 +488,9 @@ export class EnhancerApiService {
 			if (!client) continue;
 			client.topics.delete(previousTopic);
 			client.topics.add(topic);
+			const sentHash = client.sentHashes.get(previousTopic);
+			client.sentHashes.delete(previousTopic);
+			if (sentHash) client.sentHashes.set(topic, sentHash);
 			if (client.channelTopic === previousTopic) client.channelTopic = topic;
 		}
 		return state;
@@ -474,139 +509,197 @@ export class EnhancerApiService {
 		state.confirmationWaiters.clear();
 	}
 
-	private handleDataEvent(event: EnhancerDataEvent): void {
-		const topic = event.type === "aggregate.updated" ? event.topic : this.getMessageTopic(event);
-		const state = this.subscriptions.get(topic);
-		if (!state?.confirmed) return;
-		if (state.replaying || state.seedCollecting || state.snapshot) state.eventBuffer.push(event);
-		else this.processDataEvent(state, event);
+	private async loadHead(
+		state: SubscriptionState,
+		head: EnhancerAggregateHeadEvent,
+		generation: number,
+	): Promise<void> {
+		const current = state.aggregate;
+		if (!head.resync && current && current.epoch === head.epoch && current.seq === head.from) return;
+		const snapshot =
+			current?.snapshot.hash === head.snapshot.hash
+				? { ...current.snapshot, seq: head.snapshot.seq }
+				: await this.fetchSnapshot(head);
+		if (state.generation !== generation) return;
+		const { header } = readSnapshotHeader(snapshot.bytes);
+		state.aggregate = {
+			channelId: header.channelId,
+			platform: header.platform,
+			epoch: head.epoch,
+			seq: head.snapshot.seq,
+			snapshot,
+			accounts: new Map(),
+			badges: new Map(),
+		};
+		state.snapshotChanged = true;
+		void this.persist(state, state.aggregate);
 	}
 
-	private processDataEvent(state: SubscriptionState, event: EnhancerDataEvent): void {
+	private async fetchSnapshot(head: EnhancerAggregateHeadEvent): Promise<AggregateSnapshotFile> {
+		const response = await fetch(new URL(head.snapshot.path, this.endpoints.api));
+		if (!response.ok) throw new Error(`Enhancer snapshot request failed with status ${response.status}`);
+		const bytes = new Uint8Array(await response.arrayBuffer());
+		const { header } = readSnapshotHeader(bytes);
+		if (header.topic.toLowerCase() !== head.topic.toLowerCase()) throw new Error("Enhancer snapshot topic mismatch");
+		return { hash: head.snapshot.hash, seq: head.snapshot.seq, bytes };
+	}
+
+	private async persist(state: SubscriptionState, data: AggregateData): Promise<void> {
+		if (!this.store) return;
+		try {
+			await this.store.put({
+				topic: state.topic,
+				formatVersion: SNAPSHOT_FORMAT_VERSION,
+				scope: state.scope,
+				hash: data.snapshot.hash,
+				seq: data.snapshot.seq,
+				epoch: data.epoch,
+				channelId: data.channelId,
+				platform: data.platform,
+				lastUsedAt: Date.now(),
+				bytes: data.snapshot.bytes,
+			});
+		} catch (error) {
+			this.logger.warn(`Failed to store aggregate for ${state.topic}:`, error);
+		}
+	}
+
+	private async finishReplay(state: SubscriptionState, generation: number): Promise<void> {
+		if (!state.replayComplete) return;
+		try {
+			await state.loading;
+		} catch (error) {
+			this.logger.error(`Failed to load Enhancer snapshot for ${state.topic}:`, error);
+			if (state.generation === generation) this.closeConnection();
+			return;
+		}
+		if (state.generation !== generation || !state.replaying) return;
+		await state.processing;
+		state.replaying = false;
+		state.loading = undefined;
+		const buffered = state.eventBuffer;
+		state.eventBuffer = [];
+		const aggregateEvents = buffered
+			.filter((event): event is EnhancerAggregateUpdatedEvent => event.type === "aggregate.updated")
+			.sort((left, right) => left.seq - right.seq);
+		const otherEvents = buffered
+			.filter((event) => event.type !== "aggregate.updated")
+			.sort((left, right) => this.compareCursors(left.cursor as string, right.cursor as string));
+
+		const snapshotChanged = state.snapshotChanged;
+		state.snapshotChanged = false;
+		const applied: EnhancerAggregateUpdatedEvent[] = [];
+		for (const event of aggregateEvents) {
+			const result = this.applyAggregateEvent(state, event);
+			if (result === "applied") applied.push(event);
+			if (result === "gap") break;
+		}
+		if (snapshotChanged) await this.broadcastSeed(state);
+		else for (const event of applied) await this.broadcastPatch(state, event);
+
+		for (const event of otherEvents) {
+			if (event.type === "channel.available") this.applyChannelAvailable(event);
+			else if (event.type === "channel.unavailable")
+				await this.applyChannelUnavailable(state, event, Boolean(state.bootstrapPromise));
+			else if (event.type === "message") this.processMessageEvent(state, event);
+		}
+		await state.processing;
+		this.resolveSynchronization(state);
+	}
+
+	private applyAggregateEvent(
+		state: SubscriptionState,
+		event: EnhancerAggregateUpdatedEvent,
+	): "applied" | "skipped" | "gap" {
+		const data = state.aggregate;
+		if (!data) return "skipped";
+		if (event.epoch !== data.epoch || event.seq > data.seq + 1) {
+			this.requestResync(state, event.epoch !== data.epoch);
+			return "gap";
+		}
+		if (event.seq <= data.seq) return "skipped";
+		const { accounts, badges } = this.toEntries(event);
+		for (const [externalId, account] of accounts) data.accounts.set(externalId, account);
+		for (const [badgeId, badge] of badges) data.badges.set(badgeId, badge);
+		data.seq = event.seq;
+		if (data.accounts.size + data.badges.size > EnhancerApiService.MAX_OVERLAY_ENTRIES) {
+			this.requestResync(state, true);
+		}
+		return "applied";
+	}
+
+	private toEntries(event: EnhancerAggregateUpdatedEvent): {
+		accounts: AggregateAccountEntry[];
+		badges: AggregateBadgeEntry[];
+	} {
+		return {
+			accounts: [
+				...(event.externalIdsRemove ?? []).map((externalId): AggregateAccountEntry => [externalId, null]),
+				...event.accountsUpsert.map((account): AggregateAccountEntry => [account.externalId, account]),
+			],
+			badges: [
+				...event.badgeIdsRemove.map((badgeId): AggregateBadgeEntry => [badgeId, null]),
+				...event.badgesUpsert.map((badge): AggregateBadgeEntry => [badge.badgeId, badge]),
+			],
+		};
+	}
+
+	private requestResync(state: SubscriptionState, fresh: boolean): void {
+		this.logger.debug("Resynchronizing topic", { topic: state.topic, fresh });
+		state.forceFresh ||= fresh;
+		if (!state.confirmed && !state.requested) return;
+		this.unsubscribe(state);
+		state.confirmed = false;
+		this.sendNextSubscription();
+	}
+
+	private handleAggregateEvent(event: EnhancerAggregateUpdatedEvent): void {
+		const state = this.subscriptions.get(event.topic);
+		if (!state?.confirmed) return;
+		if (state.replaying) {
+			state.eventBuffer.push(event);
+			return;
+		}
+		state.processing = state.processing.then(async () => {
+			if (!state.active || state.replaying) return;
+			if (this.applyAggregateEvent(state, event) !== "applied") return;
+			try {
+				await this.broadcastPatch(state, event);
+			} catch (error) {
+				this.logger.error(`Failed to broadcast Enhancer update for ${state.topic}:`, error);
+			}
+		});
+	}
+
+	private handleMessageEvent(event: EnhancerMessageEvent): void {
+		const state = this.subscriptions.get(this.getMessageTopic(event));
+		if (!state?.confirmed) return;
+		if (state.replaying) state.eventBuffer.push(event);
+		else this.processMessageEvent(state, event);
+	}
+
+	private processMessageEvent(state: SubscriptionState, event: EnhancerMessageEvent): void {
 		state.processing = state.processing.then(async () => {
 			if (state.seenCursors.has(event.cursor) || (state.cursor && this.compareCursors(event.cursor, state.cursor) <= 0))
 				return;
 			state.seenCursors.add(event.cursor);
-			let processed = false;
-			let attempt = 0;
-			while (state.active) {
-				try {
-					if (!processed) {
-						state.cursor = event.cursor;
-						if (event.type === "message") await this.broadcastMessage(state, event);
-						else {
-							this.applyPatch(state, event);
-							await this.broadcastAggregate(state, this.materializeAggregate(state));
-						}
-						processed = true;
-					}
-					if (!state.active) return;
-					if (state.seenCursors.size > EnhancerApiService.MAX_SEEN_CURSORS) {
-						const oldest = state.seenCursors.values().next().value;
-						if (oldest) state.seenCursors.delete(oldest);
-					}
-					return;
-				} catch (error) {
-					attempt++;
-					this.logger.error(`Failed to process Enhancer event for ${state.topic}:`, error);
-					await new Promise((resolve) => setTimeout(resolve, Math.min(1000 * 2 ** attempt, 30_000)));
-				}
+			state.cursor = event.cursor;
+			if (state.seenCursors.size > EnhancerApiService.MAX_SEEN_CURSORS) {
+				const oldest = state.seenCursors.values().next().value;
+				if (oldest) state.seenCursors.delete(oldest);
 			}
-			state.seenCursors.delete(event.cursor);
+			try {
+				await this.broadcastMessage(state, event);
+			} catch (error) {
+				this.logger.error(`Failed to process Enhancer event for ${state.topic}:`, error);
+			}
 		});
-	}
-
-	private applyPatch(state: SubscriptionState, event: EnhancerAggregateUpdatedEvent): void {
-		if (!state.aggregate) return;
-		for (const account of event.accountsUpsert) state.aggregate.accounts.set(account.accountId, account);
-		for (const id of event.accountIdsRemove) state.aggregate.accounts.delete(id);
-		for (const badge of event.badgesUpsert) state.aggregate.badges.set(badge.badgeId, badge);
-		for (const id of event.badgeIdsRemove) state.aggregate.badges.delete(id);
-	}
-
-	private handleSnapshot(event: EnhancerAggregateSnapshotEvent): void {
-		const state = this.subscriptions.get(event.topic);
-		if (!state?.active) return;
-		if (!state.snapshot || state.snapshot.snapshotId !== event.snapshotId) {
-			state.snapshot = { snapshotId: event.snapshotId, cursor: event.cursor, pages: new Map() };
-		}
-		if (state.snapshot.cursor !== event.cursor) return;
-		state.snapshot.pages.set(event.page, event);
-		if (!event.hasNextPage) state.snapshot.lastPage = event.page;
-		if (this.isSnapshotComplete(state.snapshot) && !state.seedCollecting)
-			void this.installSnapshot(state, state.snapshot);
-	}
-
-	private isSnapshotComplete(snapshot: NonNullable<SubscriptionState["snapshot"]>): boolean {
-		if (snapshot.lastPage === undefined) return false;
-		for (let page = 0; page <= snapshot.lastPage; page++) {
-			if (!snapshot.pages.has(page)) return false;
-		}
-		return true;
-	}
-
-	private async installSnapshot(
-		state: SubscriptionState,
-		snapshot: NonNullable<SubscriptionState["snapshot"]>,
-	): Promise<void> {
-		await state.processing;
-		if (state.snapshot !== snapshot) return;
-		const accounts: AggregateMaps["accounts"] = new Map();
-		const badges: AggregateMaps["badges"] = new Map();
-		let channelId: string | null = null;
-		let platform = state.platform.toUpperCase() as Uppercase<PlatformType>;
-		for (let page = 0; page <= (snapshot.lastPage as number); page++) {
-			const data = snapshot.pages.get(page) as EnhancerAggregateSnapshotEvent;
-			channelId = data.channelId;
-			platform = data.platform;
-			for (const account of data.accounts) accounts.set(account.accountId, account);
-			for (const badge of data.badges) badges.set(badge.badgeId, badge);
-		}
-		state.aggregate = { channelId, platform, accounts, badges };
-		state.cursor = snapshot.cursor;
-		state.snapshot = undefined;
-		state.replaying = false;
-		state.replayComplete = true;
-		await this.broadcastAggregate(state, this.materializeAggregate(state));
-		await this.flushBufferedEvents(state);
-		this.resolveSynchronization(state);
-	}
-
-	private async finishReplay(state: SubscriptionState): Promise<void> {
-		if (!state.replayComplete || state.seedCollecting || state.snapshot) return;
-		state.replaying = false;
-		await this.flushBufferedEvents(state);
-		this.resolveSynchronization(state);
-	}
-
-	private async flushBufferedEvents(state: SubscriptionState): Promise<void> {
-		const events = state.eventBuffer.sort((left, right) => this.compareCursors(left.cursor, right.cursor));
-		state.eventBuffer = [];
-		for (const event of events) {
-			if (state.cursor && this.compareCursors(event.cursor, state.cursor) <= 0) continue;
-			if (event.type === "channel.available") {
-				this.applyChannelAvailable(event);
-				continue;
-			}
-			if (event.type === "channel.unavailable") {
-				await this.applyChannelUnavailable(state, event, Boolean(state.bootstrapPromise));
-				continue;
-			}
-			const topic = event.type === "aggregate.updated" ? event.topic : this.getMessageTopic(event);
-			if (topic === state.topic) this.processDataEvent(state, event);
-		}
-		await state.processing;
 	}
 
 	private handleChannelAvailable(event: EnhancerChannelAvailableEvent): void {
 		const state = this.pendingSubscriptions.get(event.topic) ?? this.subscriptions.get(event.topic);
 		if (!state?.active) return;
-		if (
-			state.replaying ||
-			(state.seedCollecting && Boolean(state.aggregate)) ||
-			state.snapshot ||
-			state.transitioning
-		) {
+		if (state.replaying || state.transitioning) {
 			state.eventBuffer.push(event);
 			return;
 		}
@@ -626,12 +719,16 @@ export class EnhancerApiService {
 
 	private activatePendingChannel(state: SubscriptionState, topic: EnhancerAggregateTopic): void {
 		const current = this.resolveState(state);
+		if (current.retryTimer) {
+			this.retryChannel(current);
+			return;
+		}
 		if (!current.active || current.bootstrapPromise || current.aggregate !== null || !current.rejected) return;
 		current.aggregate = undefined;
 		current.rejected = false;
 		void this.bootstrap(current)
-			.then((aggregate) => {
-				if (aggregate) return this.broadcastAggregate(current, aggregate.aggregate);
+			.then((ready) => {
+				if (ready) return this.broadcastSeed(ready);
 			})
 			.catch((error) => this.logger.error(`Failed to activate ${topic}:`, error));
 	}
@@ -639,12 +736,7 @@ export class EnhancerApiService {
 	private handleChannelUnavailable(event: EnhancerChannelUnavailableEvent): void {
 		const state = this.subscriptions.get(event.topic);
 		if (!state?.active) return;
-		if (
-			state.replaying ||
-			(state.seedCollecting && Boolean(state.aggregate)) ||
-			state.snapshot ||
-			state.transitioning
-		) {
+		if (state.replaying || state.transitioning) {
 			state.eventBuffer.push(event);
 			return;
 		}
@@ -661,10 +753,19 @@ export class EnhancerApiService {
 			await this.transitionChannelUnavailable(state, event, deferBootstrap);
 		} finally {
 			state.transitioning = false;
-			if (!state.replaying && !state.seedCollecting && !state.snapshot && state.eventBuffer.length > 0) {
-				void this.flushBufferedEvents(state);
+			if (!state.replaying && state.eventBuffer.length > 0) {
+				const buffered = state.eventBuffer;
+				state.eventBuffer = [];
+				for (const pending of buffered) this.redeliver(pending);
 			}
 		}
+	}
+
+	private redeliver(event: EnhancerBufferedEvent): void {
+		if (event.type === "aggregate.updated") this.handleAggregateEvent(event);
+		else if (event.type === "message") this.handleMessageEvent(event);
+		else if (event.type === "channel.available") this.handleChannelAvailable(event);
+		else this.handleChannelUnavailable(event);
 	}
 
 	private async transitionChannelUnavailable(
@@ -673,14 +774,13 @@ export class EnhancerApiService {
 		deferBootstrap: boolean,
 	): Promise<void> {
 		await state.processing;
-		if (state.cursor && this.compareCursors(event.cursor, state.cursor) <= 0) return;
 		state.aggregate = null;
-		state.cursor = event.cursor;
-		await this.broadcastAggregate(state, null, event.replacementTopic);
+		await this.broadcastSeed(state, event.replacementTopic);
 		this.unsubscribe(state);
 		state.confirmed = false;
 		state.replaying = false;
 		state.seenCursors.clear();
+		void this.store?.delete(state.topic).catch(() => {});
 
 		if (event.reason === "archived") {
 			state.rejected = true;
@@ -694,8 +794,7 @@ export class EnhancerApiService {
 		state.cursor = undefined;
 		const replacement = this.renameTopic(state, event.replacementTopic);
 		if (replacement !== state) {
-			const aggregate = this.materializeAggregate(replacement);
-			if (aggregate) await this.broadcastAggregate(replacement, aggregate);
+			if (replacement.aggregate) await this.broadcastSeed(replacement);
 			return;
 		}
 		this.pendingSubscriptions.set(state.topic, state);
@@ -703,8 +802,8 @@ export class EnhancerApiService {
 			this.scheduleBootstrap(state);
 			return;
 		}
-		const aggregate = await this.bootstrap(state);
-		if (aggregate) await this.broadcastAggregate(state, aggregate.aggregate);
+		const ready = await this.bootstrap(state);
+		if (ready) await this.broadcastSeed(ready);
 	}
 
 	private scheduleBootstrap(state: SubscriptionState): void {
@@ -714,8 +813,8 @@ export class EnhancerApiService {
 			const current = this.resolveState(state);
 			if (!current.active || current.aggregate !== undefined || current.rejected) return;
 			try {
-				const aggregate = await this.bootstrap(current);
-				if (aggregate) await this.broadcastAggregate(current, aggregate.aggregate);
+				const ready = await this.bootstrap(current);
+				if (ready) await this.broadcastSeed(ready);
 			} catch (error) {
 				this.logger.error(`Failed to bootstrap ${current.topic}:`, error);
 			}
@@ -732,11 +831,13 @@ export class EnhancerApiService {
 	}
 
 	private rejectPendingSubscription(): void {
-		if (this.pendingSubscription) {
-			this.pendingSubscription.rejected = true;
-			this.pendingSubscription.aggregate = null;
-			this.pendingSubscriptions.set(this.pendingSubscription.topic, this.pendingSubscription);
-			this.releaseSubscription(this.pendingSubscription);
+		const pending = this.pendingSubscription;
+		if (pending) {
+			pending.rejected = true;
+			pending.aggregate = null;
+			this.pendingSubscriptions.set(pending.topic, pending);
+			this.releaseSubscription(pending);
+			if (pending.scope === "CHANNEL") void this.store?.delete(pending.topic).catch(() => {});
 		}
 		this.pendingSubscription = null;
 		this.sendNextSubscription();
@@ -744,6 +845,7 @@ export class EnhancerApiService {
 
 	private releaseSubscription(state: SubscriptionState): void {
 		state.requested = false;
+		state.replaying = false;
 		if (state.confirmationRetry) clearTimeout(state.confirmationRetry);
 		state.confirmationRetry = null;
 		for (const resolve of state.confirmationWaiters) resolve();
@@ -755,8 +857,8 @@ export class EnhancerApiService {
 		if (
 			state.requested ||
 			state.rejected ||
+			state.restoring ||
 			!state.active ||
-			!state.aggregate ||
 			!this.serverReady ||
 			this.socket?.readyState !== WebSocket.OPEN
 		) {
@@ -767,15 +869,16 @@ export class EnhancerApiService {
 		if (this.pendingSubscription && this.pendingSubscription !== state) return;
 		this.pendingSubscription = state;
 		state.requested = true;
-		state.replaying = state.cursor !== undefined;
+		state.generation++;
+		state.replaying = true;
 		state.replayComplete = false;
+		state.loading = undefined;
+		state.snapshotChanged = false;
 		state.eventBuffer = [];
-		const command = {
-			type: "subscribe",
-			subscription: state.subscription,
-			...(state.cursor !== undefined ? { after: state.cursor } : {}),
-		};
-		this.socket.send(JSON.stringify(command));
+		const position =
+			state.aggregate && !state.forceFresh ? { epoch: state.aggregate.epoch, seq: state.aggregate.seq } : {};
+		state.forceFresh = false;
+		this.socket.send(JSON.stringify({ type: "subscribe", subscription: state.subscription, state: position }));
 		this.scheduleConfirmationRetry(state);
 	}
 
@@ -785,7 +888,8 @@ export class EnhancerApiService {
 			.filter(
 				(state) =>
 					state.active &&
-					Boolean(state.aggregate) &&
+					state.aggregate !== null &&
+					!state.restoring &&
 					!state.confirmed &&
 					!state.rejected &&
 					(state.scope === "GLOBAL" || this.confirmedGlobals.has(state.platform)),
@@ -813,10 +917,43 @@ export class EnhancerApiService {
 		state.confirmationRetry = setTimeout(() => {
 			state.confirmationRetry = null;
 			if (!state.active || state.confirmed || !this.serverReady) return;
+			if (state.scope === "CHANNEL") {
+				this.deferChannel(state);
+				return;
+			}
 			this.releaseSubscription(state);
 			if (this.pendingSubscription === state) this.pendingSubscription = null;
 			this.closeConnection();
 		}, EnhancerApiService.CONFIRMATION_TIMEOUT_MS);
+	}
+
+	private deferChannel(state: SubscriptionState): void {
+		const delays = EnhancerApiService.CHANNEL_RETRY_DELAYS_MS;
+		const delay = delays[Math.min(state.retryAttempt, delays.length - 1)];
+		this.logger.warn(`No reply for ${state.topic}, retrying in ${delay / 1000}s`);
+		this.unsubscribe(state);
+		state.rejected = true;
+		this.releaseSubscription(state);
+		state.retryAttempt++;
+		state.retryTimer = setTimeout(() => this.retryChannel(state), delay);
+		this.sendNextSubscription();
+	}
+
+	private retryChannel(state: SubscriptionState): void {
+		this.clearChannelRetry(state);
+		const current = this.resolveState(state);
+		if (!current.active || !current.rejected || current.bootstrapPromise) return;
+		current.rejected = false;
+		void this.bootstrap(current)
+			.then((ready) => {
+				if (ready?.confirmed) return this.broadcastSeed(ready);
+			})
+			.catch((error) => this.logger.warn(`Failed to retry ${current.topic}:`, error));
+	}
+
+	private clearChannelRetry(state: SubscriptionState): void {
+		if (state.retryTimer) clearTimeout(state.retryTimer);
+		state.retryTimer = null;
 	}
 
 	private waitForConfirmation(state: SubscriptionState): Promise<void> {
@@ -833,7 +970,7 @@ export class EnhancerApiService {
 	}
 
 	private waitForSynchronization(state: SubscriptionState): Promise<void> {
-		if (!state.replaying && !state.snapshot && !state.seedCollecting) return Promise.resolve();
+		if (!state.replaying) return Promise.resolve();
 		return new Promise((resolve) => state.syncWaiters.add(resolve));
 	}
 
@@ -842,98 +979,54 @@ export class EnhancerApiService {
 		state.syncWaiters.clear();
 	}
 
-	private async fetchAggregate(platform: PlatformType, externalId: string): Promise<EnhancerAggregateResponse | null> {
-		const url = new URL(
-			`/v1/channel/${platform}/${encodeURIComponent(externalId)}/aggregate`,
-			EnhancerApiService.HTTP_BASE_URL,
-		);
-		const response = await fetch(url);
-		if (response.status === 404) return null;
-		if (!response.ok) {
-			const body = (await response.json()) as EnhancerApiError;
-			throw new Error(`${body.error?.code ?? response.status}: ${body.error?.message ?? response.statusText}`);
-		}
-		const body = (await response.json()) as EnhancerAggregateResponse;
-		if (!Array.isArray(body.accounts) || !Array.isArray(body.badges) || typeof body.cursor !== "string") {
-			throw new Error("Invalid Enhancer aggregate response");
-		}
-		return body;
-	}
-
-	private installAggregate(state: SubscriptionState, aggregate: EnhancerChannelDto, cursor: string): void {
-		state.aggregate = {
-			channelId: aggregate.channelId,
-			platform: aggregate.platform,
-			accounts: new Map(aggregate.accounts.map((account) => [account.accountId, account])),
-			badges: new Map(aggregate.badges.map((badge) => [badge.badgeId, badge])),
-		};
-		state.cursor = cursor;
-	}
-
-	private installSeed(state: SubscriptionState, seed: CachedAggregateSeed): void {
-		let current = this.resolveState(state);
-		if (current.topic !== seed.topic) current = this.renameTopic(current, seed.topic);
-		if (current.cursor && this.compareCursors(seed.cursor, current.cursor) <= 0) return;
-		this.installAggregate(current, seed.aggregate, seed.cursor);
-	}
-
-	private materializeAggregate(state: SubscriptionState): EnhancerChannelDto | null {
-		if (!state.aggregate) return null;
+	private createSeed(state: SubscriptionState, client: EnhancerApiClient): AggregateSeed | null {
+		const data = state.aggregate;
+		if (!data) return null;
+		const known = client.sentHashes.get(state.topic) === data.snapshot.hash;
+		client.sentHashes.set(state.topic, data.snapshot.hash);
+		if (!known) data.snapshot.base64 ??= encodeBase64(data.snapshot.bytes);
 		return {
-			channelId: state.aggregate.channelId,
-			platform: state.aggregate.platform,
-			accounts: [...state.aggregate.accounts.values()],
-			badges: [...state.aggregate.badges.values()],
+			topic: state.topic,
+			hash: data.snapshot.hash,
+			seq: data.seq,
+			...(known ? {} : { bytes: data.snapshot.base64 }),
+			accounts: [...data.accounts],
+			badges: [...data.badges],
 		};
 	}
 
-	private createSeed(state: SubscriptionState): CachedAggregateSeed | null {
-		const aggregate = this.materializeAggregate(state);
-		if (!aggregate || !state.cursor) return null;
-		return { topic: state.topic, aggregate, cursor: state.cursor };
-	}
-
-	private async requestSeeds(topic: EnhancerAggregateTopic): Promise<CachedAggregateSeed[]> {
-		const tabs = await chrome.tabs.query({ url: ["*://*.twitch.tv/*", "*://*.kick.com/*"] });
-		const request: WorkerBroadcast = {
-			type: "enhancer-api-seed-request",
-			payload: { requestId: crypto.randomUUID(), topic },
-		};
-		const responses = await Promise.all(
-			tabs.map(async (tab) => {
-				if (tab.id === undefined) return null;
-				try {
-					return (await chrome.tabs.sendMessage(tab.id, request, { frameId: 0 })) as CachedAggregateSeed | null;
-				} catch {
-					return null;
-				}
-			}),
-		);
-		return responses.filter((seed): seed is CachedAggregateSeed => seed?.topic === topic);
-	}
-
-	private async broadcastAggregate(
-		state: SubscriptionState,
-		aggregate: EnhancerChannelDto | null,
-		replacementTopic?: EnhancerAggregateTopic,
-	): Promise<void> {
-		if (!state.cursor) return;
-		await this.broadcastToSubscribers(state, (client) => ({
+	private async broadcastSeed(state: SubscriptionState, replacementTopic?: EnhancerAggregateTopic): Promise<void> {
+		const skip = (client: EnhancerApiClient) => client.awaitingScopes.has(state.scope) && !replacementTopic;
+		await this.broadcastToSubscribers(state, skip, (client) => ({
 			type: "enhancer-api-updated",
 			payload: {
 				platform: state.platform,
 				clientId: client.clientId,
 				scope: state.scope,
 				topic: state.topic,
-				aggregate,
-				cursor: state.cursor as string,
+				seed: this.createSeed(state, client),
 				replacementTopic,
 			},
 		}));
 	}
 
+	private async broadcastPatch(state: SubscriptionState, event: EnhancerAggregateUpdatedEvent): Promise<void> {
+		const { accounts, badges } = this.toEntries(event);
+		await this.broadcastToSubscribers(state, undefined, (client) => ({
+			type: "enhancer-api-patch",
+			payload: {
+				platform: state.platform,
+				clientId: client.clientId,
+				topic: state.topic,
+				seq: event.seq,
+				accounts,
+				badges,
+			},
+		}));
+	}
+
 	private async broadcastMessage(state: SubscriptionState, message: EnhancerMessageEvent): Promise<void> {
-		await this.broadcastToSubscribers(state, (client) => ({
+		await this.broadcastToSubscribers(state, undefined, (client) => ({
 			type: "enhancer-api-message",
 			payload: { platform: state.platform, clientId: client.clientId, topic: state.topic, message },
 		}));
@@ -941,13 +1034,14 @@ export class EnhancerApiService {
 
 	private async broadcastToSubscribers(
 		state: SubscriptionState,
+		skip: ((client: EnhancerApiClient) => boolean) | undefined,
 		createMessage: (client: EnhancerApiClient) => WorkerBroadcast,
 	): Promise<void> {
 		const staleClients: Array<{ clientId: string; generation: number }> = [];
 		await Promise.all(
 			[...state.subscribers].map(async (clientId) => {
 				const client = this.clients.get(clientId);
-				if (!client) return;
+				if (!client || skip?.(client)) return;
 				const generation = client.generation;
 				try {
 					await chrome.tabs.sendMessage(client.tabId, createMessage(client), { frameId: client.frameId });
@@ -1011,9 +1105,11 @@ export class EnhancerApiService {
 		for (const state of this.subscriptions.values()) {
 			state.confirmed = false;
 			state.requested = false;
+			state.generation++;
 			state.replaying = false;
 			state.replayComplete = false;
-			state.snapshot = undefined;
+			state.loading = undefined;
+			state.snapshotChanged = false;
 			state.eventBuffer = [];
 			if (state.confirmationRetry) clearTimeout(state.confirmationRetry);
 			state.confirmationRetry = null;

@@ -20,8 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     outputs:
       VERSION: ${{ steps.get_version.outputs.VERSION }}
+      PREVIOUS_TAG: ${{ steps.get_version.outputs.PREVIOUS_TAG }}
     steps:
       - name: Checkout code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -65,17 +67,28 @@ jobs:
           name: extension-builds
           path: dist/
 
+      - name: Write release notes
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+        env:
+          PREVIOUS_TAG: ${{ steps.get_version.outputs.PREVIOUS_TAG }}
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+          TARGET_SHA: ${{ github.sha }}
+        with:
+          script: |
+            const { collectChanges, formatNotes } = require("./.github/scripts/release-changes.cjs");
+            const { PREVIOUS_TAG: fromTag, VERSION: version, TARGET_SHA: to } = process.env;
+            const changes = fromTag ? await collectChanges({ github, context, from: fromTag, to, followPicks: false }) : [];
+            const notes = formatNotes({ changes, context, fromTag, toTag: `canary-${version}` });
+            require("node:fs").writeFileSync("release-notes.md", notes);
+
       - name: Create GitHub Pre-release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.get_version.outputs.VERSION }}
-          PREVIOUS_TAG: ${{ steps.get_version.outputs.PREVIOUS_TAG }}
           TARGET_SHA: ${{ github.sha }}
         run: |
-          NOTES_ARGS=(--generate-notes)
-          if [ -n "$PREVIOUS_TAG" ]; then NOTES_ARGS+=(--notes-start-tag "$PREVIOUS_TAG"); fi
           gh release create "canary-$VERSION" --target "$TARGET_SHA" --title "Canary $VERSION" \
-            --prerelease --latest=false "${NOTES_ARGS[@]}" \
+            --prerelease --latest=false --notes-file release-notes.md \
             "dist/build-$VERSION.zip" "dist/build-chrome-$VERSION.zip" "dist/source-$VERSION.zip"
 
   publish-chrome:
@@ -126,3 +139,34 @@ jobs:
           jwt-issuer: ${{ secrets.AMO_JWT_ISSUER }}
           jwt-secret: ${{ secrets.AMO_JWT_SECRET }}
           self-hosted: false
+
+  announce-discord:
+    name: Announce Canary on Discord
+    needs: [build-release, publish-chrome, publish-firefox]
+    if: needs.publish-chrome.result == 'success' && needs.publish-firefox.result == 'success'
+    runs-on: ubuntu-latest
+    environment: release-announce-canary
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout scripts
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Generate and send changelog
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+        env:
+          DISCORD_CHANGELOG_WEBHOOK: ${{ secrets.DISCORD_CHANGELOG_WEBHOOK }}
+          LLM_GATEWAY_API_KEY: ${{ secrets.LLM_GATEWAY_API_KEY }}
+          LLM_GATEWAY_MODEL: ${{ vars.LLM_GATEWAY_MODEL }}
+          VERSION: ${{ needs.build-release.outputs.VERSION }}
+          TAG: canary-${{ needs.build-release.outputs.VERSION }}
+          PREVIOUS_TAG: ${{ needs.build-release.outputs.PREVIOUS_TAG }}
+          CHANNEL: canary
+        with:
+          script: |
+            const run = require("./.github/scripts/announce-discord.cjs");
+            await run({ github, context, core });

@@ -47,7 +47,7 @@ export default defineConfig({
 		rollupOptions: {
 			output: {
 				entryFileNames: "[name].js",
-				chunkFileNames: "[name].js",
+				chunkFileNames: "chunks/[name].js",
 				assetFileNames: "[name].[ext]",
 				banner: (chunk) => (CONTENT_SCRIPT_CHUNKS.has(chunk.name) ? "(() => {" : ""),
 				footer: (chunk) => (CONTENT_SCRIPT_CHUNKS.has(chunk.name) ? "})();" : ""),
@@ -57,6 +57,8 @@ export default defineConfig({
 				inject: "src/inject.ts",
 				"worker.bridge": "src/shared/worker/worker.bridge.ts",
 				"worker.background": "src/shared/worker/worker.background.ts",
+				home: "home.html",
+				account: "account.html",
 			},
 		},
 	},

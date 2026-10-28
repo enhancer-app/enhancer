@@ -78,7 +78,7 @@ src/
       modules/                # Twitch feature modules (~23 modules)
     kick/                     # All Kick-specific code (mirrors twitch/ structure)
   shared/
-    apis/                     # EnhancerApi — external backend API client
+    apis/                     # EnhancerApi (backend client), EmotesApi (emotes-api client, `this.emotesApi()` in modules)
     components/               # Reusable Preact UI components
     event/                    # EventEmitterFactory (wraps nanoevents)
     logger/                   # Colored console Logger
@@ -336,7 +336,7 @@ Categories: `correctness` errors, `suspicious` warnings. Key rules off: `typescr
 - Every change goes through a PR into `master` and is merged with **Squash and merge**.
 - Never open PRs into `stable` or `canary` and never push to them. They only take the bot release PRs (`release-stable`, `release-hotfix`, `master` → `canary`), merged with **Create a merge commit**.
 - Hotfixes also go through `master`: untick every other change in the `release(stable)` PR and pick patch, so the bot cherry-picks only the fix onto `stable`.
-- Never merge the `sync-stable` → `master` PR by hand. Add the `merge-sync` label and the `enhancer-release` app merges it.
+- Never merge the `sync-stable` → `master` PR by hand. The `enhancer-release` app merges it on its own when it only brings `stable`'s changes; otherwise it comments on the PR, and after review the `merge-sync` label merges it.
 - See `docs/development.md` → Releasing for the full flow.
 
 ## Critical Rules

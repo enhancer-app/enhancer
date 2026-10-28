@@ -4,6 +4,8 @@ export const REPO = "enhancer-app/enhancer";
 export const RELEASE_ENV = "release";
 export const ANNOUNCE_ENV = "release-announce";
 export const SYNC_ENV = "release-sync";
+export const ANNOUNCE_CANARY_ENV = "release-announce-canary";
+export const BOT_ENV = "release-bot";
 export const LEGACY_RELEASE_ENVS = ["release-stable", "release-canary"];
 export const ENVIRONMENTS_URL = `https://github.com/${REPO}/settings/environments`;
 export const RELEASE_APP_SLUG = "enhancer-release";
@@ -105,6 +107,8 @@ export function configureEnvironments(): void {
 	configureEnvironment(RELEASE_ENV, ["stable", "canary"], true);
 	configureEnvironment(ANNOUNCE_ENV, ["stable"], false);
 	configureEnvironment(SYNC_ENV, ["master"], false);
+	configureEnvironment(ANNOUNCE_CANARY_ENV, ["canary"], false);
+	configureEnvironment(BOT_ENV, ["master", "stable", "canary"], false);
 }
 
 export function legacyEnvironments(): string[] {
@@ -141,7 +145,8 @@ function releaseAppActor(): Ruleset["bypass_actors"][number] {
 	} catch {
 		throw new Error(`Create the ${RELEASE_APP_SLUG} GitHub App and install it on ${REPO} first.`);
 	}
-	return { actor_id: id, actor_type: "Integration", bypass_mode: "pull_request" };
+	// GitHub rejects the app's merge commits on master unless its bypass is "always".
+	return { actor_id: id, actor_type: "Integration", bypass_mode: "always" };
 }
 
 const methodOnly = (methods: string[]): Rule => ({
@@ -224,6 +229,19 @@ export function configureRulesets(): void {
 		conditions: { ref_name: { include: ["refs/tags/v*", "refs/tags/canary-*"], exclude: [] } },
 		bypass_actors: maintainers,
 		rules: [{ type: "update" }, ...protect],
+	});
+
+	upsertRuleset(existing, {
+		name: "release-bot-branches",
+		enforcement: "active",
+		conditions: {
+			ref_name: {
+				include: ["refs/heads/release-stable", "refs/heads/release-hotfix", "refs/heads/sync-stable"],
+				exclude: [],
+			},
+		},
+		bypass_actors: [...maintainers, app],
+		rules: [{ type: "creation" }, { type: "update" }, { type: "deletion" }],
 	});
 
 	api("PUT", "immutable-releases");

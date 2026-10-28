@@ -1,5 +1,6 @@
 import type KickApi from "$kick/apis/kick.api.ts";
 import type KickUtils from "$kick/kick.utils.ts";
+import type EmotesApi from "$shared/apis/emotes.api.ts";
 import type EnhancerApi from "$shared/apis/enhancer.api.ts";
 import Module from "$shared/module/module.ts";
 import type SettingsCache from "$shared/settings/settings.service.ts";
@@ -19,10 +20,11 @@ export default abstract class KickModule extends Module<KickEvents, KickStorage,
 		utilsRepository: UtilsRepository,
 		enhancerApi: EnhancerApi,
 		workerApi: WorkerService,
+		emotesApi: EmotesApi,
 		private readonly _kickUtils: KickUtils,
 		private readonly _kickApi: KickApi,
 	) {
-		super(emitter, storageRepository, settingsCache, utilsRepository, enhancerApi, workerApi);
+		super(emitter, storageRepository, settingsCache, utilsRepository, enhancerApi, workerApi, emotesApi);
 	}
 
 	protected kickUtils() {
