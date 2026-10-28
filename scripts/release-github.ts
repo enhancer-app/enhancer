@@ -4,6 +4,7 @@ export const REPO = "enhancer-app/enhancer";
 export const RELEASE_ENV = "release";
 export const ANNOUNCE_ENV = "release-announce";
 export const SYNC_ENV = "release-sync";
+export const ANNOUNCE_CANARY_ENV = "release-announce-canary";
 export const LEGACY_RELEASE_ENVS = ["release-stable", "release-canary"];
 export const ENVIRONMENTS_URL = `https://github.com/${REPO}/settings/environments`;
 export const RELEASE_APP_SLUG = "enhancer-release";
@@ -105,6 +106,7 @@ export function configureEnvironments(): void {
 	configureEnvironment(RELEASE_ENV, ["stable", "canary"], true);
 	configureEnvironment(ANNOUNCE_ENV, ["stable"], false);
 	configureEnvironment(SYNC_ENV, ["master"], false);
+	configureEnvironment(ANNOUNCE_CANARY_ENV, ["canary"], false);
 }
 
 export function legacyEnvironments(): string[] {
