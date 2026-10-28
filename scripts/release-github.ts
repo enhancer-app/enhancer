@@ -5,6 +5,7 @@ export const RELEASE_ENV = "release";
 export const ANNOUNCE_ENV = "release-announce";
 export const SYNC_ENV = "release-sync";
 export const ANNOUNCE_CANARY_ENV = "release-announce-canary";
+export const BOT_ENV = "release-bot";
 export const LEGACY_RELEASE_ENVS = ["release-stable", "release-canary"];
 export const ENVIRONMENTS_URL = `https://github.com/${REPO}/settings/environments`;
 export const RELEASE_APP_SLUG = "enhancer-release";
@@ -107,6 +108,7 @@ export function configureEnvironments(): void {
 	configureEnvironment(ANNOUNCE_ENV, ["stable"], false);
 	configureEnvironment(SYNC_ENV, ["master"], false);
 	configureEnvironment(ANNOUNCE_CANARY_ENV, ["canary"], false);
+	configureEnvironment(BOT_ENV, ["master", "stable", "canary"], false);
 }
 
 export function legacyEnvironments(): string[] {
@@ -227,6 +229,19 @@ export function configureRulesets(): void {
 		conditions: { ref_name: { include: ["refs/tags/v*", "refs/tags/canary-*"], exclude: [] } },
 		bypass_actors: maintainers,
 		rules: [{ type: "update" }, ...protect],
+	});
+
+	upsertRuleset(existing, {
+		name: "release-bot-branches",
+		enforcement: "active",
+		conditions: {
+			ref_name: {
+				include: ["refs/heads/release-stable", "refs/heads/release-hotfix", "refs/heads/sync-stable"],
+				exclude: [],
+			},
+		},
+		bypass_actors: [...maintainers, app],
+		rules: [{ type: "creation" }, { type: "update" }, { type: "deletion" }],
 	});
 
 	api("PUT", "immutable-releases");

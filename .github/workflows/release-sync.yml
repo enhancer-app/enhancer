@@ -2,7 +2,7 @@ name: Merge Sync PR
 
 on:
   pull_request_target:
-    types: [labeled]
+    types: [labeled, synchronize]
     branches:
       - master
   workflow_dispatch:
@@ -15,6 +15,47 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  describe-resolution:
+    name: Show the manual conflict resolution
+    if: >-
+      github.event.action == 'synchronize' &&
+      github.event.pull_request.head.ref == 'sync-stable' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: master
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Comment the resolution
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          git fetch origin "$HEAD_SHA"
+          git rev-parse -q --verify "$HEAD_SHA^2" >/dev/null || exit 0
+          DIFF=$(git show --remerge-diff --format= --no-color "$HEAD_SHA" | head -c 60000)
+          {
+            echo "Manual conflict resolution in \`${HEAD_SHA:0:7}\`. This is everything changed by hand compared to git's automatic merge; review it before adding the \`merge-sync\` label."
+            echo
+            if [ -n "$DIFF" ]; then
+              echo '```diff'
+              echo "$DIFF"
+              echo '```'
+            else
+              echo "Nothing was changed by hand."
+            fi
+          } > comment.md
+          gh pr comment "$NUMBER" -R "$GITHUB_REPOSITORY" --body-file comment.md
+
   merge-sync:
     name: Merge stable into master
     if: >-

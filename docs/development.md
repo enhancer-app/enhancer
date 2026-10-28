@@ -121,7 +121,13 @@ Enhancer has two release channels, each on its own branch:
 
 Never open PRs into `stable` or `canary` yourself; they only take the bot PRs above. The `master-merge-method`
 ruleset only allows squash on `master`; only the `enhancer-release` app can bypass it. GitHub rejects the app's
-merge commit unless its bypass is `always`, so its key only lives in the `release-sync` environment.
+merge commit unless its bypass is `always`, so its key only lives in environments that deploy from protected
+branches.
+
+The bot branches `release-stable`, `release-hotfix` and `sync-stable` are protected by the `release-bot-branches`
+ruleset: only the `enhancer-release` app and maintainers can create, push to or delete them. The bot pushes and
+opens its PRs as the app, so the real CI runs on them. When a maintainer pushes a conflict resolution to
+`sync-stable`, the workflow comments with `git show --remerge-diff`, which shows only what was changed by hand.
 `release-merge-method` only allows merge commits on `stable` and `canary`, and nobody can bypass it. A review
 bypass therefore cannot pick the wrong method. Squash or rebase on a release branch would give the same changes
 new commit hashes, and the branches would drift apart. The `release-tags` ruleset and immutable releases keep
@@ -129,12 +135,13 @@ new commit hashes, and the branches would drift apart. The `release-tags` rulese
 
 One-time setup: create the `enhancer-release` GitHub App (contents, pull requests and workflows write) and install
 it on this repository only, run `bun run release:setup-branches`, then store the app's client ID in the
-`RELEASE_APP_CLIENT_ID` repository variable and its private key in the `RELEASE_APP_PRIVATE_KEY` secret of the
-`release-sync` environment (never as a repository secret: every workflow could read it). Finally run
-`bun run release:setup-secrets`. Both channels publish from one store account, so they share the `release`
-environment; `release-announce` only deploys from `stable` and `release-sync` only from `master`. Canary
-changelogs go to a separate Discord channel: store its webhook as `DISCORD_CHANGELOG_WEBHOOK` in the
-`release-announce-canary` environment, which only deploys from `canary`.
+`RELEASE_APP_CLIENT_ID` repository variable and its private key in the `RELEASE_APP_PRIVATE_KEY` secret of both
+the `release-sync` and `release-bot` environments (never as a repository secret: every workflow could read it).
+Finally run `bun run release:setup-secrets`. Both channels publish from one store account, so they share the
+`release` environment; `release-announce` only deploys from `stable`, `release-sync` only from `master`, and
+`release-bot` only from `master`, `stable` and `canary`. Canary changelogs go to a separate Discord channel: store
+its webhook as `DISCORD_CHANGELOG_WEBHOOK` in the `release-announce-canary` environment, which only deploys from
+`canary`.
 
 Release notes and Discord changelogs list the pull requests merged into `master` since the previous tag of the same
 channel. Cherry-picked commits are traced back to their original pull request through their `cherry picked from
