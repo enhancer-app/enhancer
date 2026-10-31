@@ -131,7 +131,10 @@ opens its PRs as the app, so the real CI runs on them. When a maintainer pushes 
 `release-merge-method` only allows merge commits on `stable` and `canary`, and nobody can bypass it. A review
 bypass therefore cannot pick the wrong method. Squash or rebase on a release branch would give the same changes
 new commit hashes, and the branches would drift apart. The `release-tags` ruleset and immutable releases keep
-`v*` and `canary-*` tags and release assets from being moved, deleted or replaced.
+`v*` and `canary-*` tags and release assets from being created, moved, deleted or replaced by anyone but the
+release workflows (which create releases as the app) and maintainers. Release PRs into `stable` and `canary` need an
+approval from `enhancer-admins`, release workflows started by hand check that the actor is admin or maintain, and
+the bot ignores release PR ticks unless a maintainer or the bot saved them.
 
 One-time setup: create the `enhancer-release` GitHub App (contents, pull requests and workflows write) and install
 it on this repository only, run `bun run release:setup-branches`, then store the app's client ID in the
@@ -141,7 +144,8 @@ Finally run `bun run release:setup-secrets`. Both channels publish from one stor
 `release` environment; `release-announce` only deploys from `stable`, `release-sync` only from `master`, and
 `release-bot` only from `master`, `stable` and `canary`. Canary changelogs go to a separate Discord channel: store
 its webhook as `DISCORD_CHANGELOG_WEBHOOK` in the `release-announce-canary` environment, which only deploys from
-`canary`.
+`canary`. Store `LLM_GATEWAY_API_KEY` in both `release-announce` and `release-announce-canary`, not as a repository
+secret.
 
 Release notes and Discord changelogs list the pull requests merged into `master` since the previous tag of the same
 channel. Cherry-picked commits are traced back to their original pull request through their `cherry picked from
