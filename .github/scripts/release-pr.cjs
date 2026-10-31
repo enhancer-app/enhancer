@@ -15,6 +15,7 @@ const SYNC_NOTE = [
 	"> [!IMPORTANT]",
 	"> Do not merge this PR by hand. The Merge Sync PR workflow merges it with a merge commit on its own when it only brings stable's changes, and comments here when it cannot. Then review the branch and add the `merge-sync` label.",
 ].join("\n");
+const RELEASE_APP_SLUG = "enhancer-release";
 const PROVENANCE_SCRIPT = ".github/scripts/sync-provenance.sh";
 const FOOTER =
 	"<sub>Managed by the release workflow. Only the release app and maintainers can push to this branch.</sub>";
@@ -180,6 +181,40 @@ module.exports = async ({ github, app, context, core, exec }) => {
 		await app.graphql(`mutation($id: ID!) { ${mutation}(input: { pullRequestId: $id }) { clientMutationId } }`, {
 			id: data.node_id,
 		});
+	};
+	const roles = new Map();
+	const isTrusted = async (editor) => {
+		if (!editor) return false;
+		if (editor.__typename === "Bot") return editor.login === RELEASE_APP_SLUG;
+		if (!roles.has(editor.login)) {
+			const { data } = await github.rest.repos
+				.getCollaboratorPermissionLevel({ owner, repo, username: editor.login })
+				.catch(() => ({ data: {} }));
+			roles.set(editor.login, ["admin", "maintain"].includes(data.role_name));
+		}
+		return roles.get(editor.login);
+	};
+	// Write users can edit the PR body; only ticks saved by maintainers or the bot count.
+	const trustedBody = async (pull) => {
+		const { repository } = await app.graphql(
+			`query($owner: String!, $repo: String!, $number: Int!) {
+				repository(owner: $owner, name: $repo) {
+					pullRequest(number: $number) {
+						author { login __typename }
+						userContentEdits(first: 50) { nodes { diff editor { login __typename } } }
+					}
+				}
+			}`,
+			{ owner, repo, number: pull.number },
+		);
+		const { author, userContentEdits } = repository.pullRequest;
+		const edits = userContentEdits.nodes;
+		if (!edits.length) return (await isTrusted(author)) ? pull.body : null;
+		for (const edit of edits) {
+			if (edit.diff != null && (await isTrusted(edit.editor))) return edit.diff;
+		}
+		core.notice("The release PR body was last saved by someone who cannot release, so its ticks are ignored.");
+		return null;
 	};
 	const remoteSha = async (branch) => {
 		if (!(await succeeds("fetch", "origin", branch))) return null;
@@ -365,7 +400,7 @@ module.exports = async ({ github, app, context, core, exec }) => {
 		}
 		const existing = await findPr(RELEASE_BRANCH);
 		const editedRelease = isEdit && context.payload.pull_request.head.ref === RELEASE_BRANCH;
-		const body = editedRelease ? context.payload.pull_request.body : existing?.body;
+		const body = editedRelease ? context.payload.pull_request.body : existing && (await trustedBody(existing));
 		const previousBody = editedRelease ? context.payload.changes?.body?.from : body;
 		const level = resolveLevel(body, previousBody);
 		const unchecked = uncheckedCommits(body);

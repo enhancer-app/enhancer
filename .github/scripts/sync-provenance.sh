@@ -11,7 +11,7 @@ fail() {
 }
 
 changes() {
-	git show -U0 --no-color --no-ext-diff --no-renames --format= "$1" | grep -vE '^(index |@@)' || true
+	git show -U0 --binary --no-color --no-ext-diff --no-renames --format= "$1" | grep -vE '^(index |@@)' || true
 }
 
 for COMMIT in $(git rev-list "$MASTER..$STABLE"); do

@@ -25,8 +25,9 @@ jobs:
     name: Build & GitHub Release
     if: github.ref == 'refs/heads/stable'
     runs-on: ubuntu-latest
+    environment: release-bot
     permissions:
-      contents: write
+      contents: read
       pull-requests: read
     outputs:
       VERSION: ${{ steps.get_version.outputs.VERSION }}
@@ -34,6 +35,19 @@ jobs:
       PUBLISH: ${{ steps.check_release.outputs.publish }}
       PREVIOUS_TAG: ${{ steps.previous.outputs.TAG }}
     steps:
+      - name: Check who started the run
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTORS: ${{ github.actor }} ${{ github.triggering_actor }}
+        run: |
+          for ACTOR in $ACTORS; do
+            ROLE=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$ACTOR/permission" --jq .role_name || true)
+            if [ "$ROLE" != "admin" ] && [ "$ROLE" != "maintain" ]; then
+              echo "::error::$ACTOR (${ROLE:-unknown}) cannot start a release by hand."
+              exit 1
+            fi
+          done
       - name: Checkout code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
@@ -156,10 +170,19 @@ jobs:
             const changes = fromTag ? await collectChanges({ github, context, from: fromTag, to }) : [];
             require("node:fs").writeFileSync("release-notes.md", formatNotes({ changes, context, fromTag, toTag }));
 
+      - name: Create App Token
+        id: app-token
+        if: steps.check_release.outputs.publish == 'true'
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+
       - name: Create GitHub Release
         if: steps.check_release.outputs.publish == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           VERSION: ${{ steps.get_version.outputs.VERSION }}
           CLEAN_VER: ${{ steps.get_version.outputs.CLEAN_VER }}
           TARGET_SHA: ${{ github.sha }}
