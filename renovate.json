@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)",
+    "helpers:pinGitHubActionDigestsToSemver"
+  ],
+  "baseBranchPatterns": ["master"],
+  "timezone": "Europe/Warsaw",
+  "schedule": ["* 0-5 * * 1"],
+  "dependencyDashboard": true,
+  "labels": ["dependencies"],
+  "enabledManagers": ["bun", "bun-version", "github-actions"],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
+  "osvVulnerabilityAlerts": true,
+  "packageRules": [
+    {
+      "matchManagers": ["bun"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "bun non-major dependencies"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "github actions non-major"
+    },
+    {
+      "description": "Keep .bun-version (read by setup-bun in CI) and the Bun types on the same Bun release",
+      "matchPackageNames": ["bun", "@types/bun", "bun-types"],
+      "groupName": "bun runtime"
+    },
+    {
+      "description": "Vulnerability fixes already skip the schedule and limits; also put them first",
+      "matchJsonata": ["$exists(vulnerabilityFixVersion)"],
+      "prPriority": 10
+    }
+  ]
+}
