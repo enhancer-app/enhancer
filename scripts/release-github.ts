@@ -56,20 +56,18 @@ export function tryApi<T>(method: string, path: string): T | undefined {
 	}
 }
 
-export function allowActionsToCreatePullRequests(): void {
+export function blockActionsFromApprovingPullRequests(): void {
 	const settings = api<{ default_workflow_permissions: string; can_approve_pull_request_reviews: boolean }>(
 		"GET",
 		"actions/permissions/workflow",
 	);
 	if (settings.can_approve_pull_request_reviews) {
-		console.log("GitHub Actions can already create pull requests.");
-		return;
+		api("PUT", "actions/permissions/workflow", {
+			default_workflow_permissions: settings.default_workflow_permissions,
+			can_approve_pull_request_reviews: false,
+		});
 	}
-	api("PUT", "actions/permissions/workflow", {
-		default_workflow_permissions: settings.default_workflow_permissions,
-		can_approve_pull_request_reviews: true,
-	});
-	console.log("Allowed GitHub Actions to create pull requests.");
+	console.log("GitHub Actions cannot create or approve pull requests; the release app opens them.");
 }
 
 function configureEnvironment(name: string, branches: string[], requireReviewers: boolean): void {
@@ -180,7 +178,21 @@ export function configureRulesets(): void {
 	});
 	console.log(`Ruleset "${master.name}" lets ${RELEASE_APP_SLUG} merge the stable sync PR.`);
 
-	const mergeOnly = { ...pullRequest, parameters: { ...pullRequest.parameters, allowed_merge_methods: ["merge"] } };
+	// Release PRs are opened by the app, so any developer could approve them; only maintainers may release.
+	const mergeOnly = {
+		...pullRequest,
+		parameters: {
+			...pullRequest.parameters,
+			allowed_merge_methods: ["merge"],
+			required_reviewers: maintainers
+				.filter((actor) => actor.actor_type === "Team")
+				.map((actor) => ({
+					file_patterns: ["*"],
+					minimum_approvals: 1,
+					reviewer: { id: actor.actor_id, type: "Team" },
+				})),
+		},
+	};
 	const protect = [{ type: "deletion" }, { type: "non_fast_forward" }];
 	const existing = api<Ruleset[]>("GET", "rulesets");
 	upsertRuleset(existing, {
@@ -227,8 +239,8 @@ export function configureRulesets(): void {
 		target: "tag",
 		enforcement: "active",
 		conditions: { ref_name: { include: ["refs/tags/v*", "refs/tags/canary-*"], exclude: [] } },
-		bypass_actors: maintainers,
-		rules: [{ type: "update" }, ...protect],
+		bypass_actors: [...maintainers, app],
+		rules: [{ type: "creation" }, { type: "update" }, ...protect],
 	});
 
 	upsertRuleset(existing, {

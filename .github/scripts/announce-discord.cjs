@@ -5,6 +5,7 @@ const PLATFORM_SCOPES = { twitch: "Twitch", kick: "Kick" };
 const TITLE_PATTERN = /^(\w+)(?:\(([^)]+)\))?!?:\s*(.+)$/;
 const NOTHING_USER_FACING = "- Bug fixes and stability improvements";
 const MAX_MESSAGE_LENGTH = 2000;
+const MODEL = "claude-haiku-5-5";
 
 const SYSTEM_PROMPT = `You write release notes for Enhancer, a browser extension for Twitch and Kick viewers.
 Readers are regular viewers, not developers.
@@ -67,49 +68,50 @@ const summarize = async (changes, version, core) => {
 		)
 		.join("\n");
 
-	const response = await fetch("https://api.llmgateway.io/v1/chat/completions", {
+	const response = await fetch("https://api.anthropic.com/v1/messages", {
 		method: "POST",
 		headers: {
-			Authorization: `Bearer ${process.env.LLM_GATEWAY_API_KEY}`,
-			"Content-Type": "application/json",
+			"x-api-key": process.env.ANTHROPIC_API_KEY,
+			"anthropic-version": "2023-06-01",
+			"content-type": "application/json",
 		},
 		body: JSON.stringify({
-			model: process.env.LLM_GATEWAY_MODEL,
-			messages: [
-				{ role: "system", content: SYSTEM_PROMPT },
-				{ role: "user", content: `Changes in ${version}:\n${input}` },
-			],
-			temperature: 0.3,
-			max_tokens: 4000,
-			reasoning_effort: "low",
-			stream: false,
+			model: MODEL,
+			max_tokens: 2000,
+			system: SYSTEM_PROMPT,
+			messages: [{ role: "user", content: `Changes in ${version}:\n${input}` }],
 		}),
 	});
 
 	if (!response.ok) {
-		core.warning(`LLM Gateway request failed with status ${response.status}. Using the fallback changelog.`);
+		const error = await response.text().catch(() => "");
+		core.warning(`Anthropic API request failed with status ${response.status}: ${error.slice(0, 300)}`);
 		return null;
 	}
 
-	const choice = (await response.json()).choices?.[0];
-	const content = choice?.message?.content?.trim();
-	core.info(`LLM finish_reason=${choice?.finish_reason}, length=${content?.length ?? 0}`);
-	if (!content) {
-		core.warning("LLM Gateway returned an empty summary. Using the fallback changelog.");
+	const message = await response.json();
+	const content = message.content
+		?.filter((block) => block.type === "text")
+		.map((block) => block.text)
+		.join("")
+		.trim();
+	core.info(`Anthropic stop_reason=${message.stop_reason}, length=${content?.length ?? 0}`);
+	if (!content || message.stop_reason === "max_tokens") {
+		core.warning("Anthropic API returned no complete summary. Using the fallback changelog.");
 		return null;
 	}
 	return content.replace(/^\s*\*\*Changelog[^*]*\*\*\s*/i, "").trim();
 };
 
 module.exports = async ({ github, context, core }) => {
-	for (const name of ["DISCORD_CHANGELOG_WEBHOOK", "LLM_GATEWAY_API_KEY", "LLM_GATEWAY_MODEL", "VERSION", "TAG"]) {
+	for (const name of ["DISCORD_CHANGELOG_WEBHOOK", "ANTHROPIC_API_KEY", "VERSION", "TAG"]) {
 		if (!process.env[name]) {
 			core.setFailed(`Missing required environment variable: ${name}`);
 			return;
 		}
 	}
 	core.setSecret(process.env.DISCORD_CHANGELOG_WEBHOOK);
-	core.setSecret(process.env.LLM_GATEWAY_API_KEY);
+	core.setSecret(process.env.ANTHROPIC_API_KEY);
 
 	const version = process.env.VERSION;
 	const previousTag = process.env.PREVIOUS_TAG;
@@ -129,7 +131,13 @@ module.exports = async ({ github, context, core }) => {
 	}));
 	core.info(`Summarizing ${changes.length} changes since ${previousTag || "the first release"}.`);
 
-	const notes = (changes.length && (await summarize(changes, version, core))) || fallbackNotes(changes);
+	const summary = changes.length
+		? await summarize(changes, version, core).catch((error) => {
+				core.warning(`Anthropic API request failed: ${error.message}. Using the fallback changelog.`);
+				return null;
+			})
+		: null;
+	const notes = summary || fallbackNotes(changes);
 	const heading = process.env.CHANNEL === "canary" ? `Enhancer Canary changelog ${version}` : `Changelog ${version}`;
 	let message = `**${heading}**\n\n${notes}`;
 	if (message.length > MAX_MESSAGE_LENGTH) message = `${message.slice(0, MAX_MESSAGE_LENGTH - 3)}...`;

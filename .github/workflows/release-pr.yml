@@ -10,6 +10,7 @@ on:
     types: [edited]
     branches:
       - stable
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,6 +20,7 @@ jobs:
     name: Update release PRs
     if: >-
       github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
       (github.event.pull_request.head.ref == 'release-stable' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.changes.body &&
