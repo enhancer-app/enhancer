@@ -144,8 +144,8 @@ Finally run `bun run release:setup-secrets`. Both channels publish from one stor
 `release` environment; `release-announce` only deploys from `stable`, `release-sync` only from `master`, and
 `release-bot` only from `master`, `stable` and `canary`. Canary changelogs go to a separate Discord channel: store
 its webhook as `DISCORD_CHANGELOG_WEBHOOK` in the `release-announce-canary` environment, which only deploys from
-`canary`. Store `LLM_GATEWAY_API_KEY` in both `release-announce` and `release-announce-canary`, not as a repository
-secret.
+`canary`. Discord changelogs are written by Claude Haiku 5.5: store `ANTHROPIC_API_KEY` in both `release-announce`
+and `release-announce-canary`, not as a repository secret.
 
 Release notes and Discord changelogs list the pull requests merged into `master` since the previous tag of the same
 channel. Cherry-picked commits are traced back to their original pull request through their `cherry picked from

@@ -182,8 +182,7 @@ jobs:
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
         env:
           DISCORD_CHANGELOG_WEBHOOK: ${{ secrets.DISCORD_CHANGELOG_WEBHOOK }}
-          LLM_GATEWAY_API_KEY: ${{ secrets.LLM_GATEWAY_API_KEY }}
-          LLM_GATEWAY_MODEL: ${{ vars.LLM_GATEWAY_MODEL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           VERSION: ${{ needs.build-release.outputs.VERSION }}
           TAG: canary-${{ needs.build-release.outputs.VERSION }}
           PREVIOUS_TAG: ${{ needs.build-release.outputs.PREVIOUS_TAG }}
