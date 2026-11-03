@@ -210,8 +210,10 @@ module.exports = async ({ github, app, context, core, exec }) => {
 		const { author, userContentEdits } = repository.pullRequest;
 		const edits = userContentEdits.nodes;
 		if (!edits.length) return (await isTrusted(author)) ? pull.body : null;
-		for (const edit of edits) {
-			if (edit.diff != null && (await isTrusted(edit.editor))) return edit.diff;
+		for (const [index, edit] of edits.entries()) {
+			if (!(await isTrusted(edit.editor))) continue;
+			if (edit.diff != null) return edit.diff;
+			if (index === 0) return pull.body;
 		}
 		core.notice("The release PR body was last saved by someone who cannot release, so its ticks are ignored.");
 		return null;

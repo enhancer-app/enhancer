@@ -131,7 +131,13 @@ module.exports = async ({ github, context, core }) => {
 	}));
 	core.info(`Summarizing ${changes.length} changes since ${previousTag || "the first release"}.`);
 
-	const notes = (changes.length && (await summarize(changes, version, core))) || fallbackNotes(changes);
+	const summary = changes.length
+		? await summarize(changes, version, core).catch((error) => {
+				core.warning(`Anthropic API request failed: ${error.message}. Using the fallback changelog.`);
+				return null;
+			})
+		: null;
+	const notes = summary || fallbackNotes(changes);
 	const heading = process.env.CHANNEL === "canary" ? `Enhancer Canary changelog ${version}` : `Changelog ${version}`;
 	let message = `**${heading}**\n\n${notes}`;
 	if (message.length > MAX_MESSAGE_LENGTH) message = `${message.slice(0, MAX_MESSAGE_LENGTH - 3)}...`;
