@@ -1,3 +1,4 @@
+import { PLAYLIST_PROXY_FRAME_NAME, runPlaylistProxy } from "$shared/utils/playlist-proxy.frame.ts";
 import type { ExtensionEnvironment } from "$types/shared/extension.types.ts";
 
 const isFirefox = navigator.userAgent.includes("Firefox");
@@ -19,7 +20,9 @@ function injectScript() {
 	head.appendChild(script);
 }
 
-if (isCanary) {
+if (window.top !== window && window.name === PLAYLIST_PROXY_FRAME_NAME) {
+	runPlaylistProxy();
+} else if (isCanary) {
 	// Stable injects synchronously at document_end, so one task later its script tag exists if it is enabled.
 	setTimeout(() => {
 		if (document.getElementById(stableScriptId)) {

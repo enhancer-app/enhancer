@@ -76,6 +76,13 @@ export class WatchtimeDatabase extends Database {
 		return results;
 	}
 
+	async getPlatformWatchtime(platform: PlatformType): Promise<WatchtimeRecord[]> {
+		const range = IDBKeyRange.bound([platform, 0], [platform, Number.POSITIVE_INFINITY]);
+		return this.request<WatchtimeRecord[]>(this.storeName, "readonly", (store) =>
+			store.index("by_platform_time").getAll(range),
+		);
+	}
+
 	async setWatchtime(watchtime: WatchtimeRecord): Promise<void> {
 		await this.request<void>(this.storeName, "readwrite", (store) => store.put(watchtime));
 	}

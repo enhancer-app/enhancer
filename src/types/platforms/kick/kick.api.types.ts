@@ -41,6 +41,31 @@ export interface User {
 	profile_pic: any;
 }
 
+export interface FollowedChannelsResponse {
+	nextCursor: number | null;
+	channels: {
+		channel_slug: string;
+		user_username: string;
+		profile_picture: string | null;
+		is_live: boolean;
+	}[];
+}
+
+export interface FollowedLivestreamResponse {
+	session_title: string | null;
+	start_time: string | null;
+	viewer_count: number;
+	categories?: { name: string }[];
+	thumbnail?: { src?: string | null } | null;
+	channel: {
+		slug: string;
+		user: {
+			username: string;
+			profilepic: string | null;
+		};
+	};
+}
+
 export interface Chatroom {
 	id: number;
 	chatable_type: string;
@@ -57,3 +82,16 @@ export interface Chatroom {
 	message_interval: number;
 	following_min_duration: number;
 }
+
+export type FollowChannelResponse = {
+	status: boolean;
+	channel?: {
+		slug?: string;
+		user?: { username?: string; profile_pic?: string | null };
+	};
+};
+
+export type KickCurrentUserResponse = {
+	id?: number | string | null;
+	username?: string;
+};

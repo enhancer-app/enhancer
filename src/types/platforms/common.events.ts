@@ -1,4 +1,5 @@
 import type { EnhancerMessageEvent } from "$types/apis/enhancer.apis.ts";
+import type { GlobalSettingsEvents } from "$types/shared/settings/global-settings.types.ts";
 
 export type CommonEvents = {
 	"extension:start": () => void | Promise<void>;
@@ -8,4 +9,4 @@ export type CommonEvents = {
 	"extension:joined-channel": () => void | Promise<void>;
 	"extension:enhancer-api-refresh": () => void | Promise<void>;
 	"extension:enhancer-api-message": (message: EnhancerMessageEvent) => void | Promise<void>;
-};
+} & GlobalSettingsEvents;

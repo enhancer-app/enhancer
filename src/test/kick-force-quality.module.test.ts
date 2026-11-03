@@ -27,6 +27,7 @@ function setup(authenticated: boolean) {
 		{} as never,
 		{} as never,
 		{} as never,
+		{} as never,
 		{
 			getQualityController: () => ({
 				qualities,

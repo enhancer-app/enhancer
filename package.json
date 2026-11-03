@@ -2,7 +2,7 @@
   "name": "enhancer",
   "module": "src/content/index.ts",
   "type": "module",
-  "version": "5.3.4",
+  "version": "5.3.5",
   "homepage": "https://enhancer.at",
   "author": {
     "name": "Enhancer",
@@ -38,6 +38,7 @@
     "@preact/signals": "^2.6.2",
     "bun.lock": "^0.0.0",
     "graphql-tag": "^2.12.6",
+    "hls.js": "^1.7.3",
     "nanoevents": "^9.1.0",
     "preact": "^10.28.3",
     "preact-hooks": "^0.0.0-0.0.0",

@@ -1,0 +1,67 @@
+import { css } from "styled-components";
+
+export const SETTINGS_FONT = `"Inter", "Noto Sans Arabic", "Roobert", "Helvetica Neue", Helvetica, Arial, sans-serif`;
+
+export const SETTINGS_DARK_THEME = css`
+	--settings-background: #0e0e10;
+	--settings-rail: #0e0e10;
+	--settings-surface: #151517;
+	--settings-surface-raised: #1c1c1f;
+	--settings-surface-hover: #252528;
+	--settings-well: #0a0a0b;
+	--settings-border: #222225;
+	--settings-divider: #1f1f22;
+	--settings-divider-subtle: #1f1f22;
+	--settings-control-background: #1c1c1f;
+	--settings-control-border: #2a2a2e;
+	--settings-control-hover: #252528;
+	--settings-toggle-background: #2a2a2e;
+	--settings-toggle-hover: #333338;
+	--settings-toggle-knob: #d4d4d8;
+	--settings-text-primary: #f4f4f5;
+	--settings-text-strong: #f4f4f5;
+	--settings-text: #d4d4d8;
+	--settings-text-secondary: #b4b4bb;
+	--settings-text-muted: #85858e;
+	--settings-text-dim: #85858e;
+	--settings-text-faint: #5a5a62;
+	--settings-input-placeholder: #5a5a62;
+	--settings-accent: #9147ff;
+	--settings-accent-hover: #a970ff;
+	--settings-accent-soft: rgba(145, 71, 255, 0.14);
+	--settings-danger: #ff5c6c;
+	--settings-sheen: rgba(255, 255, 255, 0.035);
+	--settings-highlight: rgba(255, 255, 255, 0.06);
+	--settings-glow: rgba(145, 71, 255, 0.16);
+	--settings-shadow: rgba(0, 0, 0, 0.7);
+`;
+
+export const SETTINGS_LIGHT_THEME = css`
+	--settings-background: #f7f7f8;
+	--settings-rail: #f0f0f2;
+	--settings-surface: #ffffff;
+	--settings-surface-raised: #ffffff;
+	--settings-surface-hover: #ececef;
+	--settings-well: #ececef;
+	--settings-border: #dedee3;
+	--settings-divider: #e5e5e7;
+	--settings-divider-subtle: #e5e5e7;
+	--settings-control-background: #ffffff;
+	--settings-control-border: #cfcfd5;
+	--settings-control-hover: #e5e5e7;
+	--settings-toggle-background: #c4c4c9;
+	--settings-toggle-hover: #b5b5bb;
+	--settings-toggle-knob: #ffffff;
+	--settings-text-primary: #0e0e10;
+	--settings-text-strong: #18181b;
+	--settings-text: #2f2f35;
+	--settings-text-secondary: #53535f;
+	--settings-text-muted: #6e6e78;
+	--settings-text-dim: #6e6e78;
+	--settings-text-faint: #878791;
+	--settings-input-placeholder: #8f8f99;
+	--settings-sheen: rgba(255, 255, 255, 0);
+	--settings-highlight: rgba(255, 255, 255, 0);
+	--settings-glow: rgba(145, 71, 255, 0.1);
+	--settings-shadow: rgba(0, 0, 0, 0.25);
+`;

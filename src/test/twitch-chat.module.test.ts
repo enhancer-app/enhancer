@@ -32,6 +32,7 @@ function createChatModule(emitter: ConstructorParameters<typeof ChatModule>[0] =
 		{} as never,
 		{} as never,
 		{} as never,
+		{} as never,
 	);
 }
 

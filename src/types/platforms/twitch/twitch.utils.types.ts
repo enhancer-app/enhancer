@@ -129,7 +129,7 @@ export type FollowedSectionStream = {
 export type FollowedSectionUser = {
 	__typename: string;
 	id: string;
-	login: number;
+	login: string;
 	displayName: string;
 	profileImageURL: string;
 	primaryColorHex: string | null;
@@ -186,6 +186,33 @@ export type ChatInputComponent = {
 			onChange: (event: { target: { value: string } }) => void;
 		};
 		focus: () => void;
+	};
+};
+
+export type ChatSendMessageErrorCheck = {
+	check: (message: string) => boolean;
+	onMessageSent?: (message: string) => void;
+};
+
+export type ChatMessageSenderComponent = {
+	props: {
+		authToken?: string;
+		emoteOnlyMode?: boolean;
+		isCurrentUserModerator?: boolean;
+		isCurrentUserVIP?: boolean;
+		onSendMessage: (message: string, additionalMetadata?: unknown) => unknown;
+		sendMessageErrorChecks?: Record<string, ChatSendMessageErrorCheck>;
+	};
+	disableChatConditions?: () => boolean;
+};
+
+export type ChatSentMessageTrackerComponent = {
+	props: {
+		registerSendMessageErrorCheck: unknown;
+	};
+	state: {
+		lastSentMessage?: string;
+		lastSentTimestamp?: number | null;
 	};
 };
 

@@ -5,4 +5,5 @@ dist
 *.zip
 tsconfig.tsbuildinfo
 .playwright-mcp
+.plans
 start-brave-mcp.sh

@@ -1,3 +1,4 @@
+import type EmotesApi from "$shared/apis/emotes.api.ts";
 import type EnhancerApi from "$shared/apis/enhancer.api.ts";
 import Module from "$shared/module/module.ts";
 import type SettingsCache from "$shared/settings/settings.service.ts";
@@ -19,10 +20,11 @@ export default abstract class TwitchModule extends Module<TwitchEvents, TwitchSt
 		utilsRepository: UtilsRepository,
 		enhancerApi: EnhancerApi,
 		workerApi: WorkerService,
+		emotesApi: EmotesApi,
 		private readonly _twitchUtils: TwitchUtils,
 		private readonly _twitchApi: TwitchApi,
 	) {
-		super(emitter, storageRepository, settingsCache, utilsRepository, enhancerApi, workerApi);
+		super(emitter, storageRepository, settingsCache, utilsRepository, enhancerApi, workerApi, emotesApi);
 	}
 
 	protected twitchUtils() {

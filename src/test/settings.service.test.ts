@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { GLOBAL_DEFAULT_SETTINGS } from "$shared/settings/global-settings.constants.ts";
 import SettingsCache from "$shared/settings/settings.service.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import type { SettingsBroadcastPayload } from "$types/shared/worker/worker.types.ts";
@@ -10,12 +11,13 @@ function setup(options: { failUpdates?: boolean } = {}) {
 	let broadcast: (payload: SettingsBroadcastPayload) => void = () => {};
 	const sent: { action: string; payload: unknown }[] = [];
 	const workerService = {
-		onBroadcast: (_type: string, handler: typeof broadcast) => {
-			broadcast = handler;
+		onBroadcast: (type: string, handler: typeof broadcast) => {
+			if (type === "settings-updated") broadcast = handler;
 		},
 		send: async (action: string, payload: unknown) => {
 			sent.push({ action, payload });
 			if (action === "getSettings") return { theme: "dark", volume: 50 };
+			if (action === "getGlobalSettings") return GLOBAL_DEFAULT_SETTINGS;
 			if (options.failUpdates) throw new Error("Failed to persist settings for platform: twitch");
 		},
 	};
