@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import {
-	allowActionsToCreatePullRequests,
+	blockActionsFromApprovingPullRequests,
 	configureEnvironments,
 	configureRulesets,
 	ensureBranch,
@@ -36,7 +36,7 @@ function main(): void {
 		throw new Error("Log in to GitHub CLI first: gh auth login");
 	}
 	gh(["api", `repos/${REPO}`, "-X", "PATCH", "-F", "allow_merge_commit=true"]);
-	allowActionsToCreatePullRequests();
+	blockActionsFromApprovingPullRequests();
 
 	const { tag, sha } = latestReleaseSha();
 	console.log(`Latest release: ${tag}`);

@@ -2,7 +2,7 @@
   "name": "enhancer",
   "module": "src/content/index.ts",
   "type": "module",
-  "version": "5.3.3",
+  "version": "5.3.4",
   "homepage": "https://enhancer.at",
   "author": {
     "name": "Enhancer",
