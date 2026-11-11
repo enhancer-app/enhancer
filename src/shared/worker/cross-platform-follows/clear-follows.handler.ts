@@ -18,6 +18,7 @@ export class ClearFollowsHandler extends MessageHandler {
 			throw new Error("Invalid payload for clearFollows action. 'platform' is required.");
 		}
 
+		this.refresher.invalidate(payload.platform);
 		const removed = await this.database.clear(payload.platform);
 		if (removed) {
 			this.logger.debug(`Cleared ${payload.platform} follows`);
