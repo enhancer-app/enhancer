@@ -7,6 +7,8 @@ import type { SettingsBroadcastPayload } from "$types/shared/worker/worker.types
 import type { Emitter } from "nanoevents";
 
 export default class SettingsCache<T extends PlatformSettings> {
+	private static readonly INITIALIZE_ATTEMPTS = 3;
+
 	private cache: T | null = null;
 	private globalCache: GlobalSettings | null = null;
 
@@ -20,12 +22,17 @@ export default class SettingsCache<T extends PlatformSettings> {
 	}
 
 	async initialize(): Promise<void> {
-		const [settings, globalSettings] = await Promise.all([
-			this.workerService.send("getSettings", { platform: this.platformType }),
-			this.workerService.send("getGlobalSettings", {}),
-		]);
-		this.cache = settings as T;
-		this.globalCache = globalSettings;
+		for (let attempt = 0; attempt < SettingsCache.INITIALIZE_ATTEMPTS; attempt++) {
+			const [settings, globalSettings] = await Promise.all([
+				this.workerService.send("getSettings", { platform: this.platformType }),
+				this.workerService.send("getGlobalSettings", {}),
+			]);
+			if (!settings || !globalSettings) continue;
+			this.cache = settings as T;
+			this.globalCache = globalSettings;
+			return;
+		}
+		throw new Error("Settings unavailable: the background worker did not respond");
 	}
 
 	getGlobal(): GlobalSettings {
@@ -34,7 +41,9 @@ export default class SettingsCache<T extends PlatformSettings> {
 	}
 
 	async updateGlobal(changes: Partial<GlobalSettings>): Promise<void> {
-		this.globalCache = await this.workerService.send("updateGlobalSettings", { settings: changes });
+		const settings = await this.workerService.send("updateGlobalSettings", { settings: changes });
+		if (!settings) throw new Error("Failed to save shared settings: the background worker did not respond");
+		this.globalCache = settings;
 	}
 
 	get(): T {
@@ -43,12 +52,19 @@ export default class SettingsCache<T extends PlatformSettings> {
 	}
 
 	async update(settings: T): Promise<void> {
-		await this.workerService.send("updateSettings", { platform: this.platformType, settings });
-		this.cache = settings;
+		const response = await this.workerService.send("updateSettings", { platform: this.platformType, settings });
+		if (!response) throw new Error(`Failed to persist settings for platform: ${this.platformType}`);
+		this.cache = response.settings as T;
+	}
+
+	async updatePatch(changes: Partial<T>): Promise<void> {
+		const response = await this.workerService.send("updateSettings", { platform: this.platformType, changes });
+		if (!response) throw new Error(`Failed to persist settings for platform: ${this.platformType}`);
+		this.cache = response.settings as T;
 	}
 
 	async updateKey<K extends keyof T>(key: K, value: T[K]): Promise<void> {
-		await this.update({ ...this.get(), [key]: value });
+		await this.updatePatch({ [key]: value } as unknown as Partial<T>);
 	}
 
 	private handleBroadcast(payload: SettingsBroadcastPayload): void {

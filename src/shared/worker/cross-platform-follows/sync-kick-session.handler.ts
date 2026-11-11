@@ -42,6 +42,7 @@ export class SyncKickSessionHandler extends MessageHandler {
 	}
 
 	private async clearFollows(): Promise<void> {
+		this.refresher.invalidate("kick");
 		if (await this.database.clear("kick")) await this.refresher.broadcast("kick");
 	}
 }
