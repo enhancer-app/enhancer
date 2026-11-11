@@ -54,11 +54,17 @@ export default class SettingsCache<T extends PlatformSettings> {
 	async update(settings: T): Promise<void> {
 		const response = await this.workerService.send("updateSettings", { platform: this.platformType, settings });
 		if (!response) throw new Error(`Failed to persist settings for platform: ${this.platformType}`);
-		this.cache = settings;
+		this.cache = response.settings as T;
+	}
+
+	async updatePatch(changes: Partial<T>): Promise<void> {
+		const response = await this.workerService.send("updateSettings", { platform: this.platformType, changes });
+		if (!response) throw new Error(`Failed to persist settings for platform: ${this.platformType}`);
+		this.cache = response.settings as T;
 	}
 
 	async updateKey<K extends keyof T>(key: K, value: T[K]): Promise<void> {
-		await this.update({ ...this.get(), [key]: value });
+		await this.updatePatch({ [key]: value } as unknown as Partial<T>);
 	}
 
 	private handleBroadcast(payload: SettingsBroadcastPayload): void {

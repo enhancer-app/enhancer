@@ -11,6 +11,7 @@ function setup(options: { failUpdates?: boolean; timeouts?: string[] } = {}) {
 	let broadcast: (payload: SettingsBroadcastPayload) => void = () => {};
 	const sent: { action: string; payload: unknown }[] = [];
 	const timeouts = [...(options.timeouts ?? [])];
+	let stored: Record<string, unknown> = { theme: "dark", volume: 50 };
 	const workerService = {
 		onBroadcast: (type: string, handler: typeof broadcast) => {
 			if (type === "settings-updated") broadcast = handler;
@@ -22,13 +23,15 @@ function setup(options: { failUpdates?: boolean; timeouts?: string[] } = {}) {
 				timeouts.splice(timeout, 1);
 				return null;
 			}
-			if (action === "getSettings") return { theme: "dark", volume: 50 };
+			if (action === "getSettings") return { ...stored };
 			if (action === "getGlobalSettings") return GLOBAL_DEFAULT_SETTINGS;
 			if (options.failUpdates) throw new Error("Failed to persist settings for platform: twitch");
 			if (action === "updateGlobalSettings") {
 				return { ...GLOBAL_DEFAULT_SETTINGS, ...(payload as { settings: object }).settings };
 			}
-			return { success: true };
+			const { settings, changes } = payload as { settings?: object; changes?: object };
+			stored = settings ? { ...settings } : { ...stored, ...changes };
+			return { success: true, settings: { ...stored } };
 		},
 	};
 	const emitter = createNanoEvents();
@@ -63,10 +66,7 @@ test("updates one key without dropping the others", async () => {
 	await cache.updateKey("volume", 80);
 
 	expect(cache.get()).toEqual({ theme: "dark", volume: 80 } as TestSettings);
-	expect(sent.at(-1)).toEqual({
-		action: "updateSettings",
-		payload: { platform: "twitch", settings: { theme: "dark", volume: 80 } },
-	});
+	expect(sent.at(-1)).toEqual({ action: "updateSettings", payload: { platform: "twitch", changes: { volume: 80 } } });
 });
 
 test("keeps the previous settings when saving fails", async () => {
@@ -113,4 +113,17 @@ test("gives up loading settings after three unanswered attempts", async () => {
 
 	await expect(cache.initialize()).rejects.toThrow("Settings unavailable");
 	expect(() => cache.get()).toThrow("Settings not initialized");
+});
+
+test("sends only the changed key when two keys change at the same time", async () => {
+	const { cache, sent } = setup();
+	await cache.initialize();
+
+	await Promise.all([cache.updateKey("theme", "light"), cache.updateKey("volume", 80)]);
+
+	expect(sent.filter(({ action }) => action === "updateSettings").map(({ payload }) => payload)).toEqual([
+		{ platform: "twitch", changes: { theme: "light" } },
+		{ platform: "twitch", changes: { volume: 80 } },
+	]);
+	expect(cache.get()).toEqual({ theme: "light", volume: 80 } as TestSettings);
 });
