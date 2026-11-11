@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { checkNickname, nicknameFeedback } from "$shared/utils/nickname.utils.ts";
+import { checkNickname, nicknameFeedback, realNameLabel } from "$shared/utils/nickname.utils.ts";
 import type { NicknameIssue } from "$types/shared/nickname.types.ts";
 
 const issueOf = (value: string) => checkNickname(value).issue;
@@ -80,5 +80,15 @@ describe("nicknameFeedback", () => {
 
 	test("explains the first broken rule", () => {
 		expect(nicknameFeedback("a".repeat(33)).error).toBe("Nickname must be at most 32 characters");
+	});
+});
+
+describe("realNameLabel", () => {
+	test.each([
+		["xQc", "xqc", "@xQc"],
+		["Игорь", "igorovh", "Игорь (@igorovh)"],
+		["", "igorovh", "@igorovh"],
+	])("labels %p / %p as %p", (displayName, login, expected) => {
+		expect(realNameLabel(displayName, login)).toBe(expected);
 	});
 });
