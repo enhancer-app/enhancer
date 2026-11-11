@@ -84,10 +84,19 @@ export type StoredAccountSession = {
 	savedAt: number;
 };
 
+export type StoredAccountCache = {
+	iv: Uint8Array<ArrayBuffer>;
+	data: ArrayBuffer;
+	savedAt: number;
+};
+
 export interface AccountSessionStore {
 	getSession(environment: EnhancerApiEnvironment): Promise<StoredAccountSession | undefined>;
 	putSession(session: StoredAccountSession): Promise<void>;
 	deleteSession(environment: EnhancerApiEnvironment): Promise<void>;
+	getCache(): Promise<StoredAccountCache | undefined>;
+	putCache(cache: StoredAccountCache): Promise<void>;
+	deleteCache(): Promise<void>;
 	getKey(): Promise<CryptoKey | undefined>;
 	putKey(key: CryptoKey): Promise<void>;
 }
@@ -147,7 +156,7 @@ export type EnhancerAccountSnapshot = {
 export type StoredAccountSnapshot = EnhancerAccountSnapshot & { owner: string };
 
 export type AccountCacheStorage = {
-	get(key: string): Promise<unknown>;
-	set(key: string, value: unknown): Promise<void>;
-	remove(key: string): Promise<void>;
+	get(): Promise<unknown>;
+	set(value: unknown): Promise<void>;
+	remove(): Promise<void>;
 };

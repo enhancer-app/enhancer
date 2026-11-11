@@ -28,7 +28,7 @@ export class EnhancerProfileService {
 	constructor(
 		private readonly logger: Logger,
 		private readonly accountService: EnhancerAccountService,
-		private readonly cache = new EnhancerAccountCache(),
+		private readonly cache = new EnhancerAccountCache(accountService.cacheStorage),
 	) {}
 
 	async getCached(): Promise<EnhancerAccountSnapshot> {

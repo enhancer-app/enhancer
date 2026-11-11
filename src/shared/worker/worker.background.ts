@@ -7,6 +7,7 @@ import { SharedDatabase } from "$shared/worker/database/shared.database.ts";
 import { CrossPlatformFollowsRefresher } from "$shared/worker/cross-platform-follows/cross-platform-follows.refresher.ts";
 import { ENHANCER_ENDPOINTS, resolveApiEnvironment } from "$shared/enhancer-environment.ts";
 import { isActionAllowedFrom } from "$shared/worker/enhancer-account/account-access.ts";
+import { LEGACY_STORAGE_KEY } from "$shared/worker/enhancer-account/enhancer-account.cache.ts";
 import { EnhancerAccountDatabase } from "$shared/worker/enhancer-account/enhancer-account.database.ts";
 import { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
 import { EnhancerProfileService } from "$shared/worker/enhancer-account/enhancer-profile.service.ts";
@@ -83,6 +84,7 @@ export default class WorkerBackground {
 
 	async start() {
 		this.setupMessageListener();
+		chrome.storage.local.remove(LEGACY_STORAGE_KEY).catch(() => {});
 
 		await Promise.all([
 			this.settingsDatabase.initialize(),

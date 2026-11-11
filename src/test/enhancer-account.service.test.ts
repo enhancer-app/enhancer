@@ -9,6 +9,7 @@ import type {
 	AccountSessionStore,
 	EnhancerAccountBroadcastPayload,
 	IdentityApi,
+	StoredAccountCache,
 	StoredAccountSession,
 } from "$types/shared/worker/enhancer-account-worker.types.ts";
 
@@ -22,6 +23,7 @@ afterEach(() => {
 
 class MemoryAccountStore implements AccountSessionStore {
 	sessions = new Map<EnhancerApiEnvironment, StoredAccountSession>();
+	cache: StoredAccountCache | undefined;
 	key: CryptoKey | undefined;
 
 	async getSession(environment: EnhancerApiEnvironment) {
@@ -32,6 +34,15 @@ class MemoryAccountStore implements AccountSessionStore {
 	}
 	async deleteSession(environment: EnhancerApiEnvironment) {
 		this.sessions.delete(environment);
+	}
+	async getCache() {
+		return this.cache;
+	}
+	async putCache(cache: StoredAccountCache) {
+		this.cache = cache;
+	}
+	async deleteCache() {
+		this.cache = undefined;
 	}
 	async getKey() {
 		return this.key;
@@ -187,9 +198,11 @@ test("drops the session when the refresh token is rejected", async () => {
 		return new Response(null, { status: 401 });
 	});
 	await service.login();
+	await service.cacheStorage.set({ owner: "production:user-1" });
 
 	expect(await service.authorizedFetch("/v1/me")).toEqual({ kind: "unauthenticated" });
 	expect(store.sessions.size).toBe(0);
+	expect(store.cache).toBeUndefined();
 	expect(broadcasts.at(-1)).toEqual({ account: { loggedIn: false, environment: "production" } });
 });
 
@@ -206,14 +219,21 @@ test("keeps production and test sessions apart", async () => {
 	expect((await service.getAccount()).loggedIn).toBe(true);
 });
 
-test("logout deletes the session and revokes the refresh token", async () => {
+test("keeps the profile cache encrypted and deletes it with the session on logout", async () => {
 	const { service, store } = setup("test");
 	const calls = mockFetch((url) => (url.endsWith("/token") ? Response.json(tokens("access-1")) : new Response(null)));
 	await service.login();
+	await service.cacheStorage.set({ owner: "test:user-1", profile: { username: "secret-login" } });
+
+	expect(new TextDecoder().decode(store.cache?.data)).not.toContain("secret-login");
+	expect(await service.cacheStorage.get()).toEqual({ owner: "test:user-1", profile: { username: "secret-login" } });
 
 	await service.logout();
 
 	expect(store.sessions.size).toBe(0);
+	expect(store.cache).toBeUndefined();
+	await service.cacheStorage.set({ owner: "test:user-1" });
+	expect(store.cache).toBeUndefined();
 	const revoke = calls.at(-1) as Call;
 	expect(revoke.url).toBe(`${ENHANCER_ENDPOINTS.test.issuer}/protocol/openid-connect/revoke`);
 	expect(form(revoke).get("token")).toBe("refresh-access-1");
