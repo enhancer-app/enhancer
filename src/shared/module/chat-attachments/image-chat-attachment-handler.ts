@@ -30,6 +30,7 @@ export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 		"kappa.lol",
 		"files.igor.ovh",
 		"prnt.sc",
+		"prntscr.com",
 		"files.catbox.moe",
 	];
 	static readonly CORSGO_PROXY_URL_PARSER = (url: URL) => {
@@ -43,6 +44,7 @@ export default class ImageChatAttachmentHandler extends ChatAttachmentHandler {
 			return url;
 		},
 		"prnt.sc": ImageChatAttachmentHandler.CORSGO_PROXY_URL_PARSER,
+		"prntscr.com": ImageChatAttachmentHandler.CORSGO_PROXY_URL_PARSER,
 		"files.catbox.moe": ImageChatAttachmentHandler.CORSGO_PROXY_URL_PARSER,
 		"imgur.com": ImageChatAttachmentHandler.CORSGO_PROXY_URL_PARSER,
 	};
