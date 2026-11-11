@@ -121,7 +121,7 @@ export default class SelectorModuleApplier<
 		if (!repeatingOnly) this.lastFullRunAt = Date.now();
 		for (const applier of this.appliers) {
 			if (repeatingOnly && applier.config.once) continue;
-			if (applier.enabled && !applier.enabled()) continue;
+			if (!this.isApplierEnabled(applier)) continue;
 			if (this.isApplierOnCooldown(applier)) continue;
 			applier.lastCheckedAt = Date.now();
 			const { config } = applier;
@@ -151,6 +151,15 @@ export default class SelectorModuleApplier<
 				return element;
 			})
 			.filter((element): element is Element => element !== undefined);
+	}
+
+	private isApplierEnabled(applier: SelectorModuleApplierRunner) {
+		try {
+			return !applier.enabled || applier.enabled();
+		} catch (error) {
+			this.logger.error(`Error checking module state, key: ${applier.config.key}`, error);
+			return false;
+		}
 	}
 
 	private isApplierOnCooldown(applier: SelectorModuleApplierRunner) {
