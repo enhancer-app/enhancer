@@ -33,20 +33,16 @@ export function TooltipPopover({ anchor, content, position, onClose }: TooltipPo
 		const handleScroll = (event: Event) => {
 			if (event.target instanceof Node && event.target.contains(anchor)) onClose();
 		};
-		let frame = 0;
-		const checkConnected = () => {
-			if (!anchor.isConnected) {
-				onClose();
-				return;
-			}
-			frame = requestAnimationFrame(checkConnected);
-		};
-		frame = requestAnimationFrame(checkConnected);
+		const detachObserver = new MutationObserver(() => {
+			if (!anchor.isConnected) onClose();
+		});
+		for (let node = anchor.parentNode; node; node = node.parentNode) detachObserver.observe(node, { childList: true });
+		if (!anchor.isConnected) onClose();
 		window.addEventListener("resize", updatePlacement);
 		document.addEventListener("scroll", handleScroll, { capture: true, passive: true });
 		return () => {
 			observer.disconnect();
-			cancelAnimationFrame(frame);
+			detachObserver.disconnect();
 			window.removeEventListener("resize", updatePlacement);
 			document.removeEventListener("scroll", handleScroll, { capture: true });
 		};

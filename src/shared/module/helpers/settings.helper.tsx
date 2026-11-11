@@ -109,7 +109,10 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 			this.saveSettings(newSettings, updatedKey, props.eventPrefix, otherKeys);
 		};
 
+		let hasOpened = false;
 		const renderSettings = () => {
+			if (!hasOpened && !this.isOpenSignal.value) return;
+			hasOpened = true;
 			if (this.settingsContainer && this.settingsSignal) {
 				render(
 					<SettingsOverlay style={{ display: this.isOpenSignal.value ? "flex" : "none" }}>
