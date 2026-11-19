@@ -24,6 +24,7 @@ export type TwitchChatMessage = {
 	timestamp: number;
 	type: number;
 	createdAt: number;
+	reply?: object;
 };
 
 export type TwitchChatMessageUser = {
