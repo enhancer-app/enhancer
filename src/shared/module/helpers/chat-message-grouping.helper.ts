@@ -2,19 +2,17 @@ export class ChatMessageGroupingHelper {
 	static readonly AUTHOR_ATTRIBUTE = "enhancer-group-author";
 	static readonly GROUPED_CLASS = "enhancer-chat-grouped";
 
-	private readonly style = document.createElement("style");
+	private style?: HTMLStyleElement;
 
-	constructor(hiddenSelectors: string[]) {
-		const selectors = hiddenSelectors
-			.map((selector) => `.${ChatMessageGroupingHelper.GROUPED_CLASS} ${selector}`)
-			.join(", ");
-		this.style.id = "enhancer-chat-message-grouping";
-		this.style.textContent = `${selectors} { display: none !important; }`;
-	}
+	constructor(private readonly hiddenSelectors: string[]) {}
 
 	setEnabled(enabled: boolean) {
-		if (enabled) document.head.appendChild(this.style);
-		else this.style.remove();
+		if (!enabled) {
+			this.style?.remove();
+			return;
+		}
+		this.style ??= this.createStyle();
+		document.head.appendChild(this.style);
 	}
 
 	markRow(row: Element, author: string, canGroup: boolean) {
@@ -27,5 +25,15 @@ export class ChatMessageGroupingHelper {
 		const previousAuthor = previous?.getAttribute(ChatMessageGroupingHelper.AUTHOR_ATTRIBUTE)?.replace(/:solo$/, "");
 		const grouped = !!author && !author.endsWith(":solo") && author === previousAuthor;
 		row.classList.toggle(ChatMessageGroupingHelper.GROUPED_CLASS, grouped);
+	}
+
+	private createStyle() {
+		const style = document.createElement("style");
+		const selectors = this.hiddenSelectors
+			.map((selector) => `.${ChatMessageGroupingHelper.GROUPED_CLASS} ${selector}`)
+			.join(", ");
+		style.id = "enhancer-chat-message-grouping";
+		style.textContent = `${selectors} { display: none !important; }`;
+		return style;
 	}
 }

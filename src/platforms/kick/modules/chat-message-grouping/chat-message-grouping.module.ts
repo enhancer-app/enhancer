@@ -33,7 +33,7 @@ export default class ChatMessageGroupingModule extends KickModule {
 
 	private handleMessage({ element, message }: KickChatMessageEvent) {
 		if (!this.helper) return;
-		const index = Number(element.getAttribute("data-index"));
+		const index = Number(element.getAttribute("data-index") ?? Number.NaN);
 		if (!element.parentElement || Number.isNaN(index)) return;
 		this.helper.markRow(element, message.sender.id.toString(), message.type === "message");
 		this.helper.updateRow(element, this.findRow(element.parentElement, index - 1));

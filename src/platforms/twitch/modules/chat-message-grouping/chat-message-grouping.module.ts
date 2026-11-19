@@ -5,7 +5,7 @@ import type { TwitchChatMessageEvent } from "$types/platforms/twitch/twitch.even
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 
 export default class ChatMessageGroupingModule extends TwitchModule {
-	private static readonly LIST_SELECTOR = `${ChatModule.TWITCHTV_CHAT_SELECTOR}, main.seventv-chat-list`;
+	private static readonly LIST_SELECTOR = `${ChatModule.TWITCHTV_CHAT_SELECTOR}, ${ChatModule.SEVENTV_CHAT_SELECTOR}`;
 	private static readonly HIDDEN_SELECTORS = [
 		".chat-line__timestamp",
 		".chat-line__username-container",
