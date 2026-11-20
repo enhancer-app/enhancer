@@ -16,7 +16,6 @@ import type { SceneProps } from "./scenes/scene.tsx";
 import { TwAttachmentsScene } from "./scenes/tw-attachments.tsx";
 import { TwEmoteBarScene } from "./scenes/tw-emotebar.tsx";
 import { TwGroupingScene } from "./scenes/tw-grouping.tsx";
-import { TwHeroScene } from "./scenes/tw-hero.tsx";
 import { TwHomeScene } from "./scenes/tw-home.tsx";
 import { TwLatencyScene } from "./scenes/tw-latency.tsx";
 import { TwitchFollowsScene } from "./scenes/twitch-follows.tsx";
@@ -39,7 +38,7 @@ const scenes: Record<WelcomeFeatureId, SceneComponent> = {
 };
 
 const slideTitle = (index: number) => {
-	if (index === 0) return copy.intro.kicker;
+	if (index === 0) return copy.intro.title.join("");
 	if (index === TOTAL - 1) return copy.done.kicker;
 	const feature = features[index - 1];
 	return feature ? copy.features[feature.id].title : "";
@@ -101,11 +100,16 @@ function Check() {
 	);
 }
 
+async function closePage() {
+	const tab = await chrome.tabs.getCurrent().catch(() => undefined);
+	if (tab?.id !== undefined) await chrome.tabs.remove(tab.id);
+	else window.close();
+}
+
 function IntroSlide({ onStart }: { onStart: () => void }) {
 	return (
 		<>
 			<div className="ob-copy">
-				<span className="ob-index">{copy.intro.kicker}</span>
 				<h1>
 					<Accented text={copy.intro.title} />
 				</h1>
@@ -116,9 +120,14 @@ function IntroSlide({ onStart }: { onStart: () => void }) {
 					{copy.intro.start} →
 				</button>
 			</div>
-			<div className="ob-stage ob-stage-wide">
-				<SceneSlot scene={TwHeroScene} />
-			</div>
+			<p className="ob-exit">
+				<span>{copy.intro.notInterested}</span>
+				<a href={links.twitch}>{copy.intro.openTwitch}</a>
+				<a href={links.kick}>{copy.intro.openKick}</a>
+				<button type="button" onClick={closePage}>
+					{copy.intro.close}
+				</button>
+			</p>
 		</>
 	);
 }

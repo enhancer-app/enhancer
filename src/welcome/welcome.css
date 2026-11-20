@@ -547,9 +547,33 @@ body {
 	height: 100%;
 }
 
-.ob-stage-wide {
-	width: min(100%, 1000px);
-	height: min(46vh, 520px);
+.ob-exit {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 6px 18px;
+	color: var(--quiet);
+	font-size: 0.9rem;
+}
+
+.ob-exit a,
+.ob-exit button {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--muted);
+	font: inherit;
+	text-decoration: underline;
+	text-decoration-color: var(--line-strong);
+	text-underline-offset: 3px;
+	cursor: pointer;
+	transition: color 0.2s;
+}
+
+.ob-exit a:hover,
+.ob-exit button:hover {
+	color: var(--text);
 }
 
 .ob-summary {
@@ -722,10 +746,6 @@ body {
 @media (max-height: 700px) and (min-width: 901px) {
 	.ob-copy .section-lede {
 		font-size: 1rem;
-	}
-
-	.ob-stage-wide {
-		height: 40vh;
 	}
 }
 

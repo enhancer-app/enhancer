@@ -38,7 +38,15 @@ export type WelcomeCopy = {
 	previous: string;
 	next: string;
 	goTo: (title: string) => string;
-	intro: { kicker: string; title: Accent; lede: string; start: string };
+	intro: {
+		title: Accent;
+		lede: string;
+		start: string;
+		notInterested: string;
+		openTwitch: string;
+		openKick: string;
+		close: string;
+	};
 	feature: {
 		turnOn: string;
 		on: string;

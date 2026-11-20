@@ -48,10 +48,13 @@ const en: WelcomeCopy = {
 	next: "Next",
 	goTo: (title) => `Go to ${title}`,
 	intro: {
-		kicker: "Enhancer is installed",
 		title: ["You're all ", "set."],
 		lede: "Enhancer already works on Twitch and Kick. Some of our best features are off until you turn them on. Take a minute and pick yours.",
 		start: "Show me",
+		notInterested: "Don't care? No problem.",
+		openTwitch: "Go to Twitch",
+		openKick: "Go to Kick",
+		close: "Close this page",
 	},
 	feature: {
 		turnOn: "Turn it on",
@@ -117,10 +120,13 @@ const pl: WelcomeCopy = {
 	next: "Dalej",
 	goTo: (title) => `Przejdź do: ${title}`,
 	intro: {
-		kicker: "Enhancer jest zainstalowany",
 		title: ["Wszystko ", "gotowe."],
 		lede: "Enhancer działa już na Twitchu i Kicku. Część najlepszych funkcji jest wyłączona, dopóki ich nie włączysz. Poświęć minutę i wybierz swoje.",
 		start: "Pokaż",
+		notInterested: "Nie interesuje Cię to? Spoko.",
+		openTwitch: "Przejdź na Twitcha",
+		openKick: "Przejdź na Kicka",
+		close: "Zamknij tę stronę",
 	},
 	feature: {
 		turnOn: "Włącz",
