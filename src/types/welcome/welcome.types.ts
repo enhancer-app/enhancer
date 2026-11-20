@@ -1,51 +1,63 @@
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
+import type { PlatformType } from "$types/shared/platform.types.ts";
+
 export type WelcomePlatform = "Twitch" | "Kick";
 
-export type WelcomeFeatureId = "follows" | "home" | "chatters" | "attachments" | "latency" | "emotebar";
+export type WelcomeFeatureId = "follows" | "home" | "attachments" | "latency" | "emotebar" | "grouping";
+
+export type WelcomeSetting =
+	| { scope: "global"; key: keyof Pick<GlobalSettings, "crossPlatformFollowsSyncEnabled" | "followsHomeEnabled"> }
+	| {
+			scope: "platform";
+			key: "chatImagesEnabled" | "streamLatencyReducerEnabled" | "emoteBarEnabled" | "chatMessageGroupingEnabled";
+			platforms: PlatformType[];
+	  };
 
 export type WelcomeFeature = {
 	id: WelcomeFeatureId;
 	platforms: WelcomePlatform[];
+	setting: WelcomeSetting;
+	requires?: WelcomeFeatureId;
 };
+
+export type WelcomeFeatureState = Partial<Record<WelcomeFeatureId, boolean>>;
 
 export type Accent = [string, string];
 
+export type WelcomeFeatureCopy = {
+	title: string;
+	description: string;
+	note?: string;
+	warning?: boolean;
+};
+
 export type WelcomeCopy = {
 	title: string;
-	nav: { docs: string; settings: string };
-	hero: {
-		badge: string;
+	skip: string;
+	step: (current: number, total: number) => string;
+	previous: string;
+	next: string;
+	goTo: (title: string) => string;
+	intro: { kicker: string; title: Accent; lede: string; start: string };
+	feature: {
+		turnOn: string;
+		on: string;
+		turnOff: string;
+		requires: (title: string) => string;
+		showRequired: string;
+		error: string;
+		available: string;
+	};
+	features: Record<WelcomeFeatureId, WelcomeFeatureCopy>;
+	done: {
+		kicker: string;
 		title: Accent;
 		lede: string;
+		on: string;
+		off: string;
+		change: string;
+		already: string;
 		openTwitch: string;
 		openKick: string;
 	};
-	features: {
-		kicker: string;
-		title: Accent;
-		lede: string;
-		available: string;
-		items: Record<WelcomeFeatureId, { title: string; description: string }>;
-	};
-	more: Accent;
-	settings: {
-		kicker: string;
-		title: Accent;
-		lede: string;
-		steps: { title: string; text: [string] | [string, string] }[];
-	};
-	account: {
-		kicker: string;
-		title: Accent;
-		lede: string;
-		points: { title: string; text: string }[];
-		cta: string;
-		support: { title: string; text: string; cta: string; perks: string[]; nick: string };
-	};
-	principles: {
-		label: string;
-		free: { title: Accent; text: string };
-		open: { title: Accent; text: string; link: string };
-		privacy: { title: Accent; text: string };
-	};
-	footer: { tagline: string; disclaimer: string };
 };

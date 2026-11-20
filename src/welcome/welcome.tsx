@@ -1,87 +1,65 @@
 import "./welcome.css";
 import "./scenes/scenes.css";
 
-import type { Accent, WelcomeFeature, WelcomePlatform } from "$types/welcome/welcome.types.ts";
+import type {
+	Accent,
+	WelcomeFeature,
+	WelcomeFeatureId,
+	WelcomeFeatureState,
+	WelcomePlatform,
+} from "$types/welcome/welcome.types.ts";
 import { render } from "preact";
-import type { ComponentType, ReactNode } from "react";
+import type { ComponentType } from "react";
 import { useEffect, useRef, useState } from "react";
+import { locale } from "./scenes/locale.ts";
 import type { SceneProps } from "./scenes/scene.tsx";
-import { TwAccountScene } from "./scenes/tw-account.tsx";
 import { TwAttachmentsScene } from "./scenes/tw-attachments.tsx";
-import { TwChattersScene } from "./scenes/tw-chatters.tsx";
 import { TwEmoteBarScene } from "./scenes/tw-emotebar.tsx";
+import { TwGroupingScene } from "./scenes/tw-grouping.tsx";
 import { TwHeroScene } from "./scenes/tw-hero.tsx";
 import { TwHomeScene } from "./scenes/tw-home.tsx";
 import { TwLatencyScene } from "./scenes/tw-latency.tsx";
 import { TwitchFollowsScene } from "./scenes/twitch-follows.tsx";
-import { locale } from "./scenes/locale.ts";
-import { copy, features, links, supporterBadge } from "./welcome.content.ts";
+import { copy, features, links } from "./welcome.content.ts";
+import { readFeatureState, writeFeature } from "./welcome.settings.ts";
 
 type SceneComponent = ComponentType<SceneProps>;
 
 const LOGO = "/assets/enhancer/logo-128.png";
+const ADVANCE_AFTER_ENABLE_MS = 900;
+const TOTAL = features.length + 2;
 
-const scenes: Record<WelcomeFeature["id"], SceneComponent> = {
+const scenes: Record<WelcomeFeatureId, SceneComponent> = {
 	follows: TwitchFollowsScene,
 	home: TwHomeScene,
-	chatters: TwChattersScene,
 	attachments: TwAttachmentsScene,
 	latency: TwLatencyScene,
 	emotebar: TwEmoteBarScene,
+	grouping: TwGroupingScene,
 };
 
-const socials: { name: string; href: string; icon: ReactNode }[] = [
-	{
-		name: "GitHub",
-		href: links.github,
-		icon: (
-			<path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.2-3.4-1.2-.5-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 2.9.8.1-.7.4-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9V21c0 .3.2.6.7.5A10 10 0 0 0 12 2z" />
-		),
-	},
-	{
-		name: "Discord",
-		href: links.discord,
-		icon: (
-			<path d="M19.3 5.3A16.5 16.5 0 0 0 15.2 4l-.5 1.1a15.3 15.3 0 0 0-5.4 0L8.8 4a16.5 16.5 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.7a16.6 16.6 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.9l.4-.3a11.9 11.9 0 0 0 11 0l.4.3c-.5.4-1.1.7-1.7.9l1.1 1.7a16.6 16.6 0 0 0 5-2.5c.4-4.3-.7-8.1-3-11.4zM8.7 14.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z" />
-		),
-	},
-	{
-		name: "X (Twitter)",
-		href: links.twitter,
-		icon: (
-			<path d="M17.8 3h3.1l-6.8 7.7 8 10.3h-6.2l-4.9-6.3L5.4 21H2.3l7.2-8.2L1.9 3h6.4l4.4 5.8zm-1.1 16.2h1.7L7.4 4.7H5.6z" />
-		),
-	},
-];
+const slideTitle = (index: number) => {
+	if (index === 0) return copy.intro.kicker;
+	if (index === TOTAL - 1) return copy.done.kicker;
+	const feature = features[index - 1];
+	return feature ? copy.features[feature.id].title : "";
+};
 
-function useInView<T extends Element>() {
-	const ref = useRef<T>(null);
-	const [inView, setInView] = useState(false);
+function SceneSlot({ scene: Scene }: { scene: SceneComponent }) {
+	const ref = useRef<HTMLDivElement>(null);
+	const [visible, setVisible] = useState(false);
 
 	useEffect(() => {
 		const element = ref.current;
 		if (!element) return;
-		const observer = new IntersectionObserver(([entry]) => setInView(entry?.isIntersecting ?? false));
+		const observer = new IntersectionObserver(([entry]) => setVisible(entry?.isIntersecting ?? false));
 		observer.observe(element);
 		return () => observer.disconnect();
 	}, []);
 
-	return [ref, inView] as const;
-}
-
-function SceneSlot({
-	scene: Scene,
-	active = true,
-	fit = false,
-}: {
-	scene: SceneComponent;
-	active?: boolean;
-	fit?: boolean;
-}) {
-	const [ref, inView] = useInView<HTMLDivElement>();
 	return (
 		<div ref={ref} className="scene-slot">
-			<Scene playing={inView && active} fit={fit} />
+			<Scene playing={visible} fit />
 		</div>
 	);
 }
@@ -95,92 +73,9 @@ function Accented({ text }: { text: Accent }) {
 	);
 }
 
-function Logo({ size = 28 }: { size?: number }) {
-	return <img className="logo" src={LOGO} width={size} height={size} alt="" />;
-}
-
-function Nav() {
-	const [scrolled, setScrolled] = useState(false);
-	useEffect(() => {
-		const onScroll = () => setScrolled(window.scrollY > 12);
-		onScroll();
-		window.addEventListener("scroll", onScroll, { passive: true });
-		return () => window.removeEventListener("scroll", onScroll);
-	}, []);
-
-	return (
-		<header className={`nav${scrolled ? " nav-scrolled" : ""}`}>
-			<div className="nav-inner">
-				<a className="brand" href="#top">
-					<Logo />
-					<span>Enhancer</span>
-				</a>
-				<nav aria-label="Main">
-					<a href={links.docs}>{copy.nav.docs}</a>
-				</nav>
-				<div className="nav-icons">
-					{socials.map((social) => (
-						<a
-							key={social.name}
-							className="icon-button"
-							href={social.href}
-							aria-label={social.name}
-							title={social.name}
-						>
-							<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-								{social.icon}
-							</svg>
-						</a>
-					))}
-				</div>
-				<a className="button button-small" href={links.twitch}>
-					{copy.hero.openTwitch}
-				</a>
-			</div>
-		</header>
-	);
-}
-
-function PlatformButtons() {
-	return (
-		<div className="actions">
-			<a className="button" href={links.twitch}>
-				{copy.hero.openTwitch}
-			</a>
-			<a className="button button-ghost platform-button-kick" href={links.kick}>
-				{copy.hero.openKick}
-			</a>
-		</div>
-	);
-}
-
-function Hero() {
-	return (
-		<section className="hero" id="top">
-			<div className="hero-glow" aria-hidden="true" />
-			<div className="container hero-copy">
-				<p className="hero-badge">
-					<span className="hero-badge-dot" aria-hidden="true" />
-					<span>
-						<strong>Enhancer {__version__}</strong> {copy.hero.badge}
-					</span>
-				</p>
-				<h1>
-					<Accented text={copy.hero.title} />
-				</h1>
-				<p className="lede">{copy.hero.lede}</p>
-				<PlatformButtons />
-			</div>
-			<div className="container hero-visual">
-				<SceneSlot scene={TwHeroScene} />
-			</div>
-		</section>
-	);
-}
-
 function PlatformTags({ platforms }: { platforms: WelcomePlatform[] }) {
 	return (
-		<ul className="platforms" aria-label={copy.features.available}>
+		<ul className="platforms" aria-label={copy.feature.available}>
 			{platforms.map((platform) => (
 				<li key={platform} data-platform={platform.toLowerCase()}>
 					{platform}
@@ -190,276 +85,267 @@ function PlatformTags({ platforms }: { platforms: WelcomePlatform[] }) {
 	);
 }
 
-function FeatureStory() {
-	const [active, setActive] = useState(0);
-	const stepRefs = useRef<(HTMLElement | null)[]>([]);
-
-	useEffect(() => {
-		const observer = new IntersectionObserver(
-			(entries) => {
-				for (const entry of entries) {
-					if (!entry.isIntersecting) continue;
-					const index = Number((entry.target as HTMLElement).dataset.index);
-					if (!Number.isNaN(index)) setActive(index);
-				}
-			},
-			{ rootMargin: "-45% 0px -45% 0px" },
-		);
-		for (const step of stepRefs.current) if (step) observer.observe(step);
-		return () => observer.disconnect();
-	}, []);
-
+function Arrow({ direction }: { direction: "left" | "right" }) {
 	return (
-		<section className="features" id="features">
-			<div className="container">
-				<div className="section-head">
-					<p className="kicker">{copy.features.kicker}</p>
-					<h2>
-						<Accented text={copy.features.title} />
-					</h2>
-					<p className="section-lede">{copy.features.lede}</p>
-				</div>
+		<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+			<path d={direction === "left" ? "M19 12H5M11 6l-6 6 6 6" : "M5 12h14M13 6l6 6-6 6"} />
+		</svg>
+	);
+}
 
-				<div className="story">
-					<div className="story-steps">
-						{features.map((feature, index) => (
-							<article
-								key={feature.id}
-								ref={(element) => {
-									stepRefs.current[index] = element;
-								}}
-								data-index={index}
-								className={`story-step${index === active ? " is-active" : ""}`}
-								aria-labelledby={`feature-${feature.id}`}
-							>
-								<div id={`feature-${feature.id}`} className="story-text">
-									<div className="feature-meta">
-										<span className="feature-index">{String(index + 1).padStart(2, "0")}</span>
-									</div>
-									<h3>{copy.features.items[feature.id].title}</h3>
-									<p>{copy.features.items[feature.id].description}</p>
-									<PlatformTags platforms={feature.platforms} />
-								</div>
-								<div className="story-inline">
-									<SceneSlot scene={scenes[feature.id]} />
-								</div>
-							</article>
-						))}
-					</div>
+function Check() {
+	return (
+		<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+			<path d="M5 12.5l4.5 4.5L19 7.5" />
+		</svg>
+	);
+}
 
-					<div className="story-stage" aria-hidden="true">
-						<div className="stage">
-							{features.map((feature, index) => (
-								<div key={feature.id} className={`stage-clip${index === active ? " is-active" : ""}`}>
-									<SceneSlot scene={scenes[feature.id]} active={index === active} fit />
-								</div>
-							))}
-						</div>
-						<ol className="stage-progress">
-							{features.map((feature, index) => (
-								<li key={feature.id} className={index === active ? "is-active" : undefined} />
-							))}
-						</ol>
-					</div>
-				</div>
+function IntroSlide({ onStart }: { onStart: () => void }) {
+	return (
+		<>
+			<div className="ob-copy">
+				<span className="ob-index">{copy.intro.kicker}</span>
+				<h1>
+					<Accented text={copy.intro.title} />
+				</h1>
+				<p className="section-lede">{copy.intro.lede}</p>
 			</div>
-		</section>
-	);
-}
-
-function More() {
-	return (
-		<section className="more" aria-label="More features">
-			<p className="container more-tail">
-				<Accented text={copy.more} />
-			</p>
-		</section>
-	);
-}
-
-function TopBarMock() {
-	return (
-		<div className="topbar-mock" aria-hidden="true">
-			<span className="topbar-mock-search" />
-			<span className="topbar-mock-icon" />
-			<span className="topbar-mock-icon" />
-			<span className="topbar-mock-enhancer">
-				<img src="/assets/enhancer/logo-gray.svg" width={20} height={20} alt="" />
-			</span>
-			<span className="topbar-mock-avatar" />
-		</div>
-	);
-}
-
-function Settings() {
-	return (
-		<section className="settings" id="settings" aria-labelledby="settings-title">
-			<div className="container settings-grid">
-				<div>
-					<p className="kicker">{copy.settings.kicker}</p>
-					<h2 id="settings-title">
-						<Accented text={copy.settings.title} />
-					</h2>
-					<p className="section-lede">{copy.settings.lede}</p>
-					<TopBarMock />
-				</div>
-				<ol className="settings-steps">
-					{copy.settings.steps.map((step) => (
-						<li key={step.title}>
-							<div>
-								<strong>{step.title}</strong>
-								<span>
-									{step.text[0]}
-									{step.text[1] !== undefined && (
-										<>
-											<span className="settings-logo">
-												<img src="/assets/enhancer/logo-gray.svg" width={14} height={14} alt="Enhancer" />
-											</span>
-											{step.text[1]}
-										</>
-									)}
-								</span>
-							</div>
-						</li>
-					))}
-				</ol>
+			<div className="ob-cta">
+				<button type="button" className="button" onClick={onStart}>
+					{copy.intro.start} →
+				</button>
 			</div>
-		</section>
+			<div className="ob-stage ob-stage-wide">
+				<SceneSlot scene={TwHeroScene} />
+			</div>
+		</>
 	);
 }
 
-function Account() {
+type FeatureSlideProps = {
+	feature: WelcomeFeature;
+	index: number;
+	state: WelcomeFeatureState;
+	onToggle: (feature: WelcomeFeature, value: boolean) => Promise<boolean>;
+	onGoTo: (index: number) => void;
+};
+
+function FeatureSlide({ feature, index, state, onToggle, onGoTo }: FeatureSlideProps) {
+	const text = copy.features[feature.id];
+	const [saving, setSaving] = useState(false);
+	const [failed, setFailed] = useState(false);
+	const enabled = state[feature.id] === true;
+	const required = feature.requires ? features.find((item) => item.id === feature.requires) : undefined;
+	const blocked = required !== undefined && state[required.id] !== true;
+
+	const toggle = async (value: boolean) => {
+		setSaving(true);
+		setFailed(false);
+		const saved = await onToggle(feature, value);
+		setSaving(false);
+		setFailed(!saved);
+	};
+
 	return (
-		<section className="account" id="account" aria-labelledby="account-title">
-			<div className="container">
-				<div className="account-grid">
-					<div className="account-copy">
-						<p className="kicker">{copy.account.kicker}</p>
-						<h2 id="account-title">
-							<Accented text={copy.account.title} />
-						</h2>
-						<p className="section-lede">{copy.account.lede}</p>
-						<ul className="account-points">
-							{copy.account.points.map((point) => (
-								<li key={point.title}>
-									<strong>{point.title}</strong>
-									<span>{point.text}</span>
-								</li>
-							))}
-						</ul>
-						<div className="account-actions">
-							<a className="button" href={links.account}>
-								{copy.account.cta} →
-							</a>
-						</div>
-					</div>
-					<div className="account-visual">
-						<SceneSlot scene={TwAccountScene} />
-					</div>
-				</div>
-				<div className="support">
-					<div className="support-copy">
-						<h3>{copy.account.support.title}</h3>
-						<p>{copy.account.support.text}</p>
-					</div>
-					<ul className="support-perks" aria-label={copy.account.support.title}>
-						<li>
-							<img className="support-badge" src={supporterBadge} width={28} height={28} loading="lazy" alt="" />
-							{copy.account.support.perks[0]}
-						</li>
-						<li>
-							<span className="support-glow" aria-hidden="true">
-								{copy.account.support.nick}
+		<>
+			<div className="ob-copy">
+				<span className="ob-index">{String(index).padStart(2, "0")}</span>
+				<h2>{text.title}</h2>
+				<p className="section-lede">{text.description}</p>
+				<PlatformTags platforms={feature.platforms} />
+				{text.note && <p className={`ob-note${text.warning ? " ob-note-warn" : ""}`}>{text.note}</p>}
+				<div className="ob-cta">
+					{enabled ? (
+						<>
+							<span className="ob-enabled">
+								<Check />
+								{copy.feature.on}
 							</span>
-							{copy.account.support.perks[1]}
-						</li>
-						<li>
-							<span className="support-font" aria-hidden="true">
-								{copy.account.support.nick}
-							</span>
-							{copy.account.support.perks[2]}
-						</li>
-						<li>
-							<span className="support-rename" aria-hidden="true">
-								<s>user123</s> → <b>{copy.account.support.nick}</b>
-							</span>
-							{copy.account.support.perks[3]}
-						</li>
-						<li className="support-cta">
-							<a href={links.support}>{copy.account.support.cta} →</a>
-						</li>
-					</ul>
+							<button type="button" className="ob-link" disabled={saving} onClick={() => toggle(false)}>
+								{copy.feature.turnOff}
+							</button>
+						</>
+					) : (
+						<button type="button" className="button" disabled={saving || blocked} onClick={() => toggle(true)}>
+							{copy.feature.turnOn}
+						</button>
+					)}
+					{blocked && required && (
+						<>
+							<span className="ob-already">{copy.feature.requires(copy.features[required.id].title)}</span>
+							<button type="button" className="ob-link" onClick={() => onGoTo(features.indexOf(required) + 1)}>
+								{copy.feature.showRequired}
+							</button>
+						</>
+					)}
 				</div>
+				{failed && (
+					<p className="ob-error" role="alert">
+						{copy.feature.error}
+					</p>
+				)}
 			</div>
-		</section>
+			<div className="ob-stage">
+				<SceneSlot scene={scenes[feature.id]} />
+			</div>
+		</>
 	);
 }
 
-function Principles() {
+function DoneSlide({ state, onGoTo }: { state: WelcomeFeatureState; onGoTo: (index: number) => void }) {
 	return (
-		<section className="principles" aria-label={copy.principles.label}>
-			<div className="container principles-grid">
-				<div>
-					<h2>
-						<Accented text={copy.principles.free.title} />
-					</h2>
-					<p>{copy.principles.free.text}</p>
-				</div>
-				<div>
-					<h2>
-						<Accented text={copy.principles.open.title} />
-					</h2>
-					<p>{copy.principles.open.text}</p>
-					<a className="text-link" href={links.github}>
-						{copy.principles.open.link}
-					</a>
-				</div>
-				<div>
-					<h2>
-						<Accented text={copy.principles.privacy.title} />
-					</h2>
-					<p>{copy.principles.privacy.text}</p>
-				</div>
+		<>
+			<div className="ob-copy">
+				<span className="ob-index">{copy.done.kicker}</span>
+				<h1>
+					<Accented text={copy.done.title} />
+				</h1>
+				<p className="section-lede">{copy.done.lede}</p>
 			</div>
-		</section>
-	);
-}
-
-function Footer() {
-	return (
-		<footer className="footer">
-			<div className="container">
-				<div className="footer-about">
-					<a className="brand" href="#top">
-						<Logo size={26} />
-						<span>Enhancer</span>
-					</a>
-					<p>{copy.footer.tagline}</p>
-					<PlatformButtons />
-				</div>
-				<div className="footer-bottom">
-					<span>Enhancer {__version__}</span>
-					<span>{copy.footer.disclaimer}</span>
-				</div>
+			<ul className="ob-summary">
+				{features.map((feature, index) => {
+					const on = state[feature.id] === true;
+					return (
+						<li key={feature.id} className={on ? "is-on" : undefined}>
+							<span className="ob-summary-dot" aria-hidden="true" />
+							<span>{copy.features[feature.id].title}</span>
+							<span className="ob-summary-state">{on ? copy.done.on : copy.done.off}</span>
+							<button type="button" className="ob-link" onClick={() => onGoTo(index + 1)}>
+								{copy.done.change}
+							</button>
+						</li>
+					);
+				})}
+			</ul>
+			<p className="ob-already">{copy.done.already}</p>
+			<div className="ob-cta">
+				<a className="button" href={links.twitch}>
+					{copy.done.openTwitch}
+				</a>
+				<a className="button button-ghost" href={links.kick}>
+					{copy.done.openKick}
+				</a>
 			</div>
-		</footer>
+		</>
 	);
 }
 
 function App() {
+	const [current, setCurrent] = useState(0);
+	const [back, setBack] = useState(false);
+	const [state, setState] = useState<WelcomeFeatureState>({});
+	const advanceTimer = useRef<number>();
+
+	useEffect(() => {
+		readFeatureState(features)
+			.then(setState)
+			.catch(() => {});
+	}, []);
+
+	const goTo = (index: number) => {
+		window.clearTimeout(advanceTimer.current);
+		const next = Math.max(0, Math.min(TOTAL - 1, index));
+		setBack(next < current);
+		setCurrent(next);
+	};
+	const goBy = (delta: number) => goTo(current + delta);
+
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			if (event.target instanceof HTMLElement && event.target.closest("input, textarea")) return;
+			if (event.key === "ArrowRight") goBy(1);
+			if (event.key === "ArrowLeft") goBy(-1);
+		};
+		document.addEventListener("keydown", onKey);
+		return () => document.removeEventListener("keydown", onKey);
+	});
+
+	const toggle = async (feature: WelcomeFeature, value: boolean) => {
+		try {
+			await writeFeature(feature, value);
+		} catch {
+			return false;
+		}
+		setState((previous) => ({ ...previous, [feature.id]: value }));
+		if (value) advanceTimer.current = window.setTimeout(() => goBy(1), ADVANCE_AFTER_ENABLE_MS);
+		return true;
+	};
+
+	const feature = features[current - 1];
+	const isDone = current === TOTAL - 1;
+	const centered = current === 0 || isDone;
+
 	return (
-		<>
-			<Nav />
-			<main>
-				<Hero />
-				<FeatureStory />
-				<More />
-				<Settings />
-				<Account />
-				<Principles />
+		<div className="ob">
+			<div className="ob-glow" aria-hidden="true" />
+			<header className="ob-head">
+				<span className="brand">
+					<img className="logo" src={LOGO} width={28} height={28} alt="" />
+					<span>Enhancer</span>
+				</span>
+				<span className="ob-step" aria-live="polite">
+					{copy.step(current + 1, TOTAL)}
+				</span>
+				{!isDone && (
+					<button type="button" className="ob-skip" onClick={() => goTo(TOTAL - 1)}>
+						{copy.skip}
+					</button>
+				)}
+			</header>
+
+			<main className="ob-main">
+				<section
+					key={current}
+					className={`ob-slide${centered ? " ob-slide-center" : ""}${back ? " is-back" : ""}`}
+					aria-label={slideTitle(current)}
+				>
+					{current === 0 && <IntroSlide onStart={() => goBy(1)} />}
+					{feature && <FeatureSlide feature={feature} index={current} state={state} onToggle={toggle} onGoTo={goTo} />}
+					{isDone && <DoneSlide state={state} onGoTo={goTo} />}
+				</section>
 			</main>
-			<Footer />
-		</>
+
+			<nav className="ob-foot" aria-label="Onboarding">
+				<button
+					type="button"
+					className="ob-arrow"
+					aria-label={copy.previous}
+					disabled={current === 0}
+					onClick={() => goBy(-1)}
+				>
+					<Arrow direction="left" />
+				</button>
+				<ol className="ob-dots">
+					{Array.from({ length: TOTAL }, (_, index) => {
+						const dotFeature = features[index - 1];
+						const classes = [index === current && "is-active", dotFeature && state[dotFeature.id] && "is-on"]
+							.filter(Boolean)
+							.join(" ");
+						return (
+							<li key={index}>
+								<button
+									type="button"
+									className={classes || undefined}
+									aria-label={copy.goTo(slideTitle(index))}
+									aria-current={index === current ? "step" : undefined}
+									onClick={() => goTo(index)}
+								/>
+							</li>
+						);
+					})}
+				</ol>
+				<button
+					type="button"
+					className="ob-arrow ob-arrow-next"
+					aria-label={copy.next}
+					disabled={isDone}
+					onClick={() => goBy(1)}
+				>
+					<Arrow direction="right" />
+				</button>
+			</nav>
+		</div>
 	);
 }
 
