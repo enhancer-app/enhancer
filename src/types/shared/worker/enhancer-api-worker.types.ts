@@ -1,10 +1,8 @@
 import type {
 	EnhancerAccount,
-	EnhancerAggregateSnapshotEvent,
 	EnhancerAggregateTopic,
 	EnhancerBadge,
 	EnhancerBufferedEvent,
-	EnhancerChannelDto,
 	EnhancerMessageEvent,
 	EnhancerSubscription,
 	XayoWatchtimePeriod,
@@ -19,24 +17,49 @@ export type EnhancerApiAction =
 
 export type AggregateScope = "GLOBAL" | "CHANNEL";
 
-export interface CachedAggregateSeed {
-	topic: EnhancerAggregateTopic;
-	aggregate: EnhancerChannelDto;
-	cursor: string;
+export type AggregateAccountEntry = [string, EnhancerAccount | null];
+export type AggregateBadgeEntry = [string, EnhancerBadge | null];
+
+export interface AggregateSnapshotFile {
+	hash: string;
+	seq: number;
+	bytes: Uint8Array;
+	base64?: string;
 }
 
-export interface AggregateMaps {
+export interface AggregateData {
 	channelId: string | null;
 	platform: Uppercase<PlatformType>;
-	accounts: Map<string, EnhancerAccount>;
-	badges: Map<string, EnhancerBadge>;
+	epoch: string;
+	seq: number;
+	snapshot: AggregateSnapshotFile;
+	accounts: Map<string, EnhancerAccount | null>;
+	badges: Map<string, EnhancerBadge | null>;
 }
 
-export interface AggregateSnapshot {
-	snapshotId: string;
-	cursor: string;
-	pages: Map<number, EnhancerAggregateSnapshotEvent>;
-	lastPage?: number;
+export interface AggregateSeed {
+	topic: EnhancerAggregateTopic;
+	hash: string;
+	seq: number;
+	bytes?: string;
+	accounts: AggregateAccountEntry[];
+	badges: AggregateBadgeEntry[];
+}
+
+export interface StoredAggregateMeta {
+	topic: EnhancerAggregateTopic;
+	formatVersion: number;
+	scope: AggregateScope;
+	hash: string;
+	seq: number;
+	epoch: string;
+	channelId: string | null;
+	platform: Uppercase<PlatformType>;
+	lastUsedAt: number;
+}
+
+export interface StoredAggregateSnapshot extends StoredAggregateMeta {
+	bytes: Uint8Array;
 }
 
 export interface SubscriptionState {
@@ -50,20 +73,25 @@ export interface SubscriptionState {
 	rejected: boolean;
 	requested: boolean;
 	active: boolean;
-	aggregate?: AggregateMaps | null;
+	aggregate?: AggregateData | null;
 	cursor?: string;
 	replaying: boolean;
 	replayComplete: boolean;
-	seedCollecting: boolean;
+	restoring: boolean;
 	transitioning: boolean;
+	snapshotChanged: boolean;
+	forceFresh: boolean;
+	generation: number;
+	loading?: Promise<void>;
 	eventBuffer: EnhancerBufferedEvent[];
-	snapshot?: AggregateSnapshot;
 	confirmationRetry: ReturnType<typeof setTimeout> | null;
 	confirmationWaiters: Set<() => void>;
+	retryTimer: ReturnType<typeof setTimeout> | null;
+	retryAttempt: number;
 	syncWaiters: Set<() => void>;
 	seenCursors: Set<string>;
 	processing: Promise<void>;
-	bootstrapPromise?: Promise<CachedAggregateSeed | null>;
+	bootstrapPromise?: Promise<SubscriptionState | null>;
 	redirect?: SubscriptionState;
 }
 
@@ -75,19 +103,21 @@ export interface EnhancerApiClient {
 	topics: Set<EnhancerAggregateTopic>;
 	channelTopic?: EnhancerAggregateTopic;
 	generation: number;
+	sentHashes: Map<EnhancerAggregateTopic, string>;
+	awaitingScopes: Set<AggregateScope>;
 }
 
 export interface InitializeEnhancerApiPayload {
 	platform: PlatformType;
 	clientId: string;
-	seed?: CachedAggregateSeed;
+	knownHash?: string;
 }
 
 export interface JoinEnhancerChannelPayload {
 	platform: PlatformType;
 	externalId: string;
 	clientId: string;
-	seed?: CachedAggregateSeed;
+	knownHash?: string;
 }
 
 export interface GetEnhancerWatchTimePayload {
@@ -106,9 +136,17 @@ export interface EnhancerApiUpdatedPayload {
 	clientId: string;
 	scope: AggregateScope;
 	topic: EnhancerAggregateTopic;
-	aggregate: EnhancerChannelDto | null;
-	cursor: string;
+	seed: AggregateSeed | null;
 	replacementTopic?: EnhancerAggregateTopic;
+}
+
+export interface EnhancerApiPatchPayload {
+	platform: PlatformType;
+	clientId: string;
+	topic: EnhancerAggregateTopic;
+	seq: number;
+	accounts: AggregateAccountEntry[];
+	badges: AggregateBadgeEntry[];
 }
 
 export interface EnhancerApiMessagePayload {
@@ -116,9 +154,4 @@ export interface EnhancerApiMessagePayload {
 	clientId: string;
 	topic: EnhancerAggregateTopic;
 	message: EnhancerMessageEvent;
-}
-
-export interface EnhancerApiSeedRequestPayload {
-	requestId: string;
-	topic: EnhancerAggregateTopic;
 }

@@ -7,7 +7,7 @@ export default class AdditionalFontsModule extends KickModule {
 
 	readonly config: KickModuleConfig = {
 		name: "additional-fonts",
-		enabled: () => this.settings().loadAdditionalFonts,
+		enabled: () => this.settings().loadAdditionalFonts && this.settings().chatNicknameCustomizationEnabled,
 		appliers: [
 			{
 				type: "selector",

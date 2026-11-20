@@ -44,18 +44,8 @@ export class AdditionalFontsHelper {
 	}
 
 	getUsedFonts(): string[] {
-		const allAccounts = [
-			...(this.enhancerApi.getGlobalChannel()?.accounts ?? []),
-			...(this.enhancerApi.getCurrentChannel()?.accounts ?? []),
-		];
-
 		const uniqueFonts = new Map<string, string>();
-		for (const account of allAccounts) {
-			const font = account.customFont;
-			if (!font) {
-				continue;
-			}
-
+		for (const font of this.enhancerApi.getCustomFonts()) {
 			const normalized = font.toLowerCase().trim();
 			if (!uniqueFonts.has(normalized)) {
 				uniqueFonts.set(normalized, font);

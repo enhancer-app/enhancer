@@ -14,6 +14,7 @@ export type KickSettings = {
 	chatNicknameCustomizationEnabled: boolean;
 	loadAdditionalFonts: boolean;
 	chatMessageMenuEnabled: boolean;
+	chatMessageGroupingEnabled: boolean;
 	quickAccessLinks: QuickAccessLink[];
 	streamLatencyEnabled: boolean;
 	streamLatencyReducerEnabled: boolean;

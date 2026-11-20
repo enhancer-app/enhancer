@@ -14,11 +14,14 @@ export type TwitchSettings = {
 	chatMessageMenuEnabled: boolean;
 	chatMessageMenuUseAddInsteadOfSet: boolean;
 	chatMentionSoundEnabled: boolean;
+	chatMessageGroupingEnabled: boolean;
+	emoteBarEnabled: boolean;
 	/**
 	 * @deprecated Use chatMentionSoundFile instead. This field is kept for backward compatibility only.
 	 */
 	chatMentionSoundSource: string;
 	chatMentionSoundFile: string;
+	chatMentionSoundFileName: string;
 	chatMentionSoundVolume: number;
 	quickAccessLinks: QuickAccessLink[];
 	pinnedStreamers: string[];
@@ -31,7 +34,6 @@ export type TwitchSettings = {
 	realVideoTimeEnabled: boolean;
 	realVideoTimeFormat12h: boolean;
 	realVideoTimeDateMode: RealVideoTimeDateMode;
-	pinnedStreamersEnabled: boolean;
 	xayoWatchtimeEnabled: boolean;
 	xayoWatchtimePeriod: XayoWatchtimePeriod;
 	channelSection: boolean;

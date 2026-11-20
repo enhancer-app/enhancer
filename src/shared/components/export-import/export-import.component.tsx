@@ -1,6 +1,8 @@
 import { Logger } from "$shared/logger/logger.ts";
+import { fetchAllPages, importInBatches, isPlainObject } from "$shared/utils/backup.utils.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import type { PlatformType, WatchtimeRecord } from "$types/shared/worker/worker.types.ts";
 import type { Emitter } from "nanoevents";
@@ -128,6 +130,7 @@ export interface ExportImportMetadata {
 export interface ExportImportData {
 	meta: ExportImportMetadata;
 	settings: Record<string, unknown>;
+	globalSettings?: Partial<GlobalSettings>;
 	watchtime: WatchtimeRecord[];
 }
 
@@ -155,33 +158,9 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 		setStatus({ message, type });
 	};
 
-	const fetchAllWatchtime = async (): Promise<WatchtimeRecord[]> => {
-		const allData: WatchtimeRecord[] = [];
-		let currentPageNum = 1;
-		let hasMore = true;
+	const fetchAllWatchtime = (): Promise<WatchtimeRecord[]> => {
 		const pageSize = 1000;
-
-		try {
-			while (hasMore) {
-				const response = await workerService.send("getPaginatedWatchtime", {
-					platform,
-					page: currentPageNum,
-					pageSize,
-				});
-
-				if (response && response.data.length > 0) {
-					allData.push(...response.data);
-					hasMore = response.data.length === pageSize;
-					currentPageNum++;
-				} else {
-					hasMore = false;
-				}
-			}
-			return allData;
-		} catch (error) {
-			logger.error("Error fetching all watchtime data:", error);
-			return allData;
-		}
+		return fetchAllPages((page) => workerService.send("getPaginatedWatchtime", { platform, page, pageSize }), pageSize);
 	};
 
 	const exportData = async () => {
@@ -189,6 +168,8 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 		setStatus(null);
 		try {
 			const settings = await workerService.send("getSettings", { platform });
+			const globalSettings = await workerService.send("getGlobalSettings", {});
+			if (!settings || !globalSettings) throw new Error("Settings unavailable: the background worker did not respond");
 			const watchtime = await fetchAllWatchtime();
 
 			const backup: ExportImportData = {
@@ -197,7 +178,8 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 					platform,
 					exportDate: new Date().toISOString(),
 				},
-				settings: settings || {},
+				settings,
+				globalSettings,
 				watchtime,
 			};
 
@@ -248,7 +230,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			}
 
 			// Validate structure
-			if (!data.settings && !data.watchtime) {
+			if (!data.settings && !data.globalSettings && !data.watchtime) {
 				showStatus("Invalid backup file: no data found", "error");
 				return;
 			}
@@ -257,10 +239,19 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			let importedWatchtime = 0;
 			let failedWatchtime = 0;
 
+			if (data.settings !== undefined && !isPlainObject(data.settings)) {
+				showStatus("Invalid backup file: settings are malformed", "error");
+				return;
+			}
+
 			// Import settings
 			if (data.settings) {
 				try {
-					await workerService.send("updateSettings", { platform, settings: data.settings as PlatformSettings });
+					const response = await workerService.send("updateSettings", {
+						platform,
+						settings: data.settings as PlatformSettings,
+					});
+					if (!response) throw new Error("The background worker did not respond");
 					importedSettings = Object.keys(data.settings).length;
 					emitter.emit("extension:settings-refresh");
 				} catch (error) {
@@ -270,31 +261,39 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 				}
 			}
 
-			// Import watchtime records concurrently with error handling
+			if (data.globalSettings && typeof data.globalSettings === "object") {
+				try {
+					const { crossPlatformFollowsSyncEnabled, ...changes } = data.globalSettings;
+					// Sharing follows needs the consent dialog, so a backup can only turn it off.
+					const settings: Partial<GlobalSettings> =
+						crossPlatformFollowsSyncEnabled === false ? { ...changes, crossPlatformFollowsSyncEnabled } : changes;
+					const response = await workerService.send("updateGlobalSettings", { settings });
+					if (!response) throw new Error("The background worker did not respond");
+					importedSettings += Object.keys(settings).length;
+				} catch (error) {
+					logger.error("Failed to import shared settings:", error);
+					showStatus("Failed to import shared settings", "error");
+					return;
+				}
+			}
+
+			// Import watchtime records in batches with error handling
 			if (data.watchtime && Array.isArray(data.watchtime)) {
 				const recordsToImport = data.watchtime.filter((record) => record.platform === platform);
 
-				const results = await Promise.allSettled(
-					recordsToImport.map((record) =>
-						workerService.send("importWatchtime", {
-							platform,
-							username: record.username,
-							time: record.time,
-							firstUpdate: record.firstUpdate,
-							lastUpdate: record.lastUpdate,
-						}),
-					),
-				);
-
-				// Count successes and failures
-				results.forEach((result, index) => {
-					if (result.status === "fulfilled") {
-						importedWatchtime++;
-					} else {
-						failedWatchtime++;
-						logger.error(`Failed to import record for ${recordsToImport[index].username}:`, result.reason);
-					}
+				const result = await importInBatches(recordsToImport, 50, async (record) => {
+					const response = await workerService.send("importWatchtime", {
+						platform,
+						username: record.username,
+						time: record.time,
+						firstUpdate: record.firstUpdate,
+						lastUpdate: record.lastUpdate,
+					});
+					if (!response) logger.error(`Failed to import record for ${record.username}: no answer`);
+					return response;
 				});
+				importedWatchtime = result.imported;
+				failedWatchtime = result.failed;
 			}
 
 			// Emit watchtime refresh event if any watchtime records were imported
@@ -315,7 +314,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			}
 
 			const message = parts.length > 0 ? `Imported ${parts.join(", ")}` : "No data imported";
-			const type = failedWatchtime > 0 && importedWatchtime === 0 ? "error" : "success";
+			const type = failedWatchtime > 0 ? "error" : "success";
 			showStatus(message, type);
 		} catch (error) {
 			logger.error("Import error:", error);
@@ -339,7 +338,7 @@ export function ExportImportComponent({ platform, workerService, emitter }: Expo
 			<InfoSection>
 				<InfoTitle>Data Backup</InfoTitle>
 				<InfoDescription>
-					This backup handles data for <PlatformTag>{platform}</PlatformTag> only.
+					This backup handles data for <PlatformTag>{platform}</PlatformTag> and the settings shared by Twitch and Kick.
 				</InfoDescription>
 			</InfoSection>
 
