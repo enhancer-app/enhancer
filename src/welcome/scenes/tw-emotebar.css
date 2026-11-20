@@ -1,0 +1,125 @@
+/* Chat column with the Canary emote bar (bar values from emote-bar.component.tsx) */
+
+.twe {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	background: #18181b;
+	color: #efeff1;
+	font-family: Inter, Roobert, "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-size: 13px;
+	line-height: 20px;
+}
+
+.twe-log {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	justify-content: flex-end;
+	min-height: 0;
+	padding-bottom: 8px;
+	overflow: hidden;
+}
+
+.twe-line {
+	flex: none;
+	padding: 4px 16px;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.twe-name {
+	font-weight: 700;
+}
+
+.twe-line .twe-emote {
+	display: inline-block;
+	margin: -4px 0;
+	vertical-align: middle;
+}
+
+.twe-input-area {
+	flex: none;
+	padding: 0 10px 10px;
+}
+
+.twe-bar {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 2px;
+	box-sizing: content-box;
+	height: 30px;
+	padding-top: 6px;
+	margin-bottom: 6px;
+	overflow: hidden;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.twe-bar-button {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	height: 30px;
+	padding: 0 2px;
+	border-radius: 4px;
+	background: transparent;
+	transition:
+		background-color 0.15s ease,
+		box-shadow 0.15s ease;
+}
+
+.twe-bar-button.is-active {
+	background: rgba(83, 83, 95, 0.55);
+}
+
+.twe-bar-button .twe-emote {
+	display: block;
+}
+
+.twe-input {
+	display: flex;
+	align-items: center;
+	box-sizing: border-box;
+	height: 36px;
+	padding: 0 12px;
+	border: 1px solid #53535f;
+	border-radius: 5px;
+}
+
+.twe-input-placeholder,
+.twe-input-text {
+	flex: 1;
+	white-space: pre;
+}
+
+.twe-input-placeholder {
+	color: #bababb;
+}
+
+.twe-buttons {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 8px;
+}
+
+.twe-chat {
+	display: grid;
+	place-items: center;
+	width: 52px;
+	height: 30px;
+	border-radius: 15px;
+	background: #9147ff;
+	color: #fff;
+	font-size: 13px;
+	font-weight: 600;
+	transition: background-color 0.15s;
+}
+
+.twe-chat.is-hover {
+	background: #772ce8;
+}

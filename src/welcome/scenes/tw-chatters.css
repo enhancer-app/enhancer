@@ -1,0 +1,172 @@
+/* Stream info row with the Canary chatters counter; everything else is a placeholder */
+
+.twc {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	background: #0e0e10;
+	color: #efeff1;
+	font-family: "Inter Variable", Inter, Roobert, "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-size: 15px;
+	line-height: 20px;
+}
+
+.twc svg :is(path, circle):not([fill]) {
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.6;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.twc-player {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	height: 40px;
+	border-radius: 0;
+	background: rgba(255, 255, 255, 0.04);
+}
+
+.twc-avatar {
+	position: absolute;
+	left: 20px;
+	top: 62px;
+	width: 56px;
+	height: 56px;
+}
+
+.twc-avatar-pic {
+	display: block;
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	box-shadow: 0 0 0 2px #eb0400;
+}
+
+.twc-live {
+	position: absolute;
+	left: 50%;
+	bottom: -8px;
+	padding: 0 4px;
+	border: 2px solid #0e0e10;
+	border-radius: 5px;
+	background: #eb0400;
+	color: #fff;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 14px;
+	transform: translateX(-50%);
+}
+
+.twc-info {
+	position: absolute;
+	left: 96px;
+	top: 58px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+}
+
+.twc-name {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+	line-height: 22px;
+}
+
+.twc-title {
+	margin: 0;
+	color: #dedee3;
+	font-size: 14px;
+	line-height: 18px;
+}
+
+.twc-meta {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 2px;
+}
+
+.twc-category {
+	margin-right: 4px;
+	color: #bf94ff;
+	font-size: 14px;
+	line-height: 18px;
+}
+
+.twc-stats {
+	position: absolute;
+	right: 20px;
+	top: 84px;
+}
+
+.twc-viewers {
+	display: flex;
+	align-items: center;
+	margin: 0;
+	color: #ff8280;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.twc-viewers strong {
+	font-weight: inherit;
+}
+
+.twc-viewers svg {
+	margin-right: 3px;
+}
+
+.twc-chatters {
+	position: relative;
+	display: inline-block;
+}
+
+.twc-count {
+	margin-left: 5px;
+	white-space: nowrap;
+}
+
+.twc-chatters.is-hover .twc-count {
+	opacity: 0.75;
+}
+
+/* Shown above so the tooltip never covers the viewer count it explains. */
+.twc-tip {
+	position: absolute;
+	right: -6px;
+	bottom: calc(100% + 10px);
+	z-index: 2;
+	width: 340px;
+	padding: 12px 16px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	background: rgba(25, 25, 28, 0.92);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+	backdrop-filter: blur(8px);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 400;
+	line-height: 1.4;
+	animation: twc-tip-in 0.2s ease-out;
+}
+
+.twc-tip i {
+	position: absolute;
+	right: 32px;
+	top: 100%;
+	border-top: 6px solid rgba(25, 25, 28, 0.98);
+	border-right: 6px solid transparent;
+	border-left: 6px solid transparent;
+}
+
+@keyframes twc-tip-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+}

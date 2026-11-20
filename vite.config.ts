@@ -59,6 +59,7 @@ export default defineConfig({
 				"worker.background": "src/shared/worker/worker.background.ts",
 				home: "home.html",
 				account: "account.html",
+				welcome: "welcome.html",
 			},
 		},
 	},
