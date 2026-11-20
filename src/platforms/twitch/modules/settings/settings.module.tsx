@@ -16,6 +16,7 @@ import {
 	channelSectionSetting,
 	cosmeticsSettings,
 	chatImagesSettings,
+	chatMessageGroupingSetting,
 	followsSettings,
 	latencySettings,
 	pinnedStreamersSetting,
@@ -142,6 +143,7 @@ export default class SettingsModule extends TwitchModule {
 				options: WATCHTIME_PERIOD_OPTIONS,
 			},
 			...chatImagesSettings(CATEGORY.CHAT),
+			chatMessageGroupingSetting(CATEGORY.CHAT),
 			{
 				id: "chatMessageMenuEnabled",
 				title: "Message menu",

@@ -1,0 +1,4 @@
+# tidy (https://github.com/enhancer-app/tidy) triages issues, proposes fixes and reviews pull requests here.
+review:
+  # Run on the pull request's code in a container without secrets; the reviewer reads the output.
+  checks: ["bun install --frozen-lockfile", "bun run check", "bun run typecheck", "bun test", "bun run build"]
