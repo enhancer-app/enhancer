@@ -17,6 +17,15 @@ test("account actions are refused from Twitch and Kick pages and accepted from e
 	expect(isActionAllowedFrom("loginEnhancerAccount", "", "")).toBe(false);
 });
 
+test("the Kick session is accepted only from kick.com tabs", () => {
+	for (const url of ["https://kick.com/xqc", "https://dashboard.kick.com/"]) {
+		expect(isActionAllowedFrom("syncKickSession", url, EXTENSION)).toBe(true);
+	}
+	for (const url of ["https://www.twitch.tv/xqc", "https://evilkick.com/", "http://kick.com/", undefined]) {
+		expect(isActionAllowedFrom("syncKickSession", url, EXTENSION)).toBe(false);
+	}
+});
+
 const badge = (overrides: Partial<EnhancerViewerBadge>): EnhancerViewerBadge => ({
 	assignmentId: "a1",
 	accountId: "acc-1",

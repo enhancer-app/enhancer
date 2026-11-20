@@ -24,6 +24,7 @@ const KICK_FOLLOWS_RETRY_MS = 5 * 60_000;
 export class CrossPlatformFollowsRefresher {
 	private readonly inFlight = new Map<PlatformType, Promise<void>>();
 	private readonly attemptedAt = new Map<PlatformType, number>();
+	private readonly generations = new Map<PlatformType, number>();
 	private kickFollowsAttemptAt = 0;
 
 	constructor(
@@ -122,6 +123,10 @@ export class CrossPlatformFollowsRefresher {
 		this.startRefresh(platform);
 	}
 
+	invalidate(platform: PlatformType): void {
+		this.generations.set(platform, this.generation(platform) + 1);
+	}
+
 	resetKickFollowsRetry(): void {
 		this.kickFollowsAttemptAt = 0;
 	}
@@ -161,7 +166,11 @@ export class CrossPlatformFollowsRefresher {
 		return this.vault.hasCredential("kick");
 	}
 
-	private async syncKickFollows(): Promise<void> {
+	private generation(platform: PlatformType): number {
+		return this.generations.get(platform) ?? 0;
+	}
+
+	private async syncKickFollows(generation: number): Promise<void> {
 		this.kickFollowsAttemptAt = Date.now();
 		const result = await fetchKickFollows(this.vault);
 		if (!result.ok) {
@@ -169,6 +178,7 @@ export class CrossPlatformFollowsRefresher {
 			return;
 		}
 		const current = await this.database.getFollows("kick");
+		if (this.generation("kick") !== generation) return;
 		await this.database.putFollows({
 			platform: "kick",
 			channels: result.channels,
@@ -181,8 +191,9 @@ export class CrossPlatformFollowsRefresher {
 	}
 
 	private async refresh(platform: PlatformType): Promise<void> {
+		const generation = this.generation(platform);
 		if (platform === "kick" && (await this.isKickFollowsSyncDue(await this.database.getFollows(platform)))) {
-			await this.syncKickFollows();
+			await this.syncKickFollows(generation);
 		}
 		const record = await this.database.getFollows(platform);
 		if (!record) return;
@@ -195,7 +206,7 @@ export class CrossPlatformFollowsRefresher {
 
 		if (!result.ok) {
 			this.logger.warn(`Status refresh for ${platform} failed: ${result.problem}`);
-			await this.updateRecordStatus(platform, record.statusCheckedAt, result.problem);
+			await this.updateRecordStatus(platform, generation, record.statusCheckedAt, result.problem);
 			return;
 		}
 
@@ -222,6 +233,7 @@ export class CrossPlatformFollowsRefresher {
 			if (!next.has(login) && followed.has(login)) next.set(login, status);
 		}
 
+		if (this.generation(platform) !== generation) return;
 		await this.database.replaceStatuses(platform, [...next.values()]);
 		const newFollows: FollowedChannel[] =
 			platform === "kick"
@@ -233,17 +245,18 @@ export class CrossPlatformFollowsRefresher {
 							avatarUrl: status.avatarUrl,
 						}))
 				: [];
-		await this.updateRecordStatus(platform, now, result.partial ? "request-failed" : null, newFollows);
+		await this.updateRecordStatus(platform, generation, now, result.partial ? "request-failed" : null, newFollows);
 	}
 
 	private async updateRecordStatus(
 		platform: PlatformType,
+		generation: number,
 		checkedAt: number | null,
 		problem: CrossPlatformFollowsSnapshot["problem"],
 		newFollows: FollowedChannel[] = [],
 	): Promise<void> {
 		const current = await this.database.getFollows(platform);
-		if (!current) return;
+		if (!current || this.generation(platform) !== generation) return;
 		if (newFollows.length > 0) this.logger.debug(`Found ${newFollows.length} new ${platform} follows`);
 		const now = Date.now();
 		const problemSince = problem ? (current.statusProblem ? (current.statusProblemSince ?? now) : now) : null;

@@ -6,6 +6,7 @@ import ChannelSectionModule from "$kick/modules/channel-section/channel-section.
 import ChatAttachmentsModule from "$kick/modules/chat-attachments/chat-attachments.module.ts";
 import ChatBadgesModule from "$kick/modules/chat-badges/chat-badges.module.tsx";
 import ChatFixAutoScrollModule from "$kick/modules/chat-fix-auto-scroll/chat-fix-auto-scroll.module.tsx";
+import ChatMessageGroupingModule from "$kick/modules/chat-message-grouping/chat-message-grouping.module.ts";
 import ChatHighlightUserModule from "$kick/modules/chat-highlight-user/chat-highlight-user.module.tsx";
 import ChatMessagePopupModule from "$kick/modules/chat-message-popup/chat-message-popup.module.tsx";
 import ChatNicknameCustomizationModule from "$kick/modules/chat-nickname-customization/chat-nickname-customization.module.ts";
@@ -70,6 +71,7 @@ export default class KickPlatform extends Platform<KickModule, KickEvents, KickS
 			// new ChatMessageMenuModule(...dependencies),
 			new AdditionalFontsModule(...dependencies),
 			new ChatFixAutoScrollModule(...dependencies),
+			new ChatMessageGroupingModule(...dependencies),
 			new CrossPlatformFollowsSyncModule(...dependencies),
 			new CrossPlatformFollowsModule(...dependencies),
 			new SidebarChannelHoverModule(...dependencies),

@@ -16,7 +16,7 @@ export class UpdateSettingsHandler extends MessageHandler {
 	}
 
 	async handle(payload: UpdateSettingsPayload): Promise<UpdateSettingsResponse> {
-		if (!payload || !payload.platform || !payload.settings) {
+		if (!payload || !payload.platform || !(isRecord(payload.settings) || isRecord(payload.changes))) {
 			throw new Error("Invalid payload for updateSettings action. 'platform' and 'settings' are required.");
 		}
 
@@ -25,11 +25,13 @@ export class UpdateSettingsHandler extends MessageHandler {
 		}
 
 		this.logger.debug(`Updating settings for platform: ${payload.platform}`);
-		await this.database.updateSettings(payload.platform, payload.settings);
+		const settings = payload.settings
+			? await this.database.updateSettings(payload.platform, payload.settings)
+			: await this.database.patchSettings(payload.platform, payload.changes);
 
 		const broadcast: WorkerBroadcast = {
 			type: "settings-updated",
-			payload: { platform: payload.platform, settings: payload.settings },
+			payload: { platform: payload.platform, settings },
 		};
 		const tabs = await chrome.tabs.query({});
 		for (const tab of tabs) {
@@ -38,6 +40,10 @@ export class UpdateSettingsHandler extends MessageHandler {
 			}
 		}
 
-		return { success: true };
+		return { success: true, settings };
 	}
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -15,6 +15,7 @@ export class SettingsDatabase extends Database {
 	private cache = new Map<PlatformType, PlatformSettings>();
 	private globalCache: GlobalSettings | null = null;
 	private indexedDbAvailable = true;
+	private writes: Promise<unknown> = Promise.resolve();
 
 	constructor(private readonly defaults: Map<PlatformType, PlatformSettings>) {
 		super("settings-db");
@@ -62,7 +63,17 @@ export class SettingsDatabase extends Database {
 		return settings as T;
 	}
 
-	async updateSettings(platform: PlatformType, settings: PlatformSettings): Promise<void> {
+	updateSettings(platform: PlatformType, settings: PlatformSettings): Promise<PlatformSettings> {
+		return this.serialize(() => this.writeSettings(platform, { ...this.getDefaultSettings(platform), ...settings }));
+	}
+
+	patchSettings(platform: PlatformType, changes: Partial<PlatformSettings>): Promise<PlatformSettings> {
+		return this.serialize(async () =>
+			this.writeSettings(platform, { ...(await this.getSettings(platform)), ...changes }),
+		);
+	}
+
+	private async writeSettings(platform: PlatformType, settings: PlatformSettings): Promise<PlatformSettings> {
 		const now = Date.now();
 		const settingsRecord: SettingsRecord = {
 			id: platform,
@@ -79,6 +90,7 @@ export class SettingsDatabase extends Database {
 
 		this.cache.set(platform, settings);
 		this.logger.debug(`Settings updated for platform: ${platform}`);
+		return settings;
 	}
 
 	async getGlobalSettings(): Promise<GlobalSettings> {
@@ -96,11 +108,19 @@ export class SettingsDatabase extends Database {
 		return settings;
 	}
 
-	async updateGlobalSettings(changes: Partial<GlobalSettings>): Promise<GlobalSettings> {
-		const settings = { ...(await this.getGlobalSettings()), ...sanitizeGlobalSettings(changes) };
-		await chrome.storage.local.set({ [GLOBAL_STORAGE_KEY]: settings });
-		this.globalCache = settings;
-		return settings;
+	updateGlobalSettings(changes: Partial<GlobalSettings>): Promise<GlobalSettings> {
+		return this.serialize(async () => {
+			const settings = { ...(await this.getGlobalSettings()), ...sanitizeGlobalSettings(changes) };
+			await chrome.storage.local.set({ [GLOBAL_STORAGE_KEY]: settings });
+			this.globalCache = settings;
+			return settings;
+		});
+	}
+
+	private serialize<T>(task: () => Promise<T>): Promise<T> {
+		const run = this.writes.then(task, task);
+		this.writes = run.catch(() => {});
+		return run;
 	}
 
 	private async getLegacyGlobalSettings(): Promise<Partial<GlobalSettings>> {

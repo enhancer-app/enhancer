@@ -12,6 +12,7 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	chatMessageMenuEnabled: true,
 	chatMessageMenuUseAddInsteadOfSet: false,
 	chatMentionSoundEnabled: false,
+	chatMessageGroupingEnabled: false,
 	emoteBarEnabled: false,
 	chatMentionSoundSource: "",
 	chatMentionSoundFile: "",

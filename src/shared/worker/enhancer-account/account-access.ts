@@ -15,11 +15,18 @@ const EXTENSION_PAGE_ACTIONS: ReadonlySet<WorkerAction> = new Set<WorkerAction>(
 	"getEnhancerAccountCache",
 ]);
 
+function isKickPage(senderUrl: string | undefined): boolean {
+	if (typeof senderUrl !== "string" || !URL.canParse(senderUrl)) return false;
+	const { protocol, hostname } = new URL(senderUrl);
+	return protocol === "https:" && (hostname === "kick.com" || hostname.endsWith(".kick.com"));
+}
+
 export function isActionAllowedFrom(
 	action: WorkerAction,
 	senderUrl: string | undefined,
 	extensionUrl: string,
 ): boolean {
+	if (action === "syncKickSession") return isKickPage(senderUrl);
 	if (!EXTENSION_PAGE_ACTIONS.has(action)) return true;
 	return typeof senderUrl === "string" && extensionUrl.length > 0 && senderUrl.startsWith(extensionUrl);
 }
