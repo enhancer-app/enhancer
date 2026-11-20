@@ -51,26 +51,37 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 		eventPrefix: string,
 		otherKeys: (keyof PanelSettings<TSettings>)[] = [],
 	): Promise<void> {
+		if (this.settingsSignal) {
+			this.settingsSignal.value = settings;
+		}
+		const keys = [updatedKey, ...otherKeys];
+		const globalChanges: Record<string, unknown> = {};
+		const platformChanges: Record<string, unknown> = {};
+		for (const key of keys) {
+			if (isGlobalSettingKey(key)) globalChanges[key] = settings[key];
+			else platformChanges[key as string] = settings[key];
+		}
 		try {
-			if (isGlobalSettingKey(updatedKey)) {
-				await this.settingsCache.updateGlobal({ [updatedKey]: settings[updatedKey] });
-				eventPrefix = "global:settings:";
-			} else {
-				const platformSettings: Record<string, unknown> = { ...settings };
-				for (const key of Object.keys(platformSettings)) {
-					if (isGlobalSettingKey(key)) delete platformSettings[key];
-				}
-				await this.settingsCache.update(platformSettings as TSettings);
+			if (Object.keys(globalChanges).length > 0) {
+				await this.settingsCache.updateGlobal(globalChanges as Partial<GlobalSettings>);
 			}
-			if (this.settingsSignal) {
-				this.settingsSignal.value = settings;
+			if (Object.keys(platformChanges).length > 0) {
+				await this.settingsCache.updatePatch(platformChanges as Partial<TSettings>);
 			}
-			for (const key of [updatedKey, ...otherKeys]) {
+			if (isGlobalSettingKey(updatedKey)) eventPrefix = "global:settings:";
+			for (const key of keys) {
 				this.emitter.emit(`${String(eventPrefix)}${String(key)}`, settings[key]);
 			}
 			this.logger.debug(`Settings changed "${String(updatedKey)}" to`, settings[updatedKey]);
 		} catch (error) {
 			this.logger.error("Failed to save settings:", error);
+			if (this.settingsSignal) {
+				this.settingsSignal.value = {
+					...this.settingsSignal.value,
+					...this.settingsCache.get(),
+					...this.settingsCache.getGlobal(),
+				};
+			}
 		}
 	}
 

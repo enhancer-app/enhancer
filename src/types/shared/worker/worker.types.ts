@@ -132,17 +132,16 @@ export interface GetSettingsPayload {
 	platform: PlatformType;
 }
 
-export interface UpdateSettingsPayload {
-	platform: PlatformType;
-	settings: PlatformSettings;
-}
+export type UpdateSettingsPayload =
+	| { platform: PlatformType; settings: PlatformSettings; changes?: never }
+	| { platform: PlatformType; changes: Partial<PlatformSettings>; settings?: never };
 
 export interface UpdateGlobalSettingsPayload {
 	settings: Partial<GlobalSettings>;
 }
 
 export type GetSettingsResponse = PlatformSettings;
-export type UpdateSettingsResponse = { success: true };
+export type UpdateSettingsResponse = { success: true; settings: PlatformSettings };
 
 export interface WorkerApiActions {
 	getLogs: {
