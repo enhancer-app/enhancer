@@ -120,14 +120,25 @@ function IntroSlide({ onStart }: { onStart: () => void }) {
 					{copy.intro.start} →
 				</button>
 			</div>
-			<p className="ob-exit">
-				<span>{copy.intro.notInterested}</span>
-				<a href={links.twitch}>{copy.intro.openTwitch}</a>
-				<a href={links.kick}>{copy.intro.openKick}</a>
-				<button type="button" onClick={closePage}>
-					{copy.intro.close}
-				</button>
-			</p>
+			<div className="ob-exit">
+				<p>{copy.intro.notInterested}</p>
+				<div className="ob-exit-actions">
+					<a className="ob-exit-button" href={links.twitch}>
+						<span className="pf-dot pf-dot-twitch" aria-hidden="true" />
+						{copy.intro.openTwitch}
+					</a>
+					<a className="ob-exit-button" href={links.kick}>
+						<span className="pf-dot pf-dot-kick" aria-hidden="true" />
+						{copy.intro.openKick}
+					</a>
+					<button type="button" className="ob-exit-button" onClick={closePage}>
+						<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+							<path d="M6 6l12 12M18 6L6 18" />
+						</svg>
+						{copy.intro.close}
+					</button>
+				</div>
+			</div>
 		</>
 	);
 }
