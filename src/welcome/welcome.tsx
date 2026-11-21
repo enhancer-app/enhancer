@@ -372,8 +372,8 @@ function App() {
 			return { ...othersOff, crossPlatformFollowsSyncEnabled: true, [key]: true };
 		}
 		const keepsSync = others.some((item) => state[item.id]);
-		if (!value && key === "crossPlatformFollowsDisplayEnabled" && !keepsSync) {
-			return { crossPlatformFollowsSyncEnabled: false };
+		if (!value && !keepsSync) {
+			return { [key]: value, crossPlatformFollowsSyncEnabled: false };
 		}
 		return { [key]: value };
 	};
