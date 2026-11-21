@@ -100,6 +100,14 @@ function Check() {
 	);
 }
 
+function CloseIcon() {
+	return (
+		<svg className="ob-close-icon" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+			<path d="M6 6l12 12M18 6L6 18" />
+		</svg>
+	);
+}
+
 async function closePage() {
 	const tab = await chrome.tabs.getCurrent().catch(() => undefined);
 	if (tab?.id !== undefined) await chrome.tabs.remove(tab.id);
@@ -132,9 +140,7 @@ function IntroSlide({ onStart }: { onStart: () => void }) {
 						{copy.intro.openKick}
 					</a>
 					<button type="button" className="ob-exit-button" onClick={closePage}>
-						<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-							<path d="M6 6l12 12M18 6L6 18" />
-						</svg>
+						<CloseIcon />
 						{copy.intro.close}
 					</button>
 				</div>
@@ -246,6 +252,10 @@ function DoneSlide({ state, onGoTo }: { state: WelcomeFeatureState; onGoTo: (ind
 				<a className="button button-ghost" href={links.kick}>
 					{copy.done.openKick}
 				</a>
+				<button type="button" className="button button-ghost" onClick={closePage}>
+					<CloseIcon />
+					{copy.intro.close}
+				</button>
 			</div>
 		</>
 	);

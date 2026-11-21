@@ -553,8 +553,6 @@ body {
 	align-items: center;
 	gap: 14px;
 	margin-top: 8px;
-	padding-top: 28px;
-	border-top: 1px solid var(--line);
 }
 
 .ob-exit p {
@@ -600,7 +598,7 @@ body {
 	height: 8px;
 }
 
-.ob-exit-button svg {
+.ob-close-icon {
 	fill: none;
 	stroke: currentColor;
 	stroke-width: 2.4;
