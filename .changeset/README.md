@@ -19,6 +19,7 @@ Group consecutive chat messages from the same user.
 - `minor` for new features, `patch` for fixes and small improvements, `major` only for breaking changes.
 - Write one short sentence for users, in English, in the imperative mood. Prefix it with `Twitch:` or `Kick:`
   when it applies to only one platform.
+- A changeset added in a later PR can credit the original one: start the text with a `pr: 123` line.
 - The stable release bot runs `changeset version` on the changes ticked in the `release(stable)` PR. It bumps
   `package.json` to the highest level, writes the section in `CHANGELOG.md` and deletes the used changesets.
 

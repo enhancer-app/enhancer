@@ -12,7 +12,8 @@ const isChangesetFile = (path) => /^\.changeset\/[^/]+\.md$/.test(path) && path 
 const parseChangeset = (content) => {
 	const match = content.match(FRONTMATTER_PATTERN);
 	if (!match) return null;
-	return { level: match[1].match(RELEASE_PATTERN)?.[1] ?? null, summary: match[2].trim() };
+	const summary = match[2].trim().replace(/^pr:\s*#?\d+\s*\n/i, "").trim();
+	return { level: match[1].match(RELEASE_PATTERN)?.[1] ?? null, summary };
 };
 
 const highestLevel = (levels) =>
