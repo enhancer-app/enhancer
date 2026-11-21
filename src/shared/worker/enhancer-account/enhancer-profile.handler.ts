@@ -1,7 +1,9 @@
 import type { Logger } from "$shared/logger/logger.ts";
+import { isLegalDocumentList } from "$shared/worker/enhancer-account/enhancer-account.guards.ts";
 import type { EnhancerProfileService } from "$shared/worker/enhancer-account/enhancer-profile.service.ts";
 import { MessageHandler } from "$shared/worker/message.handler.ts";
 import type {
+	AcceptEnhancerLegalPayload,
 	ClearEnhancerNicknamePayload,
 	EnhancerProfileAction,
 	EnhancerProfilePayload,
@@ -38,6 +40,13 @@ export class EnhancerProfileHandler extends MessageHandler {
 				return this.service.getBadges();
 			case "getEnhancerBilling":
 				return this.service.getBilling();
+			case "acceptEnhancerLegal": {
+				const documents = (payload as AcceptEnhancerLegalPayload | undefined)?.documents;
+				if (!isLegalDocumentList(documents)) throw new Error("Legal documents payload is required");
+				return this.service.acceptLegal({
+					documents: documents.map(({ document, version }) => ({ document, version })),
+				});
+			}
 			case "saveEnhancerBadgeSlot": {
 				const slot = payload as SaveEnhancerBadgeSlotPayload | undefined;
 				if (!slot || !Array.isArray(slot.visibleAssignmentIds)) throw new Error("Badge slot payload is required");

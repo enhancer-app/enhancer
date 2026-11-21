@@ -1,6 +1,7 @@
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { EnhancerApiEnvironment } from "$types/shared/enhancer-environment.types.ts";
 import type {
+	AcceptLegalRequest,
 	EnhancerViewerBadges,
 	EnhancerViewerBilling,
 	EnhancerViewerSummary,
@@ -19,7 +20,8 @@ export type EnhancerProfileAction =
 	| "saveEnhancerChatStyle"
 	| "submitEnhancerNickname"
 	| "clearEnhancerNickname"
-	| "getEnhancerAccountCache";
+	| "getEnhancerAccountCache"
+	| "acceptEnhancerLegal";
 
 export type EnhancerProfileResult<T> =
 	| { kind: "ok"; data: T }
@@ -42,7 +44,12 @@ export type SubmitEnhancerNicknamePayload = SubmitNicknameRequest;
 
 export type ClearEnhancerNicknamePayload = { accountId: string };
 
+export type AcceptEnhancerLegalPayload = AcceptLegalRequest;
+
+export type AcceptEnhancerLegalResponse = EnhancerProfileResult<null>;
+
 export type EnhancerProfilePayload =
+	| AcceptEnhancerLegalPayload
 	| SaveEnhancerBadgeSlotPayload
 	| SaveEnhancerChatStylePayload
 	| SubmitEnhancerNicknamePayload

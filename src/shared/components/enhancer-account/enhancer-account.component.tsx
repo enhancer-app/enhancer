@@ -9,6 +9,7 @@ import {
 	toggleSlotBadge,
 } from "$shared/enhancer-account/badge-slots.ts";
 import { ChatStyleCard } from "$shared/components/enhancer-account/chat-style.component.tsx";
+import { LegalAcceptanceScreen } from "$shared/components/enhancer-account/legal-acceptance.component.tsx";
 import { ENHANCER_ENDPOINTS } from "$shared/enhancer-environment.ts";
 import { getEnhancerAccountStore } from "$shared/enhancer-account/enhancer-account.store.ts";
 import { pickBadgeImage } from "$shared/utils/badge-image.utils.ts";
@@ -678,6 +679,19 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 
 	if (!account.loggedIn) {
 		return <LoginScreen logoUrl={logoUrl} busy={busy} error={error} onLogin={login} />;
+	}
+
+	if (store.legalPending.value.length > 0) {
+		return (
+			<LegalAcceptanceScreen
+				logoUrl={logoUrl}
+				pending={store.legalPending.value}
+				dashboardUrl={ENHANCER_ENDPOINTS[account.environment].dashboard}
+				busy={busy}
+				onAccept={() => store.acceptLegal()}
+				onLogout={logout}
+			/>
+		);
 	}
 
 	const user = profile?.user;

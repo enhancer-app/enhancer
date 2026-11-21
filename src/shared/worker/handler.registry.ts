@@ -141,6 +141,7 @@ export class HandlerRegistry {
 			"submitEnhancerNickname",
 			"clearEnhancerNickname",
 			"getEnhancerAccountCache",
+			"acceptEnhancerLegal",
 		] as const) {
 			this.handlers.set(action, new EnhancerProfileHandler(this.logger, this.enhancerProfileService, action));
 		}

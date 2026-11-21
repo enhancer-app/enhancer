@@ -1,6 +1,7 @@
 import type { Logger } from "$shared/logger/logger.ts";
 import {
 	isEnhancerApiError,
+	isLegalAcceptResponse,
 	isViewerBadges,
 	isViewerBilling,
 	isViewerSummary,
@@ -8,11 +9,13 @@ import {
 import { EnhancerAccountCache } from "$shared/worker/enhancer-account/enhancer-account.cache.ts";
 import type { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
 import type {
+	AcceptLegalRequest,
 	SaveBadgeSlotRequest,
 	SaveChatStyleRequest,
 	SubmitNicknameRequest,
 } from "$types/apis/enhancer-account.apis.ts";
 import type {
+	AcceptEnhancerLegalResponse,
 	EnhancerAccountSnapshot,
 	EnhancerProfileResult,
 	GetEnhancerBadgesResponse,
@@ -59,6 +62,14 @@ export class EnhancerProfileService {
 		);
 	}
 
+	async acceptLegal(request: AcceptLegalRequest): Promise<AcceptEnhancerLegalResponse> {
+		const result = await this.request("/v1/me/legal/accept", this.json("POST", request), (body) =>
+			isLegalAcceptResponse(body) ? null : undefined,
+		);
+		if (result.kind === "ok") await this.getProfile();
+		return result;
+	}
+
 	getBilling(): Promise<GetEnhancerBillingResponse> {
 		return this.billing("/v1/me/billing", { method: "GET" });
 	}
@@ -91,7 +102,7 @@ export class EnhancerProfileService {
 		if (owner) await this.cache.write(owner, patch(result.data));
 	}
 
-	private json(method: "PUT", body: unknown): RequestInit {
+	private json(method: "PUT" | "POST", body: unknown): RequestInit {
 		return { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
 	}
 
