@@ -33,8 +33,16 @@ for COMMIT in $(git rev-list "$MASTER..$STABLE"); do
 
 	SUBJECT=$(git log -1 --format=%s "$COMMIT")
 	if [[ "$SUBJECT" =~ ^release\(stable\):\ v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-		[ "$(git diff --numstat "$COMMIT^" "$COMMIT")" = "$(printf '1\t1\tpackage.json')" ] || fail "Version bump $SHORT changes more than one line."
-		LINES=$(git diff -U0 --no-color "$COMMIT^" "$COMMIT" | grep -E '^[-+][^-+]' || true)
+		while IFS=$'\t' read -r ADDED DELETED FILE; do
+			case "$FILE" in
+				package.json) [ "$ADDED $DELETED" = "1 1" ] || fail "Version bump $SHORT changes more than one line of package.json." ;;
+				CHANGELOG.md) [ "$DELETED" = 0 ] || fail "Version bump $SHORT removes lines from CHANGELOG.md." ;;
+				.changeset/README.md) fail "Version bump $SHORT changes $FILE." ;;
+				.changeset/*.md) { [ "$ADDED" = 0 ] && ! git cat-file -e "$COMMIT:$FILE" 2>/dev/null; } || fail "Version bump $SHORT edits $FILE instead of using it up." ;;
+				*) fail "Version bump $SHORT changes $FILE." ;;
+			esac
+		done < <(git diff --numstat --no-renames "$COMMIT^" "$COMMIT")
+		LINES=$(git diff -U0 --no-color "$COMMIT^" "$COMMIT" -- package.json | grep -E '^[-+][^-+]' || true)
 		[ "$(grep -cE "$VERSION_LINE" <<< "$LINES")" = 2 ] || fail "Version bump $SHORT changes more than the version."
 		continue
 	fi

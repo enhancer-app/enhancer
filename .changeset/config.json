@@ -1,0 +1,8 @@
+{
+	"$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
+	"changelog": ["./changelog.mjs", { "repo": "enhancer-app/enhancer" }],
+	"commit": false,
+	"access": "restricted",
+	"baseBranch": "master",
+	"format": false
+}
