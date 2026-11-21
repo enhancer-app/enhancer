@@ -108,6 +108,25 @@ function CloseIcon() {
 	);
 }
 
+function ExitActions() {
+	return (
+		<div className="ob-exit-actions">
+			<a className="ob-exit-button" href={links.twitch}>
+				<span className="pf-dot pf-dot-twitch" aria-hidden="true" />
+				{copy.intro.openTwitch}
+			</a>
+			<a className="ob-exit-button" href={links.kick}>
+				<span className="pf-dot pf-dot-kick" aria-hidden="true" />
+				{copy.intro.openKick}
+			</a>
+			<button type="button" className="ob-exit-button" onClick={closePage}>
+				<CloseIcon />
+				{copy.intro.close}
+			</button>
+		</div>
+	);
+}
+
 async function closePage() {
 	const tab = await chrome.tabs.getCurrent().catch(() => undefined);
 	if (tab?.id !== undefined) await chrome.tabs.remove(tab.id);
@@ -130,20 +149,7 @@ function IntroSlide({ onStart }: { onStart: () => void }) {
 			</div>
 			<div className="ob-exit">
 				<p>{copy.intro.notInterested}</p>
-				<div className="ob-exit-actions">
-					<a className="ob-exit-button" href={links.twitch}>
-						<span className="pf-dot pf-dot-twitch" aria-hidden="true" />
-						{copy.intro.openTwitch}
-					</a>
-					<a className="ob-exit-button" href={links.kick}>
-						<span className="pf-dot pf-dot-kick" aria-hidden="true" />
-						{copy.intro.openKick}
-					</a>
-					<button type="button" className="ob-exit-button" onClick={closePage}>
-						<CloseIcon />
-						{copy.intro.close}
-					</button>
-				</div>
+				<ExitActions />
 			</div>
 		</>
 	);
@@ -244,19 +250,7 @@ function DoneSlide({ state, onGoTo }: { state: WelcomeFeatureState; onGoTo: (ind
 					);
 				})}
 			</ul>
-			<p className="ob-already">{copy.done.already}</p>
-			<div className="ob-cta">
-				<a className="button" href={links.twitch}>
-					{copy.done.openTwitch}
-				</a>
-				<a className="button button-ghost" href={links.kick}>
-					{copy.done.openKick}
-				</a>
-				<button type="button" className="button button-ghost" onClick={closePage}>
-					<CloseIcon />
-					{copy.intro.close}
-				</button>
-			</div>
+			<ExitActions />
 		</>
 	);
 }

@@ -64,8 +64,5 @@ export type WelcomeCopy = {
 		on: string;
 		off: string;
 		change: string;
-		already: string;
-		openTwitch: string;
-		openKick: string;
 	};
 };

@@ -106,9 +106,6 @@ const en: WelcomeCopy = {
 		on: "On",
 		off: "Off",
 		change: "Change",
-		already: "Already on: the real chatters count and your stream delay.",
-		openTwitch: "Open Twitch",
-		openKick: "Open Kick",
 	},
 };
 
@@ -178,9 +175,6 @@ const pl: WelcomeCopy = {
 		on: "Włączone",
 		off: "Wyłączone",
 		change: "Zmień",
-		already: "Już działa: prawdziwa liczba osób na czacie i opóźnienie streamu.",
-		openTwitch: "Otwórz Twitcha",
-		openKick: "Otwórz Kicka",
 	},
 };
 
