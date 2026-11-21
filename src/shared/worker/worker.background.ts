@@ -13,6 +13,7 @@ import { EnhancerProfileService } from "$shared/worker/enhancer-account/enhancer
 import { AggregateSnapshotDatabase } from "$shared/worker/enhancer-api/aggregate-snapshot.database.ts";
 import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
+import { openWelcomeOnFirstInstall } from "$shared/worker/onboarding/onboarding.ts";
 import { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
 import { WatchtimeAccumulator } from "$shared/worker/watchtime/watchtime.accumulator.ts";
 import { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
@@ -178,6 +179,15 @@ export default class WorkerBackground {
 		return await handler.handle(payload, sender);
 	}
 }
+
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+	openWelcomeOnFirstInstall(reason, {
+		sync: chrome.storage.sync,
+		local: chrome.storage.local,
+		openWelcomePage: () => chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") }),
+		version: __version__,
+	}).catch((error) => new Logger({ context: "onboarding", source: "background" }).error("Welcome page failed:", error));
+});
 
 (async () => {
 	const backgroundWorker = new WorkerBackground();

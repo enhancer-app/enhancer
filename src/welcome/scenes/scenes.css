@@ -1,0 +1,365 @@
+.scene {
+	position: relative;
+	width: 100%;
+	margin: 0;
+}
+
+.scene-canvas {
+	position: absolute;
+	left: 0;
+	top: 0;
+	transform-origin: 0 0;
+	color: var(--text);
+	font-family: var(--sans);
+	font-size: 14px;
+	line-height: 1.4;
+}
+
+.scene-canvas :where(ul) {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.scene-canvas :where(h4) {
+	margin: 0;
+}
+
+.card {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	border-radius: 16px;
+	background: linear-gradient(180deg, #111116, #0b0b0f);
+	box-shadow:
+		inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+		inset 0 1px 0 rgba(255, 255, 255, 0.07),
+		0 30px 80px -30px rgba(0, 0, 0, 0.9);
+	transition: opacity 0.45s;
+}
+
+.card.is-fading {
+	opacity: 0;
+}
+
+.scene-cursor {
+	position: absolute;
+	left: 0;
+	top: 0;
+	z-index: 10;
+	pointer-events: none;
+	filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+	transition: opacity 0.25s;
+}
+
+.scene-cursor svg {
+	display: block;
+	transition: scale 0.12s;
+}
+
+.scene-cursor.is-pressed svg {
+	scale: 0.82;
+}
+
+.scene-avatar {
+	display: grid;
+	flex: none;
+	place-items: center;
+	border-radius: 50%;
+	color: rgba(255, 255, 255, 0.92);
+	font-weight: 700;
+}
+
+.scene-tooltip {
+	position: absolute;
+	z-index: 5;
+	padding: 10px 12px;
+	border-radius: 10px;
+	background: #1d1d24;
+	box-shadow:
+		0 0 0 1px rgba(255, 255, 255, 0.1),
+		0 12px 30px rgba(0, 0, 0, 0.5);
+	color: #dcdce2;
+	font-size: 12.5px;
+	line-height: 1.4;
+	opacity: 0;
+	transform: translateY(6px);
+	transition:
+		opacity 0.2s,
+		transform 0.2s;
+}
+
+.scene-tooltip.is-visible {
+	opacity: 1;
+	transform: none;
+}
+
+.lat-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--live);
+	box-shadow: 0 0 10px rgba(235, 4, 0, 0.7);
+}
+
+.lat-rate {
+	display: inline-block;
+	max-width: 0;
+	overflow: hidden;
+	color: var(--muted);
+	font-weight: 400;
+	vertical-align: bottom;
+	opacity: 0;
+	transition:
+		max-width 0.5s cubic-bezier(0.3, 0.8, 0.3, 1),
+		opacity 0.3s;
+}
+
+.lat-rate.is-visible {
+	max-width: 5em;
+	opacity: 1;
+}
+
+/* Twitch sidebar with the Canary merged follow list (values from the extension) */
+
+.tf {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	background: #1f1f23;
+	color: #efeff1;
+	font-family: Inter, Roobert, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.tf-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	height: 42px;
+	padding: 10px 10px 0;
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.tf-head svg {
+	fill: #efeff1;
+}
+
+.tf-filters {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	height: 36px;
+	padding: 4px 8px 0;
+}
+
+.tf-chip {
+	display: grid;
+	place-items: center;
+	min-width: 28px;
+	height: 28px;
+	border-radius: 4px;
+	color: #adadb8;
+	transition:
+		background 0.2s,
+		color 0.2s;
+}
+
+.tf-chip-text {
+	padding: 0 10px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.tf-chip.is-on {
+	background: rgba(83, 83, 95, 0.38);
+	color: #efeff1;
+}
+
+.tf-chip svg circle,
+.tf-chip svg path:not([fill]) {
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.tf-sort {
+	margin-left: auto;
+}
+
+.tf-row {
+	position: absolute;
+	left: 4px;
+	right: 4px;
+	top: 0;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: 45px;
+	padding: 5px 8px;
+	border-radius: 4px;
+	transition:
+		transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+		opacity 0.3s,
+		background 0.15s;
+}
+
+.tf-row.is-hover {
+	background: rgba(83, 83, 95, 0.38);
+}
+
+.tf-row.is-hidden {
+	opacity: 0;
+}
+
+.tf-avatar {
+	position: relative;
+	flex: none;
+	width: 30px;
+	height: 30px;
+}
+
+.tf-picture {
+	display: block;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+}
+
+.tf-platform {
+	position: absolute;
+	right: -3px;
+	bottom: -3px;
+	width: 12px;
+	height: 12px;
+	border: 2px solid #1f1f23;
+	border-radius: 50%;
+}
+
+.tf-platform-twitch {
+	background: #9146ff;
+}
+
+.tf-platform-kick {
+	background: #53fc18;
+}
+
+.tf-pin {
+	position: absolute;
+	left: -4px;
+	bottom: -6px;
+	display: grid;
+	place-items: center;
+	width: 16px;
+	height: 16px;
+	border-radius: 3px;
+	background: rgba(0, 0, 0, 0.4);
+	color: #fff;
+	font-size: 12px;
+	line-height: 1;
+}
+
+.tf-pin.is-pinned {
+	background: rgba(145, 71, 255, 0.5);
+	font-weight: 700;
+	text-shadow: 0 0 3px rgba(145, 71, 255, 0.5);
+	animation: tf-pin-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes tf-pin-pop {
+	0% {
+		transform: scale(0.3) rotate(-72deg);
+		opacity: 0.4;
+	}
+	60% {
+		transform: scale(1.45) rotate(12deg);
+		opacity: 1;
+	}
+}
+
+.tf-meta {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	line-height: 1.2;
+}
+
+.tf-meta strong {
+	overflow: hidden;
+	font-size: 14px;
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tf-meta small {
+	overflow: hidden;
+	color: #adadb8;
+	font-size: 13px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tf-viewers {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	gap: 5px;
+	align-self: flex-start;
+	margin-top: 2px;
+	color: #dedee3;
+	font-size: 13px;
+}
+
+.tf-viewers i {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #eb0400;
+}
+
+/* Shared placeholders: grey blocks stand in for UI that is not part of the feature. */
+
+.sk {
+	display: inline-block;
+	flex: none;
+	height: 10px;
+	border-radius: 4px;
+	background: rgba(255, 255, 255, 0.08);
+	vertical-align: middle;
+}
+
+.sk-strong {
+	background: rgba(255, 255, 255, 0.14);
+}
+
+.sk-round {
+	border-radius: 999px;
+}
+
+.pf-dot {
+	display: inline-block;
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+}
+
+.pf-dot-twitch {
+	background: #9146ff;
+}
+
+.pf-dot-kick {
+	background: #53fc18;
+}
+
+/* Platform scenes paint their own surface; give it the page's frame. */
+.scene-canvas > :is(.tf, .twh, .twc, .twa, .twl, .twe, .twr) {
+	overflow: hidden;
+	border-radius: 12px;
+	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
