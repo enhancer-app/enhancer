@@ -111,10 +111,18 @@ jobs:
 
           if [ "$MODE" = "auto" ]; then
             PROVENANCE=$(bash .github/scripts/sync-provenance.sh origin/master origin/stable 2>&1) || reject "$PROVENANCE"
-            [ "$(git diff --numstat origin/master "$RESULT")" = "$(printf '1\t1\tpackage.json')" ] \
-              || reject "Merging sync-stable changes more than the version."
+            while IFS=$'\t' read -r ADDED DELETED FILE; do
+              case "$FILE" in
+                package.json) [ "$ADDED $DELETED" = "1 1" ] || reject "Merging sync-stable changes more than the version." ;;
+                CHANGELOG.md) [ "$DELETED" = 0 ] || reject "Merging sync-stable removes lines from CHANGELOG.md." ;;
+                .changeset/README.md) reject "Merging sync-stable changes $FILE." ;;
+                .changeset/*.md) { [ "$ADDED" = 0 ] && ! git cat-file -e "$RESULT:$FILE" 2>/dev/null; } \
+                  || reject "Merging sync-stable edits $FILE instead of removing a released changeset." ;;
+                *) reject "Merging sync-stable changes $FILE." ;;
+              esac
+            done < <(git diff --numstat --no-renames origin/master "$RESULT")
             VERSION_LINE='^[-+][[:space:]]*"version": "[0-9]+\.[0-9]+\.[0-9]+",$'
-            [ "$(git diff -U0 --no-color origin/master "$RESULT" | grep -E '^[-+][^-+]' | grep -cE "$VERSION_LINE")" = 2 ] \
+            [ "$(git diff -U0 --no-color origin/master "$RESULT" -- package.json | grep -E '^[-+][^-+]' | grep -cE "$VERSION_LINE")" = 2 ] \
               || reject "Merging sync-stable changes more than the version."
             OLD=$(git show origin/master:package.json | jq -r .version)
             NEW=$(git cat-file -p "$RESULT:package.json" | jq -r .version)
@@ -122,7 +130,14 @@ jobs:
             [ "$NEW" != "$OLD" ] && [ "$(printf '%s\n%s\n' "$OLD" "$NEW" | sort -V | tail -n 1)" = "$NEW" ] \
               || reject "Version $NEW is not newer than $OLD on master."
           elif EXPECTED=$(git merge-tree --write-tree --no-messages origin/master origin/stable); then
-            [ "$RESULT" = "$EXPECTED" ] || reject "sync-stable changes more than merging stable into master would."
+            while IFS=$'\t' read -r ADDED _ FILE; do
+              case "$FILE" in
+                .changeset/README.md) reject "sync-stable changes more than merging stable into master would." ;;
+                .changeset/*.md) { [ "$ADDED" = 0 ] && ! git cat-file -e "$RESULT:$FILE" 2>/dev/null; } \
+                  || reject "sync-stable changes more than merging stable into master would." ;;
+                *) reject "sync-stable changes more than merging stable into master would." ;;
+              esac
+            done < <(git diff --numstat --no-renames "$EXPECTED" "$RESULT")
           else
             echo "::warning::stable conflicts with master, so the conflict resolution in sync-stable was merged as reviewed."
           fi

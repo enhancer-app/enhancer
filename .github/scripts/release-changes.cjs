@@ -65,7 +65,7 @@ const collectChanges = async ({ github, context, from, to, followPicks = true })
 	return changes;
 };
 
-const formatNotes = ({ changes, context, fromTag, toTag }) => {
+const formatNotes = ({ changes, section, context, fromTag, toTag }) => {
 	const { owner, repo } = context.repo;
 	const lines = changes.map((change) =>
 		change.number
@@ -73,8 +73,7 @@ const formatNotes = ({ changes, context, fromTag, toTag }) => {
 			: `* ${change.title} (${change.sha.slice(0, 7)})`,
 	);
 	return [
-		"## What's Changed",
-		...(lines.length ? lines : ["* Maintenance release"]),
+		...(section ? [section] : ["## What's Changed", ...(lines.length ? lines : ["* Maintenance release"])]),
 		"",
 		...(fromTag ? [`**Full Changelog**: https://github.com/${owner}/${repo}/compare/${fromTag}...${toTag}`] : []),
 	].join("\n");

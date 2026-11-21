@@ -58,3 +58,28 @@ jobs:
           header: pr-title-lint-error
           delete: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  require-changeset:
+    name: Require Changeset
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Check for a changeset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: ${{ github.event.pull_request.title }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if ! [[ "$TITLE" =~ ^(feat|fix|bugfix|perf)(\([^\)]*\))?!?: ]]; then
+            echo "A ${TITLE%%:*} PR needs no changeset."
+            exit 0
+          fi
+          FILES=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$NUMBER/files" \
+            --jq '.[] | select(.status == "added") | .filename')
+          if grep -E '^\.changeset/[^/]+\.md$' <<< "$FILES" | grep -qvx '.changeset/README.md'; then
+            echo "Changeset found."
+            exit 0
+          fi
+          echo "::error::Add a changeset with 'bunx changeset' (or 'bunx changeset --empty' when users will not notice the change). See .changeset/README.md."
+          exit 1

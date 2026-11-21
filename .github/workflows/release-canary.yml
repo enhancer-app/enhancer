@@ -170,24 +170,22 @@ jobs:
     environment: release-announce-canary
     permissions:
       contents: read
-      pull-requests: read
     steps:
-      - name: Checkout scripts
+      - name: Checkout changesets
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           sparse-checkout: .github/scripts
+          fetch-depth: 0
           persist-credentials: false
 
-      - name: Generate and send changelog
+      - name: Send changelog
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
         env:
           DISCORD_CHANGELOG_WEBHOOK: ${{ secrets.DISCORD_CHANGELOG_WEBHOOK }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           VERSION: ${{ needs.build-release.outputs.VERSION }}
-          TAG: canary-${{ needs.build-release.outputs.VERSION }}
           PREVIOUS_TAG: ${{ needs.build-release.outputs.PREVIOUS_TAG }}
           CHANNEL: canary
         with:
           script: |
             const run = require("./.github/scripts/announce-discord.cjs");
-            await run({ github, context, core });
+            await run({ core });

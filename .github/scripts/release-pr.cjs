@@ -1,10 +1,12 @@
+const { existsSync, readFileSync } = require("node:fs");
+const { isChangesetFile, parseChangeset, highestLevel, changelogSection } = require("./changelog.cjs");
+
 const STABLE = "stable";
 const CANARY = "canary";
 const RELEASE_BRANCH = "release-stable";
 const HOTFIX_BRANCH = "release-hotfix";
 const SYNC_BRANCH = "sync-stable";
-const LEVELS = ["patch", "minor", "major"];
-const LEVEL_PATTERN = /^- \[([ xX])\] .*<!-- release-level:(patch|minor|major) -->\s*$/gm;
+const CHANGESET_CLI = "node_modules/@changesets/cli/bin.js";
 const BOT_NAME = "github-actions[bot]";
 const BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com";
 const MERGE_NOTE = [
@@ -27,15 +29,6 @@ const bump = (version, level) => {
 	return `${major}.${minor}.${patch + 1}`;
 };
 
-const checkedLevels = (body) =>
-	[...(body ?? "").matchAll(LEVEL_PATTERN)].filter((match) => match[1] !== " ").map((match) => match[2]);
-
-const resolveLevel = (body, previousBody) => {
-	const checked = checkedLevels(body);
-	const previous = checkedLevels(previousBody);
-	return checked.find((level) => !previous.includes(level)) ?? checked[0] ?? "patch";
-};
-
 const COMMIT_PATTERN = /^- \[([ xX])\] .*<!-- commit:([0-9a-f]{40}) -->\s*$/gm;
 const PLAN_PATTERN = /<!-- release-plan:([^ ]+) -->/;
 const PICKED_PATTERN = /\(cherry picked from commit ([0-9a-f]{40})\)/g;
@@ -43,7 +36,13 @@ const PICKED_PATTERN = /\(cherry picked from commit ([0-9a-f]{40})\)/g;
 const uncheckedCommits = (body) =>
 	new Set([...(body ?? "").matchAll(COMMIT_PATTERN)].filter((match) => match[1] === " ").map((match) => match[2]));
 
-const renderStableBody = ({ current, level, candidates, selected, mode, warning, plan }) =>
+// The bot saves this body, so changeset text must not smuggle in commit or plan markers.
+const renderChangelog = (section) =>
+	section
+		? ["### Changelog", "", section.replace(/<!--/g, "&lt;!--").replace(/^### /gm, "#### ")]
+		: ["### Changelog", "", "_No selected change has a changeset, so this release has no changelog entry._"];
+
+const renderStableBody = ({ current, next, section, candidates, selected, levels, mode, warning, plan }) =>
 	[
 		"Merging this PR releases a new **stable** version to GitHub, Chrome Web Store and Firefox Add-ons.",
 		"",
@@ -56,21 +55,22 @@ const renderStableBody = ({ current, level, candidates, selected, mode, warning,
 				]
 			: []),
 		"",
-		"### Release type",
+		"### Version",
 		"",
-		...LEVELS.map(
-			(option) =>
-				`- [${option === level ? "x" : " "}] ${option} → v${bump(current, option)} <!-- release-level:${option} -->`,
-		),
+		`v${current} → **v${next}**`,
+		"",
+		"<sub>The highest changeset level among the selected changes sets the version. Without changesets it is a patch release.</sub>",
+		"",
+		...renderChangelog(section),
 		"",
 		`### Changes since v${current}`,
 		"",
 		"Untick a change to keep it out of this release. New changes are ticked by default.",
 		"",
-		...candidates.map(
-			({ sha, subject }) =>
-				`- [${selected.has(sha) ? "x" : " "}] ${subject} (\`${sha.slice(0, 7)}\`) <!-- commit:${sha} -->`,
-		),
+		...candidates.map(({ sha, subject }) => {
+			const level = levels.get(sha);
+			return `- [${selected.has(sha) ? "x" : " "}] ${subject} (\`${sha.slice(0, 7)}\`)${level ? ` · \`${level}\`` : ""} <!-- commit:${sha} -->`;
+		}),
 		"",
 		mode === "cherry-pick"
 			? "<sub>Some changes are left out, so the selected ones are cherry-picked onto stable and get new hashes there.</sub>"
@@ -80,11 +80,13 @@ const renderStableBody = ({ current, level, candidates, selected, mode, warning,
 		`<!-- release-plan:${plan} -->`,
 	].join("\n");
 
-const renderHotfixBody = (current, next, changes) =>
+const renderHotfixBody = (current, next, changes, section) =>
 	[
 		`Merging this PR releases the **stable hotfix** v${next} to GitHub, Chrome Web Store and Firefox Add-ons.`,
 		"",
 		MERGE_NOTE,
+		"",
+		...renderChangelog(section),
 		"",
 		`### Hotfixes since v${current}`,
 		"",
@@ -136,10 +138,39 @@ module.exports = async ({ github, app, context, core, exec }) => {
 		return result.stdout.trim();
 	};
 	const succeeds = async (...args) => (await run(args)).exitCode === 0;
-	const commit = (message, ...paths) =>
-		git("-c", `user.name=${BOT_NAME}`, "-c", `user.email=${BOT_EMAIL}`, "commit", "-m", message, "--", ...paths);
+	const commit = (message) =>
+		git("-c", `user.name=${BOT_NAME}`, "-c", `user.email=${BOT_EMAIL}`, "commit", "-m", message);
 	const versionAt = async (ref) => JSON.parse(await git("show", `${ref}:package.json`)).version;
 	const changesBetween = (from, to) => git("log", "--no-merges", "--format=- %s", `${from}..${to}`);
+	const changelogAt = async (ref, version) =>
+		changelogSection(await git("show", `${ref}:CHANGELOG.md`).catch(() => ""), version);
+	const changesetLevel = async (sha) => {
+		const added = await git("diff-tree", "--no-commit-id", "--name-only", "--diff-filter=A", "-r", sha);
+		const levels = [];
+		for (const path of added.split("\n").filter(isChangesetFile)) {
+			const changeset = parseChangeset(await git("show", `${sha}:${path}`));
+			if (changeset?.level) levels.push(changeset.level);
+		}
+		return highestLevel(levels);
+	};
+	// Changesets bump from the version in package.json, which lags behind stable until the sync PR is merged.
+	const versionRelease = async (current) => {
+		const packageVersion = () => JSON.parse(readFileSync("package.json", "utf8")).version;
+		await exec.exec("npm", ["version", current, "--no-git-tag-version", "--allow-same-version"]);
+		if (existsSync(".changeset/config.json")) {
+			const result = await exec.getExecOutput("bun", [CHANGESET_CLI, "version"], { ignoreReturnCode: true });
+			if (result.exitCode !== 0 && !`${result.stdout}${result.stderr}`.includes("No unreleased changesets")) {
+				throw new Error(`changeset version failed: ${(result.stderr || result.stdout).trim()}`);
+			}
+		}
+		if (packageVersion() === current) {
+			await exec.exec("npm", ["version", bump(current, "patch"), "--no-git-tag-version"]);
+		}
+		const next = packageVersion();
+		await git("add", "--all", "--", ...["package.json", "CHANGELOG.md", ".changeset"].filter(existsSync));
+		await commit(`release(stable): v${next}`);
+		return next;
+	};
 
 	if (isEdit) {
 		const { data } = await github.rest.repos.getCollaboratorPermissionLevel({ owner, repo, username: context.actor });
@@ -238,6 +269,14 @@ module.exports = async ({ github, app, context, core, exec }) => {
 		core.notice(`Canary PR targets v${version}.`);
 	};
 
+	// A cherry-picked changeset is added and used up on stable only, so merging stable leaves master's copy behind.
+	const dropReleasedChangesets = async () => {
+		const used = await git("log", "--diff-filter=D", "--name-only", "--format=", `${masterRef}..${stableRef}`);
+		const paths = [...new Set(used.split("\n").filter(isChangesetFile))].filter((path) => existsSync(path));
+		if (paths.length) await git("rm", "--quiet", "--", ...paths);
+		return paths.length > 0;
+	};
+
 	const updateSync = async () => {
 		const pending = await git("rev-list", "--count", `${masterRef}..${stableRef}`);
 		if (pending === "0") {
@@ -262,6 +301,9 @@ module.exports = async ({ github, app, context, core, exec }) => {
 			title,
 			stableRef,
 		);
+		if (merged && (await dropReleasedChangesets())) {
+			await git("-c", `user.name=${BOT_NAME}`, "-c", `user.email=${BOT_EMAIL}`, "commit", "--amend", "--no-edit");
+		}
 		let resolved = false;
 		if (!merged) {
 			await run(["merge", "--abort"]);
@@ -282,6 +324,8 @@ module.exports = async ({ github, app, context, core, exec }) => {
 					stableRef,
 				);
 				await exec.exec("npm", ["version", await versionAt(stableRef), "--no-git-tag-version", "--allow-same-version"]);
+				await git("checkout", stableRef, "--", "CHANGELOG.md");
+				await dropReleasedChangesets();
 				await git("add", "package.json");
 				await git("-c", `user.name=${BOT_NAME}`, "-c", `user.email=${BOT_EMAIL}`, "commit", "--no-edit", "-m", title);
 				resolved = true;
@@ -319,18 +363,18 @@ module.exports = async ({ github, app, context, core, exec }) => {
 		}
 		const stableSha = await git("rev-parse", stableRef);
 		const current = await versionAt(stableRef);
-		const next = bump(current, "patch");
-		const title = `release(stable): v${next}`;
 		const remote = await remoteSha(HOTFIX_BRANCH);
-		const upToDate =
-			remote !== null && (await git("rev-parse", `${remote}^`)) === stableSha && (await versionAt(remote)) === next;
+		const upToDate = remote !== null && (await git("rev-parse", `${remote}^`)) === stableSha;
 		if (!upToDate) {
 			await git("switch", "--detach", stableRef);
-			await exec.exec("npm", ["version", next, "--no-git-tag-version"]);
-			await commit(title, "package.json");
+			await versionRelease(current);
 			await publishBranch(HOTFIX_BRANCH);
 		}
-		await upsertPr({ head: HOTFIX_BRANCH, base: STABLE, title, body: renderHotfixBody(current, next, changes) });
+		const built = upToDate ? remote : await git("rev-parse", "HEAD");
+		const next = await versionAt(built);
+		const title = `release(stable): v${next}`;
+		const body = renderHotfixBody(current, next, changes, await changelogAt(built, next));
+		await upsertPr({ head: HOTFIX_BRANCH, base: STABLE, title, body });
 		core.notice(`Hotfix PR targets v${next}.`);
 	};
 
@@ -348,7 +392,7 @@ module.exports = async ({ github, app, context, core, exec }) => {
 			.filter(({ sha }) => !picked.has(sha));
 	};
 
-	const buildRelease = async ({ mode, baseSha, stableSha, chosen, next, title, syncNumber }) => {
+	const buildRelease = async ({ mode, baseSha, stableSha, chosen, current, syncNumber }) => {
 		if (mode === "merge") {
 			await git("switch", "--detach", baseSha);
 			if (!(await succeeds("merge-base", "--is-ancestor", stableSha, "HEAD"))) {
@@ -367,6 +411,7 @@ module.exports = async ({ github, app, context, core, exec }) => {
 					await run(["merge", "--abort"]);
 					return `${STABLE} conflicts with the selected changes. Merge the sync PR${syncNumber ? ` #${syncNumber}` : ""} first.`;
 				}
+				await dropReleasedChangesets();
 			}
 		} else {
 			await git("switch", "--detach", stableSha);
@@ -387,8 +432,7 @@ module.exports = async ({ github, app, context, core, exec }) => {
 				}
 			}
 		}
-		await exec.exec("npm", ["version", next, "--no-git-tag-version", "--allow-same-version"]);
-		await commit(title, "package.json");
+		await versionRelease(current);
 		await publishBranch(RELEASE_BRANCH);
 		return null;
 	};
@@ -403,14 +447,12 @@ module.exports = async ({ github, app, context, core, exec }) => {
 		const existing = await findPr(RELEASE_BRANCH);
 		const editedRelease = isEdit && context.payload.pull_request.head.ref === RELEASE_BRANCH;
 		const body = editedRelease ? context.payload.pull_request.body : existing && (await trustedBody(existing));
-		const previousBody = editedRelease ? context.payload.changes?.body?.from : body;
-		const level = resolveLevel(body, previousBody);
 		const unchecked = uncheckedCommits(body);
 		const selected = new Set(candidates.filter(({ sha }) => !unchecked.has(sha)).map(({ sha }) => sha));
 		const chosen = candidates.filter(({ sha }) => selected.has(sha));
+		const levels = new Map();
+		for (const { sha } of candidates) levels.set(sha, await changesetLevel(sha));
 		const current = await versionAt(stableRef);
-		const next = bump(current, level);
-		const title = `release(stable): v${next}`;
 		const stableSha = await git("rev-parse", stableRef);
 		const remote = await remoteSha(RELEASE_BRANCH);
 
@@ -433,31 +475,36 @@ module.exports = async ({ github, app, context, core, exec }) => {
 
 		const plan = require("node:crypto")
 			.createHash("sha1")
-			.update([mode, baseSha, stableSha, next, ...chosen.map(({ sha }) => sha)].join(","))
+			.update(["changesets", mode, baseSha, stableSha, ...chosen.map(({ sha }) => sha)].join(","))
 			.digest("hex");
 		let storedPlan = body?.match(PLAN_PATTERN)?.[1];
 		if (mode !== "none" && (plan !== storedPlan || remote === null)) {
-			warning = await buildRelease({ mode, baseSha, stableSha, chosen, next, title, syncNumber });
+			warning = await buildRelease({ mode, baseSha, stableSha, chosen, current, syncNumber });
 			storedPlan = warning ? `failed-${plan}` : plan;
 		} else if (mode !== "none" && storedPlan === plan) {
 			warning = null;
 		}
-		if (remote === null && (await remoteSha(RELEASE_BRANCH)) === null) {
+		const built = await remoteSha(RELEASE_BRANCH);
+		if (built === null) {
 			core.warning(`No ${RELEASE_BRANCH} branch could be built: ${warning}`);
 			return;
 		}
+		const next = await versionAt(built);
+		const title = `release(stable): v${next}`;
 		const newBody = renderStableBody({
 			current,
-			level,
+			next,
+			section: await changelogAt(built, next),
 			candidates,
 			selected,
+			levels,
 			mode,
 			warning,
 			plan: storedPlan ?? plan,
 		});
 		const number = await upsertPr({ head: RELEASE_BRANCH, base: STABLE, title, body: newBody });
 		await setDraft(number, Boolean(warning));
-		core.notice(`Stable release PR targets v${next} (${level}, ${mode}, ${chosen.length}/${candidates.length}).`);
+		core.notice(`Stable release PR targets v${next} (${mode}, ${chosen.length}/${candidates.length}).`);
 	};
 
 	if (hasCanary) await updateCanary();

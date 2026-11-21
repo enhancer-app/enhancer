@@ -334,8 +334,11 @@ Categories: `correctness` errors, `suspicious` warnings. Key rules off: `typescr
 ## Git Workflow
 
 - Every change goes through a PR into `master` and is merged with **Squash and merge**.
+- Every `feat`, `fix` or `perf` PR adds a changeset (`.changeset/*.md`, see `.changeset/README.md`): `minor` for
+  features, `patch` for fixes, one English sentence for users. Use `bunx changeset --empty` when users will not
+  notice the change. Never edit `CHANGELOG.md` by hand; the stable release writes it.
 - Never open PRs into `stable` or `canary` and never push to them. They only take the bot release PRs (`release-stable`, `release-hotfix`, `master` → `canary`), merged with **Create a merge commit**.
-- Hotfixes also go through `master`: untick every other change in the `release(stable)` PR and pick patch, so the bot cherry-picks only the fix onto `stable`.
+- Hotfixes also go through `master`: untick every other change in the `release(stable)` PR, so the bot cherry-picks only the fix and its changeset onto `stable`.
 - Never merge the `sync-stable` → `master` PR by hand. The `enhancer-release` app merges it on its own when it only brings `stable`'s changes; otherwise it comments on the PR, and after review the `merge-sync` label merges it.
 - See `docs/development.md` → Releasing for the full flow.
 
