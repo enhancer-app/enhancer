@@ -3,12 +3,13 @@ import "./scenes/scenes.css";
 
 import type {
 	Accent,
+	WelcomeConfirmation,
 	WelcomeFeature,
 	WelcomeFeatureId,
 	WelcomeFeatureState,
 	WelcomePlatform,
 } from "$types/welcome/welcome.types.ts";
-import { render } from "preact";
+import { Fragment, render } from "preact";
 import type { ComponentType } from "react";
 import { useEffect, useRef, useState } from "react";
 import { locale } from "./scenes/locale.ts";
@@ -160,16 +161,17 @@ type FeatureSlideProps = {
 	index: number;
 	state: WelcomeFeatureState;
 	onToggle: (feature: WelcomeFeature, value: boolean) => Promise<boolean>;
-	onGoTo: (index: number) => void;
 };
 
-function FeatureSlide({ feature, index, state, onToggle, onGoTo }: FeatureSlideProps) {
+const requiredFeature = (feature: WelcomeFeature) => features.find((item) => item.id === feature.requires);
+
+function FeatureSlide({ feature, index, state, onToggle }: FeatureSlideProps) {
 	const text = copy.features[feature.id];
 	const [saving, setSaving] = useState(false);
 	const [failed, setFailed] = useState(false);
 	const enabled = state[feature.id] === true;
-	const required = feature.requires ? features.find((item) => item.id === feature.requires) : undefined;
-	const blocked = required !== undefined && state[required.id] !== true;
+	const required = requiredFeature(feature);
+	const turnsOnRequired = required !== undefined && state[required.id] !== true;
 
 	const toggle = async (value: boolean) => {
 		setSaving(true);
@@ -199,17 +201,12 @@ function FeatureSlide({ feature, index, state, onToggle, onGoTo }: FeatureSlideP
 							</button>
 						</>
 					) : (
-						<button type="button" className="button" disabled={saving || blocked} onClick={() => toggle(true)}>
+						<button type="button" className="button" disabled={saving} onClick={() => toggle(true)}>
 							{copy.feature.turnOn}
 						</button>
 					)}
-					{blocked && required && (
-						<>
-							<span className="ob-already">{copy.feature.requires(copy.features[required.id].title)}</span>
-							<button type="button" className="ob-link" onClick={() => onGoTo(features.indexOf(required) + 1)}>
-								{copy.feature.showRequired}
-							</button>
-						</>
+					{!enabled && turnsOnRequired && required && (
+						<span className="ob-already">{copy.feature.alsoTurnsOn(copy.features[required.id].title)}</span>
 					)}
 				</div>
 				{failed && (
@@ -222,6 +219,62 @@ function FeatureSlide({ feature, index, state, onToggle, onGoTo }: FeatureSlideP
 				<SceneSlot scene={scenes[feature.id]} />
 			</div>
 		</>
+	);
+}
+
+type ConfirmDialogProps = {
+	confirmation: WelcomeConfirmation;
+	saving: boolean;
+	failed: boolean;
+	onCancel: () => void;
+	onConfirm: () => void;
+};
+
+function ConfirmDialog({ confirmation, saving, failed, onCancel, onConfirm }: ConfirmDialogProps) {
+	const confirmRef = useRef<HTMLButtonElement>(null);
+
+	useEffect(() => confirmRef.current?.focus(), []);
+
+	return (
+		<div className="ob-modal-backdrop">
+			<button
+				type="button"
+				className="ob-modal-scrim"
+				tabIndex={-1}
+				aria-label={copy.feature.cancel}
+				onClick={onCancel}
+			/>
+			<div className="ob-modal" role="alertdialog" aria-modal="true" aria-labelledby="ob-modal-title">
+				<h3 id="ob-modal-title">{confirmation.confirmationTitle}</h3>
+				<div className="ob-modal-body">
+					{confirmation.confirmationMessage && <p>{confirmation.confirmationMessage}</p>}
+					{confirmation.confirmationFacts?.length ? (
+						<dl className="ob-modal-facts">
+							{confirmation.confirmationFacts.map((fact) => (
+								<Fragment key={fact.term}>
+									<dt>{fact.term}</dt>
+									<dd>{fact.detail}</dd>
+								</Fragment>
+							))}
+						</dl>
+					) : null}
+					{confirmation.confirmationNote && <p className="ob-modal-note">{confirmation.confirmationNote}</p>}
+				</div>
+				{failed && (
+					<p className="ob-error" role="alert">
+						{copy.feature.error}
+					</p>
+				)}
+				<div className="ob-modal-actions">
+					<button type="button" className="button button-ghost" onClick={onCancel}>
+						{copy.feature.cancel}
+					</button>
+					<button type="button" className="button" ref={confirmRef} disabled={saving} onClick={onConfirm}>
+						{confirmation.confirmText ?? copy.feature.turnOn}
+					</button>
+				</div>
+			</div>
+		</div>
 	);
 }
 
@@ -259,6 +312,9 @@ function App() {
 	const [current, setCurrent] = useState(0);
 	const [back, setBack] = useState(false);
 	const [state, setState] = useState<WelcomeFeatureState>({});
+	const [pending, setPending] = useState<{ chain: WelcomeFeature[]; confirmation: WelcomeConfirmation } | null>(null);
+	const [pendingSaving, setPendingSaving] = useState(false);
+	const [pendingFailed, setPendingFailed] = useState(false);
 	const advanceTimer = useRef<number>();
 
 	useEffect(() => {
@@ -277,6 +333,10 @@ function App() {
 
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
+			if (pending) {
+				if (event.key === "Escape") setPending(null);
+				return;
+			}
 			if (event.target instanceof HTMLElement && event.target.closest("input, textarea")) return;
 			if (event.key === "ArrowRight") goBy(1);
 			if (event.key === "ArrowLeft") goBy(-1);
@@ -285,15 +345,35 @@ function App() {
 		return () => document.removeEventListener("keydown", onKey);
 	});
 
-	const toggle = async (feature: WelcomeFeature, value: boolean) => {
+	const apply = async (chain: WelcomeFeature[], value: boolean) => {
 		try {
-			await writeFeature(feature, value);
+			for (const item of chain) await writeFeature(item, value);
 		} catch {
 			return false;
 		}
-		setState((previous) => ({ ...previous, [feature.id]: value }));
+		setState((previous) => ({ ...previous, ...Object.fromEntries(chain.map((item) => [item.id, value])) }));
 		if (value) advanceTimer.current = window.setTimeout(() => goBy(1), ADVANCE_AFTER_ENABLE_MS);
 		return true;
+	};
+
+	const toggle = async (feature: WelcomeFeature, value: boolean) => {
+		if (!value) return apply([feature], false);
+		const required = requiredFeature(feature);
+		const chain = required && state[required.id] !== true ? [required, feature] : [feature];
+		const confirmation = chain.find((item) => item.confirmation && state[item.id] !== true)?.confirmation;
+		if (!confirmation) return apply(chain, true);
+		setPendingFailed(false);
+		setPending({ chain, confirmation });
+		return true;
+	};
+
+	const confirmPending = async () => {
+		if (!pending) return;
+		setPendingSaving(true);
+		const saved = await apply(pending.chain, true);
+		setPendingSaving(false);
+		if (saved) setPending(null);
+		else setPendingFailed(true);
 	};
 
 	const feature = features[current - 1];
@@ -325,7 +405,7 @@ function App() {
 					aria-label={slideTitle(current)}
 				>
 					{current === 0 && <IntroSlide onStart={() => goBy(1)} />}
-					{feature && <FeatureSlide feature={feature} index={current} state={state} onToggle={toggle} onGoTo={goTo} />}
+					{feature && <FeatureSlide feature={feature} index={current} state={state} onToggle={toggle} />}
 					{isDone && <DoneSlide state={state} onGoTo={goTo} />}
 				</section>
 			</main>
@@ -369,6 +449,16 @@ function App() {
 					<Arrow direction="right" />
 				</button>
 			</nav>
+
+			{pending && (
+				<ConfirmDialog
+					confirmation={pending.confirmation}
+					saving={pendingSaving}
+					failed={pendingFailed}
+					onCancel={() => setPending(null)}
+					onConfirm={confirmPending}
+				/>
+			)}
 		</div>
 	);
 }

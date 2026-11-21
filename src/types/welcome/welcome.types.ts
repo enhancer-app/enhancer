@@ -1,3 +1,4 @@
+import type { ToggleSettingDefinition } from "$types/shared/components/settings.component.types.ts";
 import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 
@@ -13,11 +14,17 @@ export type WelcomeSetting =
 			platforms: PlatformType[];
 	  };
 
+export type WelcomeConfirmation = Pick<
+	ToggleSettingDefinition,
+	"confirmationTitle" | "confirmationMessage" | "confirmText" | "confirmationFacts" | "confirmationNote"
+>;
+
 export type WelcomeFeature = {
 	id: WelcomeFeatureId;
 	platforms: WelcomePlatform[];
 	setting: WelcomeSetting;
 	requires?: WelcomeFeatureId;
+	confirmation?: WelcomeConfirmation;
 };
 
 export type WelcomeFeatureState = Partial<Record<WelcomeFeatureId, boolean>>;
@@ -51,8 +58,8 @@ export type WelcomeCopy = {
 		turnOn: string;
 		on: string;
 		turnOff: string;
-		requires: (title: string) => string;
-		showRequired: string;
+		alsoTurnsOn: (title: string) => string;
+		cancel: string;
 		error: string;
 		available: string;
 	};

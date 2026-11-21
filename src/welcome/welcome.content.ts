@@ -1,4 +1,6 @@
-import type { WelcomeCopy, WelcomeFeature } from "$types/welcome/welcome.types.ts";
+import { followsSettings } from "$shared/module/helpers/common-setting-definitions.ts";
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
+import type { WelcomeConfirmation, WelcomeCopy, WelcomeFeature } from "$types/welcome/welcome.types.ts";
 import { locale } from "./scenes/locale.ts";
 
 export const links = {
@@ -6,11 +8,18 @@ export const links = {
 	kick: "https://kick.com/",
 };
 
+const followsSharing = followsSettings<GlobalSettings>("").find(
+	(definition) => definition.id === "crossPlatformFollowsSyncEnabled",
+);
+const followsConfirmation: WelcomeConfirmation | undefined =
+	followsSharing?.type === "toggle" ? followsSharing : undefined;
+
 export const features: WelcomeFeature[] = [
 	{
 		id: "follows",
 		platforms: ["Twitch", "Kick"],
 		setting: { scope: "global", key: "crossPlatformFollowsSyncEnabled" },
+		confirmation: followsConfirmation,
 	},
 	{
 		id: "home",
@@ -60,8 +69,8 @@ const en: WelcomeCopy = {
 		turnOn: "Turn it on",
 		on: "On",
 		turnOff: "Turn off",
-		requires: (title) => `Needs “${title}”. Turn that on first.`,
-		showRequired: "Go back to it",
+		alsoTurnsOn: (title) => `This also turns on “${title}”.`,
+		cancel: "Cancel",
 		error: "Couldn't save this. Try again, or change it later in the settings.",
 		available: "Available on",
 	},
@@ -70,7 +79,6 @@ const en: WelcomeCopy = {
 			title: "One list for all your follows",
 			description:
 				"See the channels you follow on Twitch and Kick together in the sidebar. Pin your favourites to keep them on top.",
-			note: "Enhancer uses your Kick login only to load your follows and check who is live. It stays encrypted on this computer and is never sent to Enhancer. After turning this on, open twitch.tv and kick.com once while logged in.",
 		},
 		home: {
 			title: "Your streams on the home page",
@@ -129,8 +137,8 @@ const pl: WelcomeCopy = {
 		turnOn: "Włącz",
 		on: "Włączone",
 		turnOff: "Wyłącz",
-		requires: (title) => `Wymaga funkcji „${title}”. Najpierw ją włącz.`,
-		showRequired: "Wróć do niej",
+		alsoTurnsOn: (title) => `Włączy to też funkcję „${title}”.`,
+		cancel: "Anuluj",
 		error: "Nie udało się zapisać. Spróbuj ponownie albo zmień to później w ustawieniach.",
 		available: "Dostępne na",
 	},
@@ -139,7 +147,6 @@ const pl: WelcomeCopy = {
 			title: "Wszyscy obserwowani na jednej liście",
 			description:
 				"Kanały, które obserwujesz na Twitchu i Kicku, razem na pasku bocznym. Przypnij ulubionych, żeby byli na górze.",
-			note: "Enhancer używa Twojego logowania do Kicka tylko po to, żeby wczytać obserwowanych i sprawdzić, kto nadaje. Jest zaszyfrowane na tym komputerze i nigdy nie trafia do Enhancera. Po włączeniu otwórz raz twitch.tv i kick.com, będąc zalogowanym.",
 		},
 		home: {
 			title: "Twoje streamy na stronie głównej",
