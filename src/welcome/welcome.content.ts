@@ -11,21 +11,21 @@ export const links = {
 const followsSharing = followsSettings<GlobalSettings>("").find(
 	(definition) => definition.id === "crossPlatformFollowsSyncEnabled",
 );
-const followsConfirmation: WelcomeConfirmation | undefined =
+export const followsSyncConfirmation: WelcomeConfirmation | undefined =
 	followsSharing?.type === "toggle" ? followsSharing : undefined;
 
 export const features: WelcomeFeature[] = [
 	{
 		id: "follows",
 		platforms: ["Twitch", "Kick"],
-		setting: { scope: "global", key: "crossPlatformFollowsSyncEnabled" },
-		confirmation: followsConfirmation,
+		setting: { scope: "global", key: "crossPlatformFollowsDisplayEnabled" },
+		needsFollowsSync: true,
 	},
 	{
 		id: "home",
 		platforms: ["Twitch", "Kick"],
 		setting: { scope: "global", key: "followsHomeEnabled" },
-		requires: "follows",
+		needsFollowsSync: true,
 	},
 	{
 		id: "attachments",
@@ -69,7 +69,6 @@ const en: WelcomeCopy = {
 		turnOn: "Turn it on",
 		on: "On",
 		turnOff: "Turn off",
-		alsoTurnsOn: (title) => `This also turns on “${title}”.`,
 		cancel: "Cancel",
 		error: "Couldn't save this. Try again, or change it later in the settings.",
 		available: "Available on",
@@ -137,7 +136,6 @@ const pl: WelcomeCopy = {
 		turnOn: "Włącz",
 		on: "Włączone",
 		turnOff: "Wyłącz",
-		alsoTurnsOn: (title) => `Włączy to też funkcję „${title}”.`,
 		cancel: "Anuluj",
 		error: "Nie udało się zapisać. Spróbuj ponownie albo zmień to później w ustawieniach.",
 		available: "Dostępne na",

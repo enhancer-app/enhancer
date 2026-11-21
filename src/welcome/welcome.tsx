@@ -1,6 +1,7 @@
 import "./welcome.css";
 import "./scenes/scenes.css";
 
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type {
 	Accent,
 	WelcomeConfirmation,
@@ -20,8 +21,8 @@ import { TwGroupingScene } from "./scenes/tw-grouping.tsx";
 import { TwHomeScene } from "./scenes/tw-home.tsx";
 import { TwLatencyScene } from "./scenes/tw-latency.tsx";
 import { TwitchFollowsScene } from "./scenes/twitch-follows.tsx";
-import { copy, features, links } from "./welcome.content.ts";
-import { readFeatureState, writeFeature } from "./welcome.settings.ts";
+import { copy, features, followsSyncConfirmation, links } from "./welcome.content.ts";
+import { readFeatureState, writeFeature, writeGlobalSettings } from "./welcome.settings.ts";
 
 type SceneComponent = ComponentType<SceneProps>;
 
@@ -163,15 +164,11 @@ type FeatureSlideProps = {
 	onToggle: (feature: WelcomeFeature, value: boolean) => Promise<boolean>;
 };
 
-const requiredFeature = (feature: WelcomeFeature) => features.find((item) => item.id === feature.requires);
-
 function FeatureSlide({ feature, index, state, onToggle }: FeatureSlideProps) {
 	const text = copy.features[feature.id];
 	const [saving, setSaving] = useState(false);
 	const [failed, setFailed] = useState(false);
 	const enabled = state[feature.id] === true;
-	const required = requiredFeature(feature);
-	const turnsOnRequired = required !== undefined && state[required.id] !== true;
 
 	const toggle = async (value: boolean) => {
 		setSaving(true);
@@ -204,9 +201,6 @@ function FeatureSlide({ feature, index, state, onToggle }: FeatureSlideProps) {
 						<button type="button" className="button" disabled={saving} onClick={() => toggle(true)}>
 							{copy.feature.turnOn}
 						</button>
-					)}
-					{!enabled && turnsOnRequired && required && (
-						<span className="ob-already">{copy.feature.alsoTurnsOn(copy.features[required.id].title)}</span>
 					)}
 				</div>
 				{failed && (
@@ -312,14 +306,24 @@ function App() {
 	const [current, setCurrent] = useState(0);
 	const [back, setBack] = useState(false);
 	const [state, setState] = useState<WelcomeFeatureState>({});
-	const [pending, setPending] = useState<{ chain: WelcomeFeature[]; confirmation: WelcomeConfirmation } | null>(null);
+	const [followsSync, setFollowsSync] = useState(false);
+	const [pending, setPending] = useState<Partial<GlobalSettings> | null>(null);
 	const [pendingSaving, setPendingSaving] = useState(false);
 	const [pendingFailed, setPendingFailed] = useState(false);
 	const advanceTimer = useRef<number>();
 
+	const refresh = async () => {
+		const snapshot = await readFeatureState(features);
+		setState(snapshot.state);
+		setFollowsSync(snapshot.followsSync);
+	};
+
 	useEffect(() => {
 		readFeatureState(features)
-			.then(setState)
+			.then((snapshot) => {
+				setState(snapshot.state);
+				setFollowsSync(snapshot.followsSync);
+			})
 			.catch(() => {});
 	}, []);
 
@@ -345,32 +349,57 @@ function App() {
 		return () => document.removeEventListener("keydown", onKey);
 	});
 
-	const apply = async (chain: WelcomeFeature[], value: boolean) => {
+	const advanceIf = (value: boolean) => {
+		if (value) advanceTimer.current = window.setTimeout(() => goBy(1), ADVANCE_AFTER_ENABLE_MS);
+	};
+
+	const applyGlobal = async (changes: Partial<GlobalSettings>, value: boolean) => {
 		try {
-			for (const item of chain) await writeFeature(item, value);
+			await writeGlobalSettings(changes);
+			await refresh();
 		} catch {
 			return false;
 		}
-		setState((previous) => ({ ...previous, ...Object.fromEntries(chain.map((item) => [item.id, value])) }));
-		if (value) advanceTimer.current = window.setTimeout(() => goBy(1), ADVANCE_AFTER_ENABLE_MS);
+		advanceIf(value);
 		return true;
 	};
 
+	const followsSyncChanges = (feature: WelcomeFeature, value: boolean): Partial<GlobalSettings> => {
+		const key = feature.setting.key as keyof GlobalSettings;
+		const others = features.filter((item) => item.needsFollowsSync && item !== feature);
+		if (value && !followsSync) {
+			const othersOff = Object.fromEntries(others.map((item) => [item.setting.key, false]));
+			return { ...othersOff, crossPlatformFollowsSyncEnabled: true, [key]: true };
+		}
+		const keepsSync = others.some((item) => state[item.id]);
+		if (!value && key === "crossPlatformFollowsDisplayEnabled" && !keepsSync) {
+			return { crossPlatformFollowsSyncEnabled: false };
+		}
+		return { [key]: value };
+	};
+
 	const toggle = async (feature: WelcomeFeature, value: boolean) => {
-		if (!value) return apply([feature], false);
-		const required = requiredFeature(feature);
-		const chain = required && state[required.id] !== true ? [required, feature] : [feature];
-		const confirmation = chain.find((item) => item.confirmation && state[item.id] !== true)?.confirmation;
-		if (!confirmation) return apply(chain, true);
+		if (!feature.needsFollowsSync) {
+			try {
+				await writeFeature(feature, value);
+			} catch {
+				return false;
+			}
+			setState((previous) => ({ ...previous, [feature.id]: value }));
+			advanceIf(value);
+			return true;
+		}
+		const changes = followsSyncChanges(feature, value);
+		if (!changes.crossPlatformFollowsSyncEnabled) return applyGlobal(changes, value);
 		setPendingFailed(false);
-		setPending({ chain, confirmation });
+		setPending(changes);
 		return true;
 	};
 
 	const confirmPending = async () => {
 		if (!pending) return;
 		setPendingSaving(true);
-		const saved = await apply(pending.chain, true);
+		const saved = await applyGlobal(pending, true);
 		setPendingSaving(false);
 		if (saved) setPending(null);
 		else setPendingFailed(true);
@@ -450,9 +479,9 @@ function App() {
 				</button>
 			</nav>
 
-			{pending && (
+			{pending && followsSyncConfirmation && (
 				<ConfirmDialog
-					confirmation={pending.confirmation}
+					confirmation={followsSyncConfirmation}
 					saving={pendingSaving}
 					failed={pendingFailed}
 					onCancel={() => setPending(null)}

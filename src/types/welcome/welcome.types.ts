@@ -7,7 +7,7 @@ export type WelcomePlatform = "Twitch" | "Kick";
 export type WelcomeFeatureId = "follows" | "home" | "attachments" | "latency" | "emotebar" | "grouping";
 
 export type WelcomeSetting =
-	| { scope: "global"; key: keyof Pick<GlobalSettings, "crossPlatformFollowsSyncEnabled" | "followsHomeEnabled"> }
+	| { scope: "global"; key: keyof Pick<GlobalSettings, "crossPlatformFollowsDisplayEnabled" | "followsHomeEnabled"> }
 	| {
 			scope: "platform";
 			key: "chatImagesEnabled" | "streamLatencyReducerEnabled" | "emoteBarEnabled" | "chatMessageGroupingEnabled";
@@ -23,11 +23,15 @@ export type WelcomeFeature = {
 	id: WelcomeFeatureId;
 	platforms: WelcomePlatform[];
 	setting: WelcomeSetting;
-	requires?: WelcomeFeatureId;
-	confirmation?: WelcomeConfirmation;
+	needsFollowsSync?: boolean;
 };
 
 export type WelcomeFeatureState = Partial<Record<WelcomeFeatureId, boolean>>;
+
+export type WelcomeSettingsSnapshot = {
+	state: WelcomeFeatureState;
+	followsSync: boolean;
+};
 
 export type Accent = [string, string];
 
@@ -58,7 +62,6 @@ export type WelcomeCopy = {
 		turnOn: string;
 		on: string;
 		turnOff: string;
-		alsoTurnsOn: (title: string) => string;
 		cancel: string;
 		error: string;
 		available: string;
