@@ -5,11 +5,9 @@ export type PersistentPlayerComponent = {
 };
 
 export type ChatControllerMessage = {
-	id: number;
+	id: string;
 	type: number;
-	msgid: number;
 	message: string;
-	channel: string;
 };
 
 export type ChatControllerComponent = {
@@ -17,6 +15,7 @@ export type ChatControllerComponent = {
 	props: {
 		channelLogin: string;
 		channelID: string;
+		userLogin?: string;
 		messageHandlerAPI: {
 			handleMessage: (...messages: TwitchChatMessage[]) => unknown;
 			addMessageHandler: (callback: (message: TwitchChatMessage) => void) => void;
