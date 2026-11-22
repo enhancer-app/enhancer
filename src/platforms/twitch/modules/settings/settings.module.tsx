@@ -155,6 +155,18 @@ export default class SettingsModule extends TwitchModule {
 				tags: ["Chat Join Leave", "Joins", "Parts"],
 			},
 			{
+				id: "chatJoinLeaveDisplay",
+				title: "Show as",
+				description: "Show how many people joined and left, or list everyone right away.",
+				type: "choice",
+				categoryId: CATEGORY.CHAT,
+				dependsOn: { key: "chatJoinLeaveEnabled" },
+				options: [
+					{ label: "Counts", value: { chatJoinLeaveShowNames: false } },
+					{ label: "Names", value: { chatJoinLeaveShowNames: true } },
+				],
+			},
+			{
 				id: "chatJoinLeaveShowLeaves",
 				title: "Show leaves",
 				description: "Also shows who left the chat.",

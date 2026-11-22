@@ -21,7 +21,7 @@ export function formatChatJoinLeave(props: ChatJoinLeaveProps) {
 }
 
 export function ChatJoinLeaveComponent(props: ChatJoinLeaveProps) {
-	const [expanded, setExpanded] = useState(false);
+	const [expanded, setExpanded] = useState(props.showNames ?? false);
 	if (isInline(props)) return <span>{formatNames(props)}</span>;
 
 	return (

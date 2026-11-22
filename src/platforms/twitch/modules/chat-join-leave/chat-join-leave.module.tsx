@@ -118,7 +118,7 @@ export default class ChatJoinLeaveModule extends TwitchModule {
 	private pushMessage(joined: string[], left: string[]) {
 		const controller = this.twitchUtils().getChatController();
 		if (!controller) return;
-		const props: ChatJoinLeaveProps = { joined, left };
+		const props: ChatJoinLeaveProps = { joined, left, showNames: this.settings().chatJoinLeaveShowNames };
 		const text = formatChatJoinLeave(props);
 		controller.pushMessage({
 			id: `${this.getId()}-${++this.messageCounter}`,

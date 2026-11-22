@@ -15,6 +15,7 @@ export const TWITCH_DEFAULT_SETTINGS: TwitchSettings = {
 	chatMessageGroupingEnabled: false,
 	chatJoinLeaveEnabled: false,
 	chatJoinLeaveShowLeaves: true,
+	chatJoinLeaveShowNames: false,
 	emoteBarEnabled: false,
 	chatMentionSoundSource: "",
 	chatMentionSoundFile: "",

@@ -17,6 +17,7 @@ export type TwitchSettings = {
 	chatMessageGroupingEnabled: boolean;
 	chatJoinLeaveEnabled: boolean;
 	chatJoinLeaveShowLeaves: boolean;
+	chatJoinLeaveShowNames: boolean;
 	emoteBarEnabled: boolean;
 	/**
 	 * @deprecated Use chatMentionSoundFile instead. This field is kept for backward compatibility only.
