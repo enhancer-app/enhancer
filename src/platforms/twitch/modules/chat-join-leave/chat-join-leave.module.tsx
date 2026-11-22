@@ -119,17 +119,18 @@ export default class ChatJoinLeaveModule extends TwitchModule {
 		if (!this.isModuleEnabled() || channel !== currentChannel) return;
 
 		const joined = entries.filter(([, action]) => action === "join").map(([login]) => login);
-		const left = entries.filter(([, action]) => action === "leave").map(([login]) => login);
-		if (joined.length) this.pushMessage("join", joined);
-		if (left.length && this.settings().chatJoinLeaveShowLeaves) this.pushMessage("leave", left);
+		const left = this.settings().chatJoinLeaveShowLeaves
+			? entries.filter(([, action]) => action === "leave").map(([login]) => login)
+			: [];
+		if (joined.length || left.length) this.pushMessage(joined, left);
 	}
 
-	private pushMessage(action: ChatJoinLeaveAction, users: string[]) {
+	private pushMessage(joined: string[], left: string[]) {
 		const controller = this.twitchUtils().getChatController();
 		if (!controller) return;
 		const props: ChatJoinLeaveProps = {
-			action,
-			users,
+			joined,
+			left,
 			visibleCount: Math.max(1, this.settings().chatJoinLeaveVisibleNames),
 		};
 		const text = formatChatJoinLeave(props);

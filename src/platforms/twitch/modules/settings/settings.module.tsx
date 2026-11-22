@@ -165,7 +165,7 @@ export default class SettingsModule extends TwitchModule {
 			{
 				id: "chatJoinLeaveVisibleNames",
 				title: "Names shown",
-				description: "How many names to show before the rest is collapsed.",
+				description: "How many joins and leaves to show before the rest is collapsed.",
 				type: "number",
 				min: 1,
 				max: 50,
