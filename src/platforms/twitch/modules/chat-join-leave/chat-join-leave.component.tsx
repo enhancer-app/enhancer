@@ -1,89 +1,46 @@
-import type {
-	ChatJoinLeaveAction,
-	ChatJoinLeaveGroupProps,
-	ChatJoinLeaveProps,
-} from "$types/platforms/twitch/twitch.chat-join-leave.types.ts";
+import type { ChatJoinLeaveProps } from "$types/platforms/twitch/twitch.chat-join-leave.types.ts";
 import { useState } from "preact/hooks";
 import styled from "styled-components";
 
-const SIGNS: Record<ChatJoinLeaveAction, string> = { join: "+", leave: "−" };
-const COLORS: Record<ChatJoinLeaveAction, string> = { join: "#2ecc71", leave: "#ff4757" };
+const INLINE_LIMIT = 3;
 
-function formatGroup(action: ChatJoinLeaveAction, users: string[], visibleCount: number) {
-	const names = users.slice(0, visibleCount).map((user) => `${SIGNS[action]}${user}`);
-	const hidden = users.length - visibleCount;
-	return hidden > 0 ? [...names, `… ${hidden} more`].join(" ") : names.join(" ");
+function formatNames({ joined, left }: ChatJoinLeaveProps) {
+	return [...joined.map((user) => `+${user}`), ...left.map((user) => `−${user}`)].join(" ");
 }
 
-export function formatChatJoinLeave({ joined, left, visibleCount }: ChatJoinLeaveProps) {
-	return [formatGroup("join", joined, visibleCount), formatGroup("leave", left, visibleCount)]
-		.filter(Boolean)
-		.join("  ");
+function isInline({ joined, left }: ChatJoinLeaveProps) {
+	return joined.length + left.length <= INLINE_LIMIT;
 }
 
-export function ChatJoinLeaveComponent({ joined, left, visibleCount }: ChatJoinLeaveProps) {
+export function formatChatJoinLeave(props: ChatJoinLeaveProps) {
+	if (isInline(props)) return formatNames(props);
+	const counts = [];
+	if (props.joined.length) counts.push(`${props.joined.length} joined`);
+	if (props.left.length) counts.push(`${props.left.length} left`);
+	return counts.join(", ");
+}
+
+export function ChatJoinLeaveComponent(props: ChatJoinLeaveProps) {
 	const [expanded, setExpanded] = useState(false);
-	const collapsible = joined.length > visibleCount || left.length > visibleCount;
-	const limit = expanded ? Infinity : visibleCount;
-	const expand = () => setExpanded(true);
+	if (isInline(props)) return <span>{formatNames(props)}</span>;
 
 	return (
-		<Line>
-			<Group action="join" users={joined} limit={limit} onExpand={expand} />
-			<Group action="leave" users={left} limit={limit} onExpand={expand} />
-			{expanded && collapsible && <Toggle onClick={() => setExpanded(false)}>show less</Toggle>}
-		</Line>
+		<span>
+			{expanded ? formatNames(props) : formatChatJoinLeave(props)}{" "}
+			<Toggle onClick={() => setExpanded(!expanded)}>{expanded ? "hide" : "show who"}</Toggle>
+		</span>
 	);
 }
-
-function Group({ action, users, limit, onExpand }: ChatJoinLeaveGroupProps) {
-	if (!users.length) return null;
-	const hidden = users.length - limit;
-	const hiddenUsers = users.slice(limit);
-
-	return (
-		<GroupWrapper>
-			{users.slice(0, limit).map((user) => (
-				<Name key={user} $color={COLORS[action]}>
-					{SIGNS[action]}
-					{user}
-				</Name>
-			))}
-			{hidden > 0 && (
-				<Toggle onClick={onExpand} title={hiddenUsers.join(", ")}>
-					{`… ${hidden} more`}
-				</Toggle>
-			)}
-		</GroupWrapper>
-	);
-}
-
-const Line = styled.span`
-	display: inline-flex;
-	flex-wrap: wrap;
-	gap: 0 1.2rem;
-`;
-
-const GroupWrapper = styled.span`
-	display: inline-flex;
-	flex-wrap: wrap;
-	gap: 0 0.5rem;
-`;
-
-const Name = styled.span<{ $color: string }>`
-	color: ${({ $color }) => $color};
-`;
 
 const Toggle = styled.button`
 	padding: 0;
 	border: none;
 	background: none;
-	color: var(--color-text-alt-2, #adadb8);
+	color: var(--color-text-link, #bf94ff);
 	font: inherit;
 	cursor: pointer;
 
 	&:hover {
-		color: var(--color-text-link, #bf94ff);
 		text-decoration: underline;
 	}
 `;

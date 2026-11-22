@@ -3,12 +3,14 @@ export type ChatJoinLeaveAction = "join" | "leave";
 export type ChatJoinLeaveProps = {
 	joined: string[];
 	left: string[];
-	visibleCount: number;
 };
 
-export type ChatJoinLeaveGroupProps = {
+export type ChatJoinLeaveEvent = {
+	login: string;
 	action: ChatJoinLeaveAction;
-	users: string[];
-	limit: number;
-	onExpand: () => void;
+};
+
+export type ChatJoinLeaveIrcResult = {
+	data: string;
+	events: ChatJoinLeaveEvent[];
 };

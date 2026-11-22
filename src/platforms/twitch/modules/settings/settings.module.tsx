@@ -163,17 +163,6 @@ export default class SettingsModule extends TwitchModule {
 				dependsOn: { key: "chatJoinLeaveEnabled" },
 			},
 			{
-				id: "chatJoinLeaveVisibleNames",
-				title: "Names shown",
-				description: "How many joins and leaves to show before the rest is collapsed.",
-				type: "number",
-				min: 1,
-				max: 50,
-				step: 1,
-				categoryId: CATEGORY.CHAT,
-				dependsOn: { key: "chatJoinLeaveEnabled" },
-			},
-			{
 				id: "chatMessageMenuEnabled",
 				title: "Message menu",
 				description: "Right-click a chat message to see more options.",

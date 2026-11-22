@@ -3,10 +3,10 @@ import type { ChatJoinLeaveAction, ChatJoinLeaveProps } from "$types/platforms/t
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { render } from "preact";
 import { ChatJoinLeaveComponent, formatChatJoinLeave } from "./chat-join-leave.component.tsx";
+import { extractMembership } from "./chat-join-leave.irc.ts";
 
 export default class ChatJoinLeaveModule extends TwitchModule {
 	private static readonly IRC_URL = "wss://irc-ws.chat.twitch.tv";
-	private static readonly MEMBERSHIP_LINE = /^:(\w+)!\w+@\w+\.tmi\.twitch\.tv (JOIN|PART) #(\w+)$/;
 	private static readonly INFO_MESSAGE_TYPE = 29;
 	private static readonly BATCH_DELAY = 1500;
 	private static readonly RENDERED_ATTRIBUTE = "enhancer-chat-join-leave";
@@ -36,7 +36,6 @@ export default class ChatJoinLeaveModule extends TwitchModule {
 		if (this.isModuleEnabled()) this.installInterceptor();
 	}
 
-	// Twitch's IRC client shows a welcome line for every JOIN, so membership lines are removed before it reads them.
 	private installInterceptor() {
 		if (this.interceptorInstalled) return;
 		const descriptor = Object.getOwnPropertyDescriptor(MessageEvent.prototype, "data");
@@ -65,6 +64,7 @@ export default class ChatJoinLeaveModule extends TwitchModule {
 			this.logger.info("Requested chat membership events");
 			return data;
 		}
+		// Twitch rejects "CAP REQ :-twitch.tv/membership", so this socket stays filtered after the setting is turned off.
 		if (!data.includes(" JOIN #") && !data.includes(" PART #")) return data;
 
 		const cached = this.filteredData.get(event);
@@ -72,23 +72,12 @@ export default class ChatJoinLeaveModule extends TwitchModule {
 
 		const controller = this.twitchUtils().getChatController();
 		const channel = controller?.props.channelLogin?.toLowerCase();
-		const currentUser = controller?.props.userLogin?.toLowerCase();
-		const kept: string[] = [];
-		for (const line of data.split("\r\n")) {
-			const match = ChatJoinLeaveModule.MEMBERSHIP_LINE.exec(line);
-			const login = match?.[1];
-			if (!match || !login || login === currentUser || login.startsWith("justinfan")) {
-				kept.push(line);
-				continue;
-			}
-			if (channel && match[3] === channel && this.isModuleEnabled()) {
-				this.queue(channel, login, match[2] === "JOIN" ? "join" : "leave");
-			}
+		const result = extractMembership(data, channel, controller?.props.userLogin?.toLowerCase());
+		if (channel && this.isModuleEnabled()) {
+			for (const { login, action } of result.events) this.queue(channel, login, action);
 		}
-
-		const filtered = kept.join("\r\n");
-		this.filteredData.set(event, filtered);
-		return filtered;
+		this.filteredData.set(event, result.data);
+		return result.data;
 	}
 
 	private queue(channel: string, login: string, action: ChatJoinLeaveAction) {
@@ -128,11 +117,7 @@ export default class ChatJoinLeaveModule extends TwitchModule {
 	private pushMessage(joined: string[], left: string[]) {
 		const controller = this.twitchUtils().getChatController();
 		if (!controller) return;
-		const props: ChatJoinLeaveProps = {
-			joined,
-			left,
-			visibleCount: Math.max(1, this.settings().chatJoinLeaveVisibleNames),
-		};
+		const props: ChatJoinLeaveProps = { joined, left };
 		const text = formatChatJoinLeave(props);
 		controller.pushMessage({
 			id: `${this.getId()}-${++this.messageCounter}`,
