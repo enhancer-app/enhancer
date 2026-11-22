@@ -35,6 +35,8 @@ import type {
 	SaveEnhancerBadgeSlotPayload,
 	SaveEnhancerBadgeSlotResponse,
 	ClearEnhancerNicknamePayload,
+	AcceptEnhancerLegalPayload,
+	AcceptEnhancerLegalResponse,
 	GetEnhancerBillingResponse,
 	SaveEnhancerChatStylePayload,
 	SubmitEnhancerNicknamePayload,
@@ -251,6 +253,10 @@ export interface WorkerApiActions {
 	clearEnhancerNickname: {
 		payload: ClearEnhancerNicknamePayload;
 		response: GetEnhancerBillingResponse;
+	};
+	acceptEnhancerLegal: {
+		payload: AcceptEnhancerLegalPayload;
+		response: AcceptEnhancerLegalResponse;
 	};
 	syncFollows: {
 		payload: SyncFollowsPayload;

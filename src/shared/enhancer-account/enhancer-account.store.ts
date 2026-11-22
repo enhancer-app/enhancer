@@ -12,7 +12,7 @@ import type {
 	GetEnhancerBillingResponse,
 } from "$types/shared/worker/enhancer-account-worker.types.ts";
 import type { WorkerClient } from "$types/shared/worker/worker-client.types.ts";
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 
 export class EnhancerAccountStore {
 	readonly account = signal<EnhancerAccountState>({ loggedIn: false, environment: "production" });
@@ -24,6 +24,7 @@ export class EnhancerAccountStore {
 	readonly error = signal<string | null>(null);
 	readonly busy = signal(false);
 	readonly ready = signal(false);
+	readonly legalPending = computed(() => this.profile.value?.legal?.pending ?? []);
 
 	private started = false;
 
@@ -75,6 +76,15 @@ export class EnhancerAccountStore {
 
 	clearNickname(accountId: string): Promise<string | null> {
 		return this.applyBilling(this.workerService.send("clearEnhancerNickname", { accountId }));
+	}
+
+	async acceptLegal(): Promise<string | null> {
+		const result = await this.workerService.send("acceptEnhancerLegal", { documents: this.legalPending.value });
+		if (!result) return "Request timed out.";
+		if (result.kind === "unauthenticated") return "Your session expired. Log in again.";
+		if (result.kind === "error") return result.message;
+		await this.refresh();
+		return null;
 	}
 
 	async login(): Promise<void> {

@@ -37,6 +37,20 @@ export type EnhancerViewerSummary = {
 		createdAt: string;
 	};
 	identities: EnhancerViewerIdentity[];
+	legal?: { pending: EnhancerLegalDocument[] };
+};
+
+export type EnhancerLegalDocument = {
+	document: string;
+	version: string;
+};
+
+export type AcceptLegalRequest = {
+	documents: EnhancerLegalDocument[];
+};
+
+export type AcceptLegalResponse = {
+	pending: EnhancerLegalDocument[];
 };
 
 export type EnhancerViewerBadge = {

@@ -1,6 +1,8 @@
 import type { EnhancerApiError } from "$types/apis/enhancer.apis.ts";
 import type {
+	AcceptLegalResponse,
 	EnhancerChatAccountStyle,
+	EnhancerLegalDocument,
 	EnhancerViewerBadge,
 	EnhancerViewerBadges,
 	EnhancerViewerBilling,
@@ -66,8 +68,31 @@ function isViewerIdentity(value: unknown): value is EnhancerViewerIdentity {
 	);
 }
 
+export function isLegalDocumentList(value: unknown): value is EnhancerLegalDocument[] {
+	return Array.isArray(value) && value.length > 0 && value.length <= 8 && value.every(isLegalDocument);
+}
+
+function isLegalDocument(value: unknown): value is EnhancerLegalDocument {
+	return (
+		isRecord(value) &&
+		typeof value.document === "string" &&
+		value.document.length <= 32 &&
+		typeof value.version === "string" &&
+		value.version.length <= 32
+	);
+}
+
+function isLegalDocuments(value: unknown): value is EnhancerLegalDocument[] {
+	return Array.isArray(value) && value.every(isLegalDocument);
+}
+
+export function isLegalAcceptResponse(value: unknown): value is AcceptLegalResponse {
+	return isRecord(value) && isLegalDocuments(value.pending);
+}
+
 export function isViewerSummary(value: unknown): value is EnhancerViewerSummary {
 	if (!isRecord(value) || !isRecord(value.user) || !Array.isArray(value.identities)) return false;
+	if (value.legal !== undefined && !isLegalAcceptResponse(value.legal)) return false;
 	const { user } = value;
 	return (
 		typeof user.id === "string" &&

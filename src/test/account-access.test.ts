@@ -6,7 +6,12 @@ import type { EnhancerViewerBadge } from "$types/apis/enhancer-account.apis.ts";
 const EXTENSION = "chrome-extension://abc/";
 
 test("account actions are refused from Twitch and Kick pages and accepted from extension pages", () => {
-	for (const action of ["loginEnhancerAccount", "saveEnhancerChatStyle", "getEnhancerBilling"] as const) {
+	for (const action of [
+		"loginEnhancerAccount",
+		"saveEnhancerChatStyle",
+		"getEnhancerBilling",
+		"acceptEnhancerLegal",
+	] as const) {
 		expect(isActionAllowedFrom(action, "https://www.twitch.tv/xqc", EXTENSION)).toBe(false);
 		expect(isActionAllowedFrom(action, undefined, EXTENSION)).toBe(false);
 		expect(isActionAllowedFrom(action, "chrome-extension://other/account.html", EXTENSION)).toBe(false);

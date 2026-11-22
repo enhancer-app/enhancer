@@ -13,6 +13,7 @@ const EXTENSION_PAGE_ACTIONS: ReadonlySet<WorkerAction> = new Set<WorkerAction>(
 	"submitEnhancerNickname",
 	"clearEnhancerNickname",
 	"getEnhancerAccountCache",
+	"acceptEnhancerLegal",
 ]);
 
 function isKickPage(senderUrl: string | undefined): boolean {
