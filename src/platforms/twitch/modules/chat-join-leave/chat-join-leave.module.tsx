@@ -72,7 +72,8 @@ export default class ChatJoinLeaveModule extends TwitchModule {
 
 		const controller = this.twitchUtils().getChatController();
 		const channel = controller?.props.channelLogin?.toLowerCase();
-		const result = extractMembership(data, channel, controller?.props.userLogin?.toLowerCase());
+		const currentUser = controller?.props.userLogin ?? this.twitchUtils().getScrollableChat()?.props.currentUserLogin;
+		const result = extractMembership(data, channel, currentUser?.toLowerCase());
 		if (channel && this.isModuleEnabled()) {
 			for (const { login, action } of result.events) this.queue(channel, login, action);
 		}
