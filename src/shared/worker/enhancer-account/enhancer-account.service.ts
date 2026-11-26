@@ -268,12 +268,7 @@ export class EnhancerAccountService {
 
 	private toState(session: EnhancerAccountSession | null): EnhancerAccountState {
 		if (!session) return { loggedIn: false, environment: this.environment };
-		return {
-			loggedIn: true,
-			environment: this.environment,
-			...(session.profile.displayName ? { displayName: session.profile.displayName } : {}),
-			...(session.profile.username ? { username: session.profile.username } : {}),
-		};
+		return { loggedIn: true, environment: this.environment };
 	}
 
 	private fetchWithToken(url: string, init: RequestInit, accessToken: string): Promise<Response> {

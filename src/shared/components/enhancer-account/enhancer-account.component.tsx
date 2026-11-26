@@ -92,6 +92,15 @@ const AvatarFallback = styled.div<{ $size: number }>`
 	flex-shrink: 0;
 `;
 
+const NameSkeleton = styled.span`
+	display: inline-block;
+	width: 140px;
+	height: 14px;
+	border-radius: 7px;
+	vertical-align: middle;
+	background: var(--settings-surface-raised);
+`;
+
 const Chips = styled.div`
 	display: flex;
 	flex-wrap: wrap;
@@ -695,8 +704,7 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 	}
 
 	const user = profile?.user;
-	const displayName =
-		user?.displayName ?? user?.username ?? account.displayName ?? account.username ?? "Enhancer account";
+	const displayName = user?.displayName ?? user?.username ?? null;
 	const chatAccounts = billing ? sortChatAccounts(billing.accounts, platform) : [];
 	const activeAccount = chatAccounts.find((item) => item.accountId === selectedAccountId) ?? chatAccounts[0] ?? null;
 	const scopedBadges = badges
@@ -716,11 +724,11 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 					{user?.avatarUrl ? (
 						<Avatar $size={48} src={user.avatarUrl} alt="" />
 					) : (
-						<AvatarFallback $size={48}>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
+						<AvatarFallback $size={48}>{displayName?.charAt(0).toUpperCase()}</AvatarFallback>
 					)}
 					<RowMain>
 						<RowTitle>
-							{displayName}
+							{displayName ?? <NameSkeleton aria-label="Loading account" />}
 							{badgeCount !== null && (
 								<TitleCount>
 									· {badgeCount} {badgeCount === 1 ? "badge" : "badges"} collected

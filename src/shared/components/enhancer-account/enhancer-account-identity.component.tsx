@@ -168,14 +168,14 @@ export function EnhancerAccountIdentity({
 		);
 	}
 
-	const displayName = card.displayName ?? "Enhancer Account";
+	const displayName = card.displayName;
 	const badgeImage = card.badgeImageUrl;
 	const meta = card.badgesLoaded ? (card.badgeName ?? "No badge shown") : "Enhancer Account";
 
 	return (
 		<IdentityButton type="button" $active={active} aria-current={active ? "page" : undefined} onClick={onSelect}>
 			<AvatarWrap $accent>
-				{card.avatarUrl ? <img className="avatar" src={card.avatarUrl} alt="" /> : displayName.charAt(0).toUpperCase()}
+				{card.avatarUrl ? <img className="avatar" src={card.avatarUrl} alt="" /> : displayName?.charAt(0).toUpperCase()}
 				{badgeImage && (
 					<Pip>
 						<img src={badgeImage} alt="" />
@@ -183,7 +183,7 @@ export function EnhancerAccountIdentity({
 				)}
 			</AvatarWrap>
 			<Who>
-				<Name>{displayName}</Name>
+				{displayName ? <Name>{displayName}</Name> : <SkeletonLine $width={110} />}
 				<Meta $cta={false}>{meta}</Meta>
 			</Who>
 			<Chevron width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
