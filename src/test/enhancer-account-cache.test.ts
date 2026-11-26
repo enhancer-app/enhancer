@@ -38,7 +38,7 @@ function memoryStorage(): AccountCacheStorage & { data: Map<string, unknown> } {
 function setup() {
 	const state = {
 		owner: "production:user-1" as string | null,
-		account: { loggedIn: true, environment: "production", displayName: "igorovh" } as EnhancerAccountState,
+		account: { loggedIn: true, environment: "production" } as EnhancerAccountState,
 		avatar: "https://cdn/a.png",
 		status: 200,
 		requests: 0,
@@ -86,7 +86,7 @@ test("the account card answers from the cache and refreshes stale data in the ba
 	const handler = new EnhancerAccountCardHandler(logger, accountService, profiles, () => now);
 
 	const first = await handler.handle({ platform: "twitch" });
-	expect(first).toMatchObject({ loggedIn: true, displayName: "igorovh", avatarUrl: null, badgesLoaded: false });
+	expect(first).toMatchObject({ loggedIn: true, displayName: null, avatarUrl: null, badgesLoaded: false });
 	await handler.waitForRefresh();
 	expect(state.notified).toBe(1);
 

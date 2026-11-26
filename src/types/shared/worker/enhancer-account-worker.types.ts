@@ -73,8 +73,6 @@ export type EnhancerAccountSession = {
 export type EnhancerAccountState = {
 	loggedIn: boolean;
 	environment: EnhancerApiEnvironment;
-	displayName?: string;
-	username?: string;
 };
 
 export type StoredAccountSession = {

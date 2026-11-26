@@ -122,7 +122,7 @@ test("logs in against the selected realm and keeps the session encrypted", async
 
 	expect(result).toEqual({
 		success: true,
-		account: { loggedIn: true, environment: "test", displayName: "Streamer", username: "s1" },
+		account: { loggedIn: true, environment: "test" },
 	});
 	expect(calls[0].url).toBe(`${ENHANCER_ENDPOINTS.test.issuer}/protocol/openid-connect/token`);
 	const exchange = form(calls[0]);
