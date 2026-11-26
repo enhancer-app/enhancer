@@ -1,6 +1,7 @@
 const { execFileSync } = require("node:child_process");
 const { existsSync, readFileSync } = require("node:fs");
 const { isChangesetFile, parseChangeset, changelogSection, renderChangesets, toDiscord } = require("./changelog.cjs");
+const { findChangelogPage } = require("./changelog-page.cjs");
 
 const NOTHING_USER_FACING = "- Bug fixes and stability improvements";
 const MAX_MESSAGE_LENGTH = 2000;
@@ -34,8 +35,12 @@ module.exports = async ({ core }) => {
 		: releaseSection(version);
 	const notes = section ? toDiscord(section) : NOTHING_USER_FACING;
 	const heading = canary ? `Enhancer Canary changelog ${version}` : `Changelog ${version}`;
+	const page = canary ? null : await findChangelogPage(version);
+	const footer = page ? `\n\n**What's new:** <${page}>` : "";
 	let message = `**${heading}**\n\n${notes}`;
-	if (message.length > MAX_MESSAGE_LENGTH) message = `${message.slice(0, MAX_MESSAGE_LENGTH - 3)}...`;
+	const limit = MAX_MESSAGE_LENGTH - footer.length;
+	if (message.length > limit) message = `${message.slice(0, limit - 3)}...`;
+	message += footer;
 	core.info(message);
 
 	const discordResponse = await fetch(process.env.DISCORD_CHANGELOG_WEBHOOK, {
