@@ -76,3 +76,8 @@ export function nicknameFeedback(value: string): NicknameFeedback {
 	if (!check.issue || check.issue === "EMPTY") return { hint };
 	return { hint, error: NICKNAME_ISSUE_MESSAGES[check.issue] };
 }
+
+export function realNameLabel(displayName: string, login: string): string {
+	if (!displayName || displayName.toLowerCase() === login.toLowerCase()) return `@${displayName || login}`;
+	return `${displayName} (@${login})`;
+}
