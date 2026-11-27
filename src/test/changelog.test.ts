@@ -9,6 +9,8 @@ import {
 import { GLOBAL_DEFAULT_SETTINGS, sanitizeGlobalSettings } from "$shared/settings/global-settings.constants.ts";
 import type SettingsCache from "$shared/settings/settings.service.ts";
 import {
+	CHANGELOG_AWAITING_TTL,
+	CHANGELOG_AWAITING_WINDOW,
 	CHANGELOG_CACHE_KEY,
 	CHANGELOG_CACHE_TTL,
 	CHANGELOG_PENDING_SEEN_KEY,
@@ -38,6 +40,15 @@ test("versions compare numerically and ignore the Canary build number", () => {
 	expect(compareVersions("5.5.0-beta", "5.5.0")).toBeNaN();
 });
 
+test("a Canary build sees the release notes once it reaches that version, and only once", async () => {
+	const { feed, seen } = setupFeed({ version: "5.4.3.1" });
+	expect(await feed.getLatest()).toMatchObject({ id: "5-4-0" });
+	const updated = setupFeed({ version: "5.5.0.0" });
+	expect((await updated.feed.getLatest())?.id).toBe("5-5-0");
+	expect(selectLatestEntry(FEED, "5.5.0.7")?.id).toBe("5-5-0");
+	expect(seen).toEqual([]);
+});
+
 test("the newest notifying entry up to the installed version wins, in any feed order", () => {
 	expect(selectLatestEntry(FEED, "5.5.3")?.id).toBe("5-5-0");
 	expect(selectLatestEntry(FEED.toReversed(), "5.5.3")?.id).toBe("5-5-0");
@@ -58,15 +69,14 @@ test("malformed feed entries are dropped and a non-list feed is an error", () =>
 	expect(() => parseChangelogFeed({ entries: [] })).toThrow();
 });
 
-test("the dot shows only for an unseen entry, with notifications on, outside Canary", () => {
+test("the dot shows only for an unseen entry with notifications on", () => {
 	const latest = entry("5.5.0");
 	const settings = { whatsNewEnabled: true, lastSeenChangelogId: null };
-	expect(shouldShowChangelog(latest, settings, "stable")).toBe(true);
-	expect(shouldShowChangelog(latest, { ...settings, lastSeenChangelogId: "5-4-0" }, "stable")).toBe(true);
-	expect(shouldShowChangelog(latest, { ...settings, lastSeenChangelogId: "5-5-0" }, "stable")).toBe(false);
-	expect(shouldShowChangelog(latest, { ...settings, whatsNewEnabled: false }, "stable")).toBe(false);
-	expect(shouldShowChangelog(latest, settings, "canary")).toBe(false);
-	expect(shouldShowChangelog(null, settings, "stable")).toBe(false);
+	expect(shouldShowChangelog(latest, settings)).toBe(true);
+	expect(shouldShowChangelog(latest, { ...settings, lastSeenChangelogId: "5-4-0" })).toBe(true);
+	expect(shouldShowChangelog(latest, { ...settings, lastSeenChangelogId: "5-5-0" })).toBe(false);
+	expect(shouldShowChangelog(latest, { ...settings, whatsNewEnabled: false })).toBe(false);
+	expect(shouldShowChangelog(null, settings)).toBe(false);
 });
 
 test("stored settings keep only a valid last seen changelog id", () => {
@@ -120,6 +130,9 @@ function setupFeed(options: { version?: string; feed?: () => unknown } = {}) {
 		recover: () => {
 			respond = () => FEED;
 		},
+		respondWith: (items: unknown) => {
+			respond = () => items;
+		},
 	};
 }
 
@@ -171,6 +184,37 @@ test("an extension update refetches right away, ignoring a fresh cache", async (
 	expect(seen).toEqual([]);
 });
 
+test("after an update that beat its release notes, the feed is checked every 30 minutes until they appear", async () => {
+	const { feed, clock, fetches, respondWith } = setupFeed({ version: "5.7.0" });
+	await feed.handleInstalled("update");
+	expect((await feed.getLatest())?.id).toBe("5-6-0");
+
+	clock.now += CHANGELOG_AWAITING_TTL - 1;
+	await feed.getLatest();
+	expect(fetches).toHaveLength(1);
+
+	respondWith([entry("5.7.0"), ...FEED]);
+	clock.now += 1;
+	expect((await feed.getLatest())?.id).toBe("5-7-0");
+	expect(fetches).toHaveLength(2);
+
+	clock.now += CHANGELOG_AWAITING_TTL;
+	await feed.getLatest();
+	expect(fetches).toHaveLength(2);
+});
+
+test("a version that never gets release notes falls back to the normal cache after two days", async () => {
+	const { feed, clock, fetches } = setupFeed({ version: "5.7.0" });
+	await feed.handleInstalled("update");
+	clock.now += CHANGELOG_AWAITING_WINDOW;
+	await feed.getLatest();
+	expect(fetches).toHaveLength(2);
+
+	clock.now += CHANGELOG_AWAITING_TTL;
+	await feed.getLatest();
+	expect(fetches).toHaveLength(2);
+});
+
 test("a first install marks the newest entry as seen so new users get no dot", async () => {
 	const { feed, seen } = setupFeed();
 	await feed.handleInstalled("install");
@@ -200,7 +244,7 @@ test("browser updates do not touch the feed", async () => {
 	expect(data[CHANGELOG_CACHE_KEY]).toBeUndefined();
 });
 
-function setupNotifier(channel: "stable" | "canary" = "stable") {
+function setupNotifier() {
 	let global: GlobalSettings = { ...GLOBAL_DEFAULT_SETTINGS };
 	const requests: string[] = [];
 	const workerService = {
@@ -215,7 +259,7 @@ function setupNotifier(channel: "stable" | "canary" = "stable") {
 			global = { ...global, ...changes };
 		},
 	} as unknown as SettingsCache<any>;
-	const notifier = ChangelogNotifier.for(workerService, settingsCache, createNanoEvents(), channel);
+	const notifier = ChangelogNotifier.for(workerService, settingsCache, createNanoEvents());
 	return { notifier, requests, global: () => global };
 }
 
@@ -224,7 +268,7 @@ test("dismissing or disabling hides the notice, and showing it again brings it b
 	await notifier.load();
 	expect(notifier.notice.value?.id).toBe("5-5-0");
 
-	await notifier.dismiss();
+	await notifier.markSeen();
 	expect(global().lastSeenChangelogId).toBe("5-5-0");
 	expect(notifier.notice.value).toBeNull();
 
@@ -238,11 +282,4 @@ test("dismissing or disabling hides the notice, and showing it again brings it b
 	await notifier.showAgain();
 	expect(global()).toMatchObject({ whatsNewEnabled: true, lastSeenChangelogId: null });
 	expect(notifier.notice.value?.id).toBe("5-5-0");
-});
-
-test("Canary builds never ask for the changelog", async () => {
-	const { notifier, requests } = setupNotifier("canary");
-	await notifier.load();
-	expect(requests).toEqual([]);
-	expect(notifier.notice.value).toBeNull();
 });

@@ -170,10 +170,7 @@ export class HandlerRegistry {
 		this.handlers.set("getChannelLinks", new GetChannelLinksHandler(this.logger, this.sharedDatabase));
 		this.handlers.set("updateChannelLink", new UpdateChannelLinkHandler(this.logger, this.sharedDatabase));
 		this.handlers.set("removeChannelLink", new RemoveChannelLinkHandler(this.logger, this.sharedDatabase));
-		this.handlers.set(
-			"getLatestChangelog",
-			new GetLatestChangelogHandler(this.logger, this.changelogFeed, __channel__),
-		);
+		this.handlers.set("getLatestChangelog", new GetLatestChangelogHandler(this.logger, this.changelogFeed));
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {

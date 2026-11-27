@@ -3,7 +3,6 @@ import type SettingsCache from "$shared/settings/settings.service.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
 import type { CommonEvents } from "$types/platforms/common.events.ts";
 import type { ChangelogEntry } from "$types/shared/changelog.types.ts";
-import type { ExtensionChannel } from "$types/shared/extension.types.ts";
 import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import { type Signal, signal } from "@preact/signals";
@@ -20,7 +19,6 @@ export class ChangelogNotifier {
 		private readonly workerService: WorkerService,
 		private readonly settingsCache: SettingsCache<PlatformSettings>,
 		emitter: Emitter<CommonEvents>,
-		private readonly channel: ExtensionChannel,
 	) {
 		emitter.on("extension:settings-refresh", () => this.refresh());
 	}
@@ -29,18 +27,16 @@ export class ChangelogNotifier {
 		workerService: WorkerService,
 		settingsCache: SettingsCache<any>,
 		emitter: Emitter<any>,
-		channel: ExtensionChannel = __channel__,
 	): ChangelogNotifier {
 		let notifier = notifiers.get(workerService);
 		if (!notifier) {
-			notifier = new ChangelogNotifier(workerService, settingsCache, emitter, channel);
+			notifier = new ChangelogNotifier(workerService, settingsCache, emitter);
 			notifiers.set(workerService, notifier);
 		}
 		return notifier;
 	}
 
 	load(): Promise<void> {
-		if (this.channel === "canary") return Promise.resolve();
 		this.loading ??= this.workerService
 			.send("getLatestChangelog")
 			.then((response) => {
@@ -51,16 +47,9 @@ export class ChangelogNotifier {
 		return this.loading;
 	}
 
-	open(): Promise<void> {
+	markSeen(): Promise<void> {
 		const entry = this.notice.value;
-		if (!entry) return Promise.resolve();
-		window.open(entry.url, "_blank", "noopener,noreferrer");
-		return this.markSeen(entry.id);
-	}
-
-	dismiss(): Promise<void> {
-		const entry = this.notice.value;
-		return entry ? this.markSeen(entry.id) : Promise.resolve();
+		return entry ? this.update({ lastSeenChangelogId: entry.id }) : Promise.resolve();
 	}
 
 	disable(): Promise<void> {
@@ -69,10 +58,6 @@ export class ChangelogNotifier {
 
 	showAgain(): Promise<void> {
 		return this.update({ whatsNewEnabled: true, lastSeenChangelogId: null });
-	}
-
-	private markSeen(id: string): Promise<void> {
-		return this.update({ lastSeenChangelogId: id });
 	}
 
 	private async update(changes: Partial<GlobalSettings>): Promise<void> {
@@ -87,6 +72,6 @@ export class ChangelogNotifier {
 		} catch {
 			return;
 		}
-		this.notice.value = shouldShowChangelog(this.entry, settings, this.channel) ? this.entry : null;
+		this.notice.value = shouldShowChangelog(this.entry, settings) ? this.entry : null;
 	}
 }

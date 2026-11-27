@@ -3,7 +3,6 @@ import { ChangelogResetButton } from "$shared/components/changelog/changelog-not
 import type { SettingDefinition } from "$types/shared/components/settings.component.types.ts";
 
 export function createChangelogSettings<T>(categoryId: string, notifier: ChangelogNotifier): SettingDefinition<T>[] {
-	if (__channel__ === "canary") return [];
 	return [
 		{
 			id: "whatsNewEnabled",

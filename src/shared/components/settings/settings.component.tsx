@@ -251,6 +251,10 @@ const Main = styled.section`
 	min-width: 0;
 	min-height: 0;
 	overflow: clip;
+
+	&:has([data-settings-notice]) {
+		--settings-page-top: 20px;
+	}
 `;
 
 const MainGlow = styled.div`
@@ -308,7 +312,7 @@ const Page = styled.div`
 	width: 100%;
 	max-width: 860px;
 	margin: 0 auto;
-	padding: 32px 56px 56px;
+	padding: var(--settings-page-top, 32px) 56px 56px;
 `;
 
 const BarePage = styled.div`

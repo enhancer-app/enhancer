@@ -127,7 +127,6 @@ export default class WorkerBackground {
 	}
 
 	async handleInstalled(reason: string): Promise<void> {
-		if (__channel__ === "canary") return;
 		await this.started;
 		await this.changelogFeed.handleInstalled(reason);
 	}

@@ -1,5 +1,4 @@
 import type { ChangelogEntry, ChangelogNoticeSettings } from "$types/shared/changelog.types.ts";
-import type { ExtensionChannel } from "$types/shared/extension.types.ts";
 
 const VERSION_PATTERN = /^\d+(\.\d+){0,3}$/;
 const MAX_ID_LENGTH = 100;
@@ -59,9 +58,8 @@ export function selectLatestEntry(entries: ChangelogEntry[], currentVersion: str
 export function shouldShowChangelog(
 	entry: ChangelogEntry | null,
 	settings: ChangelogNoticeSettings,
-	channel: ExtensionChannel,
 ): entry is ChangelogEntry {
-	if (!entry || channel === "canary" || !settings.whatsNewEnabled) return false;
+	if (!entry || !settings.whatsNewEnabled) return false;
 	return entry.id !== settings.lastSeenChangelogId;
 }
 

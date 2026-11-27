@@ -1,9 +1,12 @@
-import { parseChangelogFeed, selectLatestEntry } from "$shared/changelog/changelog.utils.ts";
+import { compareVersions, parseChangelogFeed, selectLatestEntry } from "$shared/changelog/changelog.utils.ts";
 import type { ChangelogEntry, ChangelogFeedCache, ChangelogFeedDependencies } from "$types/shared/changelog.types.ts";
 
 export const CHANGELOG_CACHE_KEY = "enhancer.changelog.feed";
 export const CHANGELOG_PENDING_SEEN_KEY = "enhancer.changelog.pending-seen";
+export const CHANGELOG_UPDATED_AT_KEY = "enhancer.changelog.updated-at";
 export const CHANGELOG_CACHE_TTL = 6 * 60 * 60 * 1000;
+export const CHANGELOG_AWAITING_TTL = 30 * 60 * 1000;
+export const CHANGELOG_AWAITING_WINDOW = 48 * 60 * 60 * 1000;
 export const CHANGELOG_RETRY_DELAY = 30 * 60 * 1000;
 
 export async function fetchChangelogFeed(url: string): Promise<unknown> {
@@ -21,7 +24,8 @@ export class ChangelogFeed {
 		const cache = await this.readCache();
 		const now = this.now();
 		if (!force && cache) {
-			if (cache.fetchedAt !== undefined && now - cache.fetchedAt < CHANGELOG_CACHE_TTL) return cache.entries;
+			const ttl = (await this.isAwaitingNotes(cache.entries, now)) ? CHANGELOG_AWAITING_TTL : CHANGELOG_CACHE_TTL;
+			if (cache.fetchedAt !== undefined && now - cache.fetchedAt < ttl) return cache.entries;
 			if (cache.failedAt !== undefined && now - cache.failedAt < CHANGELOG_RETRY_DELAY) return cache.entries;
 		}
 		this.inflight ??= this.refresh(cache).finally(() => {
@@ -40,6 +44,7 @@ export class ChangelogFeed {
 
 	async handleInstalled(reason: string): Promise<void> {
 		if (reason !== "install" && reason !== "update") return;
+		if (reason === "update") await this.deps.storage.set({ [CHANGELOG_UPDATED_AT_KEY]: this.now() }).catch(() => {});
 		const entries = await this.getEntries(true);
 		if (reason === "update") return;
 		const latest = selectLatestEntry(entries, this.deps.version);
@@ -76,6 +81,16 @@ export class ChangelogFeed {
 
 	private async writeCache(cache: ChangelogFeedCache): Promise<void> {
 		await this.deps.storage.set({ [CHANGELOG_CACHE_KEY]: cache }).catch(() => {});
+	}
+
+	private async isAwaitingNotes(entries: ChangelogEntry[], now: number): Promise<boolean> {
+		if (entries.some((entry) => compareVersions(entry.version, this.deps.version) === 0)) return false;
+		try {
+			const updatedAt = (await this.deps.storage.get(CHANGELOG_UPDATED_AT_KEY))[CHANGELOG_UPDATED_AT_KEY];
+			return typeof updatedAt === "number" && now - updatedAt < CHANGELOG_AWAITING_WINDOW;
+		} catch {
+			return false;
+		}
 	}
 
 	private async hasPendingSeen(): Promise<boolean> {

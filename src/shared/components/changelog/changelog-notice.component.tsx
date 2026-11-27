@@ -1,6 +1,6 @@
 import type { ChangelogNotifier } from "$shared/changelog/changelog.notifier.ts";
 import { SETTINGS_FONT } from "$shared/components/settings/settings-theme.ts";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 
 const Wrapper = styled.div`
 	position: relative;
@@ -9,75 +9,84 @@ const Wrapper = styled.div`
 	width: 100%;
 	max-width: 860px;
 	margin: 0 auto;
-	padding: 24px 56px 0;
+	padding: 16px 56px 0;
 `;
 
 const Card = styled.section`
+	container-type: inline-size;
 	display: flex;
-	flex-wrap: wrap;
 	align-items: center;
-	gap: 10px 14px;
-	padding: 12px 12px 12px 16px;
-	border-radius: 12px;
+	gap: 10px;
+	height: 40px;
+	padding: 0 6px 0 12px;
+	border-radius: 10px;
 	background: var(--settings-accent-soft);
 	box-shadow: inset 0 0 0 1px rgba(145, 71, 255, 0.35);
 	font-family: ${SETTINGS_FONT};
 `;
 
-const Icon = styled.div`
-	display: grid;
-	place-items: center;
-	flex-shrink: 0;
-	width: 32px;
-	height: 32px;
-	border-radius: 8px;
-	background: var(--settings-accent);
-	color: #ffffff;
-`;
-
-const Text = styled.div`
+const Icon = styled.span`
 	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	flex: 1 1 220px;
+	flex-shrink: 0;
+	color: var(--settings-accent);
+`;
+
+const Text = styled.a`
+	flex: 1;
 	min-width: 0;
-`;
-
-const Eyebrow = styled.span`
-	white-space: nowrap;
-	font-size: 12px;
-	font-weight: 500;
-	color: var(--settings-text-muted);
-`;
-
-const Title = styled.h2`
-	margin: 0;
-	font-size: 14px;
-	font-weight: 600;
+	overflow: hidden;
+	font-size: 13px;
 	line-height: 20px;
-	color: var(--settings-text-primary);
-	overflow-wrap: anywhere;
+	text-decoration: none;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+
+	&&,
+	&&:hover,
+	&&:visited {
+		color: var(--settings-text-primary);
+		text-decoration: none;
+	}
+
+	&:hover strong {
+		text-decoration: underline;
+	}
+
+	&:focus-visible {
+		border-radius: 4px;
+		outline: 2px solid var(--settings-accent);
+	}
+`;
+
+const Title = styled.strong`
+	font-weight: 600;
+`;
+
+const Prefix = styled.span`
+	@container (max-width: 560px) {
+		display: none;
+	}
 `;
 
 const Actions = styled.div`
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: 2px;
 	flex-shrink: 0;
-	margin-left: auto;
 `;
 
-const Button = styled.button`
+const buttonStyles = css`
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	height: 32px;
-	padding: 0 12px;
+	height: 28px;
+	padding: 0 10px;
 	border: none;
 	border-radius: 8px;
 	font-family: ${SETTINGS_FONT};
-	font-size: 13px;
+	font-size: 12px;
 	font-weight: 500;
+	text-decoration: none;
 	white-space: nowrap;
 	cursor: pointer;
 
@@ -87,9 +96,20 @@ const Button = styled.button`
 	}
 `;
 
-const PrimaryButton = styled(Button)`
+const Button = styled.button`
+	${buttonStyles}
+`;
+
+const PrimaryLink = styled.a`
+	${buttonStyles}
 	background: var(--settings-accent);
-	color: #ffffff;
+
+	&&,
+	&&:hover,
+	&&:visited {
+		color: #ffffff;
+		text-decoration: none;
+	}
 
 	&:hover {
 		background: var(--settings-accent-hover);
@@ -108,7 +128,7 @@ const QuietButton = styled(Button)`
 
 const DismissButton = styled(QuietButton)`
 	justify-content: center;
-	width: 32px;
+	width: 28px;
 	padding: 0;
 `;
 
@@ -134,21 +154,30 @@ const CloseIcon = (
 export function ChangelogNotice({ notifier }: { notifier: ChangelogNotifier }) {
 	const entry = notifier.notice.value;
 	if (!entry) return null;
+	const link = {
+		href: entry.url,
+		target: "_blank",
+		rel: "noopener noreferrer",
+		onClick: () => void notifier.markSeen(),
+		onAuxClick: (event: MouseEvent) => {
+			if (event.button === 1) void notifier.markSeen();
+		},
+	};
 	return (
-		<Wrapper>
+		<Wrapper data-settings-notice="">
 			<Card aria-label={`What's new in ${entry.version}`}>
 				<Icon>{SparkIcon}</Icon>
-				<Text>
-					<Eyebrow>What's new in {entry.version}</Eyebrow>
-					<Title>{entry.title}</Title>
+				<Text {...link} title={`What's new in ${entry.version}: ${entry.title}`}>
+					<Prefix>What's new in </Prefix>
+					{entry.version}: <Title>{entry.title}</Title>
 				</Text>
 				<Actions>
 					<QuietButton onClick={() => void notifier.disable()}>Never show again</QuietButton>
-					<PrimaryButton onClick={() => void notifier.open()}>
+					<PrimaryLink {...link}>
 						See what's new
 						{ExternalIcon}
-					</PrimaryButton>
-					<DismissButton onClick={() => void notifier.dismiss()} title="Dismiss" aria-label="Dismiss">
+					</PrimaryLink>
+					<DismissButton onClick={() => void notifier.markSeen()} title="Dismiss" aria-label="Dismiss">
 						{CloseIcon}
 					</DismissButton>
 				</Actions>
@@ -158,6 +187,9 @@ export function ChangelogNotice({ notifier }: { notifier: ChangelogNotifier }) {
 }
 
 const OutlineButton = styled(Button)`
+	height: 32px;
+	padding: 0 12px;
+	font-size: 13px;
 	background: var(--settings-control-background);
 	box-shadow: inset 0 0 0 1px var(--settings-control-border);
 	color: var(--settings-text-primary);
