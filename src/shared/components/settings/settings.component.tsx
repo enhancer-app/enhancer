@@ -1601,6 +1601,7 @@ const Settings = <T,>({
 	isOpen = true,
 	identity,
 	identityCategoryId,
+	notice,
 	categories,
 	settingDefinitions,
 	settings,
@@ -2283,6 +2284,7 @@ const Settings = <T,>({
 					<CloseButton onClick={onClose} title="Close" aria-label="Close settings">
 						{CloseIcon(18)}
 					</CloseButton>
+					{notice}
 					<Content ref={contentRef}>
 						{showBare ? (
 							renderContent()

@@ -1,5 +1,8 @@
+import { ChangelogNotifier } from "$shared/changelog/changelog.notifier.ts";
+import { ChangelogDot, changelogButtonLabel } from "$shared/components/changelog/changelog-dot.component.tsx";
 import { EXTENSION_NAME } from "$shared/extension.constants.ts";
 import { TooltipComponent } from "$shared/components/tooltip/tooltip.component.tsx";
+import type { SettingsButtonComponentProps } from "$types/shared/components/changelog.component.types.ts";
 import type { TwitchModuleConfig } from "$types/shared/module/module.types.ts";
 import { render } from "preact";
 import styled from "styled-components";
@@ -38,7 +41,11 @@ export default class SettingsButtonModule extends TwitchModule {
 		wrappers.forEach((element) => {
 			render(
 				<TooltipComponent content={<p>Open Enhancer Settings</p>} position="bottom">
-					<SettingsButtonComponent onClick={this.openSettings.bind(this)} logoUrl={logo} />
+					<SettingsButtonComponent
+						onClick={this.openSettings.bind(this)}
+						logoUrl={logo}
+						notifier={this.changelogNotifier()}
+					/>
 				</TooltipComponent>,
 				element,
 			);
@@ -55,7 +62,11 @@ export default class SettingsButtonModule extends TwitchModule {
 			target.prepend(wrapper);
 			render(
 				<TooltipComponent content={<p>Open Enhancer Settings</p>} position="bottom">
-					<SettingsButtonComponent onClick={this.openSettings.bind(this)} logoUrl={logo} />
+					<SettingsButtonComponent
+						onClick={this.openSettings.bind(this)}
+						logoUrl={logo}
+						notifier={this.changelogNotifier()}
+					/>
 				</TooltipComponent>,
 				wrapper,
 			);
@@ -66,7 +77,12 @@ export default class SettingsButtonModule extends TwitchModule {
 		this.emitter.emit("extension:settings-open");
 	}
 
+	private changelogNotifier() {
+		return ChangelogNotifier.for(this.workerService(), this.settingsCache(), this.emitter);
+	}
+
 	async initialize() {
+		void this.changelogNotifier().load();
 		this.commonUtils().createGlobalStyle(`
 			.top-nav__menu .enhancer-settings-button { order: -5 !important; }
 		    .top-nav__menu .ffz-top-nav { order: -4 !important; }
@@ -86,6 +102,7 @@ const StyledSettingsButton = styled.button`
 	cursor: pointer;
 	position: relative;
 	margin-top: 4px;
+	--enhancer-changelog-dot-ring: var(--color-background-base);
 
 	border: none;
 	background: transparent;
@@ -110,15 +127,11 @@ const StyledSettingsButton = styled.button`
 	}
 `;
 
-interface SettingsButtonComponentProps {
-	onClick: () => void;
-	logoUrl: string;
-}
-
-function SettingsButtonComponent({ onClick, logoUrl }: SettingsButtonComponentProps) {
+function SettingsButtonComponent({ onClick, logoUrl, notifier }: SettingsButtonComponentProps) {
 	return (
 		<StyledSettingsButton onClick={onClick}>
-			<img src={logoUrl} alt={`${EXTENSION_NAME} Settings`} />
+			<img src={logoUrl} alt={changelogButtonLabel(notifier, `${EXTENSION_NAME} Settings`)} />
+			<ChangelogDot notifier={notifier} />
 		</StyledSettingsButton>
 	);
 }
