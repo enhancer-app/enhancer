@@ -162,7 +162,7 @@ const ErrorText = styled.p`
 const Footer = styled.div`
 	display: flex;
 	justify-content: center;
-	gap: 8px;
+	gap: 16px;
 	margin-top: 20px;
 	font-size: 12.5px;
 	color: var(--settings-text-faint);
@@ -261,7 +261,6 @@ export function LegalAcceptanceScreen({
 					<button type="button" onClick={onLogout} disabled={saving || busy}>
 						Log out
 					</button>
-					<span>·</span>
 					<a href={dashboardUrl} target="_blank" rel="noopener noreferrer">
 						Don't agree?
 					</a>

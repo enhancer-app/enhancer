@@ -69,7 +69,7 @@ const renderStableBody = ({ current, next, section, candidates, selected, levels
 		"",
 		...candidates.map(({ sha, subject }) => {
 			const level = levels.get(sha);
-			return `- [${selected.has(sha) ? "x" : " "}] ${subject} (\`${sha.slice(0, 7)}\`)${level ? ` · \`${level}\`` : ""} <!-- commit:${sha} -->`;
+			return `- [${selected.has(sha) ? "x" : " "}] ${subject} (\`${sha.slice(0, 7)}\`${level ? `, \`${level}\`` : ""}) <!-- commit:${sha} -->`;
 		}),
 		"",
 		mode === "cherry-pick"

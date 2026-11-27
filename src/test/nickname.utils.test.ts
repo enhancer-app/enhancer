@@ -75,7 +75,7 @@ describe("checkNickname", () => {
 
 describe("nicknameFeedback", () => {
 	test("counts characters and symbols without flagging an empty field", () => {
-		expect(nicknameFeedback("")).toEqual({ hint: "0/32 characters · 0/5 emoji or symbols" });
+		expect(nicknameFeedback("")).toEqual({ hint: "0/32 characters, 0/5 emoji or symbols" });
 	});
 
 	test("explains the first broken rule", () => {
