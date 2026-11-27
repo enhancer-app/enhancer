@@ -1,3 +1,5 @@
+import { ChangelogNotifier } from "$shared/changelog/changelog.notifier.ts";
+import { ChangelogNotice } from "$shared/components/changelog/changelog-notice.component.tsx";
 import Settings, { SettingsOverlay } from "$shared/components/settings/settings.component.tsx";
 import type { Logger } from "$shared/logger/logger.ts";
 import { isGlobalSettingKey } from "$shared/settings/global-settings.constants.ts";
@@ -108,6 +110,10 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 			"https://enhancer.at/assets/brand/logo.png",
 		);
 
+		const changelogNotifier = ChangelogNotifier.for(this.workerService, this.settingsCache, this.emitter);
+		void changelogNotifier.load();
+		const notice = <ChangelogNotice notifier={changelogNotifier} />;
+
 		const closeSettings = () => {
 			this.isOpenSignal.value = false;
 		};
@@ -133,6 +139,7 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 							isOpen={this.isOpenSignal.value}
 							identity={props.identity}
 							identityCategoryId={props.identityCategoryId}
+							notice={notice}
 							categories={props.categories}
 							settingDefinitions={props.definitions}
 							settings={this.settingsSignal.value}

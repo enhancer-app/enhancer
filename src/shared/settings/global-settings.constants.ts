@@ -1,3 +1,4 @@
+import { isChangelogId } from "$shared/changelog/changelog.utils.ts";
 import { isEnhancerApiEnvironment } from "$shared/enhancer-environment.ts";
 import { isFollowsPlatformFilter } from "$shared/utils/follows-filter.utils.ts";
 import { FOLLOWS_SORT_ORDERS } from "$shared/utils/follows-sort.utils.ts";
@@ -12,6 +13,8 @@ export const GLOBAL_DEFAULT_SETTINGS: GlobalSettings = {
 	followsPlatformFilter: "all",
 	developerSettingsEnabled: false,
 	apiEnvironment: "production",
+	whatsNewEnabled: true,
+	lastSeenChangelogId: null,
 };
 
 export function isGlobalSettingKey(key: PropertyKey): key is keyof GlobalSettings {
@@ -22,6 +25,7 @@ function isValidGlobalSetting(key: keyof GlobalSettings, item: unknown): boolean
 	if (key === "followsSort") return (FOLLOWS_SORT_ORDERS as unknown[]).includes(item);
 	if (key === "followsPlatformFilter") return isFollowsPlatformFilter(item);
 	if (key === "apiEnvironment") return isEnhancerApiEnvironment(item);
+	if (key === "lastSeenChangelogId") return item === null || isChangelogId(item);
 	return typeof item === "boolean";
 }
 

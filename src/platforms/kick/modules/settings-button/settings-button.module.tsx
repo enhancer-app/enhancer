@@ -1,5 +1,8 @@
+import { ChangelogNotifier } from "$shared/changelog/changelog.notifier.ts";
+import { ChangelogDot, changelogButtonLabel } from "$shared/components/changelog/changelog-dot.component.tsx";
 import { EXTENSION_NAME } from "$shared/extension.constants.ts";
 import KickModule from "$kick/kick.module.ts";
+import type { SettingsButtonComponentProps } from "$types/shared/components/changelog.component.types.ts";
 import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 import { render } from "preact";
 import styled from "styled-components";
@@ -36,12 +39,27 @@ export default class SettingsButtonModule extends KickModule {
 		const wrappers = this.commonUtils().createEmptyElements(this.getId(), menus, "span");
 		wrappers.forEach((element) => {
 			element.style.order = "-1";
-			render(<SettingsButtonComponent onClick={this.openSettings.bind(this)} logoUrl={logo} />, element);
+			render(
+				<SettingsButtonComponent
+					onClick={this.openSettings.bind(this)}
+					logoUrl={logo}
+					notifier={this.changelogNotifier()}
+				/>,
+				element,
+			);
 		});
 	}
 
 	private openSettings() {
 		this.emitter.emit("extension:settings-open");
+	}
+
+	private changelogNotifier() {
+		return ChangelogNotifier.for(this.workerService(), this.settingsCache(), this.emitter);
+	}
+
+	initialize() {
+		void this.changelogNotifier().load();
 	}
 }
 
@@ -54,6 +72,7 @@ const StyledSettingsButton = styled.button`
 	height: 30px;
 	cursor: pointer;
 	position: relative;
+	--enhancer-changelog-dot-ring: var(--color-surface-bg-lowest);
 
 	border: none;
 	background: transparent;
@@ -70,15 +89,11 @@ const StyledSettingsButton = styled.button`
 	}
 `;
 
-interface SettingsButtonComponentProps {
-	onClick: () => void;
-	logoUrl: string;
-}
-
-function SettingsButtonComponent({ onClick, logoUrl }: SettingsButtonComponentProps) {
+function SettingsButtonComponent({ onClick, logoUrl, notifier }: SettingsButtonComponentProps) {
 	return (
 		<StyledSettingsButton onClick={onClick}>
-			<img src={logoUrl} alt={`${EXTENSION_NAME} Settings`} />
+			<img src={logoUrl} alt={changelogButtonLabel(notifier, `${EXTENSION_NAME} Settings`)} />
+			<ChangelogDot notifier={notifier} />
 		</StyledSettingsButton>
 	);
 }

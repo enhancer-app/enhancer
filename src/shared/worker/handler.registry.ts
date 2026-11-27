@@ -1,4 +1,6 @@
 import type { Logger } from "$shared/logger/logger.ts";
+import type { ChangelogFeed } from "$shared/worker/changelog/changelog.feed.ts";
+import { GetLatestChangelogHandler } from "$shared/worker/changelog/get-latest-changelog.handler.ts";
 import type { CredentialVault } from "$shared/worker/credentials/credential.vault.ts";
 import { ClearFollowsHandler } from "$shared/worker/cross-platform-follows/clear-follows.handler.ts";
 import type { SharedDatabase } from "$shared/worker/database/shared.database.ts";
@@ -55,6 +57,7 @@ export class HandlerRegistry {
 		private readonly credentialVault: CredentialVault,
 		private readonly enhancerAccountService: EnhancerAccountService,
 		private readonly enhancerProfileService: EnhancerProfileService,
+		private readonly changelogFeed: ChangelogFeed,
 		private readonly onApiEnvironmentChanged: (settings: GlobalSettings) => Promise<unknown> = async () => {},
 	) {
 		this.registerHandlers();
@@ -167,6 +170,7 @@ export class HandlerRegistry {
 		this.handlers.set("getChannelLinks", new GetChannelLinksHandler(this.logger, this.sharedDatabase));
 		this.handlers.set("updateChannelLink", new UpdateChannelLinkHandler(this.logger, this.sharedDatabase));
 		this.handlers.set("removeChannelLink", new RemoveChannelLinkHandler(this.logger, this.sharedDatabase));
+		this.handlers.set("getLatestChangelog", new GetLatestChangelogHandler(this.logger, this.changelogFeed));
 	}
 
 	getHandler(action: WorkerAction): MessageHandler {

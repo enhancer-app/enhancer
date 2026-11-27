@@ -1,4 +1,5 @@
 import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
+import type { GetLatestChangelogResponse } from "$types/shared/changelog.types.ts";
 import type { EnhancerApiEnvironment } from "$types/shared/enhancer-environment.types.ts";
 import type { LogEntry } from "$types/shared/logger.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
@@ -301,6 +302,10 @@ export interface WorkerApiActions {
 	removeChannelLink: {
 		payload: RemoveChannelLinkPayload;
 		response: ChannelLinksPayload;
+	};
+	getLatestChangelog: {
+		payload: never;
+		response: GetLatestChangelogResponse;
 	};
 }
 
