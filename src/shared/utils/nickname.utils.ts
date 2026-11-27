@@ -72,7 +72,7 @@ export function checkNickname(raw: string): NicknameCheck {
 
 export function nicknameFeedback(value: string): NicknameFeedback {
 	const check = checkNickname(value);
-	const hint = `${check.length}/${NICKNAME_MAX_LENGTH} characters · ${check.symbols}/${NICKNAME_MAX_SYMBOLS} emoji or symbols`;
+	const hint = `${check.length}/${NICKNAME_MAX_LENGTH} characters, ${check.symbols}/${NICKNAME_MAX_SYMBOLS} emoji or symbols`;
 	if (!check.issue || check.issue === "EMPTY") return { hint };
 	return { hint, error: NICKNAME_ISSUE_MESSAGES[check.issue] };
 }

@@ -134,7 +134,7 @@ const HeadingRow = styled.div`
 `;
 
 const TitleCount = styled.span`
-	margin-left: 6px;
+	margin-left: 8px;
 	font-size: 12px;
 	font-weight: 400;
 	color: var(--settings-text-muted);
@@ -473,7 +473,7 @@ const LoginFooter = styled.div`
 	bottom: 0;
 	display: flex;
 	justify-content: center;
-	gap: 8px;
+	gap: 16px;
 	padding: 20px 0 22px;
 	font-size: 12.5px;
 	color: var(--settings-text-faint);
@@ -521,11 +521,9 @@ function LoginScreen({ logoUrl, busy, error, onLogin }: LoginScreenProps) {
 				<a href={`${DOCUMENTS_URL}/terms-of-service`} target="_blank" rel="noopener noreferrer">
 					Terms of Service
 				</a>
-				<span>·</span>
 				<a href={`${DOCUMENTS_URL}/privacy-policy`} target="_blank" rel="noopener noreferrer">
 					Privacy Policy
 				</a>
-				<span>·</span>
 				<a href={`${DOCUMENTS_URL}/cookie-policy`} target="_blank" rel="noopener noreferrer">
 					Cookie Policy
 				</a>
@@ -731,7 +729,7 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 							{displayName ?? <NameSkeleton aria-label="Loading account" />}
 							{badgeCount !== null && (
 								<TitleCount>
-									· {badgeCount} {badgeCount === 1 ? "badge" : "badges"} collected
+									{badgeCount} {badgeCount === 1 ? "badge" : "badges"} collected
 								</TitleCount>
 							)}
 						</RowTitle>
