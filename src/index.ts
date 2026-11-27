@@ -25,6 +25,7 @@ declare global {
 	const __version__: string;
 	const __environment__: ExtensionEnvironment;
 	const __channel__: ExtensionChannel;
+	const __changelog_feed_url__: string;
 
 	interface Window {
 		enhancer: ExtensionMetadata;

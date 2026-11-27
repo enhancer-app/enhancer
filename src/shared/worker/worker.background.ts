@@ -3,6 +3,7 @@ import { Logger } from "$shared/logger/logger.ts";
 import { CredentialDatabase } from "$shared/worker/credentials/credential.database.ts";
 import { getRequiredScopes } from "$shared/worker/credentials/credential.scopes.ts";
 import { CredentialVault } from "$shared/worker/credentials/credential.vault.ts";
+import { ChangelogFeed, fetchChangelogFeed } from "$shared/worker/changelog/changelog.feed.ts";
 import { SharedDatabase } from "$shared/worker/database/shared.database.ts";
 import { CrossPlatformFollowsRefresher } from "$shared/worker/cross-platform-follows/cross-platform-follows.refresher.ts";
 import { ENHANCER_ENDPOINTS, resolveApiEnvironment } from "$shared/enhancer-environment.ts";
@@ -59,6 +60,13 @@ export default class WorkerBackground {
 		new Logger({ context: "enhancer-profile", source: "background" }),
 		this.enhancerAccountService,
 	);
+	private readonly changelogFeed = new ChangelogFeed({
+		storage: chrome.storage.local,
+		fetchFeed: () => fetchChangelogFeed(__changelog_feed_url__),
+		markSeen: (id): Promise<unknown> =>
+			this.handlerRegistry.getHandler("updateGlobalSettings").handle({ settings: { lastSeenChangelogId: id } }),
+		version: __version__,
+	});
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.settingsDatabase,
@@ -70,11 +78,16 @@ export default class WorkerBackground {
 		this.credentialVault,
 		this.enhancerAccountService,
 		this.enhancerProfileService,
+		this.changelogFeed,
 		(settings) => this.switchApiEnvironment(settings, true),
 	);
 
 	private apiEnvironment: EnhancerApiEnvironment = "production";
 	private isInitialized = false;
+	private markStarted: () => void = () => {};
+	private readonly started = new Promise<void>((resolve) => {
+		this.markStarted = resolve;
+	});
 	private messageQueue: Array<{
 		message: { action: string; payload?: any };
 		sender: chrome.runtime.MessageSender;
@@ -107,9 +120,16 @@ export default class WorkerBackground {
 			.catch((error) => this.logger.error("Failed to apply global settings:", error));
 		this.watchtimeAccumulator.initialize();
 		this.isInitialized = true;
+		this.markStarted();
 		this.logger.info("Background worker started");
 
 		await this.processQueuedMessages();
+	}
+
+	async handleInstalled(reason: string): Promise<void> {
+		if (__channel__ === "canary") return;
+		await this.started;
+		await this.changelogFeed.handleInstalled(reason);
 	}
 
 	private async switchApiEnvironment(settings: GlobalSettings, reloadTabs: boolean): Promise<void> {
@@ -180,7 +200,14 @@ export default class WorkerBackground {
 	}
 }
 
+const backgroundWorker = new WorkerBackground();
+
 chrome.runtime.onInstalled.addListener(({ reason }) => {
+	backgroundWorker
+		.handleInstalled(reason)
+		.catch((error) =>
+			new Logger({ context: "changelog", source: "background" }).warn("Changelog check failed:", error),
+		);
 	openWelcomeOnFirstInstall(reason, {
 		sync: chrome.storage.sync,
 		local: chrome.storage.local,
@@ -189,7 +216,4 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
 	}).catch((error) => new Logger({ context: "onboarding", source: "background" }).error("Welcome page failed:", error));
 });
 
-(async () => {
-	const backgroundWorker = new WorkerBackground();
-	await backgroundWorker.start();
-})();
+void backgroundWorker.start();
