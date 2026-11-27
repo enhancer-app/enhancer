@@ -4,13 +4,8 @@ import type {
 	StoredAccountSnapshot,
 } from "$types/shared/worker/enhancer-account-worker.types.ts";
 
-const STORAGE_KEY = "enhancerAccountCache";
-
-const chromeLocalStorage: AccountCacheStorage = {
-	get: async (key) => (await chrome.storage.local.get(key))[key],
-	set: (key, value) => chrome.storage.local.set({ [key]: value }),
-	remove: (key) => chrome.storage.local.remove(key),
-};
+// Builds before the cache was encrypted kept a plaintext copy in chrome.storage.local.
+export const LEGACY_STORAGE_KEY = "enhancerAccountCache";
 
 function isStoredSnapshot(value: unknown): value is StoredAccountSnapshot {
 	return (
@@ -24,11 +19,11 @@ function isStoredSnapshot(value: unknown): value is StoredAccountSnapshot {
 export class EnhancerAccountCache {
 	private writes: Promise<void> = Promise.resolve();
 
-	constructor(private readonly storage: AccountCacheStorage = chromeLocalStorage) {}
+	constructor(private readonly storage: AccountCacheStorage) {}
 
 	async read(owner: string): Promise<EnhancerAccountSnapshot> {
 		await this.writes.catch(() => {});
-		const stored = await this.storage.get(STORAGE_KEY).catch(() => undefined);
+		const stored = await this.storage.get().catch(() => undefined);
 		if (!isStoredSnapshot(stored) || stored.owner !== owner) return { updatedAt: 0 };
 		const { owner: _owner, ...snapshot } = stored;
 		return snapshot;
@@ -38,15 +33,15 @@ export class EnhancerAccountCache {
 		this.writes = this.writes
 			.catch(() => {})
 			.then(async () => {
-				const stored = await this.storage.get(STORAGE_KEY).catch(() => undefined);
+				const stored = await this.storage.get().catch(() => undefined);
 				const base = isStoredSnapshot(stored) && stored.owner === owner ? stored : { owner };
-				await this.storage.set(STORAGE_KEY, { ...base, ...patch, owner, updatedAt: Date.now() });
+				await this.storage.set({ ...base, ...patch, owner, updatedAt: Date.now() });
 			});
 		return this.writes.catch(() => {});
 	}
 
 	clear(): Promise<void> {
-		this.writes = this.writes.catch(() => {}).then(() => this.storage.remove(STORAGE_KEY));
+		this.writes = this.writes.catch(() => {}).then(() => this.storage.remove());
 		return this.writes.catch(() => {});
 	}
 }

@@ -29,9 +29,9 @@ function memoryStorage(): AccountCacheStorage & { data: Map<string, unknown> } {
 	const data = new Map<string, unknown>();
 	return {
 		data,
-		get: async (key) => structuredClone(data.get(key)),
-		set: async (key, value) => void data.set(key, structuredClone(value)),
-		remove: async (key) => void data.delete(key),
+		get: async () => structuredClone(data.get("cache")),
+		set: async (value) => void data.set("cache", structuredClone(value)),
+		remove: async () => void data.delete("cache"),
 	};
 }
 
