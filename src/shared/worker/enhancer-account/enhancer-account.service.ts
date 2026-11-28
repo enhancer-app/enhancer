@@ -14,6 +14,7 @@ import {
 import type { OidcTokenResponse } from "$types/apis/enhancer-account.apis.ts";
 import type { EnhancerApiEnvironment, EnhancerEndpoints } from "$types/shared/enhancer-environment.types.ts";
 import type {
+	AccountCacheStorage,
 	AccountSessionStore,
 	AuthorizationRequest,
 	AuthorizedRequestResult,
@@ -38,6 +39,12 @@ export class EnhancerAccountService {
 	private refreshPromise: Promise<EnhancerAccountSession | null> | null = null;
 	private loginPromise: Promise<LoginEnhancerAccountResponse> | null = null;
 	private key: Promise<CryptoKey> | null = null;
+
+	readonly cacheStorage: AccountCacheStorage = {
+		get: () => this.readCache(),
+		set: (value) => this.writeCache(value),
+		remove: () => this.clearCache(),
+	};
 
 	constructor(
 		private readonly logger: Logger,
@@ -84,6 +91,7 @@ export class EnhancerAccountService {
 	async logout(): Promise<void> {
 		const session = await this.readSession();
 		await this.store.deleteSession(this.environment);
+		await this.clearCache();
 		await this.broadcast({ account: this.toState(null) });
 		if (!session?.refreshToken) return;
 		try {
@@ -224,6 +232,7 @@ export class EnhancerAccountService {
 
 	private async expireSession(environment: EnhancerApiEnvironment): Promise<void> {
 		await this.store.deleteSession(environment);
+		await this.clearCache();
 		if (environment === this.environment) await this.broadcast({ account: this.toState(null) });
 	}
 
@@ -268,12 +277,7 @@ export class EnhancerAccountService {
 
 	private toState(session: EnhancerAccountSession | null): EnhancerAccountState {
 		if (!session) return { loggedIn: false, environment: this.environment };
-		return {
-			loggedIn: true,
-			environment: this.environment,
-			...(session.profile.displayName ? { displayName: session.profile.displayName } : {}),
-			...(session.profile.username ? { username: session.profile.username } : {}),
-		};
+		return { loggedIn: true, environment: this.environment };
 	}
 
 	private fetchWithToken(url: string, init: RequestInit, accessToken: string): Promise<Response> {
@@ -286,8 +290,7 @@ export class EnhancerAccountService {
 		try {
 			const stored = await this.store.getSession(this.environment);
 			if (!stored) return null;
-			const data = await crypto.subtle.decrypt({ name: "AES-GCM", iv: stored.iv }, await this.getKey(), stored.data);
-			const session: unknown = JSON.parse(decoder.decode(data));
+			const session = await this.decrypt(stored);
 			return isEnhancerAccountSession(session) ? session : null;
 		} catch (error) {
 			this.logger.warn("Failed to read Enhancer account session:", error);
@@ -296,13 +299,37 @@ export class EnhancerAccountService {
 	}
 
 	private async writeSession(session: EnhancerAccountSession, environment: EnhancerApiEnvironment): Promise<void> {
+		await this.store.putSession({ environment, ...(await this.encrypt(session)), savedAt: Date.now() });
+	}
+
+	private async readCache(): Promise<unknown> {
+		const stored = await this.store.getCache();
+		return stored ? this.decrypt(stored) : undefined;
+	}
+
+	private async writeCache(value: unknown): Promise<void> {
+		// A profile request that finishes after logout must not bring the cache back.
+		if (!(await this.readSession())) return;
+		await this.store.putCache({ ...(await this.encrypt(value)), savedAt: Date.now() });
+	}
+
+	private async clearCache(): Promise<void> {
+		await this.store.deleteCache().catch((error) => this.logger.warn("Failed to clear account cache:", error));
+	}
+
+	private async encrypt(value: unknown): Promise<{ iv: Uint8Array<ArrayBuffer>; data: ArrayBuffer }> {
 		const iv = crypto.getRandomValues(new Uint8Array(12));
 		const data = await crypto.subtle.encrypt(
 			{ name: "AES-GCM", iv },
 			await this.getKey(),
-			encoder.encode(JSON.stringify(session)),
+			encoder.encode(JSON.stringify(value)),
 		);
-		await this.store.putSession({ environment, iv, data, savedAt: Date.now() });
+		return { iv, data };
+	}
+
+	private async decrypt(stored: { iv: Uint8Array<ArrayBuffer>; data: ArrayBuffer }): Promise<unknown> {
+		const data = await crypto.subtle.decrypt({ name: "AES-GCM", iv: stored.iv }, await this.getKey(), stored.data);
+		return JSON.parse(decoder.decode(data));
 	}
 
 	private getKey(): Promise<CryptoKey> {

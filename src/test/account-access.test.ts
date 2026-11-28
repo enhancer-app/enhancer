@@ -6,7 +6,12 @@ import type { EnhancerViewerBadge } from "$types/apis/enhancer-account.apis.ts";
 const EXTENSION = "chrome-extension://abc/";
 
 test("account actions are refused from Twitch and Kick pages and accepted from extension pages", () => {
-	for (const action of ["loginEnhancerAccount", "saveEnhancerChatStyle", "getEnhancerBilling"] as const) {
+	for (const action of [
+		"loginEnhancerAccount",
+		"saveEnhancerChatStyle",
+		"getEnhancerBilling",
+		"acceptEnhancerLegal",
+	] as const) {
 		expect(isActionAllowedFrom(action, "https://www.twitch.tv/xqc", EXTENSION)).toBe(false);
 		expect(isActionAllowedFrom(action, undefined, EXTENSION)).toBe(false);
 		expect(isActionAllowedFrom(action, "chrome-extension://other/account.html", EXTENSION)).toBe(false);
@@ -15,6 +20,15 @@ test("account actions are refused from Twitch and Kick pages and accepted from e
 	expect(isActionAllowedFrom("getEnhancerAccountCard", "https://kick.com/xqc", EXTENSION)).toBe(true);
 	expect(isActionAllowedFrom("updateSettings", "https://kick.com/xqc", EXTENSION)).toBe(true);
 	expect(isActionAllowedFrom("loginEnhancerAccount", "", "")).toBe(false);
+});
+
+test("the Kick session is accepted only from kick.com tabs", () => {
+	for (const url of ["https://kick.com/xqc", "https://dashboard.kick.com/"]) {
+		expect(isActionAllowedFrom("syncKickSession", url, EXTENSION)).toBe(true);
+	}
+	for (const url of ["https://www.twitch.tv/xqc", "https://evilkick.com/", "http://kick.com/", undefined]) {
+		expect(isActionAllowedFrom("syncKickSession", url, EXTENSION)).toBe(false);
+	}
 });
 
 const badge = (overrides: Partial<EnhancerViewerBadge>): EnhancerViewerBadge => ({
@@ -40,7 +54,7 @@ const badge = (overrides: Partial<EnhancerViewerBadge>): EnhancerViewerBadge => 
 
 test("the account card exposes only the name, avatar and the badge shown on this platform", () => {
 	const card = buildAccountCard(
-		{ loggedIn: true, environment: "production", displayName: "Fallback", username: "fallback" },
+		{ loggedIn: true, environment: "production" },
 		{
 			user: {
 				id: "u1",
@@ -66,9 +80,9 @@ test("the account card exposes only the name, avatar and the badge shown on this
 	expect(card.badgeImageUrl).toStartWith("https://cdn/");
 });
 
-test("the account card falls back to the session name and hides everything when logged out", () => {
-	const account = { loggedIn: true, environment: "test" as const, username: "s1" };
-	expect(buildAccountCard(account, null, null, "kick")).toMatchObject({ displayName: "s1", badgesLoaded: false });
+test("the account card has no name until the profile loads and hides everything when logged out", () => {
+	const account = { loggedIn: true, environment: "test" as const };
+	expect(buildAccountCard(account, null, null, "kick")).toMatchObject({ displayName: null, badgesLoaded: false });
 	expect(buildAccountCard({ loggedIn: false, environment: "production" }, null, null, "twitch")).toEqual({
 		loggedIn: false,
 		displayName: null,

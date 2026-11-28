@@ -155,6 +155,7 @@ export type SettingsProps<T = any> = {
 	isOpen?: boolean;
 	identity?: SettingsIdentityRenderer;
 	identityCategoryId?: string;
+	notice?: JSX.Element;
 	categories: SettingCategory[];
 	settingDefinitions: SettingDefinition<T>[];
 	settings: T;

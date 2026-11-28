@@ -24,6 +24,9 @@ export default defineConfig({
 		__environment__: JSON.stringify(process.env.ENVIRONMENT),
 		__version__: JSON.stringify(getVersion(channel)),
 		__channel__: JSON.stringify(channel),
+		__changelog_feed_url__: JSON.stringify(
+			process.env.CHANGELOG_FEED_URL ?? "https://changelog.enhancer.at/changelog.json",
+		),
 	},
 	plugins: [
 		preact(),
@@ -59,6 +62,7 @@ export default defineConfig({
 				"worker.background": "src/shared/worker/worker.background.ts",
 				home: "home.html",
 				account: "account.html",
+				welcome: "welcome.html",
 			},
 		},
 	},

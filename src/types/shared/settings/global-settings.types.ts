@@ -13,6 +13,8 @@ export type GlobalSettings = {
 	followsPlatformFilter: FollowsPlatformFilter;
 	developerSettingsEnabled: boolean;
 	apiEnvironment: EnhancerApiEnvironment;
+	whatsNewEnabled: boolean;
+	lastSeenChangelogId: string | null;
 };
 
 export type GlobalSettingsEvents = {

@@ -123,6 +123,18 @@ export function chatImagesSettings<T>(categoryId: string): SettingDefinition<T>[
 	];
 }
 
+export function chatMessageGroupingSetting<T>(categoryId: string): SettingDefinition<T> {
+	return {
+		id: "chatMessageGroupingEnabled",
+		title: "Group messages",
+		description: "Hides the name on messages sent in a row by the same person.",
+		type: "toggle",
+		categoryId,
+		section: SETTING_SECTION.MESSAGES,
+		tags: ["Group Consecutive Messages", "Compact chat"],
+	};
+}
+
 export function cosmeticsSettings<T>(categoryId: string): SettingDefinition<T>[] {
 	return [
 		{

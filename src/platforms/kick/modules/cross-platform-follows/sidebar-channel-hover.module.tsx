@@ -6,8 +6,9 @@ import type { KickModuleConfig } from "$types/shared/module/module.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import { render } from "preact";
 
-const ROW_SELECTOR = '#sidebar-wrapper a[data-testid^="sidebar-recommended-channel"]';
-const NATIVE_TOOLTIP = "[data-radix-popper-content-wrapper]";
+const ROW_SELECTOR =
+	'#sidebar-wrapper a:is([data-testid^="sidebar-recommended-channel"], [data-testid^="sidebar-similar-channel"])';
+const NATIVE_TOOLTIP = '[data-radix-popper-content-wrapper], [data-slot="hover-card-positioner"]';
 
 export default class SidebarChannelHoverModule extends KickModule {
 	readonly config: KickModuleConfig = {
@@ -34,7 +35,7 @@ export default class SidebarChannelHoverModule extends KickModule {
 
 	initialize(): void {
 		this.commonUtils().createGlobalStyle(
-			`body:has(#${this.getId()}):has(${ROW_SELECTOR}[aria-describedby]) ${NATIVE_TOOLTIP}:has([role="tooltip"]) { display: none !important; }`,
+			`body:has(#${this.getId()}):has(${ROW_SELECTOR}[aria-describedby]) :is([data-radix-popper-content-wrapper]:has([role="tooltip"]), [data-slot="hover-card-positioner"]) { display: none !important; }`,
 		);
 	}
 

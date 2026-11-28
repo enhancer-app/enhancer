@@ -10,6 +10,7 @@ export const KICK_DEFAULT_SETTINGS: KickSettings = {
 	chatNicknameCustomizationEnabled: true,
 	loadAdditionalFonts: true,
 	chatMessageMenuEnabled: true,
+	chatMessageGroupingEnabled: false,
 	quickAccessLinks: [{ title: "Streams Charts", url: "https://streamscharts.com/channels/%username%?platform=kick" }],
 	streamLatencyEnabled: true,
 	streamLatencyReducerEnabled: false,

@@ -9,6 +9,8 @@ import {
 	createDeveloperCategories,
 	createDeveloperSettings,
 } from "$shared/module/helpers/enhancer-account-settings.tsx";
+import { ChangelogNotifier } from "$shared/changelog/changelog.notifier.ts";
+import { createChangelogSettings } from "$shared/module/helpers/changelog-settings.tsx";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
@@ -18,6 +20,7 @@ import {
 	channelSectionSetting,
 	cosmeticsSettings,
 	chatImagesSettings,
+	chatMessageGroupingSetting,
 	followsSettings,
 	latencySettings,
 	pinnedStreamersSetting,
@@ -146,6 +149,7 @@ export default class SettingsModule extends KickModule {
 				requiresRefreshToDisable: true,
 			},
 			...chatImagesSettings(CATEGORY.CHAT),
+			chatMessageGroupingSetting(CATEGORY.CHAT),
 			...cosmeticsSettings(CATEGORY.CHAT),
 			...createCosmeticsLink(CATEGORY.CHAT),
 			quickAccessLinksSetting(CATEGORY.CHANNEL, KICK_DEFAULT_SETTINGS.quickAccessLinks),
@@ -212,6 +216,10 @@ export default class SettingsModule extends KickModule {
 				},
 				hideInfo: true,
 			},
+			...createChangelogSettings<KickSettings>(
+				CATEGORY.ABOUT,
+				ChangelogNotifier.for(workerService, this.settingsCache(), this.emitter),
+			),
 			...createDeveloperSettings<KickSettings>(CATEGORY.ABOUT),
 		];
 	}

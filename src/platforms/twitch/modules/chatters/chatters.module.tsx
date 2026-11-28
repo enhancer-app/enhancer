@@ -9,7 +9,11 @@ import TwitchModule from "../../twitch.module.ts";
 
 export default class ChattersModule extends TwitchModule {
 	private static URL_CONFIG = (url: string) =>
-		!url.includes("clips.twitch.tv") && !url.includes("/team/") && !url.includes("/directory/");
+		!url.includes("clips.twitch.tv") &&
+		!url.includes("/clip/") &&
+		!url.includes("/videos/") &&
+		!url.includes("/team/") &&
+		!url.includes("/directory/");
 	public static LOADING_VALUE = -1;
 
 	config: TwitchModuleConfig = {

@@ -3,6 +3,7 @@ import type { PlatformType } from "$types/shared/platform.types.ts";
 import type {
 	EnhancerChatAccountStyle,
 	EnhancerChatStylePerks,
+	EnhancerLegalDocument,
 	EnhancerViewerBadge,
 	SaveChatStyleRequest,
 } from "$types/apis/enhancer-account.apis.ts";
@@ -42,6 +43,15 @@ export type LoginScreenProps = {
 	busy: boolean;
 	error: string | null;
 	onLogin: () => void;
+};
+
+export type LegalAcceptanceScreenProps = {
+	logoUrl: string;
+	pending: EnhancerLegalDocument[];
+	dashboardUrl: string;
+	busy: boolean;
+	onAccept: () => Promise<string | null>;
+	onLogout: () => void;
 };
 
 export type EnhancerAccountIdentityProps = SettingsIdentityProps & {

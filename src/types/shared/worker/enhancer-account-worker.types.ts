@@ -1,6 +1,7 @@
 import type { PlatformType } from "$types/shared/platform.types.ts";
 import type { EnhancerApiEnvironment } from "$types/shared/enhancer-environment.types.ts";
 import type {
+	AcceptLegalRequest,
 	EnhancerViewerBadges,
 	EnhancerViewerBilling,
 	EnhancerViewerSummary,
@@ -19,7 +20,8 @@ export type EnhancerProfileAction =
 	| "saveEnhancerChatStyle"
 	| "submitEnhancerNickname"
 	| "clearEnhancerNickname"
-	| "getEnhancerAccountCache";
+	| "getEnhancerAccountCache"
+	| "acceptEnhancerLegal";
 
 export type EnhancerProfileResult<T> =
 	| { kind: "ok"; data: T }
@@ -42,7 +44,12 @@ export type SubmitEnhancerNicknamePayload = SubmitNicknameRequest;
 
 export type ClearEnhancerNicknamePayload = { accountId: string };
 
+export type AcceptEnhancerLegalPayload = AcceptLegalRequest;
+
+export type AcceptEnhancerLegalResponse = EnhancerProfileResult<null>;
+
 export type EnhancerProfilePayload =
+	| AcceptEnhancerLegalPayload
 	| SaveEnhancerBadgeSlotPayload
 	| SaveEnhancerChatStylePayload
 	| SubmitEnhancerNicknamePayload
@@ -66,8 +73,6 @@ export type EnhancerAccountSession = {
 export type EnhancerAccountState = {
 	loggedIn: boolean;
 	environment: EnhancerApiEnvironment;
-	displayName?: string;
-	username?: string;
 };
 
 export type StoredAccountSession = {
@@ -77,10 +82,19 @@ export type StoredAccountSession = {
 	savedAt: number;
 };
 
+export type StoredAccountCache = {
+	iv: Uint8Array<ArrayBuffer>;
+	data: ArrayBuffer;
+	savedAt: number;
+};
+
 export interface AccountSessionStore {
 	getSession(environment: EnhancerApiEnvironment): Promise<StoredAccountSession | undefined>;
 	putSession(session: StoredAccountSession): Promise<void>;
 	deleteSession(environment: EnhancerApiEnvironment): Promise<void>;
+	getCache(): Promise<StoredAccountCache | undefined>;
+	putCache(cache: StoredAccountCache): Promise<void>;
+	deleteCache(): Promise<void>;
 	getKey(): Promise<CryptoKey | undefined>;
 	putKey(key: CryptoKey): Promise<void>;
 }
@@ -140,7 +154,7 @@ export type EnhancerAccountSnapshot = {
 export type StoredAccountSnapshot = EnhancerAccountSnapshot & { owner: string };
 
 export type AccountCacheStorage = {
-	get(key: string): Promise<unknown>;
-	set(key: string, value: unknown): Promise<void>;
-	remove(key: string): Promise<void>;
+	get(): Promise<unknown>;
+	set(value: unknown): Promise<void>;
+	remove(): Promise<void>;
 };

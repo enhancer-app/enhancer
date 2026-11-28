@@ -1,4 +1,5 @@
 import type { EnhancerStreamerWatchTimeData } from "$types/apis/enhancer.apis.ts";
+import type { GetLatestChangelogResponse } from "$types/shared/changelog.types.ts";
 import type { EnhancerApiEnvironment } from "$types/shared/enhancer-environment.types.ts";
 import type { LogEntry } from "$types/shared/logger.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
@@ -35,6 +36,8 @@ import type {
 	SaveEnhancerBadgeSlotPayload,
 	SaveEnhancerBadgeSlotResponse,
 	ClearEnhancerNicknamePayload,
+	AcceptEnhancerLegalPayload,
+	AcceptEnhancerLegalResponse,
 	GetEnhancerBillingResponse,
 	SaveEnhancerChatStylePayload,
 	SubmitEnhancerNicknamePayload,
@@ -132,17 +135,16 @@ export interface GetSettingsPayload {
 	platform: PlatformType;
 }
 
-export interface UpdateSettingsPayload {
-	platform: PlatformType;
-	settings: PlatformSettings;
-}
+export type UpdateSettingsPayload =
+	| { platform: PlatformType; settings: PlatformSettings; changes?: never }
+	| { platform: PlatformType; changes: Partial<PlatformSettings>; settings?: never };
 
 export interface UpdateGlobalSettingsPayload {
 	settings: Partial<GlobalSettings>;
 }
 
 export type GetSettingsResponse = PlatformSettings;
-export type UpdateSettingsResponse = { success: true };
+export type UpdateSettingsResponse = { success: true; settings: PlatformSettings };
 
 export interface WorkerApiActions {
 	getLogs: {
@@ -253,6 +255,10 @@ export interface WorkerApiActions {
 		payload: ClearEnhancerNicknamePayload;
 		response: GetEnhancerBillingResponse;
 	};
+	acceptEnhancerLegal: {
+		payload: AcceptEnhancerLegalPayload;
+		response: AcceptEnhancerLegalResponse;
+	};
 	syncFollows: {
 		payload: SyncFollowsPayload;
 		response: { success: true };
@@ -296,6 +302,10 @@ export interface WorkerApiActions {
 	removeChannelLink: {
 		payload: RemoveChannelLinkPayload;
 		response: ChannelLinksPayload;
+	};
+	getLatestChangelog: {
+		payload: never;
+		response: GetLatestChangelogResponse;
 	};
 }
 

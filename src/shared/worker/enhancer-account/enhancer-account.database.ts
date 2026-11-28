@@ -1,14 +1,20 @@
 import { Database } from "$shared/worker/database/database.ts";
 import type { EnhancerApiEnvironment } from "$types/shared/enhancer-environment.types.ts";
-import type { AccountSessionStore, StoredAccountSession } from "$types/shared/worker/enhancer-account-worker.types.ts";
+import type {
+	AccountSessionStore,
+	StoredAccountCache,
+	StoredAccountSession,
+} from "$types/shared/worker/enhancer-account-worker.types.ts";
 
 const KEY_ID = "account";
+const CACHE_ID = "profile";
 
 export class EnhancerAccountDatabase extends Database implements AccountSessionStore {
 	protected readonly dbName = "enhancer_account";
-	protected readonly dbVersion = 1;
+	protected readonly dbVersion = 2;
 	private readonly sessionsStore = "sessions";
 	private readonly keysStore = "keys";
+	private readonly cacheStore = "cache";
 
 	constructor() {
 		super("account-db");
@@ -20,6 +26,9 @@ export class EnhancerAccountDatabase extends Database implements AccountSessionS
 		}
 		if (!db.objectStoreNames.contains(this.keysStore)) {
 			db.createObjectStore(this.keysStore, { keyPath: "id" });
+		}
+		if (!db.objectStoreNames.contains(this.cacheStore)) {
+			db.createObjectStore(this.cacheStore, { keyPath: "id" });
 		}
 	}
 
@@ -33,6 +42,18 @@ export class EnhancerAccountDatabase extends Database implements AccountSessionS
 
 	async deleteSession(environment: EnhancerApiEnvironment): Promise<void> {
 		await this.request(this.sessionsStore, "readwrite", (store) => store.delete(environment));
+	}
+
+	getCache(): Promise<StoredAccountCache | undefined> {
+		return this.request(this.cacheStore, "readonly", (store) => store.get(CACHE_ID));
+	}
+
+	async putCache(cache: StoredAccountCache): Promise<void> {
+		await this.request(this.cacheStore, "readwrite", (store) => store.put({ ...cache, id: CACHE_ID }));
+	}
+
+	async deleteCache(): Promise<void> {
+		await this.request(this.cacheStore, "readwrite", (store) => store.delete(CACHE_ID));
 	}
 
 	async getKey(): Promise<CryptoKey | undefined> {

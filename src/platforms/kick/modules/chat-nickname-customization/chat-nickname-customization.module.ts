@@ -37,6 +37,11 @@ export default class ChatNicknameCustomizationModule extends KickModule {
 			usernameElement.dataset.enhancerUsername = message.sender.slug.toLowerCase();
 			if (userCustomization.customNickname) {
 				usernameElement.innerText = userCustomization.customNickname;
+				this.chatNicknameCustomizationHelper.applyRealName(
+					usernameElement,
+					message.sender.username,
+					message.sender.username,
+				);
 			}
 			if (userCustomization.hasGlow) {
 				this.applyGlowEffect(usernameElement, message);

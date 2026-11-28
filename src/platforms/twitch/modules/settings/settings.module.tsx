@@ -7,6 +7,8 @@ import {
 	createDeveloperCategories,
 	createDeveloperSettings,
 } from "$shared/module/helpers/enhancer-account-settings.tsx";
+import { ChangelogNotifier } from "$shared/changelog/changelog.notifier.ts";
+import { createChangelogSettings } from "$shared/module/helpers/changelog-settings.tsx";
 import { ExportImportComponent } from "$shared/components/export-import/export-import.component.tsx";
 import { EnhancerAboutComponent } from "$shared/components/settings/about.component.tsx";
 import { WatchtimeListComponent } from "$shared/components/watchtime-list/watchtime-list.component.tsx";
@@ -16,6 +18,7 @@ import {
 	channelSectionSetting,
 	cosmeticsSettings,
 	chatImagesSettings,
+	chatMessageGroupingSetting,
 	followsSettings,
 	latencySettings,
 	pinnedStreamersSetting,
@@ -142,6 +145,37 @@ export default class SettingsModule extends TwitchModule {
 				options: WATCHTIME_PERIOD_OPTIONS,
 			},
 			...chatImagesSettings(CATEGORY.CHAT),
+			chatMessageGroupingSetting(CATEGORY.CHAT),
+			{
+				id: "chatJoinLeaveEnabled",
+				title: "Join and leave messages",
+				description: "Shows in chat who joined or left it.",
+				hint: "Twitch only sends this for chats with fewer than about 1,000 people.",
+				type: "toggle",
+				categoryId: CATEGORY.CHAT,
+				section: SETTING_SECTION.MESSAGES,
+				tags: ["Chat Join Leave", "Joins", "Parts"],
+			},
+			{
+				id: "chatJoinLeaveDisplay",
+				title: "Show as",
+				description: "Show how many people joined and left, or list everyone right away.",
+				type: "choice",
+				categoryId: CATEGORY.CHAT,
+				dependsOn: { key: "chatJoinLeaveEnabled" },
+				options: [
+					{ label: "Counts", value: { chatJoinLeaveShowNames: false } },
+					{ label: "Names", value: { chatJoinLeaveShowNames: true } },
+				],
+			},
+			{
+				id: "chatJoinLeaveShowLeaves",
+				title: "Show leaves",
+				description: "Also shows who left the chat.",
+				type: "toggle",
+				categoryId: CATEGORY.CHAT,
+				dependsOn: { key: "chatJoinLeaveEnabled" },
+			},
 			{
 				id: "chatMessageMenuEnabled",
 				title: "Message menu",
@@ -264,6 +298,10 @@ export default class SettingsModule extends TwitchModule {
 				},
 				hideInfo: true,
 			},
+			...createChangelogSettings<TwitchSettings>(
+				CATEGORY.ABOUT,
+				ChangelogNotifier.for(workerService, this.settingsCache(), this.emitter),
+			),
 			...createDeveloperSettings<TwitchSettings>(CATEGORY.ABOUT),
 		];
 	}

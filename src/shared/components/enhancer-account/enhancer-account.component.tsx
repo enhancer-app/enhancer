@@ -9,6 +9,7 @@ import {
 	toggleSlotBadge,
 } from "$shared/enhancer-account/badge-slots.ts";
 import { ChatStyleCard } from "$shared/components/enhancer-account/chat-style.component.tsx";
+import { LegalAcceptanceScreen } from "$shared/components/enhancer-account/legal-acceptance.component.tsx";
 import { ENHANCER_ENDPOINTS } from "$shared/enhancer-environment.ts";
 import { getEnhancerAccountStore } from "$shared/enhancer-account/enhancer-account.store.ts";
 import { pickBadgeImage } from "$shared/utils/badge-image.utils.ts";
@@ -91,6 +92,15 @@ const AvatarFallback = styled.div<{ $size: number }>`
 	flex-shrink: 0;
 `;
 
+const NameSkeleton = styled.span`
+	display: inline-block;
+	width: 140px;
+	height: 14px;
+	border-radius: 7px;
+	vertical-align: middle;
+	background: var(--settings-surface-raised);
+`;
+
 const Chips = styled.div`
 	display: flex;
 	flex-wrap: wrap;
@@ -124,7 +134,7 @@ const HeadingRow = styled.div`
 `;
 
 const TitleCount = styled.span`
-	margin-left: 6px;
+	margin-left: 8px;
 	font-size: 12px;
 	font-weight: 400;
 	color: var(--settings-text-muted);
@@ -463,7 +473,7 @@ const LoginFooter = styled.div`
 	bottom: 0;
 	display: flex;
 	justify-content: center;
-	gap: 8px;
+	gap: 16px;
 	padding: 20px 0 22px;
 	font-size: 12.5px;
 	color: var(--settings-text-faint);
@@ -511,11 +521,9 @@ function LoginScreen({ logoUrl, busy, error, onLogin }: LoginScreenProps) {
 				<a href={`${DOCUMENTS_URL}/terms-of-service`} target="_blank" rel="noopener noreferrer">
 					Terms of Service
 				</a>
-				<span>·</span>
 				<a href={`${DOCUMENTS_URL}/privacy-policy`} target="_blank" rel="noopener noreferrer">
 					Privacy Policy
 				</a>
-				<span>·</span>
 				<a href={`${DOCUMENTS_URL}/cookie-policy`} target="_blank" rel="noopener noreferrer">
 					Cookie Policy
 				</a>
@@ -680,9 +688,21 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 		return <LoginScreen logoUrl={logoUrl} busy={busy} error={error} onLogin={login} />;
 	}
 
+	if (store.legalPending.value.length > 0) {
+		return (
+			<LegalAcceptanceScreen
+				logoUrl={logoUrl}
+				pending={store.legalPending.value}
+				dashboardUrl={ENHANCER_ENDPOINTS[account.environment].dashboard}
+				busy={busy}
+				onAccept={() => store.acceptLegal()}
+				onLogout={logout}
+			/>
+		);
+	}
+
 	const user = profile?.user;
-	const displayName =
-		user?.displayName ?? user?.username ?? account.displayName ?? account.username ?? "Enhancer account";
+	const displayName = user?.displayName ?? user?.username ?? null;
 	const chatAccounts = billing ? sortChatAccounts(billing.accounts, platform) : [];
 	const activeAccount = chatAccounts.find((item) => item.accountId === selectedAccountId) ?? chatAccounts[0] ?? null;
 	const scopedBadges = badges
@@ -702,14 +722,14 @@ export function EnhancerAccountComponent({ workerService, platform, logoUrl }: E
 					{user?.avatarUrl ? (
 						<Avatar $size={48} src={user.avatarUrl} alt="" />
 					) : (
-						<AvatarFallback $size={48}>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
+						<AvatarFallback $size={48}>{displayName?.charAt(0).toUpperCase()}</AvatarFallback>
 					)}
 					<RowMain>
 						<RowTitle>
-							{displayName}
+							{displayName ?? <NameSkeleton aria-label="Loading account" />}
 							{badgeCount !== null && (
 								<TitleCount>
-									· {badgeCount} {badgeCount === 1 ? "badge" : "badges"} collected
+									{badgeCount} {badgeCount === 1 ? "badge" : "badges"} collected
 								</TitleCount>
 							)}
 						</RowTitle>

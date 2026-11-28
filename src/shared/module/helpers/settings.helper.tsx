@@ -1,3 +1,5 @@
+import { ChangelogNotifier } from "$shared/changelog/changelog.notifier.ts";
+import { ChangelogNotice } from "$shared/components/changelog/changelog-notice.component.tsx";
 import Settings, { SettingsOverlay } from "$shared/components/settings/settings.component.tsx";
 import type { Logger } from "$shared/logger/logger.ts";
 import { isGlobalSettingKey } from "$shared/settings/global-settings.constants.ts";
@@ -51,26 +53,37 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 		eventPrefix: string,
 		otherKeys: (keyof PanelSettings<TSettings>)[] = [],
 	): Promise<void> {
+		if (this.settingsSignal) {
+			this.settingsSignal.value = settings;
+		}
+		const keys = [updatedKey, ...otherKeys];
+		const globalChanges: Record<string, unknown> = {};
+		const platformChanges: Record<string, unknown> = {};
+		for (const key of keys) {
+			if (isGlobalSettingKey(key)) globalChanges[key] = settings[key];
+			else platformChanges[key as string] = settings[key];
+		}
 		try {
-			if (isGlobalSettingKey(updatedKey)) {
-				await this.settingsCache.updateGlobal({ [updatedKey]: settings[updatedKey] });
-				eventPrefix = "global:settings:";
-			} else {
-				const platformSettings: Record<string, unknown> = { ...settings };
-				for (const key of Object.keys(platformSettings)) {
-					if (isGlobalSettingKey(key)) delete platformSettings[key];
-				}
-				await this.settingsCache.update(platformSettings as TSettings);
+			if (Object.keys(globalChanges).length > 0) {
+				await this.settingsCache.updateGlobal(globalChanges as Partial<GlobalSettings>);
 			}
-			if (this.settingsSignal) {
-				this.settingsSignal.value = settings;
+			if (Object.keys(platformChanges).length > 0) {
+				await this.settingsCache.updatePatch(platformChanges as Partial<TSettings>);
 			}
-			for (const key of [updatedKey, ...otherKeys]) {
+			if (isGlobalSettingKey(updatedKey)) eventPrefix = "global:settings:";
+			for (const key of keys) {
 				this.emitter.emit(`${String(eventPrefix)}${String(key)}`, settings[key]);
 			}
 			this.logger.debug(`Settings changed "${String(updatedKey)}" to`, settings[updatedKey]);
 		} catch (error) {
 			this.logger.error("Failed to save settings:", error);
+			if (this.settingsSignal) {
+				this.settingsSignal.value = {
+					...this.settingsSignal.value,
+					...this.settingsCache.get(),
+					...this.settingsCache.getGlobal(),
+				};
+			}
 		}
 	}
 
@@ -97,6 +110,10 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 			"https://enhancer.at/assets/brand/logo.png",
 		);
 
+		const changelogNotifier = ChangelogNotifier.for(this.workerService, this.settingsCache, this.emitter);
+		void changelogNotifier.load();
+		const notice = <ChangelogNotice notifier={changelogNotifier} />;
+
 		const closeSettings = () => {
 			this.isOpenSignal.value = false;
 		};
@@ -109,7 +126,10 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 			this.saveSettings(newSettings, updatedKey, props.eventPrefix, otherKeys);
 		};
 
+		let hasOpened = false;
 		const renderSettings = () => {
+			if (!hasOpened && !this.isOpenSignal.value) return;
+			hasOpened = true;
 			if (this.settingsContainer && this.settingsSignal) {
 				render(
 					<SettingsOverlay style={{ display: this.isOpenSignal.value ? "flex" : "none" }}>
@@ -119,6 +139,7 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 							isOpen={this.isOpenSignal.value}
 							identity={props.identity}
 							identityCategoryId={props.identityCategoryId}
+							notice={notice}
 							categories={props.categories}
 							settingDefinitions={props.definitions}
 							settings={this.settingsSignal.value}

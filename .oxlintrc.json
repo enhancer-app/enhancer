@@ -20,6 +20,7 @@
 			}
 		],
 		"import/no-named-as-default": "off",
+		"import/no-unassigned-import": ["warn", { "allow": ["**/*.css"] }],
 		"jsx-a11y/prefer-tag-over-role": "off",
 		"react/capitalized-calls": "off",
 		"react/react-in-jsx-scope": "off",

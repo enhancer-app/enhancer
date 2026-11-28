@@ -24,7 +24,7 @@ export function buildAccountCard(
 	const shown = badges ? findShownGlobalBadge(groupBadgeSlots(filterPlatformBadges(badges, platform))) : null;
 	return {
 		loggedIn: true,
-		displayName: user?.displayName ?? user?.username ?? account.displayName ?? account.username ?? null,
+		displayName: user?.displayName ?? user?.username ?? null,
 		avatarUrl: user?.avatarUrl ?? null,
 		badgesLoaded: badges !== null,
 		badgeName: shown?.name ?? null,

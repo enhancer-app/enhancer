@@ -2,7 +2,7 @@
   "name": "enhancer",
   "module": "src/content/index.ts",
   "type": "module",
-  "version": "5.3.3",
+  "version": "5.3.4",
   "homepage": "https://enhancer.at",
   "author": {
     "name": "Enhancer",
@@ -14,6 +14,8 @@
     "email": "contact@enhancer.at"
   },
   "devDependencies": {
+    "@changesets/cli": "3.0.3",
+    "@changesets/get-github-info": "^1.0.1",
     "@preact/preset-vite": "^2.10.3",
     "@types/bun": "^1.3.8",
     "@types/chrome": "^0.0.262",
@@ -56,6 +58,7 @@
     "build": "ENVIRONMENT=production bun run check && bun run typecheck && vite build",
     "pack": "ENVIRONMENT=production bun run scripts/pack.ts",
     "pack:canary": "CHANNEL=canary ENVIRONMENT=production bun run scripts/pack.ts",
+    "changeset": "changeset",
     "release:setup-branches": "bun run scripts/setup-release-branches.ts",
     "release:setup-secrets": "bun run scripts/setup-release-secrets.ts",
     "chrome:refresh-token": "bun run scripts/setup-release-secrets.ts --chrome",

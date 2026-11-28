@@ -3,16 +3,19 @@ import { Logger } from "$shared/logger/logger.ts";
 import { CredentialDatabase } from "$shared/worker/credentials/credential.database.ts";
 import { getRequiredScopes } from "$shared/worker/credentials/credential.scopes.ts";
 import { CredentialVault } from "$shared/worker/credentials/credential.vault.ts";
+import { ChangelogFeed, fetchChangelogFeed } from "$shared/worker/changelog/changelog.feed.ts";
 import { SharedDatabase } from "$shared/worker/database/shared.database.ts";
 import { CrossPlatformFollowsRefresher } from "$shared/worker/cross-platform-follows/cross-platform-follows.refresher.ts";
 import { ENHANCER_ENDPOINTS, resolveApiEnvironment } from "$shared/enhancer-environment.ts";
 import { isActionAllowedFrom } from "$shared/worker/enhancer-account/account-access.ts";
+import { LEGACY_STORAGE_KEY } from "$shared/worker/enhancer-account/enhancer-account.cache.ts";
 import { EnhancerAccountDatabase } from "$shared/worker/enhancer-account/enhancer-account.database.ts";
 import { EnhancerAccountService } from "$shared/worker/enhancer-account/enhancer-account.service.ts";
 import { EnhancerProfileService } from "$shared/worker/enhancer-account/enhancer-profile.service.ts";
 import { AggregateSnapshotDatabase } from "$shared/worker/enhancer-api/aggregate-snapshot.database.ts";
 import { EnhancerApiService } from "$shared/worker/enhancer-api/enhancer-api.service.ts";
 import { HandlerRegistry } from "$shared/worker/handler.registry.ts";
+import { openWelcomeOnFirstInstall } from "$shared/worker/onboarding/onboarding.ts";
 import { SettingsDatabase } from "$shared/worker/settings/settings.database.ts";
 import { WatchtimeAccumulator } from "$shared/worker/watchtime/watchtime.accumulator.ts";
 import { WatchtimeDatabase } from "$shared/worker/watchtime/watchtime.database.ts";
@@ -58,6 +61,13 @@ export default class WorkerBackground {
 		new Logger({ context: "enhancer-profile", source: "background" }),
 		this.enhancerAccountService,
 	);
+	private readonly changelogFeed = new ChangelogFeed({
+		storage: chrome.storage.local,
+		fetchFeed: () => fetchChangelogFeed(__changelog_feed_url__),
+		markSeen: (id): Promise<unknown> =>
+			this.handlerRegistry.getHandler("updateGlobalSettings").handle({ settings: { lastSeenChangelogId: id } }),
+		version: __version__,
+	});
 	private readonly handlerRegistry = new HandlerRegistry(
 		this.logger,
 		this.settingsDatabase,
@@ -69,11 +79,16 @@ export default class WorkerBackground {
 		this.credentialVault,
 		this.enhancerAccountService,
 		this.enhancerProfileService,
+		this.changelogFeed,
 		(settings) => this.switchApiEnvironment(settings, true),
 	);
 
 	private apiEnvironment: EnhancerApiEnvironment = "production";
 	private isInitialized = false;
+	private markStarted: () => void = () => {};
+	private readonly started = new Promise<void>((resolve) => {
+		this.markStarted = resolve;
+	});
 	private messageQueue: Array<{
 		message: { action: string; payload?: any };
 		sender: chrome.runtime.MessageSender;
@@ -82,6 +97,7 @@ export default class WorkerBackground {
 
 	async start() {
 		this.setupMessageListener();
+		chrome.storage.local.remove(LEGACY_STORAGE_KEY).catch(() => {});
 
 		await Promise.all([
 			this.settingsDatabase.initialize(),
@@ -106,9 +122,15 @@ export default class WorkerBackground {
 			.catch((error) => this.logger.error("Failed to apply global settings:", error));
 		this.watchtimeAccumulator.initialize();
 		this.isInitialized = true;
+		this.markStarted();
 		this.logger.info("Background worker started");
 
 		await this.processQueuedMessages();
+	}
+
+	async handleInstalled(reason: string): Promise<void> {
+		await this.started;
+		await this.changelogFeed.handleInstalled(reason);
 	}
 
 	private async switchApiEnvironment(settings: GlobalSettings, reloadTabs: boolean): Promise<void> {
@@ -179,7 +201,20 @@ export default class WorkerBackground {
 	}
 }
 
-(async () => {
-	const backgroundWorker = new WorkerBackground();
-	await backgroundWorker.start();
-})();
+const backgroundWorker = new WorkerBackground();
+
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+	backgroundWorker
+		.handleInstalled(reason)
+		.catch((error) =>
+			new Logger({ context: "changelog", source: "background" }).warn("Changelog check failed:", error),
+		);
+	openWelcomeOnFirstInstall(reason, {
+		sync: chrome.storage.sync,
+		local: chrome.storage.local,
+		openWelcomePage: () => chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") }),
+		version: __version__,
+	}).catch((error) => new Logger({ context: "onboarding", source: "background" }).error("Welcome page failed:", error));
+});
+
+void backgroundWorker.start();
