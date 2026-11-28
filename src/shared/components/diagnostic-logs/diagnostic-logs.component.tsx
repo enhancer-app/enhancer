@@ -11,32 +11,29 @@ const Container = styled.div`
 `;
 
 const Button = styled.button`
-	display: flex;
+	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	background: #0d0d0d;
-	border: 1px solid #1e1e1e;
-	color: #e5e5e5;
-	padding: 8px 14px;
+	height: 34px;
+	padding: 0 14px;
+	border: none;
 	border-radius: 8px;
-	font-size: 11px;
+	background: var(--settings-surface-raised);
+	box-shadow: inset 0 0 0 1px var(--settings-control-border);
+	color: var(--settings-text-primary);
+	font: inherit;
+	font-size: 13px;
 	font-weight: 500;
+	white-space: nowrap;
 	cursor: pointer;
-	min-width: 112px;
-	flex-shrink: 0;
-	transition:
-		border-color 0.15s ease,
-		color 0.15s ease,
-		background 0.15s ease;
+	transition: background 0.12s ease;
 
 	&:hover:not(:disabled) {
-		background: #0d0d0d;
-		border-color: rgba(145, 71, 255, 0.4);
-		color: #fff;
+		background: var(--settings-surface-hover);
 	}
 
 	&:focus-visible {
-		outline: 2px solid #9147ff;
+		outline: 2px solid var(--settings-accent);
 		outline-offset: 2px;
 	}
 
@@ -47,9 +44,10 @@ const Button = styled.button`
 `;
 
 const Status = styled.div<{ $error: boolean }>`
-	margin-top: 8px;
-	color: ${(props) => (props.$error ? "#ff5252" : "#66bb6a")};
-	font-size: 11px;
+	margin-top: 6px;
+	color: ${(props) => (props.$error ? "var(--settings-danger)" : "#4ade80")};
+	font-size: 12px;
+	text-align: right;
 `;
 
 interface DiagnosticLogsComponentProps {

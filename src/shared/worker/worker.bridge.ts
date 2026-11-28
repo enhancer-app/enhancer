@@ -171,29 +171,11 @@ export default class WorkerBridge {
 	}
 
 	private setupBroadcastReceiving() {
-		chrome.runtime.onMessage.addListener((message: WorkerBroadcast, _sender, sendResponse) => {
+		chrome.runtime.onMessage.addListener((message: WorkerBroadcast) => {
 			if (!this.bridgeElement || !message.type) return;
-			if (message.type === "enhancer-api-seed-request") {
-				const requestId = message.payload.requestId;
-				const handleResponse = (event: Event) => {
-					const detail = JSON.parse((event as CustomEvent<string>).detail) as {
-						requestId: string;
-						seed: unknown;
-					};
-					if (detail.requestId !== requestId) return;
-					clearTimeout(timeout);
-					this.bridgeElement?.removeEventListener("enhancer-api-seed-response", handleResponse);
-					sendResponse(detail.seed);
-				};
-				const timeout = setTimeout(() => {
-					this.bridgeElement?.removeEventListener("enhancer-api-seed-response", handleResponse);
-					sendResponse(null);
-				}, 2000);
-				this.bridgeElement.addEventListener("enhancer-api-seed-response", handleResponse);
-				this.bridgeElement.dispatchEvent(
-					new CustomEvent<string>("enhancer-api-seed-request", { detail: JSON.stringify(message.payload) }),
-				);
-				return true;
+			if (message.type === "api-environment-changed") {
+				if (window.top === window) location.reload();
+				return;
 			}
 			const broadcastEvent = new CustomEvent<string>("enhancer-broadcast", {
 				detail: JSON.stringify(message),

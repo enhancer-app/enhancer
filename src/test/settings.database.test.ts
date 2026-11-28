@@ -88,3 +88,79 @@ test("reports a failed save and keeps serving the last persisted settings", asyn
 	).rejects.toThrow("Failed to persist settings for platform: twitch");
 	expect((await database.getSettings("twitch")) as unknown).toEqual({ existing: "saved" });
 });
+
+test("carries the existing Twitch pinning toggle over to global settings once", async () => {
+	setupExtensionStorage(
+		new Map<string, unknown>([
+			["enhancer.settings.twitch", { ...TWITCH_DEFAULT_SETTINGS, pinnedStreamersEnabled: false }],
+		]),
+	);
+
+	const database = createDatabase();
+	await database.initialize();
+	expect((await database.getGlobalSettings()).pinnedStreamersEnabled).toBe(false);
+
+	await database.updateGlobalSettings({ pinnedStreamersEnabled: true });
+	const restarted = createDatabase();
+	await restarted.initialize();
+	expect((await restarted.getGlobalSettings()).pinnedStreamersEnabled).toBe(true);
+});
+
+test("ignores unknown keys and invalid values in global settings updates", async () => {
+	setupExtensionStorage();
+	const database = createDatabase();
+	await database.initialize();
+
+	const settings = await database.updateGlobalSettings({
+		followsSort: "viewers-asc",
+		followsHomeEnabled: "yes",
+		unknown: true,
+	} as never);
+
+	expect(settings.followsSort).toBe("viewers-asc");
+	expect(settings.followsHomeEnabled).toBe(false);
+	expect("unknown" in settings).toBe(false);
+});
+
+test("keeps both platform changes saved at the same time", async () => {
+	setupExtensionStorage();
+	const database = createDatabase({ first: "default", second: "default" } as unknown as PlatformSettings);
+	await database.initialize();
+
+	await Promise.all([
+		database.patchSettings("twitch", { first: "changed" } as unknown as Partial<PlatformSettings>),
+		database.patchSettings("twitch", { second: "changed" } as unknown as Partial<PlatformSettings>),
+	]);
+	const restarted = createDatabase({ first: "default", second: "default" } as unknown as PlatformSettings);
+	await restarted.initialize();
+
+	expect((await restarted.getSettings("twitch")) as unknown).toEqual({ first: "changed", second: "changed" });
+});
+
+test("keeps both global changes saved at the same time", async () => {
+	setupExtensionStorage();
+	const database = createDatabase();
+	await database.initialize();
+
+	await Promise.all([
+		database.updateGlobalSettings({ followsHomeEnabled: true }),
+		database.updateGlobalSettings({ pinnedStreamersEnabled: false }),
+	]);
+	const restarted = createDatabase();
+	await restarted.initialize();
+	const settings = await restarted.getGlobalSettings();
+
+	expect(settings.followsHomeEnabled).toBe(true);
+	expect(settings.pinnedStreamersEnabled).toBe(false);
+});
+
+test("fills missing keys with defaults when replacing all settings", async () => {
+	const values = setupExtensionStorage();
+	const database = createDatabase({ existing: "default", addedLater: true } as unknown as PlatformSettings);
+	await database.initialize();
+
+	const settings = await database.updateSettings("twitch", { existing: "imported" } as unknown as PlatformSettings);
+
+	expect(settings as unknown).toEqual({ existing: "imported", addedLater: true });
+	expect(values.get("enhancer.settings.twitch")).toEqual({ existing: "imported", addedLater: true });
+});

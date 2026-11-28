@@ -1,17 +1,27 @@
+import { ChangelogNotifier } from "$shared/changelog/changelog.notifier.ts";
+import { ChangelogNotice } from "$shared/components/changelog/changelog-notice.component.tsx";
 import Settings, { SettingsOverlay } from "$shared/components/settings/settings.component.tsx";
 import type { Logger } from "$shared/logger/logger.ts";
+import { isGlobalSettingKey } from "$shared/settings/global-settings.constants.ts";
 import type SettingsCache from "$shared/settings/settings.service.ts";
 import type CommonUtils from "$shared/utils/common.utils.ts";
 import type WorkerService from "$shared/worker/worker.service.ts";
-import type { SettingCategory, SettingDefinition } from "$types/shared/components/settings.component.types.ts";
+import type {
+	SettingCategory,
+	SettingDefinition,
+	SettingsIdentityRenderer,
+} from "$types/shared/components/settings.component.types.ts";
 import type { PlatformType } from "$types/shared/platform.types.ts";
+import type { GlobalSettings } from "$types/shared/settings/global-settings.types.ts";
 import type { PlatformSettings } from "$types/shared/worker/settings-worker.types.ts";
 import { type Signal, signal } from "@preact/signals";
 import type { Emitter } from "nanoevents";
 import { render } from "preact";
 
+type PanelSettings<TSettings> = TSettings & GlobalSettings;
+
 export class SettingsHelper<TSettings extends PlatformSettings> {
-	private settingsSignal: Signal<TSettings> | null = null;
+	private settingsSignal: Signal<PanelSettings<TSettings>> | null = null;
 	private isOpenSignal: Signal<boolean> = signal(false);
 	private settingsContainer: HTMLDivElement | null = null;
 
@@ -24,39 +34,68 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 		private readonly commonUtils: CommonUtils,
 	) {}
 
-	loadSettings(defaults: TSettings): TSettings {
+	loadSettings(defaults: TSettings): PanelSettings<TSettings> {
 		try {
-			const settings = { ...defaults, ...this.settingsCache.get() };
+			const settings = { ...defaults, ...this.settingsCache.get(), ...this.settingsCache.getGlobal() };
 			if (this.settingsSignal) {
 				this.settingsSignal.value = settings;
 			}
 			return settings;
 		} catch (error) {
 			this.logger.error("Failed to load settings:", error);
-			return defaults;
+			return defaults as PanelSettings<TSettings>;
 		}
 	}
 
-	async saveSettings(settings: TSettings, updatedKey: keyof TSettings, eventPrefix: string): Promise<void> {
+	async saveSettings(
+		settings: PanelSettings<TSettings>,
+		updatedKey: keyof PanelSettings<TSettings>,
+		eventPrefix: string,
+		otherKeys: (keyof PanelSettings<TSettings>)[] = [],
+	): Promise<void> {
+		if (this.settingsSignal) {
+			this.settingsSignal.value = settings;
+		}
+		const keys = [updatedKey, ...otherKeys];
+		const globalChanges: Record<string, unknown> = {};
+		const platformChanges: Record<string, unknown> = {};
+		for (const key of keys) {
+			if (isGlobalSettingKey(key)) globalChanges[key] = settings[key];
+			else platformChanges[key as string] = settings[key];
+		}
 		try {
-			await this.settingsCache.update(settings);
-			if (this.settingsSignal) {
-				this.settingsSignal.value = settings;
+			if (Object.keys(globalChanges).length > 0) {
+				await this.settingsCache.updateGlobal(globalChanges as Partial<GlobalSettings>);
 			}
-			this.emitter.emit(`${String(eventPrefix)}${String(updatedKey)}`, settings[updatedKey]);
+			if (Object.keys(platformChanges).length > 0) {
+				await this.settingsCache.updatePatch(platformChanges as Partial<TSettings>);
+			}
+			if (isGlobalSettingKey(updatedKey)) eventPrefix = "global:settings:";
+			for (const key of keys) {
+				this.emitter.emit(`${String(eventPrefix)}${String(key)}`, settings[key]);
+			}
 			this.logger.debug(`Settings changed "${String(updatedKey)}" to`, settings[updatedKey]);
 		} catch (error) {
 			this.logger.error("Failed to save settings:", error);
+			if (this.settingsSignal) {
+				this.settingsSignal.value = {
+					...this.settingsSignal.value,
+					...this.settingsCache.get(),
+					...this.settingsCache.getGlobal(),
+				};
+			}
 		}
 	}
 
 	async createSettingsContainer(props: {
-		defaults: TSettings;
+		defaults: PanelSettings<TSettings>;
 		categories: SettingCategory[];
-		definitions: SettingDefinition<TSettings>[];
+		definitions: SettingDefinition<PanelSettings<TSettings>>[];
 		eventPrefix: string;
+		identity?: SettingsIdentityRenderer;
+		identityCategoryId?: string;
 	}): Promise<{
-		settingsSignal: Signal<TSettings>;
+		settingsSignal: Signal<PanelSettings<TSettings>>;
 		isOpenSignal: Signal<boolean>;
 		openSettings: () => void;
 		closeSettings: () => void;
@@ -71,15 +110,26 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 			"https://enhancer.at/assets/brand/logo.png",
 		);
 
+		const changelogNotifier = ChangelogNotifier.for(this.workerService, this.settingsCache, this.emitter);
+		void changelogNotifier.load();
+		const notice = <ChangelogNotice notifier={changelogNotifier} />;
+
 		const closeSettings = () => {
 			this.isOpenSignal.value = false;
 		};
 
-		const onSettingsChange = (newSettings: TSettings, updatedKey: keyof TSettings) => {
-			this.saveSettings(newSettings, updatedKey, props.eventPrefix);
+		const onSettingsChange = (
+			newSettings: PanelSettings<TSettings>,
+			updatedKey: keyof PanelSettings<TSettings>,
+			otherKeys?: (keyof PanelSettings<TSettings>)[],
+		) => {
+			this.saveSettings(newSettings, updatedKey, props.eventPrefix, otherKeys);
 		};
 
+		let hasOpened = false;
 		const renderSettings = () => {
+			if (!hasOpened && !this.isOpenSignal.value) return;
+			hasOpened = true;
 			if (this.settingsContainer && this.settingsSignal) {
 				render(
 					<SettingsOverlay style={{ display: this.isOpenSignal.value ? "flex" : "none" }}>
@@ -87,6 +137,9 @@ export class SettingsHelper<TSettings extends PlatformSettings> {
 							logoSrc={logo}
 							platform={this.platformType}
 							isOpen={this.isOpenSignal.value}
+							identity={props.identity}
+							identityCategoryId={props.identityCategoryId}
+							notice={notice}
 							categories={props.categories}
 							settingDefinitions={props.definitions}
 							settings={this.settingsSignal.value}

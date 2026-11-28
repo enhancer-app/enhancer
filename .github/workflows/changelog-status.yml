@@ -1,0 +1,40 @@
+name: Changelog Status
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited]
+    branches:
+      - stable
+  # The changelog site is deployed separately, so check again every hour.
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changelog-status:
+    name: Update changelog status
+    if: github.event_name != 'pull_request_target' || startsWith(github.event.pull_request.title, 'release(stable):')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: changelog-status
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout scripts
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Update release PR comment
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+        with:
+          script: |
+            const run = require("./.github/scripts/changelog-status.cjs");
+            await run({ github, context, core });

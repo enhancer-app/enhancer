@@ -50,15 +50,18 @@ function createApplier(
 		| Omit<SelectorModuleApplierConfig, "type" | "selectors">
 		| Omit<SelectorModuleApplierConfig, "type" | "selectors">[],
 	ignoredMutationSelectors: string[] = [],
+	modules: { enabled?: () => boolean; configs: Omit<SelectorModuleApplierConfig, "type" | "selectors">[] }[] = [],
 ) {
 	const logger = { debug() {}, info() {}, warn() {}, error() {} } as unknown as Logger;
 	const applier = new SelectorModuleApplier(logger, undefined, ignoredMutationSelectors);
-	const appliers = (Array.isArray(configs) ? configs : [configs]).map((config) => ({
-		type: "selector",
-		selectors: [".target"],
-		...config,
-	}));
+	const toAppliers = (list: Omit<SelectorModuleApplierConfig, "type" | "selectors">[]) =>
+		list.map((config) => ({ type: "selector", selectors: [".target"], ...config }));
+	const appliers = toAppliers(Array.isArray(configs) ? configs : [configs]);
 	void applier.apply({ config: { name: "test", appliers } } as unknown as Module<any, any, any>);
+	for (const { enabled, configs: moduleConfigs } of modules) {
+		const config = { name: "test", appliers: toAppliers(moduleConfigs), enabled };
+		void applier.apply({ config } as unknown as Module<any, any, any>);
+	}
 	return applier as unknown as TestApplier;
 }
 
@@ -129,6 +132,28 @@ test("skips once appliers on a repeating-only run", async () => {
 	applier.run(true);
 
 	expect(calls).toEqual(["repeating"]);
+});
+
+test("keeps running other appliers when one module fails to report its state", () => {
+	setup([new FakeElement()]);
+	const calls: string[] = [];
+	const applier = createApplier(
+		[],
+		[],
+		[
+			{
+				enabled: () => {
+					throw new Error("Settings not initialized");
+				},
+				configs: [{ key: "broken", callback: () => void calls.push("broken") }],
+			},
+			{ enabled: () => true, configs: [{ key: "working", callback: () => void calls.push("working") }] },
+		],
+	);
+
+	applier.run();
+
+	expect(calls).toEqual(["working"]);
 });
 
 class FakeMutationTarget {

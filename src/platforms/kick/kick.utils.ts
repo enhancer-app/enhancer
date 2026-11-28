@@ -216,6 +216,13 @@ export default class KickUtils {
 		return KickUtils.SET_QUALITY_MARKERS.every((marker) => source.includes(marker));
 	}
 
+	navigate(url: string): void {
+		const target = new URL(url);
+		const router = (window as { next?: { router?: { push?: (path: string) => void } } }).next?.router;
+		if (target.host === window.location.host && router?.push) router.push(target.pathname);
+		else window.location.assign(url);
+	}
+
 	private readSessionAuthStatus(fiber: any): string | null {
 		let hook = fiber?.memoizedState;
 		let visits = 0;

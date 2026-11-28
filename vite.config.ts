@@ -24,6 +24,9 @@ export default defineConfig({
 		__environment__: JSON.stringify(process.env.ENVIRONMENT),
 		__version__: JSON.stringify(getVersion(channel)),
 		__channel__: JSON.stringify(channel),
+		__changelog_feed_url__: JSON.stringify(
+			process.env.CHANGELOG_FEED_URL ?? "https://changelog.enhancer.at/changelog.json",
+		),
 	},
 	plugins: [
 		preact(),
@@ -47,7 +50,7 @@ export default defineConfig({
 		rollupOptions: {
 			output: {
 				entryFileNames: "[name].js",
-				chunkFileNames: "[name].js",
+				chunkFileNames: "chunks/[name].js",
 				assetFileNames: "[name].[ext]",
 				banner: (chunk) => (CONTENT_SCRIPT_CHUNKS.has(chunk.name) ? "(() => {" : ""),
 				footer: (chunk) => (CONTENT_SCRIPT_CHUNKS.has(chunk.name) ? "})();" : ""),
@@ -57,6 +60,9 @@ export default defineConfig({
 				inject: "src/inject.ts",
 				"worker.bridge": "src/shared/worker/worker.bridge.ts",
 				"worker.background": "src/shared/worker/worker.background.ts",
+				home: "home.html",
+				account: "account.html",
+				welcome: "welcome.html",
 			},
 		},
 	},
