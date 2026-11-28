@@ -43,7 +43,7 @@ export function getManifest(
 	return {
 		manifest_version: 3,
 		name,
-		description: "Enhancer is open-sourced and free extension, which adds what is missing on streaming platforms.",
+		description: "Free, open-source features for Twitch and Kick: one follow list, emote bar, chatters count, stream delay and more.",
 		version,
 		...(channel === "canary" && { version_name: `${version} Canary${commit ? ` (${commit})` : ""}` }),
 		permissions: ["storage", "unlimitedStorage", "identity"],
