@@ -8,6 +8,12 @@ import { render } from "preact";
 
 const ROW_SELECTOR = "#side-nav a.side-nav-card__link, #side-nav a.side-nav-card";
 const NATIVE_TOOLTIP = ".online-side-nav-channel-tooltip__body";
+const NATIVE_TOOLTIPS = [
+	NATIVE_TOOLTIP,
+	".side-nav-costreaming-tooltip__body",
+	".side-nav-guest-star-tooltip__text",
+	".side-nav-sponsored-channel-tooltip__text",
+].join(", ");
 
 export default class SidebarChannelHoverModule extends TwitchModule {
 	readonly config: TwitchModuleConfig = {
@@ -35,7 +41,7 @@ export default class SidebarChannelHoverModule extends TwitchModule {
 	initialize(): void {
 		const active = `body:has(#${this.getId()})`;
 		this.commonUtils().createGlobalStyle(
-			`${active} .tw-dialog-layer:has(${NATIVE_TOOLTIP}) { display: none !important; }
+			`${active} .tw-dialog-layer:has(:is(${NATIVE_TOOLTIPS})) { display: none !important; }
 			${active} :is(${ROW_SELECTOR}):not(#enhancer-cross-platform-follows *):hover {
 				background: var(--color-background-interactable-hover) !important;
 				border-radius: var(--border-radius-medium, 4px);
